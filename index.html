@@ -9729,6 +9729,7 @@ function applyRoleGating(){
    각 표의 컬럼을 역할별로 숨길 수 있음. nth-child CSS 주입 방식이라 재렌더에도 자동 적용. */
 const ADD_KEY='＋등록버튼';   // 컬럼 외 '등록 버튼' 토글용 특수 키
 const COLUMN_TABLES = {
+  clients:    { sel:'#client-list',       label:'수주 정보 관리(제품표)', addBtn:'openProdAdd,openClientAdd', cols:['코드','제품/규격명','납기기한','수량','수주 단가','수주 합계','공정 단계 → 상태','관리 작업'] },
   orders:     { sel:'#orders-table',      label:'생산 지시',        cols:['지시번호','고객사','생산제품','라인','목표량','실적량','불량','개시일','납기일','진행률','상태','담당자','메모','조작'] },
   defects:    { sel:'#defect-table',      label:'불량 기록(품질)',   addBtn:'openDefectAdd', cols:['코드','일자','제품','발생공정','하자유형','수량','상태','비고','관리 작업'] },
   checks:     { sel:'#check-table',       label:'출하 검사(품질)',   addBtn:'openCheckAdd',  cols:['검사일','의뢰처','완료제품','검사원','외관','치수','테스트','종합판정','관리 작업'] },
@@ -9747,7 +9748,7 @@ function applyColumnGating(){
     Object.keys(COLUMN_TABLES).forEach(tk=>{
       const t=COLUMN_TABLES[tk]; const hidden=cfg[tk]||[];
       hidden.forEach(col=>{
-        if (col===ADD_KEY){ if(t.addBtn) css += `[onclick^="${t.addBtn}"]{display:none!important;}\n`; return; }  // 등록 버튼 숨김
+        if (col===ADD_KEY){ if(t.addBtn) t.addBtn.split(',').forEach(fn=>{ css += `[onclick^="${fn.trim()}"]{display:none!important;}\n`; }); return; }  // 등록 버튼 숨김(콤마로 여러 개 지원)
         const idx=t.cols.indexOf(col); if(idx<0) return;
         const n=idx+1;
         css += `${t.sel} th:nth-child(${n}),${t.sel} td:nth-child(${n}){display:none!important;}\n`;
