@@ -9899,6 +9899,22 @@ function cloudSubscribe(){
     try { updateDlvBadge(); updateAsBadge(); updateTrashBadge(); } catch(e){}
     _cloudChip('synced'); setTimeout(()=>_cloudChip('online'), 1500);
   }, err=>{ console.warn('실시간 동기화 구독 오류', err); });
+
+  // 권한 설정(roles: 페이지/컬럼/버튼) 실시간 반영 — 관리자가 바꾸면 모든 기기에 즉시 적용
+  _fbDb.collection('roles').onSnapshot(snap=>{
+    let changed=false;
+    snap.docChanges().forEach(ch=>{
+      if (ch.type==='removed') return;
+      const id=ch.doc.id, d=ch.doc.data();
+      if (id==='config'){ saveStorageLocalOnly('rolePages', d); changed=true; }
+      else if (id==='columns'){ saveStorageLocalOnly('roleColumns', d); changed=true; }
+    });
+    if (!changed) return;
+    allowedPages = roleAllowedSet(currentRole);   // 페이지 권한 재계산 후 재적용
+    applyRoleGating(); applyColumnGating();
+    if (currentPage==='permissions' && !document.querySelector('.overlay.open')) { try{ renderPermissions(); }catch(e){} }
+    _cloudChip('synced'); setTimeout(()=>_cloudChip('online'), 1500);
+  }, err=>{ console.warn('권한 실시간 동기화 오류', err); });
 }
 
 function cloudLogin(){
