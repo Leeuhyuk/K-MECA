@@ -112,6 +112,23 @@ th { text-align: left; padding: 9px 12px; color: var(--tx-s); border-bottom: 1px
 td { padding: 9px 12px; border-bottom: 1px solid var(--br); vertical-align: middle; color: var(--tx); }
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: var(--bg-s); }
+/* ── 데이터 표 가독성: ① 줄무늬 ② 헤더 고정 ③ 첫 열 고정 (불투명 배경으로 고정셀 비침 방지) ── */
+.content tbody tr td { background: var(--bg-p); }
+.content tbody tr:nth-child(even) td { background: var(--bg-s); }
+.content tbody tr:hover td { background: var(--bg-i) !important; }
+.content thead th { position: sticky; top: 0; z-index: 3; }
+.content div:has(> table) { max-height: calc(100vh - 170px); overflow-y: auto; }
+.content th:first-child, .content td:first-child { position: sticky; left: 0; z-index: 2; }
+.content thead th:first-child { z-index: 4; }
+/* ── 가는 스크롤바(전역) ── */
+* { scrollbar-width: thin; scrollbar-color: rgba(140,140,140,0.4) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: rgba(140,140,140,0.4); border-radius: 4px; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(140,140,140,0.65); }
+*::-webkit-scrollbar-track { background: transparent; }
+/* ── 사이드바 접기(데스크톱) ── */
+.sidebar { transition: margin-left .2s ease; }
+body.sb-collapsed .sidebar { display: none; }
 
 /* 뱃지 및 프로그레스 */
 .bd { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 4px; border: 1px solid; white-space: nowrap; font-weight: 600; }
@@ -701,7 +718,7 @@ textarea { height: auto; resize: vertical; }
 <div class="main">
   <div class="topbar">
     <div style="display:flex; align-items:center; gap:10px;">
-      <button class="theme-btn" id="menu-toggle-btn" onclick="toggleMobileSidebar()" title="메뉴 열기" style="display: none; font-size: 18px; padding: 4px 8px; align-items: center; justify-content: center;">
+      <button class="theme-btn" id="menu-toggle-btn" onclick="toggleSidebar()" title="사이드바 접기/펴기" style="display: inline-flex; font-size: 18px; padding: 4px 8px; align-items: center; justify-content: center;">
         <i class="ti ti-menu-2"></i>
       </button>
       <button class="theme-btn" id="back-btn" onclick="goBack()" title="이전: 이전 화면으로 돌아가기" style="display: inline-flex; font-size: 16px; gap: 4px; padding: 4px 8px;">
@@ -1923,7 +1940,7 @@ textarea { height: auto; resize: vertical; }
           <i class="ti ti-file-import"></i>발주서 XLS 가져오기
           <input type="file" id="xls-po-input" accept=".xls,.xlsx" style="display:none;" onchange="importPoXLS(this)">
         </label>
-        <button class="btn pc-only" onclick="exportMatCSV()"><i class="ti ti-download"></i>엑셀 내보내기</button>
+        <button class="btn pc-only" onclick="exportMatCSV()"><i class="ti ti-download"></i>전체 엑셀 CSV 내보내기</button>
       </div>
     </div>
     
@@ -3575,7 +3592,7 @@ textarea { height: auto; resize: vertical; }
       </select>
       <input type="text" id="inv-q" placeholder="재고명, 보관위치 검색..." style="min-width:200px;" oninput="renderInventory()">
       <button class="btn btn-primary" onclick="openInvAdd()"><i class="ti ti-plus"></i>신규 재고 품목 등록</button>
-      <button class="btn" onclick="exportInvCSV()"><i class="ti ti-download"></i>엑셀 CSV 내보내기</button>
+      <button class="btn" onclick="exportInvCSV()"><i class="ti ti-download"></i>전체 엑셀 CSV 내보내기</button>
     </div>
 
     <!-- 재고 추가/수정 패널 -->
@@ -3977,7 +3994,7 @@ textarea { height: auto; resize: vertical; }
           <div style="display:flex; gap:6px; align-items:center;">
             <select id="dlv-filter-client" onchange="renderDeliveries()" style="min-width:130px; height:28px; font-size:11px;"><option value="">전체 고객사</option><option value="CL-006">현대리바트</option><option value="CL-007">한컴라이프케어</option><option value="CL-008">큐로시험소</option></select>
             <input type="text" id="dlv-q" placeholder="제품명·납품번호 검색..." style="width:200px; height:28px; font-size:11px;" oninput="renderDeliveries()">
-            <button class="btn btn-sm" onclick="exportDeliveriesCSV()"><i class="ti ti-download"></i>CSV 내보내기</button>
+            <button class="btn btn-sm" onclick="exportDeliveriesCSV()"><i class="ti ti-download"></i>전체 엑셀 CSV 내보내기</button>
           </div>
         </div>
         <div id="dlv-table" style="overflow-x:auto;"><div class="empty"><i class="ti ti-inbox"></i>납품 기록이 없습니다. 공정관리에서 [납품] 단계로 변경하면 자동 등록됩니다.</div></div>
@@ -4034,6 +4051,7 @@ textarea { height: auto; resize: vertical; }
         <option value="">전체 상태</option>
         <option>진행중</option><option>대기</option><option>완료</option><option>지연</option>
       </select>
+      <button class="btn btn-primary" onclick="openOrderAdd()" style="margin-left:auto;"><i class="ti ti-plus"></i>생산 지시 등록</button>
     </div>
 
     <!-- 지시서 등록/수정 패널 -->
@@ -4061,7 +4079,7 @@ textarea { height: auto; resize: vertical; }
             <option>완료</option>
             <option>보류</option>
           </select>
-          <button class="btn btn-sm" onclick="exportDefectsCSV()"><i class="ti ti-download"></i>CSV</button>
+          <button class="btn btn-sm" onclick="exportDefectsCSV()"><i class="ti ti-download"></i>전체 엑셀 CSV 내보내기</button>
             <button class="btn btn-sm btn-primary" onclick="openDefectAdd()"><i class="ti ti-plus"></i>불량 리포트</button>
           </div>
         </div>
@@ -4129,7 +4147,7 @@ textarea { height: auto; resize: vertical; }
               <option>처리중</option>
               <option>완료</option>
             </select>
-            <button class="btn btn-sm" onclick="exportClaimsCSV()"><i class="ti ti-download"></i>CSV</button>
+            <button class="btn btn-sm" onclick="exportClaimsCSV()"><i class="ti ti-download"></i>전체 엑셀 CSV 내보내기</button>
             <button class="btn btn-sm btn-primary" onclick="openClaimAdd()"><i class="ti ti-plus"></i>클레임 등록</button>
           </div>
         </div>
@@ -4176,7 +4194,7 @@ textarea { height: auto; resize: vertical; }
             <option>불합격</option>
             <option>조건부합격</option>
           </select>
-          <button class="btn btn-sm" onclick="exportChecksCSV()"><i class="ti ti-download"></i>CSV 내보내기</button>
+          <button class="btn btn-sm" onclick="exportChecksCSV()"><i class="ti ti-download"></i>전체 엑셀 CSV 내보내기</button>
           <button class="btn btn-sm btn-primary" onclick="openCheckAdd()"><i class="ti ti-plus"></i>검사 기록 추가</button>
         </div>
       </div>
@@ -4199,7 +4217,7 @@ textarea { height: auto; resize: vertical; }
             <option>처리중</option>
             <option>완료</option>
           </select>
-          <button class="btn btn-sm" onclick="exportClaimsCSV()"><i class="ti ti-download"></i>CSV 내보내기</button>
+          <button class="btn btn-sm" onclick="exportClaimsCSV()"><i class="ti ti-download"></i>전체 엑셀 CSV 내보내기</button>
           <button class="btn btn-sm btn-primary" onclick="openClaimAdd()"><i class="ti ti-plus"></i>클레임 등록</button>
         </div>
       </div>
@@ -4235,7 +4253,7 @@ textarea { height: auto; resize: vertical; }
             <option>결근</option>
             <option>휴가</option>
           </select>
-          <button class="btn btn-sm" onclick="exportWorkersCSV()"><i class="ti ti-download"></i>CSV 내보내기</button>
+          <button class="btn btn-sm" onclick="exportWorkersCSV()"><i class="ti ti-download"></i>전체 엑셀 CSV 내보내기</button>
           <button class="btn btn-sm btn-primary" onclick="openWorkerAdd()"><i class="ti ti-plus"></i>신규 직원 등록</button>
         </div>
       </div>
@@ -4520,7 +4538,7 @@ textarea { height: auto; resize: vertical; }
       </select>
       <input type="text" id="bp-q" placeholder="거래처명·담당자·이메일 검색..." style="min-width:200px;" oninput="renderPartners()">
       <button class="btn btn-primary" onclick="openPartnerModal()"><i class="ti ti-plus"></i>거래처 등록</button>
-      <button class="btn" onclick="exportPartnersXLS()"><i class="ti ti-file-spreadsheet"></i>엑셀 내보내기</button>
+      <button class="btn" onclick="exportPartnersXLS()"><i class="ti ti-file-spreadsheet"></i>전체 엑셀 CSV 내보내기</button>
     </div>
     <div class="card">
       <div id="bp-table" style="overflow-x:auto;"><div class="empty"><i class="ti ti-inbox"></i>등록된 거래처가 없습니다.</div></div>
@@ -4543,8 +4561,8 @@ textarea { height: auto; resize: vertical; }
       </select>
       <input type="text" id="rfq-q" placeholder="품목명·공급처 검색..." style="min-width:180px;" oninput="renderRfq()">
       <button class="btn btn-primary" onclick="openRfqAdd()"><i class="ti ti-plus"></i>견적요청서 등록</button>
-      <button class="btn" onclick="openRfqPrint(null)"><i class="ti ti-printer"></i>PDF 출력</button>
-      <button class="btn" onclick="exportRfqXLS()"><i class="ti ti-file-spreadsheet"></i>엑셀 내보내기</button>
+      <button class="btn" onclick="openRfqPrint(null)"><i class="ti ti-printer"></i>전체 PDF 출력</button>
+      <button class="btn" onclick="exportRfqXLS()"><i class="ti ti-file-spreadsheet"></i>전체 엑셀 CSV 내보내기</button>
       <button class="btn" style="margin-left:auto;" onclick="openEmailjsSettings()"><i class="ti ti-mail-cog"></i>이메일 연동설정</button>
     </div>
 
@@ -4569,9 +4587,19 @@ textarea { height: auto; resize: vertical; }
       </select>
       <input type="text" id="po-q" placeholder="품목명·공급처 검색..." style="min-width:180px;" oninput="renderPo()">
       <button class="btn btn-primary" onclick="openPoAdd()"><i class="ti ti-plus"></i>구매발주서 등록</button>
-      <button class="btn" onclick="openPoPrint(null)"><i class="ti ti-printer"></i>PDF 출력</button>
-      <button class="btn" onclick="exportPoXLS()"><i class="ti ti-file-spreadsheet"></i>엑셀 내보내기</button>
+      <button class="btn" onclick="openPoPrint(null)"><i class="ti ti-printer"></i>전체 PDF 출력</button>
+      <button class="btn" onclick="exportPoXLS()"><i class="ti ti-file-spreadsheet"></i>전체 엑셀 CSV 내보내기</button>
       <button class="btn" style="margin-left:auto;" onclick="openEmailjsSettings()"><i class="ti ti-mail-cog"></i>이메일 연동설정</button>
+    </div>
+
+    <!-- 선택 일괄 동작 바 -->
+    <div id="po-bulkbar" style="display:none;align-items:center;gap:8px;margin:0 0 12px;padding:9px 14px;background:var(--bg-i);border:1px solid var(--br-i);border-radius:8px;flex-wrap:wrap;">
+      <span style="font-weight:700;font-size:12.5px;color:var(--tx-i);"><i class="ti ti-checkbox"></i> <span id="po-sel-count">0</span>건 선택됨</span>
+      <button class="btn btn-sm" onclick="poBulkPrint()"><i class="ti ti-printer"></i>선택 PDF 출력</button>
+      <button class="btn btn-sm" onclick="poBulkExport()"><i class="ti ti-file-spreadsheet"></i>선택 엑셀</button>
+      <button class="btn btn-sm" onclick="poBulkEmail()"><i class="ti ti-mail"></i>선택 이메일</button>
+      <button class="btn btn-sm btn-danger" onclick="poBulkDelete()"><i class="ti ti-trash"></i>선택 삭제</button>
+      <button class="btn btn-sm" style="margin-left:auto;" onclick="poToggleAll(false)"><i class="ti ti-x"></i>선택 해제</button>
     </div>
 
     <div class="card">
@@ -4592,8 +4620,8 @@ textarea { height: auto; resize: vertical; }
       <select id="st-fs" onchange="renderSalesDoc('statement')"><option value="">전체 상태</option><option>작성</option><option>발송완료</option><option>수령확인</option></select>
       <input type="text" id="st-q" placeholder="품목명·고객사 검색..." style="min-width:180px;" oninput="renderSalesDoc('statement')">
       <button class="btn btn-primary" onclick="openSalesDocAdd('statement')"><i class="ti ti-plus"></i>거래명세표 등록</button>
-      <button class="btn" onclick="openSalesDocPrint('statement',null)"><i class="ti ti-printer"></i>PDF 출력</button>
-      <button class="btn" onclick="exportSalesDocCSV('statement')"><i class="ti ti-file-spreadsheet"></i>엑셀 내보내기</button>
+      <button class="btn" onclick="openSalesDocPrint('statement',null)"><i class="ti ti-printer"></i>전체 PDF 출력</button>
+      <button class="btn" onclick="exportSalesDocCSV('statement')"><i class="ti ti-file-spreadsheet"></i>전체 엑셀 CSV 내보내기</button>
       <button class="btn" style="margin-left:auto;" onclick="openEmailjsSettings()"><i class="ti ti-mail-cog"></i>이메일 연동설정</button>
     </div>
     <div class="card"><div id="st-table" style="overflow-x:auto;"></div></div>
@@ -4612,8 +4640,8 @@ textarea { height: auto; resize: vertical; }
       <select id="tx-fs" onchange="renderSalesDoc('tax')"><option value="">전체 상태</option><option>작성</option><option>발행완료</option><option>전송완료</option></select>
       <input type="text" id="tx-q" placeholder="품목명·고객사 검색..." style="min-width:180px;" oninput="renderSalesDoc('tax')">
       <button class="btn btn-primary" onclick="openSalesDocAdd('tax')"><i class="ti ti-plus"></i>세금계산서 등록</button>
-      <button class="btn" onclick="openSalesDocPrint('tax',null)"><i class="ti ti-printer"></i>PDF 출력</button>
-      <button class="btn" onclick="exportSalesDocCSV('tax')"><i class="ti ti-file-spreadsheet"></i>엑셀 내보내기</button>
+      <button class="btn" onclick="openSalesDocPrint('tax',null)"><i class="ti ti-printer"></i>전체 PDF 출력</button>
+      <button class="btn" onclick="exportSalesDocCSV('tax')"><i class="ti ti-file-spreadsheet"></i>전체 엑셀 CSV 내보내기</button>
       <button class="btn" style="margin-left:auto;" onclick="openEmailjsSettings()"><i class="ti ti-mail-cog"></i>이메일 연동설정</button>
     </div>
     <div class="card"><div id="tx-table" style="overflow-x:auto;"></div></div>
@@ -4638,8 +4666,8 @@ textarea { height: auto; resize: vertical; }
       <select id="qt-fs" onchange="renderSODoc('quote')"><option value="">전체 상태</option><option>작성</option><option>발송</option><option>협의중</option><option>보류</option><option>수주전환</option></select>
       <input type="text" id="qt-q" placeholder="품목명·고객사 검색..." style="min-width:180px;" oninput="renderSODoc('quote')">
       <button class="btn btn-primary" onclick="openSODocAdd('quote')"><i class="ti ti-plus"></i>견적서 등록</button>
-      <button class="btn" onclick="openSODocPrint('quote',null)"><i class="ti ti-printer"></i>PDF 출력</button>
-      <button class="btn" onclick="exportSODocCSV('quote')"><i class="ti ti-file-spreadsheet"></i>엑셀 내보내기</button>
+      <button class="btn" onclick="openSODocPrint('quote',null)"><i class="ti ti-printer"></i>전체 PDF 출력</button>
+      <button class="btn" onclick="exportSODocCSV('quote')"><i class="ti ti-file-spreadsheet"></i>전체 엑셀 CSV 내보내기</button>
       <button class="btn" style="margin-left:auto;" onclick="openEmailjsSettings()"><i class="ti ti-mail-cog"></i>이메일 연동설정</button>
     </div>
     <div class="card"><div id="qt-table" style="overflow-x:auto;"></div></div>
@@ -4656,8 +4684,8 @@ textarea { height: auto; resize: vertical; }
       <select id="so-fc" onchange="renderSODoc('order')" style="min-width:140px;"><option value="">전체 고객사</option></select>
       <select id="so-fs" onchange="renderSODoc('order')"><option value="">전체 상태</option><option>수주확정</option><option>진행중</option><option>완료</option></select>
       <input type="text" id="so-q" placeholder="품목명·고객사 검색..." style="min-width:180px;" oninput="renderSODoc('order')">
-      <button class="btn" onclick="openSODocPrint('order',null)"><i class="ti ti-printer"></i>PDF 출력</button>
-      <button class="btn" onclick="exportSODocCSV('order')"><i class="ti ti-file-spreadsheet"></i>엑셀 내보내기</button>
+      <button class="btn" onclick="openSODocPrint('order',null)"><i class="ti ti-printer"></i>전체 PDF 출력</button>
+      <button class="btn" onclick="exportSODocCSV('order')"><i class="ti ti-file-spreadsheet"></i>전체 엑셀 CSV 내보내기</button>
       <button class="btn" style="margin-left:auto;" onclick="openEmailjsSettings()"><i class="ti ti-mail-cog"></i>이메일 연동설정</button>
     </div>
     <div class="card"><div id="so-table" style="overflow-x:auto;"></div></div>
@@ -5994,6 +6022,12 @@ function onPraStageChange(clientId) {
   }
 }
 
+/* 사이드바 토글 — 모바일은 드로어, 데스크톱은 접기/펴기(상태 저장) */
+function toggleSidebar() {
+  if (window.innerWidth <= 680) { toggleMobileSidebar(); return; }
+  const c = document.body.classList.toggle('sb-collapsed');
+  try { localStorage.setItem('mes_sbCollapsed', c ? '1' : ''); } catch(e){}
+}
 function toggleMobileSidebar() {
   const sidebar = document.querySelector('.sidebar');
   const backdrop = document.getElementById('sidebar-backdrop');
@@ -6143,6 +6177,7 @@ function refreshPage(id) {
   else if (id === 'as') renderAS();
   else if (id === 'bom') renderBom();
   else if (id === 'permissions') renderPermissions();
+  if (typeof watchBulk === 'function') watchBulk();   // 일괄 선택 체크박스 부착
 }
 
 /* ════════ 대시보드 탭 제어 ════════ */
@@ -9688,6 +9723,7 @@ function toggleTheme() {
 /* ════════ 프로그램 기동 초기화 ════════ */
 syncFilterDropdowns();
 initTheme();
+if (localStorage.getItem('mes_sbCollapsed')==='1') document.body.classList.add('sb-collapsed');   // 사이드바 접힘 상태 복원
 _goTo('dashboard', null);   // 실행 시 항상 종합 대시보드를 먼저 표시
 renderAlerts();
 updateTrashBadge();
@@ -9787,7 +9823,7 @@ function applyRoleGating(){
 const ADD_KEY='＋등록버튼';   // 컬럼 외 '등록 버튼' 토글용 특수 키
 const COLUMN_TABLES = {
   clients:    { sel:'#client-list',       label:'수주 정보 관리(제품표)', addBtn:'openProdAdd,openClientAdd', cols:['코드','제품/규격명','납기기한','수량','수주 단가','수주 합계','공정 단계 → 상태','관리 작업'] },
-  orders:     { sel:'#orders-table',      label:'생산 지시',        cols:['지시번호','고객사','생산제품','라인','목표량','실적량','불량','개시일','납기일','진행률','상태','담당자','메모','조작'] },
+  orders:     { sel:'#orders-table',      label:'생산 지시',        addBtn:'openOrderAdd', cols:['지시번호','고객사','생산제품','라인','목표량','실적량','불량','개시일','납기일','진행률','상태','담당자','메모','조작'] },
   defects:    { sel:'#defect-table',      label:'불량 기록(품질)',   addBtn:'openDefectAdd', cols:['코드','일자','제품','발생공정','하자유형','수량','상태','비고','관리 작업'] },
   checks:     { sel:'#check-table',       label:'출하 검사(품질)',   addBtn:'openCheckAdd',  cols:['검사일','의뢰처','완료제품','검사원','외관','치수','테스트','종합판정','관리 작업'] },
   claims:     { sel:'#claims-table-full', label:'고객 클레임',       addBtn:'openClaimAdd',  cols:['인입일','유형','의뢰 고객사','해당 제품','클레임 사양','내용','조치 방안','상태','관리'] },
@@ -9817,13 +9853,30 @@ function applyColumnGating(){
   st.textContent=css;
 }
 
+/* ════════ 기능 권한 (엑셀 CSV 내보내기 / PDF·인쇄 출력) ════════ */
+const PDF_BTN_SEL = '[onclick^="openRfqPrint"],[onclick^="openPoPrint"],[onclick^="openSalesDocPrint"],[onclick^="openSODocPrint"],[onclick^="printPayslip"],[onclick^="poBulkPrint"]';
+const FEATURE_DEFS = [ {key:'csv', label:'엑셀 CSV 내보내기', icon:'ti-file-spreadsheet'}, {key:'pdf', label:'PDF·인쇄 출력', icon:'ti-printer'} ];
+function roleFeaturesConfig(){ return loadStorage('roleFeatures', {}); }   // { 역할:{ csv:bool, pdf:bool } } (true=허용, 기본 허용)
+function applyFeatureGating(){
+  let css='';
+  if (currentRole!=='admin'){
+    const f = roleFeaturesConfig()[currentRole] || {};
+    if (f.csv===false) css += `[onclick^="export"],[onclick^="poBulkExport"]{display:none!important;}\n`;   // 모든 내보내기 버튼
+    if (f.pdf===false) css += `${PDF_BTN_SEL}{display:none!important;}\n`;            // 모든 PDF/인쇄 버튼
+  }
+  let st=document.getElementById('feat-gating');
+  if(!st){ st=document.createElement('style'); st.id='feat-gating'; document.head.appendChild(st); }
+  st.textContent=css;
+}
+
 /* 부팅 시 localStorage의 역할로 권한 상태 초기화 */
 function initRole(){
-  if (!cloudConfigured()){ currentRole='admin'; allowedPages=null; applyRoleGating(); applyColumnGating(); return; }  // 로컬 = 전체
+  if (!cloudConfigured()){ currentRole='admin'; allowedPages=null; applyRoleGating(); applyColumnGating(); applyFeatureGating(); return; }  // 로컬 = 전체
   currentRole = localStorage.getItem('mes_myRole') || 'staff';
   allowedPages = roleAllowedSet(currentRole);
   applyRoleGating();
   applyColumnGating();
+  applyFeatureGating();
 }
 /* 로그인 사용자의 역할/활성/권한맵을 Firestore에서 로드(없으면 생성) */
 async function cloudLoadRole(){
@@ -9853,10 +9906,13 @@ async function cloudLoadRole(){
   try { const rsnap=await _fbDb.collection('roles').doc('config').get(); if(rsnap.exists) rolePages=rsnap.data(); } catch(e){}
   let roleColumns = {};
   try { const csnap=await _fbDb.collection('roles').doc('columns').get(); if(csnap.exists) roleColumns=csnap.data(); } catch(e){}
+  let roleFeatures = {};
+  try { const fsnap=await _fbDb.collection('roles').doc('features').get(); if(fsnap.exists) roleFeatures=fsnap.data(); } catch(e){}
   localStorage.setItem('mes_myRole', role);
   localStorage.setItem('mes_myActive', active ? 'true':'false');
   saveStorageLocalOnly('rolePages', rolePages);
   saveStorageLocalOnly('roleColumns', roleColumns);
+  saveStorageLocalOnly('roleFeatures', roleFeatures);
 }
 /* 클라우드 동기화 없이 localStorage에만 저장(권한맵 캐시용) */
 function saveStorageLocalOnly(key,data){ localStorage.setItem('mes_'+key, JSON.stringify(data)); }
@@ -9884,7 +9940,7 @@ function cloudBootstrap(){
           _fbAuth.signOut(); return;
         }
         _cloudActive = true; _hideLogin(); _cloudChip('online');
-        updateAdminUI(); applyRoleGating(); applyColumnGating(); cloudSubscribe();   // 역할 UI/컬럼 반영 + 실시간 동기화 시작
+        updateAdminUI(); applyRoleGating(); applyColumnGating(); applyFeatureGating(); cloudSubscribe();   // 역할 UI/컬럼/기능 반영 + 실시간 동기화 시작
       } else {
         _cloudUser=null; _cloudActive=false;
         sessionStorage.removeItem('mes_cloud_synced');
@@ -9972,10 +10028,11 @@ function cloudSubscribe(){
       const id=ch.doc.id, d=ch.doc.data();
       if (id==='config'){ saveStorageLocalOnly('rolePages', d); changed=true; }
       else if (id==='columns'){ saveStorageLocalOnly('roleColumns', d); changed=true; }
+      else if (id==='features'){ saveStorageLocalOnly('roleFeatures', d); changed=true; }
     });
     if (!changed) return;
     allowedPages = roleAllowedSet(currentRole);   // 페이지 권한 재계산 후 재적용
-    applyRoleGating(); applyColumnGating();
+    applyRoleGating(); applyColumnGating(); applyFeatureGating();
     if (currentPage==='permissions' && !document.querySelector('.overlay.open')) { try{ renderPermissions(); }catch(e){} }
     _cloudChip('synced'); setTimeout(()=>_cloudChip('online'), 1500);
   }, err=>{ console.warn('권한 실시간 동기화 오류', err); });
@@ -10046,11 +10103,15 @@ async function renderPermissions(){
     <div class="card" style="margin-bottom:16px;"><div class="card-hd"><span class="card-ttl"><i class="ti ti-table-options"></i>역할별 접근 페이지</span>
       <span style="font-size:11px;color:var(--tx-t);">관리자는 항상 전체 · 변경 즉시 저장</span></div>
       <div id="perm-matrix"></div></div>
-    <div class="card"><div class="card-hd"><span class="card-ttl"><i class="ti ti-columns-3"></i>역할별 표시 컬럼 (열 권한)</span>
+    <div class="card" style="margin-bottom:16px;"><div class="card-hd"><span class="card-ttl"><i class="ti ti-columns-3"></i>역할별 표시 컬럼 (열 권한)</span>
       <span style="font-size:11px;color:var(--tx-t);">체크 해제 시 해당 역할에게 그 열이 숨겨짐 · 관리자는 항상 전체</span></div>
-      <div id="perm-columns"></div></div>`;
+      <div id="perm-columns"></div></div>
+    <div class="card"><div class="card-hd"><span class="card-ttl"><i class="ti ti-tool"></i>역할별 기능 권한 (내보내기 · 출력)</span>
+      <span style="font-size:11px;color:var(--tx-t);">엑셀 CSV 내보내기 / PDF·인쇄 출력 허용 여부 · 관리자는 항상 전체</span></div>
+      <div id="perm-features"></div></div>`;
   renderPermMatrix();
   renderPermColumns();
+  renderPermFeatures();
 }
 function renderPermUsers(users){
   const el=inp('perm-users'); if(!el) return;
@@ -10070,40 +10131,110 @@ function renderPermUsers(users){
 function renderPermMatrix(){
   const el=inp('perm-matrix'); if(!el) return;
   const cfg = rolePagesConfig();
-  const rows = PAGE_LIST.map(p=>`<tr>
-      <td style="font-weight:600;">${p.label}</td>
-      <td style="text-align:center;color:var(--tx-ok);"><i class="ti ti-check"></i></td>
-      <td style="text-align:center;"><input type="checkbox" ${((cfg.manager)||[]).includes(p.id)?'checked':''} onchange="permToggleRolePage('manager','${p.id}',this.checked)"></td>
-      <td style="text-align:center;"><input type="checkbox" ${((cfg.staff)||[]).includes(p.id)?'checked':''} onchange="permToggleRolePage('staff','${p.id}',this.checked)"></td>
-    </tr>`).join('');
-  el.innerHTML = `<div style="overflow-x:auto;"><table><thead><tr><th>페이지</th><th style="text-align:center;">관리자</th><th style="text-align:center;">중간관리자</th><th style="text-align:center;">평사원</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  const role = permColRole;
+  const allowed = new Set(cfg[role]||[]);
+  const RB='1px solid var(--br)';
+  const tab=(r,label)=>`<button onclick="setPermRole('${r}')" style="border:none;padding:8px 18px;font-size:12px;font-weight:700;cursor:pointer;background:${role===r?'#1971c2':'transparent'};color:${role===r?'#fff':'var(--tx-s)'};">${label}</button>`;
+  const chips = PAGE_LIST.map(p=>{
+    const on=allowed.has(p.id);
+    return `<span onclick="permToggleRolePage('${role}','${p.id}',${!on})" style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;margin:3px;border-radius:16px;font-size:11.5px;cursor:pointer;user-select:none;transition:all .12s;border:1px solid ${on?'#1971c2':'var(--br)'};background:${on?'#1971c2':'transparent'};color:${on?'#fff':'var(--tx-t)'};font-weight:${on?'600':'400'};"><i class="ti ti-${on?'check':'minus'}" style="font-size:12px;opacity:.9;"></i>${p.label}</span>`;
+  }).join('');
+  const RL={manager:'중간관리자',staff:'평사원'};
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+      <span style="font-size:12px;color:var(--tx-s);font-weight:700;">역할 선택</span>
+      <div style="display:inline-flex;border:${RB};border-radius:8px;overflow:hidden;">${tab('manager','중간관리자')}${tab('staff','평사원')}</div>
+      <span style="font-size:11px;color:var(--tx-t);"><b style="color:#1971c2;">파란 칩</b> = 접근 허용 · 흐린 칩 = 차단 · 관리자는 항상 전체</span>
+      <span style="margin-left:auto;font-size:10.5px;white-space:nowrap;">
+        <a onclick="permSetAllPages('${role}',true)" style="color:var(--tx-i);cursor:pointer;">전체</a>
+        <span style="color:var(--tx-t);"> · </span>
+        <a onclick="permSetAllPages('${role}',false)" style="color:var(--tx-d);cursor:pointer;">해제</a>
+      </span>
+    </div>
+    <div style="font-size:11.5px;color:var(--tx-s);margin-bottom:8px;"><b>${RL[role]}</b> 가 접근할 수 있는 페이지를 선택합니다.</div>
+    <div>${chips}</div>`;
 }
+async function permSetAllPages(role, all){
+  const cfg = rolePagesConfig();
+  cfg[role] = all ? PAGE_LIST.map(p=>p.id) : [];
+  saveStorageLocalOnly('rolePages', cfg);
+  if (role===currentRole){ allowedPages=roleAllowedSet(currentRole); applyRoleGating(); }
+  renderPermMatrix();
+  try{ await _fbDb.collection('roles').doc('config').set(cfg); }catch(e){ showToast('저장 실패: '+e.message,'error'); }
+}
+let permColRole = 'manager';   // 권한 화면에서 현재 편집 중인 역할(페이지·컬럼 공유)
+function setPermRole(r){ permColRole = r; renderPermMatrix(); renderPermColumns(); renderPermFeatures(); }
+function setPermColRole(r){ setPermRole(r); }
 function renderPermColumns(){
   const el=inp('perm-columns'); if(!el) return;
   const cfg=roleColumnsConfig();
-  const hiddenOf=(role,tk)=> new Set(((cfg[role]||{})[tk])||[]);
-  el.innerHTML = Object.keys(COLUMN_TABLES).map(tk=>{
-    const t=COLUMN_TABLES[tk];
-    // 실제 표처럼 컬럼명을 가로로 나열
-    const head = t.cols.map(c=>`<th style="text-align:center;font-size:10px;white-space:nowrap;">${c}</th>`).join('');
-    const roleRow=(role,label)=>{
-      const hidden=hiddenOf(role,tk);
-      const cells=t.cols.map(c=>`<td style="text-align:center;"><input type="checkbox" ${hidden.has(c)?'':'checked'} onchange="permToggleRoleColumn('${role}','${tk}','${c.replace(/'/g,"\\'")}',this.checked)"></td>`).join('');
-      return `<tr><td style="font-weight:700;white-space:nowrap;background:var(--bg-s);">${label}</td>${cells}</tr>`;
-    };
-    const addCtl = t.addBtn ? `<div style="font-size:11px;margin-top:6px;display:flex;gap:18px;align-items:center;flex-wrap:wrap;">
-        <span style="color:var(--tx-s);font-weight:700;"><i class="ti ti-square-rounded-plus"></i> 등록 버튼 표시:</span>
-        <label style="cursor:pointer;"><input type="checkbox" ${hiddenOf('manager',tk).has(ADD_KEY)?'':'checked'} onchange="permToggleRoleColumn('manager','${tk}','${ADD_KEY}',this.checked)"> 중간관리자</label>
-        <label style="cursor:pointer;"><input type="checkbox" ${hiddenOf('staff',tk).has(ADD_KEY)?'':'checked'} onchange="permToggleRoleColumn('staff','${tk}','${ADD_KEY}',this.checked)"> 평사원</label>
-      </div>` : '';
-    return `<div style="margin-bottom:18px;">
-      <div style="font-size:12px;font-weight:700;color:var(--tx-s);margin-bottom:6px;"><i class="ti ti-table"></i> ${t.label}
-        <span style="font-size:10px;color:var(--tx-t);font-weight:400;">(체크 = 표시 · 관리자는 항상 전체)</span></div>
-      <div style="overflow-x:auto;"><table style="min-width:max-content;">
-        <thead><tr><th style="text-align:center;white-space:nowrap;background:var(--bg-s);">역할 \\ 컬럼</th>${head}</tr></thead>
-        <tbody>${roleRow('manager','중간관리자')}${roleRow('staff','평사원')}</tbody>
-      </table></div>${addCtl}</div>`;
+  const role=permColRole;
+  const hiddenOf=(tk)=> new Set(((cfg[role]||{})[tk])||[]);
+  const RB='1px solid var(--br)';
+  const tab=(r,label)=>`<button onclick="setPermColRole('${r}')" style="border:none;padding:8px 18px;font-size:12px;font-weight:700;cursor:pointer;background:${permColRole===r?'#1971c2':'transparent'};color:${permColRole===r?'#fff':'var(--tx-s)'};">${label}</button>`;
+  const chip=(label, shown, onclick)=>`<span onclick="${onclick}" style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;margin:3px;border-radius:16px;font-size:11.5px;cursor:pointer;user-select:none;transition:all .12s;border:1px solid ${shown?'#1971c2':'var(--br)'};background:${shown?'#1971c2':'transparent'};color:${shown?'#fff':'var(--tx-t)'};font-weight:${shown?'600':'400'};"><i class="ti ti-${shown?'eye':'eye-off'}" style="font-size:12px;opacity:.9;"></i>${label}</span>`;
+  const cards = Object.keys(COLUMN_TABLES).map(tk=>{
+    const t=COLUMN_TABLES[tk]; const hidden=hiddenOf(tk);
+    const chips=t.cols.map(c=>{
+      const shown=!hidden.has(c);
+      return chip(c, shown, `permToggleRoleColumn('${role}','${tk}','${c.replace(/'/g,"\\'")}',${!shown})`);
+    }).join('');
+    let addChip='';
+    if (t.addBtn){
+      const shown=!hidden.has(ADD_KEY);
+      addChip = `<span style="display:inline-block;width:1px;height:20px;background:var(--br);margin:0 6px;vertical-align:middle;"></span>` + chip('＋ 등록 버튼', shown, `permToggleRoleColumn('${role}','${tk}','${ADD_KEY}',${!shown})`);
+    }
+    return `<div style="border:${RB};border-radius:10px;margin-bottom:12px;background:var(--bg-p);overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--bg-s);border-bottom:${RB};">
+        <i class="ti ti-table" style="color:var(--tx-i);font-size:15px;"></i>
+        <span style="font-weight:700;font-size:13px;">${t.label}</span>
+        <span style="margin-left:auto;font-size:10.5px;white-space:nowrap;">
+          <a onclick="permSetAllColumns('${role}','${tk}',true)" style="color:var(--tx-i);cursor:pointer;">전체</a>
+          <span style="color:var(--tx-t);"> · </span>
+          <a onclick="permSetAllColumns('${role}','${tk}',false)" style="color:var(--tx-d);cursor:pointer;">해제</a>
+        </span>
+      </div>
+      <div style="padding:8px 10px;">${chips}${addChip}</div>
+    </div>`;
   }).join('');
+  const RL={manager:'중간관리자',staff:'평사원'};
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+      <span style="font-size:12px;color:var(--tx-s);font-weight:700;">역할 선택</span>
+      <div style="display:inline-flex;border:${RB};border-radius:8px;overflow:hidden;">${tab('manager','중간관리자')}${tab('staff','평사원')}</div>
+      <span style="font-size:11px;color:var(--tx-t);"><b style="color:#1971c2;">파란 칩</b> = 표시 · 흐린 칩 = 숨김 · 클릭하여 전환 · 관리자는 항상 전체</span>
+    </div>
+    <div style="font-size:11.5px;color:var(--tx-s);margin-bottom:10px;"><b>${RL[role]}</b> 에게 보일 컬럼/등록버튼을 설정합니다.</div>
+    ${cards}`;
+}
+/* 기능 권한(내보내기·PDF) 칩 렌더 */
+function renderPermFeatures(){
+  const el=inp('perm-features'); if(!el) return;
+  const role=permColRole;
+  const f=roleFeaturesConfig()[role]||{};
+  const RL={manager:'중간관리자',staff:'평사원'};
+  const chip=(def)=>{ const on=(f[def.key]!==false); return `<span onclick="permToggleFeature('${role}','${def.key}',${!on})" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;margin:3px;border-radius:18px;font-size:12px;cursor:pointer;user-select:none;border:1px solid ${on?'#1971c2':'var(--br)'};background:${on?'#1971c2':'transparent'};color:${on?'#fff':'var(--tx-t)'};font-weight:${on?'600':'400'};"><i class="ti ${def.icon}" style="font-size:13px;"></i>${def.label} <i class="ti ti-${on?'eye':'eye-off'}" style="font-size:12px;opacity:.85;"></i></span>`; };
+  el.innerHTML = `<div style="font-size:11.5px;color:var(--tx-s);margin-bottom:8px;"><b>${RL[role]}</b> 에게 허용할 기능을 선택합니다. (앱 전체 공통 적용)</div>
+    <div>${FEATURE_DEFS.map(chip).join('')}</div>`;
+}
+async function permToggleFeature(role, key, allowed){
+  const cfg=roleFeaturesConfig(); cfg[role]=cfg[role]||{};
+  cfg[role][key]=allowed;
+  saveStorageLocalOnly('roleFeatures', cfg);
+  if(role===currentRole) applyFeatureGating();
+  renderPermFeatures();
+  try{ await _fbDb.collection('roles').doc('features').set(cfg); }catch(e){ showToast('저장 실패: '+e.message,'error'); }
+}
+/* 한 역할의 표 전체 컬럼/등록버튼 일괄 표시·해제 */
+async function permSetAllColumns(role, tk, visible){
+  const cfg=roleColumnsConfig(); cfg[role]=cfg[role]||{};
+  const t=COLUMN_TABLES[tk];
+  const all=t.cols.slice(); if(t.addBtn) all.push(ADD_KEY);
+  cfg[role][tk] = visible ? [] : all;   // 표시=숨김없음 / 해제=전부 숨김
+  saveStorageLocalOnly('roleColumns', cfg);
+  try{ await _fbDb.collection('roles').doc('columns').set(cfg); }catch(e){ showToast('저장 실패: '+e.message,'error'); }
+  if(role===currentRole) applyColumnGating();
+  renderPermColumns();
 }
 async function permToggleRoleColumn(role, tk, col, visible){
   const cfg=roleColumnsConfig();
@@ -10112,9 +10243,10 @@ async function permToggleRoleColumn(role, tk, col, visible){
   if(visible) set.delete(col); else set.add(col);
   cfg[role][tk]=[...set];
   saveStorageLocalOnly('roleColumns', cfg);
+  if(role===currentRole) applyColumnGating();
+  renderPermColumns();   // 칩 상태 즉시 갱신
   try{ await _fbDb.collection('roles').doc('columns').set(cfg); }
   catch(e){ showToast('저장 실패: '+e.message,'error'); }
-  if(role===currentRole) applyColumnGating();
 }
 async function permSetRole(uid, role){
   try{ await _fbDb.collection('users').doc(uid).update({role}); showToast('역할이 변경되었습니다. (해당 사용자 새로고침 시 반영)'); }
@@ -10130,13 +10262,109 @@ async function permToggleRolePage(role, pageId, on){
   if(on) set.add(pageId); else set.delete(pageId);
   cfg[role] = [...set];
   saveStorageLocalOnly('rolePages', cfg);
+  if (role===currentRole){ allowedPages=roleAllowedSet(currentRole); applyRoleGating(); }
+  renderPermMatrix();   // 칩 즉시 갱신
   try{ await _fbDb.collection('roles').doc('config').set(cfg); }
   catch(e){ showToast('저장 실패: '+e.message,'error'); }
-  if (role===currentRole){ allowedPages=roleAllowedSet(currentRole); applyRoleGating(); }
+}
+
+/* ════════ 일괄 선택/동작 (테이블 비종속) — 체크박스 + 전체 선택 + 0건 시 비활성 ════════
+   각 표의 행 삭제 버튼 onclick에서 id를 추출하므로 렌더 함수 수정 불필요. */
+const BULK_CFG = {
+  rfq:        {sel:'#rfq-table',        del:'deleteRfq',       edit:'openRfqEdit',    pdf:'openRfqPrint', csv:'exportRfqXLS', email:'openEmailModal'},
+  materials:  {sel:'#mat-table',        del:'deleteMat',       edit:'openMatEdit'},
+  inventory:  {sel:'#inventory-table',  del:'deleteInventory', edit:'openInvEdit'},
+  orders:     {sel:'#orders-table',     del:'deleteOrder',     edit:'openOrderEdit'},
+  defects:    {sel:'#defect-table',     del:'deleteDefect',    edit:'openDefectEdit'},
+  checks:     {sel:'#check-table',      del:'deleteCheck',     edit:'openCheckEdit'},
+  claims:     {sel:'#claims-table-full',del:'deleteClaim',     edit:'openClaimEdit'},
+  deliveries: {sel:'#dlv-table',        del:'deleteDelivery',  edit:null},
+  workers:    {sel:'#workers-table',    del:'deleteWorker',    edit:'openWorkerEdit'},
+  as:         {sel:'#as-body',          del:'deleteAS',        edit:'openAsEdit'},
+  partners:   {sel:'#bp-table',         del:'deletePartner',   edit:'openPartnerModal'}
+};
+const bulkSel = {};
+function _escRe(s){ return String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+function enhanceBulk(key){
+  const c=BULK_CFG[key]; if(!c) return;
+  const cont=document.querySelector(c.sel); if(!cont) return;
+  const table=cont.querySelector('table'); if(!table) return;
+  const headRow=table.querySelector('thead tr'); if(!headRow) return;
+  if(table.dataset.bulk){ updateBulkBar(key); return; }
+  table.dataset.bulk='1';
+  bulkSel[key]=new Set();
+  const delRe=new RegExp(_escRe(c.del)+"\\(\\s*['\"]([^'\"]+)['\"]");
+  const hideFns=[c.del,c.pdf,c.csv,c.email].filter(Boolean);
+  const th=document.createElement('th'); th.style.cssText='width:24px;padding:6px 3px;text-align:center;';
+  th.innerHTML=`<input type="checkbox" title="전체 선택" onclick="bulkToggleAll('${key}',this.checked)" style="width:12px;height:12px;accent-color:#1971c2;cursor:pointer;vertical-align:middle;">`;
+  headRow.insertBefore(th, headRow.firstChild);
+  [...table.querySelectorAll('tbody tr')].forEach(tr=>{
+    let id=null;
+    tr.querySelectorAll('[onclick]').forEach(b=>{ const m=(b.getAttribute('onclick')||'').match(delRe); if(m && id==null) id=m[1]; });
+    const td=document.createElement('td'); td.style.cssText='text-align:center;padding:6px 3px;';
+    if(id!=null){
+      td.innerHTML=`<input type="checkbox" data-bid="${id}" onclick="bulkToggle('${key}','${id.replace(/'/g,"\\'")}',this.checked)" style="width:12px;height:12px;accent-color:#1971c2;cursor:pointer;vertical-align:middle;">`;
+      tr.querySelectorAll('[onclick]').forEach(b=>{ const oc=b.getAttribute('onclick')||''; if(c.edit && oc.includes(c.edit+'(')) return; if(hideFns.some(fn=>oc.includes(fn+'('))) b.style.display='none'; });
+    }
+    tr.insertBefore(td, tr.firstChild);
+  });
+  ensureBulkBar(key, table);
+  updateBulkBar(key);
+}
+function ensureBulkBar(key, table){
+  if(document.getElementById('bulkbar-'+key)) return;
+  const c=BULK_CFG[key]; const wrap=table.parentElement; if(!wrap||!wrap.parentNode) return;
+  let btns='';
+  if(c.pdf)   btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','pdf')"><i class="ti ti-printer"></i>선택 PDF 출력</button>`;
+  if(c.csv)   btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','csv')"><i class="ti ti-file-spreadsheet"></i>선택 엑셀</button>`;
+  if(c.email) btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','email')"><i class="ti ti-mail"></i>선택 이메일</button>`;
+  btns+=`<button class="btn btn-sm btn-danger" data-act onclick="bulkRun('${key}','delete')"><i class="ti ti-trash"></i>선택 삭제</button>`;
+  const bar=document.createElement('div'); bar.id='bulkbar-'+key;
+  bar.style.cssText='display:none;align-items:center;gap:8px;margin:0 0 12px;padding:9px 14px;background:var(--bg-i);border:1px solid var(--br-i);border-radius:8px;flex-wrap:wrap;';
+  bar.innerHTML=`<span style="font-weight:700;font-size:12.5px;color:var(--tx-i);"><i class="ti ti-checkbox"></i> <span id="bulkcnt-${key}">0</span>건 선택됨</span>${btns}<button class="btn btn-sm" style="margin-left:auto;" onclick="bulkToggleAll('${key}',false)"><i class="ti ti-x"></i>선택 해제</button>`;
+  wrap.parentNode.insertBefore(bar, wrap);
+}
+function updateBulkBar(key){
+  const n=(bulkSel[key]||new Set()).size;
+  const cnt=document.getElementById('bulkcnt-'+key); if(cnt) cnt.textContent=n;
+  const bar=document.getElementById('bulkbar-'+key); if(bar) bar.style.display = n>0 ? 'flex' : 'none';   // 선택 시에만 표시
+}
+function bulkToggle(key,id,on){ const s=bulkSel[key]=bulkSel[key]||new Set(); if(on)s.add(id);else s.delete(id); updateBulkBar(key); }
+function bulkToggleAll(key,on){ const s=bulkSel[key]=new Set(); const cont=document.querySelector(BULK_CFG[key].sel); if(cont) cont.querySelectorAll('tbody input[type=checkbox][data-bid]').forEach(cb=>{ cb.checked=on; if(on) s.add(cb.getAttribute('data-bid')); }); updateBulkBar(key); }
+function bulkRun(key, action){
+  const c=BULK_CFG[key]; const ids=[...(bulkSel[key]||[])]; if(!ids.length) return;
+  if(action==='delete'){
+    if(!confirm(`선택한 ${ids.length}건을 삭제하시겠습니까?`)) return;
+    const oc=window.confirm; window.confirm=()=>true;
+    try{ ids.forEach(id=>{ try{ window[c.del] && window[c.del](id); }catch(e){} }); } finally { window.confirm=oc; }
+    bulkSel[key]=new Set(); showToast(`${ids.length}건이 삭제되었습니다.`);
+  } else if(action==='pdf' && c.pdf){ ids.forEach(id=>{ try{ window[c.pdf](id); }catch(e){} }); }
+  else if(action==='csv' && c.csv){ ids.forEach(id=>{ try{ window[c.csv](id); }catch(e){} }); }
+  else if(action==='email' && c.email){
+    if(ids.length!==1){ showToast('이메일은 한 건만 선택해 발송하세요.','info'); return; }
+    const obj=_bulkFindObj(key, ids[0]); if(obj){ try{ window[c.email](obj, key); }catch(e){} }
+  }
+}
+function _bulkFindObj(key, id){
+  const map={ po:poList, rfq:rfqList };
+  const list=map[key]; return list ? list.find(x=>x.id===id) : null;
+}
+function watchBulk(){
+  try {
+    Object.keys(BULK_CFG).forEach(key=>{
+      const c=BULK_CFG[key]; const cont=document.querySelector(c.sel); if(!cont) return;
+      if(!cont._bulkObs){
+        const obs=new MutationObserver(()=>{ obs.disconnect(); try{ enhanceBulk(key); }catch(e){} obs.observe(cont,{childList:true,subtree:true}); });
+        cont._bulkObs=obs; obs.observe(cont,{childList:true,subtree:true});
+      }
+      try{ enhanceBulk(key); }catch(e){}
+    });
+  } catch(e){ /* BULK_CFG 초기화 이전(부팅 중) 호출 — 무시 */ }
 }
 
 cloudBootstrap();   // 클라우드(Firebase) 연동 시작 — 설정 시 로그인 게이트 활성화
 initRole();         // 역할 기반 접근제어(RBAC) 적용 — 사이드바/페이지 권한
+watchBulk();        // 일괄 선택/동작 활성화
 
 function tick() {
   const n = new Date();
@@ -10902,12 +11130,14 @@ function renderPo() {
 
   cont.innerHTML = `<table style="min-width:1130px;">
     <thead><tr>
+      <th style="width:24px;padding:6px 3px;text-align:center;"><input type="checkbox" id="po-check-all" onclick="poToggleAll(this.checked)" style="width:12px;height:12px;cursor:pointer;vertical-align:middle;"></th>
       <th>발주번호</th><th>발행일</th><th>고객사</th><th>연결제품</th>
       <th>공급처</th><th>품목명</th><th>규격</th><th>수량</th>
       <th>단가</th><th>금액</th><th>결제조건</th><th>납품방법</th><th>상태</th><th>비고</th><th>관리</th>
     </tr></thead>
     <tbody>${rows.map(p => `
       <tr>
+        <td style="text-align:center;padding:6px 3px;"><input type="checkbox" class="po-check" value="${p.id}" onchange="poUpdateBulkBar()" style="width:12px;height:12px;cursor:pointer;vertical-align:middle;"></td>
         <td style="font-weight:700;color:var(--tx-i);">${p.id}</td>
         <td>${p.date}</td>
         <td>${getClientName(p.clientId)||'—'}</td>
@@ -10926,14 +11156,35 @@ function renderPo() {
         <td style="font-size:11px;color:var(--tx-t);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${p.note||''}">${p.note||'—'}</td>
         <td style="white-space:nowrap;">
           <button class="edit-btn" onclick="openPoEdit('${p.id}')"><i class="ti ti-edit"></i>수정</button>
-          <button class="btn btn-sm" style="margin-left:3px;" onclick="openPoPrint('${p.id}')" title="PDF 출력"><i class="ti ti-printer"></i></button>
-          <button class="btn btn-sm" style="margin-left:3px;border-color:var(--br-ok);color:var(--tx-ok);" onclick="exportPoXLS('${p.id}')" title="엑셀 다운로드"><i class="ti ti-file-spreadsheet"></i></button>
-          <button class="btn btn-sm" style="margin-left:3px;border-color:var(--br-i);color:var(--tx-i);" onclick="openEmailModal(poList.find(x=>x.id==='${p.id}'),'po')" title="이메일 발송"><i class="ti ti-mail"></i></button>
-          <button class="del-btn" style="margin-left:3px;" onclick="deletePo('${p.id}')"><i class="ti ti-trash"></i></button>
         </td>
       </tr>`).join('')}
     </tbody>
   </table>`;
+  poUpdateBulkBar();
+}
+/* ── 구매발주서 선택 일괄 동작 ── */
+function poCheckedIds(){ return [...document.querySelectorAll('#po-table .po-check:checked')].map(c=>c.value); }
+function poToggleAll(checked){
+  document.querySelectorAll('#po-table .po-check').forEach(c=>c.checked=checked);
+  poUpdateBulkBar();
+}
+function poUpdateBulkBar(){
+  const ids=poCheckedIds(), bar=inp('po-bulkbar');
+  if(bar){ bar.style.display = ids.length ? 'flex' : 'none'; const cnt=inp('po-sel-count'); if(cnt) cnt.textContent=ids.length; }
+  const all=inp('po-check-all');
+  if(all){ const total=document.querySelectorAll('#po-table .po-check').length;
+    all.checked = total>0 && ids.length===total; all.indeterminate = ids.length>0 && ids.length<total; }
+}
+function poBulkPrint(){ const ids=poCheckedIds(); if(!ids.length) return; openPoPrint(ids, true); }   // 선택 건은 건별 개별 출력
+function poBulkExport(){ const ids=poCheckedIds(); if(!ids.length) return; exportPoXLS(ids); }
+function poBulkEmail(){ const ids=poCheckedIds(); if(ids.length!==1){ showToast('이메일은 한 건만 선택해 발송하세요.','info'); return; } openEmailModal(poList.find(x=>x.id===ids[0]),'po'); }
+function poBulkDelete(){
+  const ids=poCheckedIds(); if(!ids.length) return;
+  if(!checkAdminAction()) return;
+  if(!confirm(ids.length+'건의 구매발주서를 삭제하시겠습니까?')) return;
+  poList=poList.filter(p=>!ids.includes(p.id));
+  saveStorage('poList', poList); renderPo();
+  showToast(ids.length+'건이 삭제되었습니다.');
 }
 
 function poStatusColor(s) {
@@ -11038,13 +11289,15 @@ function deletePo(id) {
   showToast('구매발주서가 삭제되었습니다.');
 }
 
-function openPoPrint(id) {
-  const targetList = id ? [poList.find(x=>x.id===id)].filter(Boolean)
-                        : poList.filter(p => p.status !== '입고완료');
+function openPoPrint(id, individual=false) {
+  const ids = Array.isArray(id) ? id : (id ? [id] : null);
+  const targetList = ids ? ids.map(i=>poList.find(x=>x.id===i)).filter(Boolean)
+                        : poList;   // 전체 출력: 입고완료 포함 모든 발주서
   if (!targetList.length) { showToast('출력할 발주서가 없습니다.', 'error'); return; }
   const ci = getCompanyInfo();
   const grouped = {};
-  targetList.forEach(p => { (grouped[p.supplier] = grouped[p.supplier] || []).push(p); });
+  // individual=true: 건별 개별 페이지 / false: 공급처별로 묶음
+  targetList.forEach(p => { const gkey = individual ? p.id : p.supplier; (grouped[gkey] = grouped[gkey] || []).push(p); });
   const pages = Object.entries(grouped).map(([supplier, items]) => {
     const total   = items.reduce((s, p) => s + (p.unitPrice||0)*p.qty, 0);
     const vat     = Math.round(total * 0.1);
@@ -11119,7 +11372,8 @@ function openPoPrint(id) {
 }
 
 function exportPoXLS(id = null) {
-  const targets = id ? poList.filter(p => p.id === id) : poList;
+  const ids = Array.isArray(id) ? id : (id ? [id] : null);
+  const targets = ids ? poList.filter(p => ids.includes(p.id)) : poList;
   if (!targets.length) { showToast('내보낼 데이터가 없습니다.', 'error'); return; }
   const ci = getCompanyInfo();
   const wb = XLSX.utils.book_new();
@@ -11528,7 +11782,7 @@ function _salesDocBodyHtml(d, type, ci) {
 
 function openSalesDocPrint(type, id) {
   const cfg = SALES[type], list = salesList(type);
-  const targets = id ? list.filter(x => x.id === id) : list;
+  const targets = Array.isArray(id) ? list.filter(x=>id.includes(x.id)) : (id ? list.filter(x => x.id === id) : list);
   if (!targets.length) { showToast('출력할 문서가 없습니다.', 'error'); return; }
   const ci = getCompanyInfo();
   const pages = targets.map((d,i) => `<div style="${i<targets.length-1?'page-break-after:always;':''}">${_salesDocBodyHtml(d, type, ci)}</div>`).join('');
@@ -12010,6 +12264,36 @@ function selectPartner(id) {
   if (!p || !_pickerCallback) return;
   _pickerCallback(p);
   closeModal('partner-picker-modal');
+}
+
+/* ── 고객사 피커 (거래명세표·세금계산서 등 고객사 선택용) ── */
+let _clientPickerCb = null;
+function openClientPicker(callback){
+  _clientPickerCb = callback;
+  if(inp('cp-q')) inp('cp-q').value = '';
+  renderClientPickerList();
+  inp('client-picker-modal').classList.add('open');
+}
+function renderClientPickerList(){
+  const q = (v('cp-q')||'').toLowerCase();
+  const list = clients.filter(c => !q || [c.name, c.manager||'', c.tel||'', c.email||''].join(' ').toLowerCase().includes(q));
+  const cont = inp('cp-list');
+  if (!list.length){ cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--tx-t);font-size:12px;">검색 결과가 없습니다.<br>아래 버튼으로 새 고객사를 등록하세요.</div>'; return; }
+  cont.innerHTML = list.map(c => `
+    <div onclick="selectClientPick('${c.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--br);transition:background .1s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background=''">
+      <span class="bd bd-info" style="flex-shrink:0;">고객사</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;font-size:13px;">${c.name}</div>
+        <div style="font-size:11px;color:var(--tx-t);">${c.manager?c.manager+' · ':''}${c.tel||''}${c.email?' · '+c.email:''}</div>
+      </div>
+      <span style="font-size:11px;color:var(--tx-i);flex-shrink:0;">선택 →</span>
+    </div>`).join('');
+}
+function selectClientPick(id){
+  const c = clients.find(x => x.id === id);
+  if (!c || !_clientPickerCb) return;
+  _clientPickerCb(c);
+  closeModal('client-picker-modal');
 }
 
 function openPartnerModalFromPicker() {
@@ -13444,6 +13728,20 @@ document.addEventListener('keydown', function(e) {
 </div>
 
 <!-- ══ 거래처 선택 피커 모달 ══ -->
+<div class="overlay" id="client-picker-modal" style="z-index:10000;">
+  <div class="dlg" style="max-width:520px; width:95%;">
+    <div class="dlg-title"><i class="ti ti-search" style="color:var(--tx-i);"></i>고객사 선택</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <input id="cp-q" placeholder="고객사명·담당자·이메일 검색..." style="flex:1;" oninput="renderClientPickerList()">
+    </div>
+    <div id="cp-list" style="max-height:320px;overflow-y:auto;border:1px solid var(--br);border-radius:var(--rm);"></div>
+    <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;">
+      <button class="btn btn-sm" onclick="closeModal('client-picker-modal'); openClientAdd();"><i class="ti ti-plus"></i>신규 고객사 등록</button>
+      <button class="btn" onclick="closeModal('client-picker-modal')">닫기</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="partner-picker-modal" style="z-index:10000;">
   <div class="dlg" style="max-width:520px; width:95%;">
     <div class="dlg-title"><i class="ti ti-search" style="color:var(--tx-i);"></i>거래처 선택</div>
@@ -13545,7 +13843,12 @@ document.addEventListener('keydown', function(e) {
       <div class="ff"><label>문서번호</label><input id="sd-id" readonly></div>
       <div class="ff"><label>발행일자 *</label><input id="sd-date" type="date"></div>
       <div class="ff"><label>상태</label><select id="sd-status"></select></div>
-      <div class="ff"><label>공급받는 고객사 *</label><select id="sd-client" onchange="onSalesDocClientChange()"><option value="">-- 선택 --</option></select></div>
+      <div class="ff"><label>공급받는 고객사 *</label>
+        <div style="display:flex;gap:4px;">
+          <select id="sd-client" onchange="onSalesDocClientChange()" style="flex:1;"><option value="">-- 선택 --</option></select>
+          <button type="button" class="btn btn-sm" onclick="openClientPicker(function(c){ inp('sd-client').value=c.id; onSalesDocClientChange(); if(c.email && !v('sd-email')) sv('sd-email', c.email); })" style="white-space:nowrap;"><i class="ti ti-search"></i>찾기</button>
+        </div>
+      </div>
       <div class="ff"><label>연결 제품</label><select id="sd-product"><option value="">-- 선택 --</option></select></div>
       <div class="ff" style="grid-column:span 3;"><label>고객 이메일</label><input id="sd-email" type="email" placeholder="client@example.com"></div>
       <div class="ff" style="grid-column:span 2;"><label>품목명 *</label><input id="sd-item" placeholder="예: 등판내구성 시험기"></div>
