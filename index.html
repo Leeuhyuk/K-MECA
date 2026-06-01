@@ -452,7 +452,8 @@ textarea { height: auto; resize: vertical; }
     display: flex !important;
   }
   #topbar-admin-area {
-    display: none !important; /* 모바일 탑바에서 관리자 버튼 숨김 */
+    display: flex !important; /* 모바일 탑바에 로그아웃 버튼 노출 */
+    align-items: center;
   }
   .tb-title {
     white-space: nowrap !important; /* 세로줄 바꿈 원천 차단 */
@@ -537,6 +538,7 @@ textarea { height: auto; resize: vertical; }
       <div style="font-size:17px;font-weight:800;margin-top:6px;color:#e9ecf5;">MES Pro 클라우드 로그인</div>
       <div style="font-size:11.5px;color:#8a93ad;margin-top:3px;">팀이 같은 데이터를 공유합니다</div>
     </div>
+    <input id="cl-name" type="text" placeholder="이름 (신규 가입 시 입력)" autocomplete="name" style="width:100%;height:40px;margin-bottom:8px;padding:0 12px;border-radius:8px;border:1px solid var(--br,#2a3350);background:#0e1426;color:#e9ecf5;">
     <input id="cl-email" type="email" placeholder="이메일" autocomplete="username" style="width:100%;height:40px;margin-bottom:8px;padding:0 12px;border-radius:8px;border:1px solid var(--br,#2a3350);background:#0e1426;color:#e9ecf5;">
     <input id="cl-pw" type="password" placeholder="비밀번호" autocomplete="current-password" onkeydown="if(event.key==='Enter')cloudLogin()" style="width:100%;height:40px;margin-bottom:14px;padding:0 12px;border-radius:8px;border:1px solid var(--br,#2a3350);background:#0e1426;color:#e9ecf5;">
     <button onclick="cloudLogin()" style="width:100%;height:42px;border:none;border-radius:8px;background:#1971c2;color:#fff;font-weight:700;font-size:14px;cursor:pointer;">로그인</button>
@@ -549,7 +551,6 @@ textarea { height: auto; resize: vertical; }
 <div id="cloud-chip" style="display:none;position:fixed;right:12px;bottom:12px;z-index:9000;align-items:center;gap:8px;background:var(--bg-s,#161b2e);border:1px solid var(--br,#2a3350);border-radius:20px;padding:5px 12px;font-size:11px;box-shadow:0 4px 14px rgba(0,0,0,.3);">
   <i id="cloud-chip-icon" class="ti ti-cloud-check" style="color:#37b24d;"></i>
   <span id="cloud-chip-txt" style="color:var(--tx-s,#aeb6cc);">클라우드 연결됨</span>
-  <button onclick="cloudLogout()" title="로그아웃" style="background:none;border:none;color:#868e96;cursor:pointer;padding:0 0 0 4px;"><i class="ti ti-logout"></i></button>
 </div>
 
 <!-- 모바일 사이드바 백드롭 -->
@@ -5688,6 +5689,8 @@ let currentPage = 'dashboard';
 let currentRole = 'admin';      // 권한 역할 (로컬/미인증 시 전체 권한). 클라우드 로그인 시 실제 역할로 설정됨
 let allowedPages = null;        // null = 전체 허용. Set이면 해당 페이지만 허용
 let _cloudActive = false;       // 클라우드(Firebase) 로그인 활성 여부 (부팅 초기 참조 대비 조기 선언)
+let cloudUsers = loadStorage('cloudUsers_cache', []);   // Firestore users 캐시(인사 명부 ↔ 로그인 계정 조인용)
+function userByEmail(email){ if(!email) return null; const e=email.trim().toLowerCase(); return cloudUsers.find(u=>(u.email||'').toLowerCase()===e)||null; }
 let currentAlertFilter = 'all';
 let alertSettings = loadStorage('alertSettings', {
   mat_pending: true,
@@ -5907,9 +5910,8 @@ function submitAdminPasswordChange() {
 function updateAdminUI() {
   const topbarRight = inp('topbar-admin-area');
   if (topbarRight) {
-    if (_cloudActive) {   // 클라우드 로그인 시: 역할(RBAC)이 권한 관리 → 비밀번호 잠금 UI 대신 역할 표시
-      const RL = {admin:'관리자', manager:'중간관리자', staff:'평사원'};
-      topbarRight.innerHTML = `<span class="pill pill-ok" style="border-radius:6px;"><i class="ti ti-user-shield"></i> ${RL[currentRole]||currentRole}</span>`;
+    if (_cloudActive) {   // 클라우드 로그인 시: 역할 텍스트 숨기고 로그아웃 버튼만 상단에 표시
+      topbarRight.innerHTML = `<button class="btn btn-sm btn-danger" onclick="cloudLogout()" title="로그아웃" style="height:26px;padding:0 8px;"><i class="ti ti-logout"></i> 로그아웃</button>`;
     } else if (isAdmin) {
       topbarRight.innerHTML = `
         <span class="pill pill-ok" style="border-radius: 6px;"><i class="ti ti-lock-open"></i> 관리자</span>
@@ -8942,25 +8944,42 @@ function renderWorkers() {
     return true;
   });
   const el = inp('workers-table'); if (!el) return;
-  if (!workers.length) { el.innerHTML = empty('등록된 직원이 아직 없습니다.'); return; }
-  if (!filteredWorkers.length) { el.innerHTML = empty('검색 조건에 맞는 직원이 없습니다.'); return; }
-
-  el.innerHTML = `
-    <table>
+  const canManage = (currentRole==='admin');
+  const ROLE_OPT = (sel)=>['admin','manager','staff'].map(r=>`<option value="${r}"${(sel||'staff')===r?' selected':''}>${ROLE_LABEL[r]}</option>`).join('');
+  // 직원 행의 계정/역할/승인 셀 (이메일로 로그인 계정 조인)
+  function acctCells(w){
+    if (!_cloudActive) return `<td style="color:var(--tx-t);">—</td><td style="color:var(--tx-t);">—</td>`;
+    const u = userByEmail(w.email);
+    if (!w.email) return `<td style="color:var(--tx-t);">이메일 미입력</td><td>—</td>`;
+    if (!u) return `<td style="color:var(--tx-d);">계정 없음</td><td>—</td>`;
+    const isOwner = BOOTSTRAP_ADMIN_EMAILS.includes((u.email||'').toLowerCase());
+    const act = u.active!==false;
+    const roleCell = (canManage && !isOwner)
+      ? `<select class="stat-sel" onchange="permSetRole('${u.uid}',this.value)">${ROLE_OPT(u.role)}</select>`
+      : `<span class="bd bd-info">${ROLE_LABEL[u.role||'staff']}</span>${isOwner?' <span style="font-size:9px;color:var(--tx-t);">소유자</span>':''}`;
+    const apprCell = (canManage && !isOwner)
+      ? `<button class="btn btn-sm" onclick="permToggleActive('${u.uid}',${act})">${act?'비활성화':'승인'}</button>`
+      : `<span class="bd ${act?'bd-ok':'bd-err'}">${act?'활성':'대기'}</span>`;
+    return `<td>${roleCell}</td><td style="text-align:center;">${apprCell}</td>`;
+  }
+  const tableHTML = (!workers.length)
+    ? empty('등록된 직원이 아직 없습니다.')
+    : (!filteredWorkers.length)
+      ? empty('검색 조건에 맞는 직원이 없습니다.')
+      : `<table>
       <thead>
-        <tr><th>사번</th><th>이름</th><th>부서</th><th>직급</th><th>고용형태</th><th>입사일</th><th>연락처</th><th>담당</th><th>월 급여</th><th>상태</th><th>관리</th></tr>
+        <tr><th>사번</th><th>이름</th><th>부서</th><th>직급</th><th>고용형태</th><th>입사일</th><th>연락처</th><th>월 급여</th><th>상태</th><th>계정 역할</th><th>승인</th><th>관리</th></tr>
       </thead>
       <tbody>
         ${filteredWorkers.map(w => `
           <tr>
             <td style="font-weight:700;">${w.id}</td>
-            <td style="font-weight:700;">${w.name}</td>
+            <td style="font-weight:700;">${w.name}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${w.email||''}</span></td>
             <td>${w.dept || '—'}</td>
             <td>${w.position || '—'}</td>
             <td><span class="bd bd-neu">${w.empType || '정규직'}</span></td>
             <td>${w.hireDate || '—'}</td>
             <td>${w.phone || '—'}</td>
-            <td>${w.role || '—'}${w.line ? ' · 라인'+w.line : ''}</td>
             <td style="font-weight:700;color:var(--tx-i);">${w.salary ? fmtW(w.salary) : '—'}</td>
             <td>
               <select class="stat-sel" onchange="changeWorkerStatus('${w.id}', this.value)">
@@ -8970,6 +8989,7 @@ function renderWorkers() {
                 <option${w.status==='휴가'?' selected':''}>휴가</option>
               </select>
             </td>
+            ${acctCells(w)}
             <td style="white-space:nowrap;">
               <button class="btn btn-sm" onclick="openWorkerEdit('${w.id}')" title="편집"><i class="ti ti-edit"></i></button>
               <button class="del-btn" onclick="deleteWorker('${w.id}')" title="삭제"><i class="ti ti-trash"></i></button>
@@ -8977,6 +8997,41 @@ function renderWorkers() {
           </tr>`).join('')}
       </tbody>
     </table>`;
+
+  // 미등록 로그인 계정(명부에 이메일 매칭 안 됨) — 관리자만
+  let orphanHTML = '';
+  if (_cloudActive && canManage){
+    const matched = new Set(workers.map(w=>(w.email||'').toLowerCase()).filter(Boolean));
+    const orphans = cloudUsers.filter(u=> !matched.has((u.email||'').toLowerCase()));
+    if (orphans.length){
+      orphanHTML = `
+      <div class="card" style="margin-top:16px;">
+        <div class="card-hd"><span class="card-ttl"><i class="ti ti-user-question" style="color:var(--tx-w);"></i>미등록 로그인 계정 (직원 명부에 없음)</span>
+          <span style="font-size:11px;color:var(--tx-t);">이메일이 명부와 매칭되지 않은 가입 계정 · 직원으로 등록하면 연결됩니다</span></div>
+        <div style="overflow-x:auto;"><table>
+          <thead><tr><th>이름</th><th>이메일</th><th>역할</th><th style="text-align:center;">승인</th><th style="text-align:center;">명부 등록</th></tr></thead>
+          <tbody>${orphans.map(u=>{
+            const isOwner=BOOTSTRAP_ADMIN_EMAILS.includes((u.email||'').toLowerCase()); const act=u.active!==false;
+            return `<tr>
+              <td style="font-weight:700;">${u.name||'—'}${isOwner?' <span class="bd bd-info" style="font-size:9px;">소유자</span>':''}</td>
+              <td>${u.email||u.uid}</td>
+              <td>${isOwner?`<span class="bd bd-info">${ROLE_LABEL[u.role||'admin']}</span>`:`<select class="stat-sel" onchange="permSetRole('${u.uid}',this.value)">${ROLE_OPT(u.role)}</select>`}</td>
+              <td style="text-align:center;">${isOwner?'<span class="bd bd-ok">활성</span>':`<button class="btn btn-sm" onclick="permToggleActive('${u.uid}',${act})">${act?'비활성화':'승인'}</button>`}</td>
+              <td style="text-align:center;"><button class="btn btn-sm" onclick="enrollWorkerFromUser('${u.uid}')"><i class="ti ti-user-plus"></i>직원 등록</button></td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table></div>
+      </div>`;
+    }
+  }
+  el.innerHTML = tableHTML + orphanHTML;
+}
+/* 미등록 로그인 계정을 직원 명부에 등록(이메일·이름 프리필) */
+function enrollWorkerFromUser(uid){
+  const u=cloudUsers.find(x=>x.uid===uid); if(!u){ showToast('계정을 찾을 수 없습니다.','error'); return; }
+  openWorkerAdd();
+  sv('wa-email', u.email||'');
+  sv('wa-name', u.name||'');
 }
 
 function changeWorkerStatus(id, val) {
@@ -9006,7 +9061,7 @@ function openWorkerAdd() {
   inp('worker-modal-ttl').innerHTML = '<i class="ti ti-user-plus" style="color:var(--tx-i);"></i>직원 등록';
   inp('wa-save-btn').innerHTML = '<i class="ti ti-check"></i>등록';
   sv('wa-id', nextCode('E', workers));
-  ['wa-name', 'wa-position', 'wa-phone', 'wa-salary', 'wa-role', 'wa-in', 'wa-ot'].forEach(id => sv(id, ''));
+  ['wa-name', 'wa-position', 'wa-phone', 'wa-salary', 'wa-role', 'wa-in', 'wa-ot', 'wa-email'].forEach(id => sv(id, ''));
   sv('wa-dept', '생산부');
   sv('wa-emptype', '정규직');
   sv('wa-hire', today());
@@ -9038,6 +9093,7 @@ function openWorkerEdit(id) {
   sv('wa-status', w.status || '근무중');
   sv('wa-in', w.tin || '');
   sv('wa-ot', w.ot || '');
+  sv('wa-email', w.email || '');
   modal.classList.add('open');
 }
 
@@ -9060,6 +9116,7 @@ function saveWorkerForm() {
     role: v('wa-role') || '조립',
     tin: v('wa-in') || '08:00',
     ot: v('wa-ot') || '0h',
+    email: v('wa-email').trim(),
     status: v('wa-status')
   };
   if (editId) {
@@ -9772,9 +9829,11 @@ function initRole(){
 async function cloudLoadRole(){
   const uid=_cloudUser.uid, email=(_cloudUser.email||'').toLowerCase();
   const isBoot = BOOTSTRAP_ADMIN_EMAILS.includes(email);
+  const signupName = (_cloudUser.displayName||'').trim() || sessionStorage.getItem('mes_signupName') || '';
   // 소유자(부트스트랩) 이메일은 Firestore 상태와 무관하게 항상 관리자·활성
   let role = isBoot ? 'admin' : 'staff';
   let active = isBoot ? true : false;
+  let name = signupName;
   try {
     const uref=_fbDb.collection('users').doc(uid);
     const usnap=await uref.get();
@@ -9782,10 +9841,14 @@ async function cloudLoadRole(){
       const d=usnap.data();
       role = isBoot ? 'admin' : (d.role||'staff');         // 부트스트랩은 항상 admin
       active = isBoot ? true : (d.active!==false);
+      name = d.name || signupName;
+      if (signupName && !d.name) { try { await uref.update({ name:signupName }); } catch(e){} }  // 이름 보강
     } else {
-      await uref.set({ email:_cloudUser.email, role, active, createdAt:Date.now() });
+      await uref.set({ email:_cloudUser.email, name:signupName, role, active, createdAt:Date.now() });
     }
   } catch(e){ console.warn('역할 로드/생성 실패 — 기본값 적용(소유자는 관리자). 권한 규칙 확인 필요:', e&&e.code); }
+  sessionStorage.removeItem('mes_signupName');
+  localStorage.setItem('mes_myName', name||'');
   let rolePages = DEFAULT_ROLE_PAGES;
   try { const rsnap=await _fbDb.collection('roles').doc('config').get(); if(rsnap.exists) rolePages=rsnap.data(); } catch(e){}
   let roleColumns = {};
@@ -9916,6 +9979,16 @@ function cloudSubscribe(){
     if (currentPage==='permissions' && !document.querySelector('.overlay.open')) { try{ renderPermissions(); }catch(e){} }
     _cloudChip('synced'); setTimeout(()=>_cloudChip('online'), 1500);
   }, err=>{ console.warn('권한 실시간 동기화 오류', err); });
+
+  // 로그인 계정 목록(users) 실시간 캐시 — 인사 명부와 조인
+  _fbDb.collection('users').onSnapshot(snap=>{
+    cloudUsers = snap.docs.map(d=>Object.assign({uid:d.id}, d.data()));
+    saveStorageLocalOnly('cloudUsers_cache', cloudUsers);
+    if (!document.querySelector('.overlay.open')){
+      if (currentPage==='workers') { try{ renderWorkers(); }catch(e){} }
+      if (currentPage==='permissions') { try{ renderPermissions(); }catch(e){} }
+    }
+  }, err=>{ console.warn('계정 목록 동기화 오류', err); });
 }
 
 function cloudLogin(){
@@ -9925,10 +9998,14 @@ function cloudLogin(){
   _fbAuth.signInWithEmailAndPassword(email,pw).catch(e=>_cloudMsg(_cloudErr(e)));
 }
 function cloudSignup(){
-  const email=(inp('cl-email').value||'').trim(), pw=inp('cl-pw').value||'';
+  const name=(inp('cl-name').value||'').trim(), email=(inp('cl-email').value||'').trim(), pw=inp('cl-pw').value||'';
+  if(!name){ _cloudMsg('이름을 입력하세요.'); return; }
   if(!email||pw.length<6){ _cloudMsg('이메일과 6자 이상 비밀번호를 입력하세요.'); return; }
   _cloudMsg('계정 생성 중…','#8a93ad');
-  _fbAuth.createUserWithEmailAndPassword(email,pw).catch(e=>_cloudMsg(_cloudErr(e)));
+  sessionStorage.setItem('mes_signupName', name);   // 계정 문서 생성 시 사용
+  _fbAuth.createUserWithEmailAndPassword(email,pw)
+    .then(cred=>{ if(cred.user) return cred.user.updateProfile({ displayName:name }); })
+    .catch(e=>{ sessionStorage.removeItem('mes_signupName'); _cloudMsg(_cloudErr(e)); });
 }
 function cloudLogout(){
   if(!_fbAuth) return;
@@ -9960,9 +10037,12 @@ async function renderPermissions(){
   if (!_cloudActive){ body.innerHTML=`<div class="card"><div class="empty"><i class="ti ti-cloud-off"></i>클라우드 로그인 후 사용할 수 있는 기능입니다. (Firebase 미설정 시 로컬 전용)</div></div>`; return; }
   if (currentRole!=='admin'){ body.innerHTML=`<div class="card"><div class="empty"><i class="ti ti-lock"></i>권한 관리는 관리자만 접근할 수 있습니다.</div></div>`; return; }
   body.innerHTML = `
-    <div class="card" style="margin-bottom:16px;"><div class="card-hd"><span class="card-ttl"><i class="ti ti-users"></i>직원 역할 지정 · 승인</span>
-      <button class="btn btn-sm" onclick="renderPermissions()"><i class="ti ti-refresh"></i>새로고침</button></div>
-      <div id="perm-users"><div class="empty"><i class="ti ti-loader"></i>불러오는 중…</div></div></div>
+    <div class="card" style="margin-bottom:16px;background:var(--bg-s);"><div style="display:flex;align-items:center;gap:10px;padding:4px 2px;">
+      <i class="ti ti-users" style="font-size:20px;color:var(--tx-i);"></i>
+      <div style="flex:1;"><div style="font-weight:700;">직원 계정·역할·승인은 「인사 관리」에서 관리합니다</div>
+        <div style="font-size:11.5px;color:var(--tx-s);margin-top:2px;">직원 명부에서 이메일로 로그인 계정을 연결해 역할 지정·승인을 함께 처리하세요.</div></div>
+      <button class="btn btn-sm btn-primary" onclick="go('workers')"><i class="ti ti-external-link"></i>인사 관리로 이동</button>
+    </div></div>
     <div class="card" style="margin-bottom:16px;"><div class="card-hd"><span class="card-ttl"><i class="ti ti-table-options"></i>역할별 접근 페이지</span>
       <span style="font-size:11px;color:var(--tx-t);">관리자는 항상 전체 · 변경 즉시 저장</span></div>
       <div id="perm-matrix"></div></div>
@@ -9971,11 +10051,6 @@ async function renderPermissions(){
       <div id="perm-columns"></div></div>`;
   renderPermMatrix();
   renderPermColumns();
-  try {
-    const snap = await _fbDb.collection('users').get();
-    const users=[]; snap.forEach(d=>users.push(Object.assign({uid:d.id}, d.data())));
-    renderPermUsers(users);
-  } catch(e){ const el=inp('perm-users'); if(el) el.innerHTML=`<div class="empty">사용자 목록 로드 실패: ${e.message}</div>`; }
 }
 function renderPermUsers(users){
   const el=inp('perm-users'); if(!el) return;
@@ -9983,7 +10058,7 @@ function renderPermUsers(users){
     const isOwner = BOOTSTRAP_ADMIN_EMAILS.includes((u.email||'').toLowerCase());
     const act = u.active!==false;
     return `<tr>
-      <td style="font-weight:700;">${u.email||u.uid}${isOwner?' <span class="bd bd-info" style="font-size:9px;">소유자</span>':''}</td>
+      <td style="font-weight:700;">${u.name?u.name+' ':''}<span style="font-weight:400;color:var(--tx-t);font-size:11px;">${u.email||u.uid}</span>${isOwner?' <span class="bd bd-info" style="font-size:9px;">소유자</span>':''}</td>
       <td><select onchange="permSetRole('${u.uid}',this.value)" ${isOwner?'disabled':''}>
         ${['admin','manager','staff'].map(r=>`<option value="${r}"${(u.role||'staff')===r?' selected':''}>${ROLE_LABEL[r]}</option>`).join('')}</select></td>
       <td style="text-align:center;"><span class="bd ${act?'bd-ok':'bd-err'}">${act?'활성':'대기/비활성'}</span></td>
@@ -13344,7 +13419,7 @@ document.addEventListener('keydown', function(e) {
 
 
 <!-- ══ 거래처 등록/수정 모달 ══ -->
-<div class="overlay" id="partner-modal" style="z-index:1002;">
+<div class="overlay" id="partner-modal" style="z-index:10000;">
   <div class="dlg" style="max-width:580px; width:95%;">
     <div class="dlg-title" id="partner-modal-ttl"><i class="ti ti-address-book" style="color:var(--tx-i);"></i>거래처 등록</div>
     <div class="fg fg2" style="gap:10px; margin-bottom:14px;">
@@ -13369,7 +13444,7 @@ document.addEventListener('keydown', function(e) {
 </div>
 
 <!-- ══ 거래처 선택 피커 모달 ══ -->
-<div class="overlay" id="partner-picker-modal" style="z-index:1001;">
+<div class="overlay" id="partner-picker-modal" style="z-index:10000;">
   <div class="dlg" style="max-width:520px; width:95%;">
     <div class="dlg-title"><i class="ti ti-search" style="color:var(--tx-i);"></i>거래처 선택</div>
     <div style="display:flex;gap:8px;margin-bottom:12px;">
@@ -13834,6 +13909,7 @@ document.addEventListener('keydown', function(e) {
       </div>
       <div class="ff"><label>입사일</label><input id="wa-hire" type="date"></div>
       <div class="ff" style="grid-column:span 2;"><label>연락처</label><input id="wa-phone" placeholder="010-0000-0000"></div>
+      <div class="ff" style="grid-column:span 4;"><label>이메일 (로그인 계정 연결용)</label><input id="wa-email" type="email" placeholder="직원 로그인 이메일과 동일하게"></div>
       <div class="ff"><label>월 급여 (원)</label><input id="wa-salary" type="number" min="0" placeholder="3000000"></div>
       <div class="ff"><label>연차 부여일수</label><input id="wa-annual" type="number" min="0" step="0.5" placeholder="15"></div>
       <div class="ff"><label>배정 라인</label>
