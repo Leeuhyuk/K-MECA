@@ -10281,7 +10281,11 @@ const BULK_CFG = {
   deliveries: {sel:'#dlv-table',        del:'deleteDelivery',  edit:null},
   workers:    {sel:'#workers-table',    del:'deleteWorker',    edit:'openWorkerEdit'},
   as:         {sel:'#as-body',          del:'deleteAS',        edit:'openAsEdit'},
-  partners:   {sel:'#bp-table',         del:'deletePartner',   edit:'openPartnerModal'}
+  partners:   {sel:'#bp-table',         del:'deletePartner',   edit:'openPartnerModal'},
+  statement:  {sel:'#st-table', type:'statement', del:'deleteSalesDoc', edit:'openSalesDocEdit', pdf:'openSalesDocPrint', email:'openEmailModal'},
+  tax:        {sel:'#tx-table', type:'tax',       del:'deleteSalesDoc', edit:'openSalesDocEdit', pdf:'openSalesDocPrint', email:'openEmailModal'},
+  quote:      {sel:'#qt-table', type:'quote',     del:'deleteSODoc',    edit:'openSODocEdit',    pdf:'openSODocPrint',    email:'openEmailModal'},
+  order:      {sel:'#so-table', type:'order',     del:'deleteSODoc',    edit:'openSODocEdit',    pdf:'openSODocPrint',    email:'openEmailModal'}
 };
 const bulkSel = {};
 function _escRe(s){ return String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
@@ -10293,7 +10297,10 @@ function enhanceBulk(key){
   if(table.dataset.bulk){ updateBulkBar(key); return; }
   table.dataset.bulk='1';
   bulkSel[key]=new Set();
-  const delRe=new RegExp(_escRe(c.del)+"\\(\\s*['\"]([^'\"]+)['\"]");
+  // (type,id) 시그니처 함수는 두 번째 인자가 id
+  const delRe = c.type
+    ? new RegExp(_escRe(c.del)+"\\(\\s*['\"][^'\"]*['\"]\\s*,\\s*['\"]([^'\"]+)['\"]")
+    : new RegExp(_escRe(c.del)+"\\(\\s*['\"]([^'\"]+)['\"]");
   const hideFns=[c.del,c.pdf,c.csv,c.email].filter(Boolean);
   const th=document.createElement('th'); th.style.cssText='width:24px;padding:6px 3px;text-align:center;';
   th.innerHTML=`<input type="checkbox" title="전체 선택" onclick="bulkToggleAll('${key}',this.checked)" style="width:12px;height:12px;accent-color:#1971c2;cursor:pointer;vertical-align:middle;">`;
@@ -10336,17 +10343,22 @@ function bulkRun(key, action){
   if(action==='delete'){
     if(!confirm(`선택한 ${ids.length}건을 삭제하시겠습니까?`)) return;
     const oc=window.confirm; window.confirm=()=>true;
-    try{ ids.forEach(id=>{ try{ window[c.del] && window[c.del](id); }catch(e){} }); } finally { window.confirm=oc; }
+    const ocf=window.confirm_; window.confirm_=(t,m,fn)=>{ try{ fn&&fn(); }catch(e){} };   // 커스텀 확인창도 자동 승인
+    try{ ids.forEach(id=>{ try{ c.type ? window[c.del](c.type,id) : window[c.del](id); }catch(e){} }); }
+    finally { window.confirm=oc; window.confirm_=ocf; }
     bulkSel[key]=new Set(); showToast(`${ids.length}건이 삭제되었습니다.`);
-  } else if(action==='pdf' && c.pdf){ ids.forEach(id=>{ try{ window[c.pdf](id); }catch(e){} }); }
+  } else if(action==='pdf' && c.pdf){
+    if(c.type){ try{ window[c.pdf](c.type, ids); }catch(e){} }    // 선택 건 한 창에 개별 페이지
+    else ids.forEach(id=>{ try{ window[c.pdf](id); }catch(e){} });
+  }
   else if(action==='csv' && c.csv){ ids.forEach(id=>{ try{ window[c.csv](id); }catch(e){} }); }
   else if(action==='email' && c.email){
     if(ids.length!==1){ showToast('이메일은 한 건만 선택해 발송하세요.','info'); return; }
-    const obj=_bulkFindObj(key, ids[0]); if(obj){ try{ window[c.email](obj, key); }catch(e){} }
+    const obj=_bulkFindObj(key, ids[0]); if(obj){ try{ window[c.email](obj, c.type||key); }catch(e){} }
   }
 }
 function _bulkFindObj(key, id){
-  const map={ po:poList, rfq:rfqList };
+  const map={ po:poList, rfq:rfqList, statement:statementList, tax:taxList, quote:quoteList, order:orderList };
   const list=map[key]; return list ? list.find(x=>x.id===id) : null;
 }
 function watchBulk(){
@@ -12038,7 +12050,7 @@ function exportSODocCSV(type) {
 
 function openSODocPrint(type, id) {
   const cfg = SODOCS[type], list = soDocList(type);
-  const targets = id ? list.filter(x=>x.id===id) : list;
+  const targets = Array.isArray(id) ? list.filter(x=>id.includes(x.id)) : (id ? list.filter(x=>x.id===id) : list);
   if (!targets.length) { showToast('출력할 문서가 없습니다.', 'error'); return; }
   const ci = getCompanyInfo();
   const pages = targets.map(d => `<div style="page-break-after:always;">${_salesDocBodyHtml(d, cfg.docType, ci)}</div>`).join('');
