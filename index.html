@@ -92,6 +92,8 @@ body { font-family: var(--f); background: var(--bg-t); color: var(--tx); height:
 .mc { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: 15px 18px; cursor: default; box-shadow: var(--shadow); transition: transform 0.15s, border-color 0.15s; min-width: 0; }
 .mc.clickable { cursor: pointer; }
 .mc.clickable:hover { border-color: var(--tx-i); transform: translateY(-2px); }
+.mc.clickable.kpi-active { border-color: var(--tx-i); box-shadow: 0 0 0 2px var(--br-i) inset, var(--shadow); }
+.mc.clickable.kpi-active .mc-lbl::after { content: '필터됨'; margin-left: auto; font-size: 9px; font-weight: 700; color: var(--tx-i); background: var(--bg-i); border: 1px solid var(--br-i); border-radius: 8px; padding: 0 6px; }
 .mc-lbl { font-size: 11px; color: var(--tx-s); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-weight: 500; }
 .mc-val { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
 .mc-sub { font-size: 11px; color: var(--tx-t); margin-top: 4px; font-weight: 500; }
@@ -216,6 +218,9 @@ textarea { height: auto; resize: vertical; }
 
 .sum-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
 .sum-box { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: 12px 16px; display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow); min-width: 0; }
+.sum-box.clickable { cursor: pointer; transition: border-color .15s, transform .15s; }
+.sum-box.clickable:hover { border-color: var(--tx-i); transform: translateY(-2px); }
+.sum-box.kpi-active { border-color: var(--tx-i); box-shadow: 0 0 0 2px var(--br-i) inset, var(--shadow); }
 .si { font-size: 24px; color: var(--tx-s); }
 .sn { font-size: 18px; font-weight: 700; }
 .sl { font-size: 11px; color: var(--tx-t); font-weight: 500; }
@@ -427,6 +432,13 @@ textarea { height: auto; resize: vertical; }
   .metrics, .row2, .row3, .sum-row, .fg4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .fg3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+/* KPI 카드 크기 통일 (종합 대시보드 제외) — 자재 페이지 카드처럼 최소 너비 고정 + 자동 줄바꿈.
+   인라인 repeat(6,1fr) 등 페이지별 그리드 override 를 !important 로 일괄 통일. (데스크톱 ≥681px) */
+@media(min-width: 681px) {
+  .content:not(#pg-dashboard) .metrics {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+  }
+}
 @keyframes spin { to { transform: rotate(360deg); } }
 @media(max-width: 680px) {
   .sidebar {
@@ -507,11 +519,11 @@ textarea { height: auto; resize: vertical; }
   /* 통합 검색 결과창: 화면 밖으로 잘리지 않게 좌우 여백 두고 전체 폭 사용 */
   #global-search-results {
     position: fixed !important;
-    top: 54px !important;
+    top: var(--mh-results-top, 54px) !important;  /* 홈 검색창 바로 아래로 동적 배치 */
     left: 10px !important;
     right: 10px !important;
     width: auto !important;
-    max-height: 72vh !important;
+    max-height: 60vh !important;
   }
   
   /* 모바일 테이블 상태 선택기 활성화 및 최적화 */
@@ -527,6 +539,11 @@ textarea { height: auto; resize: vertical; }
   table {
     font-size: 11px !important;
   }
+  /* 가로 스크롤 시 첫 열 고정 해제 — 모바일에서 첫 열이 계속 표시되며 겹쳐 보이는 문제 방지 */
+  .content th:first-child, .content td:first-child {
+    position: static !important;
+    z-index: auto !important;
+  }
   /* 모바일: 표의 수정·삭제 버튼 숨김 (단, 품질 검사·고객 클레임 화면은 유지) */
   .edit-btn, .del-btn,
   button[onclick^="openWorkerEdit"], button[onclick^="openAttendanceEdit"], button[onclick^="openLeaveEdit"] {
@@ -536,12 +553,128 @@ textarea { height: auto; resize: vertical; }
   #pg-claims .edit-btn, #pg-claims .del-btn {
     display: inline-flex !important;
   }
+
+  /* ── 모바일 레이아웃 보정 ── */
+  /* 1) 하단 클라우드 이메일 칩 숨김 (하단 탭바와 중첩 + 개인정보 노출 방지) */
+  #cloud-chip { display: none !important; }
+
+  /* 2) 상단 탑바 가로 넘침으로 인한 우측 잘림 방지 */
+  .topbar { padding: 8px 10px !important; gap: 6px; }
+  #back-btn { display: none !important; }           /* 하단 탭/드로어로 이동 가능하므로 제거 */
+  /* 탑바의 검색 입력은 숨기되, 결과 드롭다운(#global-search-results)은 모바일 홈 검색이 재사용하므로 wrapper는 폭 0으로만 접음 */
+  .global-search-wrapper { width: 0 !important; min-width: 0 !important; flex: 0 0 0 !important; margin: 0 !important; overflow: visible !important; }
+  .global-search-wrapper > #global-search-input,
+  .global-search-wrapper > i.ti-search,
+  .global-search-wrapper > #global-search-clear { display: none !important; }
+  .tb-right { gap: 6px !important; flex-shrink: 0; }
+  #topbar-admin-area .pill,
+  #topbar-admin-area button[onclick^="openAdminPasswordChange"] { display: none !important; } /* 관리자 라벨·변경 버튼 숨김, 잠금/로그아웃만 유지 */
+
+  /* 3) 수주(고객사) 카드 헤더 세로 글자 깨짐 해결: 이름 최소폭 확보 + 버튼 줄바꿈 */
+  #pg-clients .client-hd { flex-wrap: wrap; row-gap: 8px; }
+  #pg-clients .client-hd > div:nth-child(2) { min-width: 150px !important; }   /* 이름이 0폭으로 줄어 세로로 깨지는 것 방지 */
+  #pg-clients .client-hd > div[onclick^="event.stopPropagation"] { flex-wrap: wrap; justify-content: flex-end; }
 }
 
 @media print {
   @page { size: A4; margin: 20mm; }
   .sidebar, .main > .topbar { display: none !important; }
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}
+
+/* ════════ 모바일 전용 홈 화면 & 하단 탭바 ════════ */
+#mobile-home, #mobile-tabbar { display: none; }
+@media(max-width: 680px) {
+  /* 하단 탭바 */
+  #mobile-tabbar {
+    display: flex; position: fixed; left: 0; right: 0; bottom: 0;
+    height: calc(58px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--bg-p); border-top: 1px solid var(--br);
+    z-index: 800; box-shadow: 0 -2px 12px rgba(0,0,0,0.18);
+  }
+  .mtab {
+    flex: 1; position: relative; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 3px;
+    font-size: 10px; font-weight: 600; color: var(--tx-t);
+    cursor: pointer; user-select: none; border: none; background: none;
+    transition: color .15s; -webkit-tap-highlight-color: transparent;
+  }
+  .mtab i { font-size: 21px; }
+  .mtab.active { color: var(--tx-i); }
+  .mtab .mtab-badge {
+    position: absolute; top: 5px; left: 50%; margin-left: 6px;
+    background: #e03131; color: #fff; font-size: 9px; font-weight: 700;
+    border-radius: 9px; padding: 0 4px; line-height: 15px;
+    min-width: 15px; height: 15px; text-align: center;
+  }
+  /* 하단 탭바에 가려지지 않도록 본문 여백 확보 */
+  .content { padding-bottom: 78px !important; }
+
+  /* 모바일 홈 컨테이너 */
+  #mobile-home {
+    position: fixed; left: 0; right: 0; top: 52px;
+    bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+    z-index: 700; overflow-y: auto; background: var(--bg-t);
+    padding: 14px 14px 24px; flex-direction: column; gap: 14px;
+    -webkit-overflow-scrolling: touch;
+  }
+  body.mhome #mobile-home { display: flex; }
+  body.mhome .content { display: none !important; } /* 홈에서는 일반 페이지 숨김 */
+
+  .mh-search { position: relative; }
+  .mh-search input {
+    width: 100%; height: 44px; border-radius: 12px;
+    padding: 0 40px; font-size: 13px; font-weight: 500;
+    background: var(--bg-p); border: 1px solid var(--br); color: var(--tx);
+    box-shadow: var(--shadow); -webkit-appearance: none;
+  }
+  .mh-search input:focus { outline: none; border-color: var(--tx-i); }
+  .mh-search .mh-s-ico { position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+    color: var(--tx-t); font-size: 17px; pointer-events: none; }
+  .mh-search .mh-s-clear { position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    color: var(--tx-t); font-size: 16px; cursor: pointer; display: none; }
+
+  .mh-hero { display: flex; align-items: baseline; gap: 8px; }
+  .mh-hero .mh-greet { font-size: 18px; font-weight: 800; color: var(--tx); }
+  .mh-hero .mh-date { font-size: 11.5px; color: var(--tx-t); font-weight: 600; margin-left: auto; }
+
+  .mh-sec-title { font-size: 12px; font-weight: 700; color: var(--tx-s);
+    letter-spacing: .02em; display: flex; align-items: center; gap: 6px; margin-bottom: -4px; }
+  .mh-sec-title i { font-size: 15px; color: var(--tx-i); }
+
+  .mh-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .mh-kpi { background: var(--bg-p); border: 1px solid var(--br);
+    border-radius: var(--rl); padding: 13px 14px; box-shadow: var(--shadow);
+    cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .mh-kpi:active { transform: scale(0.98); }
+  .mh-kpi .mh-k-lbl { font-size: 11px; color: var(--tx-s); font-weight: 600;
+    display: flex; align-items: center; gap: 5px; margin-bottom: 6px; }
+  .mh-kpi .mh-k-val { font-size: 23px; font-weight: 800; letter-spacing: -0.02em; }
+  .mh-kpi .mh-k-sub { font-size: 10.5px; color: var(--tx-t); margin-top: 3px; font-weight: 500; }
+
+  .mh-quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .mh-qbtn { background: var(--bg-p); border: 1px solid var(--br);
+    border-radius: var(--rl); padding: 12px 4px; display: flex; flex-direction: column;
+    align-items: center; gap: 6px; font-size: 10.5px; font-weight: 600; color: var(--tx-s);
+    cursor: pointer; box-shadow: var(--shadow); -webkit-tap-highlight-color: transparent; }
+  .mh-qbtn:active { transform: scale(0.97); }
+  .mh-qbtn i { font-size: 22px; color: var(--tx-i); }
+
+  .mh-card { background: var(--bg-p); border: 1px solid var(--br);
+    border-radius: var(--rl); box-shadow: var(--shadow); overflow: hidden; }
+  .mh-row { display: flex; align-items: center; gap: 10px; padding: 11px 14px;
+    border-top: 1px solid var(--br); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .mh-row:first-child { border-top: none; }
+  .mh-row:active { background: var(--bg-s); }
+  .mh-row .mh-r-main { flex: 1; min-width: 0; }
+  .mh-row .mh-r-t { font-size: 12.5px; font-weight: 700; color: var(--tx);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mh-row .mh-r-s { font-size: 10.5px; color: var(--tx-t); margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mh-row .mh-r-ico { font-size: 18px; flex-shrink: 0; }
+  .mh-row .ti-chevron-right { font-size: 15px; color: var(--tx-t); opacity: .5; flex-shrink: 0; }
+  .mh-empty { padding: 18px 14px; text-align: center; font-size: 11.5px; color: var(--tx-t); }
 }
 </style>
 </head>
@@ -575,6 +708,18 @@ textarea { height: auto; resize: vertical; }
 
 <!-- 토스트 알림 영역 -->
 <div id="toast-container"></div>
+
+<!-- ══ 모바일 전용 홈 화면 (≤680px에서만 표시) ══ -->
+<div id="mobile-home"></div>
+
+<!-- ══ 모바일 전용 하단 탭바 (≤680px에서만 표시) ══ -->
+<div id="mobile-tabbar">
+  <button class="mtab" data-tab="home" onclick="mobileTab('home')"><i class="ti ti-home-2"></i>홈</button>
+  <button class="mtab" data-tab="clients" onclick="mobileTab('clients')"><i class="ti ti-building-community"></i>수주</button>
+  <button class="mtab" data-tab="materials" onclick="mobileTab('materials')"><i class="ti ti-truck-loading"></i>자재</button>
+  <button class="mtab" data-tab="alerts" onclick="mobileTab('alerts')"><i class="ti ti-bell"></i>알림<span class="mtab-badge" id="mtab-alert-badge" style="display:none;">0</span></button>
+  <button class="mtab" data-tab="more" onclick="mobileTab('more')"><i class="ti ti-menu-2"></i>더보기</button>
+</div>
 
 <!-- 공용 삭제/일반 알림 확인 모달 -->
 <div class="overlay" id="confirmDlg">
@@ -4287,7 +4432,7 @@ textarea { height: auto; resize: vertical; }
   <div class="content" id="pg-as">
     <div class="toolbar">
       <select id="as-filter" onchange="renderAS()" style="height:32px;">
-        <option value="">전체 상태</option><option>접수</option><option>처리중</option><option>완료</option><option>보류</option>
+        <option value="">전체 상태</option><option value="open">미완료(접수·처리중)</option><option>접수</option><option>처리중</option><option>완료</option><option>보류</option>
       </select>
       <input id="as-search" oninput="renderAS()" placeholder="고객/제품/증상 검색" style="height:32px;min-width:180px;">
       <button class="btn btn-primary" onclick="openAsAdd()" style="margin-left:auto;"><i class="ti ti-plus"></i>A/S 접수 등록</button>
@@ -4527,9 +4672,9 @@ textarea { height: auto; resize: vertical; }
   <div class="content" id="pg-partners">
     <div class="metrics" id="bp-kpi">
       <div class="mc clickable" onclick="filterPartners('')"><div class="mc-lbl"><i class="ti ti-address-book"></i>전체 거래처</div><div class="mc-val" id="bp-kpi-total">0개사</div></div>
-      <div class="mc clickable" onclick="filterPartners('공급처')"><div class="mc-lbl"><i class="ti ti-package-import" style="color:var(--tx-i);"></i>공급처</div><div class="mc-val" id="bp-kpi-sup" style="color:var(--tx-i);">0</div></div>
-      <div class="mc clickable" onclick="filterPartners('구매처')"><div class="mc-lbl"><i class="ti ti-building-community" style="color:var(--tx-ok);"></i>구매처</div><div class="mc-val" id="bp-kpi-buy" style="color:var(--tx-ok);">0</div></div>
-      <div class="mc clickable" onclick="filterPartners('외주처')"><div class="mc-lbl"><i class="ti ti-tools" style="color:var(--tx-w);"></i>외주처</div><div class="mc-val" id="bp-kpi-out" style="color:var(--tx-w);">0</div></div>
+      <div class="mc clickable" onclick="kpiFilter('bp-ft','공급처','renderPartners')"><div class="mc-lbl"><i class="ti ti-package-import" style="color:var(--tx-i);"></i>공급처</div><div class="mc-val" id="bp-kpi-sup" style="color:var(--tx-i);">0</div></div>
+      <div class="mc clickable" onclick="kpiFilter('bp-ft','구매처','renderPartners')"><div class="mc-lbl"><i class="ti ti-building-community" style="color:var(--tx-ok);"></i>구매처</div><div class="mc-val" id="bp-kpi-buy" style="color:var(--tx-ok);">0</div></div>
+      <div class="mc clickable" onclick="kpiFilter('bp-ft','외주처','renderPartners')"><div class="mc-lbl"><i class="ti ti-tools" style="color:var(--tx-w);"></i>외주처</div><div class="mc-val" id="bp-kpi-out" style="color:var(--tx-w);">0</div></div>
     </div>
     <div class="toolbar">
       <select id="bp-ft" onchange="renderPartners()">
@@ -4549,9 +4694,9 @@ textarea { height: auto; resize: vertical; }
   <div class="content" id="pg-rfq">
     <div class="metrics" id="rfq-kpi">
       <div class="mc"><div class="mc-lbl"><i class="ti ti-file-description"></i>전체 견적요청</div><div class="mc-val" id="rfq-kpi-total">0건</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-send" style="color:var(--tx-i);"></i>요청중</div><div class="mc-val" id="rfq-kpi-pending" style="color:var(--tx-i);">0건</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-mail-opened" style="color:var(--tx-ok);"></i>회신 완료</div><div class="mc-val" id="rfq-kpi-replied" style="color:var(--tx-ok);">0건</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-w);"></i>채택</div><div class="mc-val" id="rfq-kpi-adopted" style="color:var(--tx-w);">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('rfq-fs','요청중','renderRfq')"><div class="mc-lbl"><i class="ti ti-send" style="color:var(--tx-i);"></i>요청중</div><div class="mc-val" id="rfq-kpi-pending" style="color:var(--tx-i);">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('rfq-fs','회신완료','renderRfq')"><div class="mc-lbl"><i class="ti ti-mail-opened" style="color:var(--tx-ok);"></i>회신 완료</div><div class="mc-val" id="rfq-kpi-replied" style="color:var(--tx-ok);">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('rfq-fs','채택','renderRfq')"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-w);"></i>채택</div><div class="mc-val" id="rfq-kpi-adopted" style="color:var(--tx-w);">0건</div></div>
     </div>
     <div class="toolbar">
       <select id="rfq-fc" onchange="renderRfq()" style="min-width:140px;"><option value="">전체 고객사</option></select>
@@ -4575,8 +4720,8 @@ textarea { height: auto; resize: vertical; }
   <div class="content" id="pg-po">
     <div class="metrics" id="po-kpi">
       <div class="mc"><div class="mc-lbl"><i class="ti ti-file-invoice"></i>전체 발주서</div><div class="mc-val" id="po-kpi-total">0건</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-send" style="color:var(--tx-i);"></i>발송완료</div><div class="mc-val" id="po-kpi-sent" style="color:var(--tx-i);">0건</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>입고완료</div><div class="mc-val" id="po-kpi-done" style="color:var(--tx-ok);">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('po-fs','발송완료','renderPo')"><div class="mc-lbl"><i class="ti ti-send" style="color:var(--tx-i);"></i>발송완료</div><div class="mc-val" id="po-kpi-sent" style="color:var(--tx-i);">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('po-fs','입고완료','renderPo')"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>입고완료</div><div class="mc-val" id="po-kpi-done" style="color:var(--tx-ok);">0건</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-coin" style="color:var(--tx-w);"></i>발주 총액</div><div class="mc-val" id="po-kpi-amt" style="color:var(--tx-w);">₩0</div></div>
     </div>
     <div class="toolbar">
@@ -4611,8 +4756,8 @@ textarea { height: auto; resize: vertical; }
   <div class="content" id="pg-statement">
     <div class="metrics" id="st-kpi">
       <div class="mc"><div class="mc-lbl"><i class="ti ti-receipt"></i>전체 명세표</div><div class="mc-val" id="st-k-total">0건</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-send" style="color:var(--tx-i);"></i>발송완료</div><div class="mc-val" id="st-k-sent" style="color:var(--tx-i);">0건</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>수령확인</div><div class="mc-val" id="st-k-done" style="color:var(--tx-ok);">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('st-fs','발송완료','renderSalesDoc','statement')"><div class="mc-lbl"><i class="ti ti-send" style="color:var(--tx-i);"></i>발송완료</div><div class="mc-val" id="st-k-sent" style="color:var(--tx-i);">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('st-fs','수령확인','renderSalesDoc','statement')"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>수령확인</div><div class="mc-val" id="st-k-done" style="color:var(--tx-ok);">0건</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-coin" style="color:var(--tx-w);"></i>거래 총액(VAT 포함)</div><div class="mc-val" id="st-k-amt" style="color:var(--tx-w);">₩0</div></div>
     </div>
     <div class="toolbar">
@@ -4631,8 +4776,8 @@ textarea { height: auto; resize: vertical; }
   <div class="content" id="pg-taxinvoice">
     <div class="metrics" id="tx-kpi">
       <div class="mc"><div class="mc-lbl"><i class="ti ti-file-dollar"></i>전체 계산서</div><div class="mc-val" id="tx-k-total">0건</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-stamp" style="color:var(--tx-i);"></i>발행완료</div><div class="mc-val" id="tx-k-sent" style="color:var(--tx-i);">0건</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>전송완료</div><div class="mc-val" id="tx-k-done" style="color:var(--tx-ok);">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('tx-fs','발행완료','renderSalesDoc','tax')"><div class="mc-lbl"><i class="ti ti-stamp" style="color:var(--tx-i);"></i>발행완료</div><div class="mc-val" id="tx-k-sent" style="color:var(--tx-i);">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('tx-fs','전송완료','renderSalesDoc','tax')"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>전송완료</div><div class="mc-val" id="tx-k-done" style="color:var(--tx-ok);">0건</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-coin" style="color:var(--tx-w);"></i>발행 총액(VAT 포함)</div><div class="mc-val" id="tx-k-amt" style="color:var(--tx-w);">₩0</div></div>
     </div>
     <div class="toolbar">
@@ -4657,8 +4802,8 @@ textarea { height: auto; resize: vertical; }
     <div id="sd-tab-quote">
     <div class="metrics" id="qt-kpi">
       <div class="mc"><div class="mc-lbl"><i class="ti ti-file-text"></i>전체 견적</div><div class="mc-val" id="qt-k-total">0건</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-send" style="color:var(--tx-i);"></i>발송</div><div class="mc-val" id="qt-k-sent" style="color:var(--tx-i);">0건</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>수주 전환</div><div class="mc-val" id="qt-k-done" style="color:var(--tx-ok);">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('qt-fs','발송','renderSODoc','quote')"><div class="mc-lbl"><i class="ti ti-send" style="color:var(--tx-i);"></i>발송</div><div class="mc-val" id="qt-k-sent" style="color:var(--tx-i);">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('qt-fs','수주전환','renderSODoc','quote')"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>수주 전환</div><div class="mc-val" id="qt-k-done" style="color:var(--tx-ok);">0건</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-coin" style="color:var(--tx-w);"></i>견적 총액(VAT 포함)</div><div class="mc-val" id="qt-k-amt" style="color:var(--tx-w);">₩0</div></div>
     </div>
     <div class="toolbar">
@@ -4676,8 +4821,8 @@ textarea { height: auto; resize: vertical; }
     <div id="sd-tab-order" style="display:none;">
     <div class="metrics" id="so-kpi">
       <div class="mc"><div class="mc-lbl"><i class="ti ti-clipboard-check"></i>전체 수주</div><div class="mc-val" id="so-k-total">0건</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-loader" style="color:var(--tx-i);"></i>진행중</div><div class="mc-val" id="so-k-sent" style="color:var(--tx-i);">0건</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>완료</div><div class="mc-val" id="so-k-done" style="color:var(--tx-ok);">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('so-fs','진행중','renderSODoc','order')"><div class="mc-lbl"><i class="ti ti-loader" style="color:var(--tx-i);"></i>진행중</div><div class="mc-val" id="so-k-sent" style="color:var(--tx-i);">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('so-fs','완료','renderSODoc','order')"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>완료</div><div class="mc-val" id="so-k-done" style="color:var(--tx-ok);">0건</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-coin" style="color:var(--tx-w);"></i>수주 총액(VAT 포함)</div><div class="mc-val" id="so-k-amt" style="color:var(--tx-w);">₩0</div></div>
     </div>
     <div class="toolbar">
@@ -5819,6 +5964,25 @@ function nextCode(prefix, list, field='id') {
   const nums = list.map(x => parseInt((x[field] || '').split('-').pop()) || 0);
   return `${prefix}-${String((nums.length ? Math.max(...nums) : 0) + 1).padStart(3, '0')}`;
 }
+/* KPI 카드 클릭 → 페이지의 상태 필터 select 를 해당 값으로 토글(같은 값 재클릭 시 전체 복구) 후 재렌더.
+   renderFn 에 인자가 필요한 경우(renderSalesDoc('statement') 등) ...args 로 전달. */
+function kpiFilter(selectId, value, renderFn, ...args) {
+  const sel = inp(selectId); if (!sel) return;
+  sel.value = (sel.value === value) ? '' : value;
+  if (typeof window[renderFn] === 'function') window[renderFn](...args);
+}
+/* 정적 HTML KPI 카드의 활성(필터됨) 강조 토글. map = { 상태값: 카드값요소id } */
+function _kpiActive(selectId, map) {
+  const sel = inp(selectId); const fs = sel ? sel.value : '';
+  Object.keys(map).forEach(val => {
+    const valEl = inp(map[val]);
+    const card = valEl && valEl.closest('.mc');
+    if (card) {
+      card.classList.add('clickable');
+      card.classList.toggle('kpi-active', fs === val);
+    }
+  });
+}
 function getClientName(id) { return clients.find(c => c.id === id)?.name || id; }
 function getProductById(id) { return products.find(p => p.id === id); }
 function getProductName(id) { return getProductById(id)?.name || id; }
@@ -6107,6 +6271,9 @@ function _goTo(id, el) {
   currentPage = id;
   _updateBackBtn();
   refreshPage(id);
+  // 모바일: 페이지 이동 시 홈 오버레이 해제 + 하단 탭 동기화
+  document.body.classList.remove('mhome');
+  if (typeof syncMobileTab === 'function') syncMobileTab();
 }
 
 /* 재고 관리 — 분류별(완제품/생산부품/사무비품) 사이드바 진입 */
@@ -7119,11 +7286,19 @@ function renderMaterials() {
   const done = materials.filter(m=>m.status==='입고완료').length;
   const totalAmt = materials.reduce((s,m)=>s+getMatAmt(m),0);
   const kpi = inp('mat-kpi');
-  if (kpi) kpi.innerHTML =
-    '<div class="mc"><div class="mc-lbl"><i class="ti ti-circle-dashed"></i>발주 전 대기</div><div class="mc-val">'+before+'건</div></div>' +
-    '<div class="mc"><div class="mc-lbl"><i class="ti ti-truck-delivery" style="color:var(--tx-i);"></i>외주 배송중</div><div class="mc-val" style="color:var(--tx-i);">'+shipping+'건</div></div>' +
-    '<div class="mc"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>창고 입고 완료</div><div class="mc-val" style="color:var(--tx-ok);">'+done+'건</div></div>' +
-    '<div class="mc"><div class="mc-lbl"><i class="ti ti-coin"></i>예산 소요 규모</div><div class="mc-val">'+fmtW(totalAmt)+'</div></div>';
+  if (kpi) {
+    const fsCur = v('mat-fs') || '';
+    // 클릭 가능한 상태 카드: 클릭 시 mat-fs 필터를 토글(다시 클릭 시 전체 복구)
+    const card = (status, label, iconHtml, cnt, valColor) =>
+      '<div class="mc clickable'+(fsCur===status?' kpi-active':'')+'" onclick="kpiFilter(\'mat-fs\',\''+status+'\',\'renderMaterials\')">' +
+      '<div class="mc-lbl">'+iconHtml+label+'</div>' +
+      '<div class="mc-val"'+(valColor?' style="color:'+valColor+'"':'')+'>'+cnt+'건</div></div>';
+    kpi.innerHTML =
+      card('발주전', '발주 전 대기', '<i class="ti ti-circle-dashed"></i>', before, '') +
+      card('발주중', '외주 배송중', '<i class="ti ti-truck-delivery" style="color:var(--tx-i);"></i>', shipping, 'var(--tx-i)') +
+      card('입고완료', '창고 입고 완료', '<i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>', done, 'var(--tx-ok)') +
+      '<div class="mc"><div class="mc-lbl"><i class="ti ti-coin"></i>예산 소요 규모</div><div class="mc-val">'+fmtW(totalAmt)+'</div></div>';
+  }
 
   const fc=v('mat-fc'), fp=v('mat-fp'), fs=v('mat-fs'), q=(v('mat-q')||'').toLowerCase();
   let rows = materials.filter(m => {
@@ -7293,10 +7468,11 @@ function renderInventory() {
   const secLbl = inp('inv-sec-lbl');
   if (secLbl) secLbl.innerHTML = `<i class="ti ${catIcon}"></i>${invCategory} 재고 목록`;
 
+  const stCur = v('inv-filter-status') || '';
   const kpi = inp('inv-kpi');
   if (kpi) kpi.innerHTML =
     '<div class="mc"><div class="mc-lbl"><i class="ti '+catIcon+'"></i>'+invCategory+' 품목수</div><div class="mc-val">'+total+'개 종</div></div>' +
-    '<div class="mc"><div class="mc-lbl"><i class="ti ti-package-off" style="color:var(--tx-d);"></i>안전재고 미달</div><div class="mc-val" style="color:var(--tx-d);">'+below+'개 품목</div></div>' +
+    '<div class="mc clickable'+(stCur==='low'?' kpi-active':'')+'" onclick="kpiFilter(\'inv-filter-status\',\'low\',\'renderInventory\')"><div class="mc-lbl"><i class="ti ti-package-off" style="color:var(--tx-d);"></i>안전재고 미달</div><div class="mc-val" style="color:var(--tx-d);">'+below+'개 품목</div></div>' +
     '<div class="mc"><div class="mc-lbl"><i class="ti ti-stack-2" style="color:var(--tx-i);"></i>총 보유 수량</div><div class="mc-val" style="color:var(--tx-i);">'+totalQty+'</div></div>' +
     '<div class="mc"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>안전재고 충족률</div><div class="mc-val" style="color:var(--tx-ok);">'+okRate+'%</div></div>';
 
@@ -7439,11 +7615,18 @@ function renderOrders() {
   const doneCnt = workOrders.filter(o=>o.status==='완료').length;
   const delayCnt = workOrders.filter(o=>o.status==='지연').length;
   const summ = inp('orders-summary');
-  if (summ) summ.innerHTML =
-    '<div class="sum-box" style="cursor:pointer;" onclick="inp(\'orders-fs\').value=\'진행중\'; renderOrders();"><i class="ti ti-loader si" style="color:#185FA5;"></i><div><div class="sn" style="color:#185FA5;">'+inProg+'건</div><div class="sl">진행중</div></div></div>' +
-    '<div class="sum-box"><i class="ti ti-circle-check si" style="color:var(--tx-ok);"></i><div><div class="sn" style="color:var(--tx-ok);">'+doneCnt+'건</div><div class="sl">완료</div></div></div>' +
-    '<div class="sum-box"><i class="ti ti-alert-triangle si" style="color:var(--tx-d);"></i><div><div class="sn" style="color:var(--tx-d);">'+delayCnt+'건</div><div class="sl">지연</div></div></div>' +
-    '<div class="sum-box"><i class="ti ti-chart-bar si" style="color:var(--tx-i);"></i><div><div class="sn">'+(totalQty?Math.round(totalDone/totalQty*100):0)+'%</div><div class="sl">전체 진행률</div></div></div>';
+  if (summ) {
+    const fsCur = v('orders-fs') || '';
+    // 클릭 시 orders-fs 필터 토글(같은 값 재클릭 시 전체 복구) + 활성 박스 강조
+    const sbox = (status, label, cnt, color, icon) =>
+      '<div class="sum-box clickable'+(fsCur===status?' kpi-active':'')+'" onclick="kpiFilter(\'orders-fs\',\''+status+'\',\'renderOrders\')">' +
+      '<i class="ti '+icon+' si" style="color:'+color+';"></i><div><div class="sn" style="color:'+color+';">'+cnt+'건</div><div class="sl">'+label+'</div></div></div>';
+    summ.innerHTML =
+      sbox('진행중', '진행중', inProg, '#185FA5', 'ti-loader') +
+      sbox('완료', '완료', doneCnt, 'var(--tx-ok)', 'ti-circle-check') +
+      sbox('지연', '지연', delayCnt, 'var(--tx-d)', 'ti-alert-triangle') +
+      '<div class="sum-box"><i class="ti ti-chart-bar si" style="color:var(--tx-i);"></i><div><div class="sn">'+(totalQty?Math.round(totalDone/totalQty*100):0)+'%</div><div class="sl">전체 진행률</div></div></div>';
+  }
 
   const q=(v('orders-q')||'').toLowerCase(), fs=v('orders-fs')||'';
   let fil = workOrders.filter(o=>{
@@ -8493,12 +8676,18 @@ function _escHtml(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').r
 function renderClaims() {
   const kpi = inp('claims-kpi');
   if (kpi) {
-    const open = claims.filter(c => c.status !== '완료').length;
+    const ing  = claims.filter(c => c.status === '처리중').length;
     const done = claims.filter(c => c.status === '완료').length;
+    const fsCur = v('claims-fs') || '';
+    // 클릭 시 claims-fs 필터 토글(같은 값 재클릭 시 전체 복구). 카운트=정확 상태라 필터 결과와 일치.
+    const cl = (status, label, cnt, color, icon) =>
+      '<div class="mc clickable'+(fsCur===status?' kpi-active':'')+'" onclick="kpiFilter(\'claims-fs\',\''+status+'\',\'renderClaims\')">' +
+      '<div class="mc-lbl"><i class="ti '+icon+'" style="color:'+color+';"></i>'+label+'</div>' +
+      '<div class="mc-val" style="color:'+color+';">'+cnt+'건</div></div>';
     kpi.innerHTML =
       '<div class="mc"><div class="mc-lbl"><i class="ti ti-message-report" style="color:var(--tx-d);"></i>전체 클레임</div><div class="mc-val">'+claims.length+'건</div></div>' +
-      '<div class="mc"><div class="mc-lbl"><i class="ti ti-loader" style="color:var(--tx-i);"></i>처리중</div><div class="mc-val" style="color:var(--tx-i);">'+open+'건</div></div>' +
-      '<div class="mc"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>처리 완료</div><div class="mc-val" style="color:var(--tx-ok);">'+done+'건</div></div>' +
+      cl('처리중', '처리중', ing, 'var(--tx-i)', 'ti-loader') +
+      cl('완료', '처리 완료', done, 'var(--tx-ok)', 'ti-circle-check') +
       '<div class="mc"><div class="mc-lbl"><i class="ti ti-building-community" style="color:var(--tx-w);"></i>관련 고객사</div><div class="mc-val" style="color:var(--tx-w);">'+new Set(claims.map(c=>c.clientId)).size+'곳</div></div>';
   }
 
@@ -10137,7 +10326,7 @@ function renderPermMatrix(){
   const tab=(r,label)=>`<button onclick="setPermRole('${r}')" style="border:none;padding:8px 18px;font-size:12px;font-weight:700;cursor:pointer;background:${role===r?'#1971c2':'transparent'};color:${role===r?'#fff':'var(--tx-s)'};">${label}</button>`;
   const chips = PAGE_LIST.map(p=>{
     const on=allowed.has(p.id);
-    return `<span onclick="permToggleRolePage('${role}','${p.id}',${!on})" style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;margin:3px;border-radius:16px;font-size:11.5px;cursor:pointer;user-select:none;transition:all .12s;border:1px solid ${on?'#1971c2':'var(--br)'};background:${on?'#1971c2':'transparent'};color:${on?'#fff':'var(--tx-t)'};font-weight:${on?'600':'400'};"><i class="ti ti-${on?'check':'minus'}" style="font-size:12px;opacity:.9;"></i>${p.label}</span>`;
+    return `<span onclick="permToggleRolePage('${role}','${p.id}',${!on})" style="display:inline-flex;align-items:center;padding:4px 8px;margin:2px;border-radius:11px;font-size:10px;cursor:pointer;user-select:none;transition:all .12s;border:1px solid ${on?'#1971c2':'var(--br)'};background:${on?'#1971c2':'transparent'};color:${on?'#fff':'var(--tx-t)'};font-weight:${on?'600':'400'};">${p.label}</span>`;
   }).join('');
   const RL={manager:'중간관리자',staff:'평사원'};
   el.innerHTML = `
@@ -10172,7 +10361,7 @@ function renderPermColumns(){
   const hiddenOf=(tk)=> new Set(((cfg[role]||{})[tk])||[]);
   const RB='1px solid var(--br)';
   const tab=(r,label)=>`<button onclick="setPermColRole('${r}')" style="border:none;padding:8px 18px;font-size:12px;font-weight:700;cursor:pointer;background:${permColRole===r?'#1971c2':'transparent'};color:${permColRole===r?'#fff':'var(--tx-s)'};">${label}</button>`;
-  const chip=(label, shown, onclick)=>`<span onclick="${onclick}" style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;margin:3px;border-radius:16px;font-size:11.5px;cursor:pointer;user-select:none;transition:all .12s;border:1px solid ${shown?'#1971c2':'var(--br)'};background:${shown?'#1971c2':'transparent'};color:${shown?'#fff':'var(--tx-t)'};font-weight:${shown?'600':'400'};"><i class="ti ti-${shown?'eye':'eye-off'}" style="font-size:12px;opacity:.9;"></i>${label}</span>`;
+  const chip=(label, shown, onclick)=>`<span onclick="${onclick}" style="display:inline-flex;align-items:center;padding:4px 8px;margin:2px;border-radius:11px;font-size:10px;cursor:pointer;user-select:none;transition:all .12s;border:1px solid ${shown?'#1971c2':'var(--br)'};background:${shown?'#1971c2':'transparent'};color:${shown?'#fff':'var(--tx-t)'};font-weight:${shown?'600':'400'};">${label}</span>`;
   const cards = Object.keys(COLUMN_TABLES).map(tk=>{
     const t=COLUMN_TABLES[tk]; const hidden=hiddenOf(tk);
     const chips=t.cols.map(c=>{
@@ -10213,7 +10402,7 @@ function renderPermFeatures(){
   const role=permColRole;
   const f=roleFeaturesConfig()[role]||{};
   const RL={manager:'중간관리자',staff:'평사원'};
-  const chip=(def)=>{ const on=(f[def.key]!==false); return `<span onclick="permToggleFeature('${role}','${def.key}',${!on})" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;margin:3px;border-radius:18px;font-size:12px;cursor:pointer;user-select:none;border:1px solid ${on?'#1971c2':'var(--br)'};background:${on?'#1971c2':'transparent'};color:${on?'#fff':'var(--tx-t)'};font-weight:${on?'600':'400'};"><i class="ti ${def.icon}" style="font-size:13px;"></i>${def.label} <i class="ti ti-${on?'eye':'eye-off'}" style="font-size:12px;opacity:.85;"></i></span>`; };
+  const chip=(def)=>{ const on=(f[def.key]!==false); return `<span onclick="permToggleFeature('${role}','${def.key}',${!on})" style="display:inline-flex;align-items:center;padding:5px 10px;margin:2px;border-radius:12px;font-size:10.5px;cursor:pointer;user-select:none;border:1px solid ${on?'#1971c2':'var(--br)'};background:${on?'#1971c2':'transparent'};color:${on?'#fff':'var(--tx-t)'};font-weight:${on?'600':'400'};">${def.label}</span>`; };
   el.innerHTML = `<div style="font-size:11.5px;color:var(--tx-s);margin-bottom:8px;"><b>${RL[role]}</b> 에게 허용할 기능을 선택합니다. (앱 전체 공통 적용)</div>
     <div>${FEATURE_DEFS.map(chip).join('')}</div>`;
 }
@@ -10843,6 +11032,7 @@ function renderRfq() {
   inp('rfq-kpi-pending').textContent = pending + '건';
   inp('rfq-kpi-replied').textContent = replied + '건';
   inp('rfq-kpi-adopted').textContent = adopted + '건';
+  _kpiActive('rfq-fs', {'요청중':'rfq-kpi-pending','회신완료':'rfq-kpi-replied','채택':'rfq-kpi-adopted'});
 
   const badge = inp('rfqBadge');
   if (badge) { badge.textContent = pending; badge.style.display = pending ? '' : 'none'; }
@@ -11115,6 +11305,7 @@ function renderPo() {
   inp('po-kpi-sent').textContent  = sent  + '건';
   inp('po-kpi-done').textContent  = done  + '건';
   inp('po-kpi-amt').textContent   = '₩' + amt.toLocaleString('ko-KR');
+  _kpiActive('po-fs', {'발송완료':'po-kpi-sent','입고완료':'po-kpi-done'});
 
   const badge = inp('poBadge');
   if (badge) {
@@ -11436,6 +11627,7 @@ function renderSalesDoc(type) {
   if (inp(idp+'-k-sent'))  inp(idp+'-k-sent').textContent  = sent + '건';
   if (inp(idp+'-k-done'))  inp(idp+'-k-done').textContent  = done + '건';
   if (inp(idp+'-k-amt'))   inp(idp+'-k-amt').textContent   = '₩' + sumAmt.toLocaleString('ko-KR');
+  _kpiActive(idp+'-fs', {[cfg.statuses[1]]: idp+'-k-sent', [cfg.statuses[2]]: idp+'-k-done'});
 
   const fcSel = inp(idp+'-fc');
   if (fcSel) {
@@ -11870,6 +12062,7 @@ function renderSODoc(type) {
   if (inp(idp+'-k-sent'))  inp(idp+'-k-sent').textContent  = kSent + '건';
   if (inp(idp+'-k-done'))  inp(idp+'-k-done').textContent  = kDone + '건';
   if (inp(idp+'-k-amt'))   inp(idp+'-k-amt').textContent   = '₩' + sumAmt.toLocaleString('ko-KR');
+  _kpiActive(idp+'-fs', type==='quote' ? {'발송':idp+'-k-sent','수주전환':idp+'-k-done'} : {'진행중':idp+'-k-sent','완료':idp+'-k-done'});
   updateOrderBadge();
 
   const fcSel = inp(idp+'-fc');
@@ -12116,7 +12309,8 @@ function gotoOrderProcess(id) {
 
 /* ════════ 거래처 관리 ════════ */
 function filterPartners(type) {
-  if(inp('bp-ft')) inp('bp-ft').value = type;
+  const sel = inp('bp-ft');
+  if (sel) sel.value = (sel.value === type) ? '' : type;   // 같은 유형 재클릭 시 전체 복구(토글)
   renderPartners();
   go('partners', document.querySelector('.ni[onclick*="partners"]'));
 }
@@ -12131,6 +12325,7 @@ function renderPartners() {
   setEl('bp-kpi-sup',   sup);
   setEl('bp-kpi-buy',   buy);
   setEl('bp-kpi-out',   out);
+  _kpiActive('bp-ft', {'공급처':'bp-kpi-sup','구매처':'bp-kpi-buy','외주처':'bp-kpi-out'});
 
   const ft = v('bp-ft'), q = v('bp-q').toLowerCase();
   const rows = partners.filter(p => {
@@ -13163,7 +13358,8 @@ function renderAS(){
   const done = asList.filter(a=>a.status==='완료').length;
   const paidCost = asList.reduce((s,a)=>s+(a.warranty==='유상'?(Number(a.cost)||0):0),0);
   const list = asList.filter(a=>{
-    if (fil && a.status!==fil) return false;
+    if (fil === 'open') { if (!(a.status==='접수'||a.status==='처리중')) return false; }
+    else if (fil && a.status!==fil) return false;
     if (q && ![getClientName(a.clientId),a.productName,a.symptom,a.id].join(' ').toLowerCase().includes(q)) return false;
     return true;
   }).sort((a,b)=>(b.recvDate||'').localeCompare(a.recvDate||''));
@@ -13186,8 +13382,8 @@ function renderAS(){
   body.innerHTML = `
     <div class="metrics">
       <div class="mc"><div class="mc-lbl"><i class="ti ti-tool"></i>전체 A/S</div><div class="mc-val">${total}건</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-loader" style="color:var(--tx-w);"></i>미완료(접수·처리중)</div><div class="mc-val" style="color:var(--tx-w);">${open}건</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-checks" style="color:var(--tx-ok);"></i>처리 완료</div><div class="mc-val" style="color:var(--tx-ok);">${done}건</div></div>
+      <div class="mc clickable${fil==='open'?' kpi-active':''}" onclick="kpiFilter('as-filter','open','renderAS')"><div class="mc-lbl"><i class="ti ti-loader" style="color:var(--tx-w);"></i>미완료(접수·처리중)</div><div class="mc-val" style="color:var(--tx-w);">${open}건</div></div>
+      <div class="mc clickable${fil==='완료'?' kpi-active':''}" onclick="kpiFilter('as-filter','완료','renderAS')"><div class="mc-lbl"><i class="ti ti-checks" style="color:var(--tx-ok);"></i>처리 완료</div><div class="mc-val" style="color:var(--tx-ok);">${done}건</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-coin" style="color:var(--tx-i);"></i>유상 수리 합계</div><div class="mc-val" style="color:var(--tx-i);">${fmtW(paidCost)}</div></div>
     </div>
     <div class="card">
@@ -13710,6 +13906,195 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
+
+/* ════════════════════════════════════════════════════════════
+   모바일 전용 홈 화면 + 하단 탭바
+   - ≤680px 환경에서만 동작 (CSS 미디어쿼리와 연동)
+   - 홈은 별도 UI, 세부 화면은 기존 페이지(go)를 재사용
+   ════════════════════════════════════════════════════════════ */
+function isMobileView() {
+  return window.matchMedia('(max-width: 680px)').matches;
+}
+
+/* 하단 탭 클릭 핸들러 */
+function mobileTab(tab) {
+  if (tab === 'more') { toggleMobileSidebar(); return; }
+  if (tab === 'home') { showMobileHome(); return; }
+  // 나머지는 기존 페이지로 이동 (_goTo가 mhome 해제 + 탭 동기화 수행)
+  go(tab);
+}
+
+/* 모바일 홈 표시 */
+function showMobileHome() {
+  document.body.classList.add('mhome');
+  renderMobileHome();
+  syncMobileTab();
+  const mh = inp('mobile-home');
+  if (mh) mh.scrollTop = 0;
+}
+
+/* 현재 상태에 맞춰 하단 탭 활성화 표시 동기화 */
+function syncMobileTab() {
+  const active = document.body.classList.contains('mhome')
+    ? 'home'
+    : (['clients', 'materials', 'alerts'].includes(currentPage) ? currentPage : null);
+  document.querySelectorAll('#mobile-tabbar .mtab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === active);
+  });
+  // 알림 배지 동기화
+  const badge = inp('mtab-alert-badge');
+  if (badge) {
+    const n = (typeof alertsList !== 'undefined') ? alertsList.length : 0;
+    badge.textContent = n > 99 ? '99+' : n;
+    badge.style.display = n > 0 ? 'block' : 'none';
+  }
+}
+
+/* 홈 화면 콘텐츠 렌더 (실데이터 기반 KPI · 바로가기 · 임박 납기 · 최근 알림) */
+function renderMobileHome() {
+  const el = inp('mobile-home');
+  if (!el) return;
+
+  const pending     = materials.filter(m => m.status === '발주전').length;
+  const orderMats   = materials.filter(m => m.status === '발주중').length;
+  const arrived     = materials.filter(m => m.status === '입고완료').length;
+  const activeProds = products.filter(p => p.status !== '견적' && !['완료','납품'].includes(p.processStage)).length;
+  const doneProds   = products.filter(p => ['완료','납품'].includes(p.processStage)).length;
+  const lowStock    = inventory.filter(i => i.qty <= i.minQty && i.minQty > 0).length;
+  const openDefects = defects.filter(d => d.status !== '완료').length;
+  const openClaims  = claims.filter(c => c.status !== '완료').length;
+
+  // 임박 납기 (진행 중 제품, 납기일 빠른 순)
+  const deadlines = products
+    .filter(p => p.deliveryDate && p.status !== '견적' && !['완료','납품'].includes(p.processStage))
+    .sort((a, b) => a.deliveryDate.localeCompare(b.deliveryDate))
+    .slice(0, 4);
+
+  const recentAlerts = alertsList.slice(0, 4);
+  const alertIco = { err: 'ti-alert-triangle', warn: 'ti-alert-circle', info: 'ti-info-circle' };
+  const alertCol = { err: 'var(--tx-d)', warn: 'var(--tx-w)', info: 'var(--tx-i)' };
+
+  el.innerHTML = `
+    <div class="mh-hero">
+      <span class="mh-greet">MES Pro</span>
+      <span class="mh-date">${today()}</span>
+    </div>
+
+    <div class="mh-search">
+      <i class="ti ti-search mh-s-ico"></i>
+      <input type="text" id="mh-search-input" placeholder="통합 검색 (제품·고객사·자재·재고·직원…)"
+             autocomplete="off" oninput="mhSearch(this.value)" onkeydown="mhSearchKeyDown(event)">
+      <i class="ti ti-x mh-s-clear" id="mh-search-clear" onclick="mhSearchClear()"></i>
+    </div>
+
+    <div class="mh-kpis">
+      <div class="mh-kpi" onclick="mobileGo('clients')">
+        <div class="mh-k-lbl"><i class="ti ti-box" style="color:var(--tx-i);"></i>진행 중 프로젝트</div>
+        <div class="mh-k-val" style="color:var(--tx-i);">${activeProds}<span style="font-size:13px;">건</span></div>
+        <div class="mh-k-sub">완료 ${doneProds}건 · 전체 ${products.length}종</div>
+      </div>
+      <div class="mh-kpi" onclick="mobileGo('materials')">
+        <div class="mh-k-lbl"><i class="ti ti-circle-dashed" style="color:var(--tx-t);"></i>발주 대기 자재</div>
+        <div class="mh-k-val" style="color:${pending > 0 ? 'var(--tx-d)' : 'var(--tx-t)'};">${pending}<span style="font-size:13px;">건</span></div>
+        <div class="mh-k-sub">발주중 ${orderMats} · 입고 ${arrived}</div>
+      </div>
+      <div class="mh-kpi" onclick="mobileGoInv()">
+        <div class="mh-k-lbl"><i class="ti ti-packages" style="color:${lowStock > 0 ? 'var(--tx-d)' : 'var(--tx-ok)'};"></i>안전재고 미달</div>
+        <div class="mh-k-val" style="color:${lowStock > 0 ? 'var(--tx-d)' : 'var(--tx-ok)'};">${lowStock}<span style="font-size:13px;">품목</span></div>
+        <div class="mh-k-sub">전체 재고 ${inventory.length}종</div>
+      </div>
+      <div class="mh-kpi" onclick="mobileGo('quality')">
+        <div class="mh-k-lbl"><i class="ti ti-shield-alert" style="color:${openDefects > 0 ? 'var(--tx-w)' : 'var(--tx-ok)'};"></i>미처리 품질장애</div>
+        <div class="mh-k-val" style="color:${openDefects > 0 ? 'var(--tx-w)' : 'var(--tx-ok)'};">${openDefects}<span style="font-size:13px;">건</span></div>
+        <div class="mh-k-sub">클레임 ${openClaims}건 처리중</div>
+      </div>
+    </div>
+
+    <div class="mh-sec-title"><i class="ti ti-bolt"></i>바로가기</div>
+    <div class="mh-quick">
+      <div class="mh-qbtn" onclick="mobileAction('order')"><i class="ti ti-clipboard-plus"></i>생산지시</div>
+      <div class="mh-qbtn" onclick="mobileAction('material')"><i class="ti ti-truck-loading"></i>자재발주</div>
+      <div class="mh-qbtn" onclick="mobileGo('deliveries')"><i class="ti ti-truck-delivery"></i>납품현황</div>
+      <div class="mh-qbtn" onclick="mobileGoProcess()"><i class="ti ti-layout-kanban"></i>공정관리</div>
+    </div>
+
+    <div class="mh-sec-title"><i class="ti ti-calendar-due"></i>임박 납기</div>
+    <div class="mh-card">
+      ${deadlines.length ? deadlines.map(p => `
+        <div class="mh-row" onclick="mobileGoProcess()">
+          <div class="mh-r-main">
+            <div class="mh-r-t">${p.name}</div>
+            <div class="mh-r-s">${getClientName(p.clientId)} · ${p.processStage}</div>
+          </div>
+          ${dayBadge(p.deliveryDate)}
+          <i class="ti ti-chevron-right"></i>
+        </div>`).join('') : `<div class="mh-empty">진행 중인 납기 일정이 없습니다.</div>`}
+    </div>
+
+    <div class="mh-sec-title"><i class="ti ti-bell"></i>최근 알림</div>
+    <div class="mh-card">
+      ${recentAlerts.length ? recentAlerts.map(a => `
+        <div class="mh-row" onclick="mobileGo('alerts')">
+          <i class="ti ${alertIco[a.type] || 'ti-info-circle'} mh-r-ico" style="color:${alertCol[a.type] || 'var(--tx-i)'};"></i>
+          <div class="mh-r-main">
+            <div class="mh-r-t">${a.title || ''}</div>
+            <div class="mh-r-s">${a.sub || ''}</div>
+          </div>
+          <i class="ti ti-chevron-right"></i>
+        </div>`).join('') : `<div class="mh-empty">새로운 알림이 없습니다.</div>`}
+    </div>`;
+}
+
+/* 모바일 홈 통합검색 — 기존 글로벌 검색 로직(onGlobalSearch/결과 드롭다운) 재사용 */
+function mhSearch(q) {
+  const clr = inp('mh-search-clear');
+  if (clr) clr.style.display = q.trim() ? 'block' : 'none';
+  // 결과 드롭다운을 홈 검색창 바로 아래에 위치시킴
+  const box = inp('mh-search-input');
+  if (box) document.documentElement.style.setProperty('--mh-results-top', (box.getBoundingClientRect().bottom + 6) + 'px');
+  onGlobalSearch(q); // #global-search-results 에 결과 렌더 (모바일에서 fixed 위치로 표시)
+}
+function mhSearchClear() {
+  const i = inp('mh-search-input'); if (i) { i.value = ''; i.focus(); }
+  const clr = inp('mh-search-clear'); if (clr) clr.style.display = 'none';
+  const r = inp('global-search-results'); if (r) r.style.display = 'none';
+}
+function mhSearchKeyDown(e) {
+  if (e.key === 'Escape') { mhSearchClear(); return; }
+  onGlobalSearchKeyDown(e); // 위/아래/Enter 키 결과 탐색 재사용
+}
+
+/* 홈 → 페이지 이동 헬퍼 (홈 해제 후 이동) */
+function mobileGo(id) { document.body.classList.remove('mhome'); go(id); }
+function mobileGoInv() { document.body.classList.remove('mhome'); goInventory('finished'); syncMobileTab(); }
+function mobileGoProcess() {
+  document.body.classList.remove('mhome');
+  if (currentPage !== 'dashboard') go('dashboard');
+  if (typeof switchDashTab === 'function') switchDashTab('process');
+  syncMobileTab();
+}
+function mobileAction(type) {
+  document.body.classList.remove('mhome');
+  syncMobileTab();
+  if (type === 'order' && typeof openOrderAdd === 'function') openOrderAdd();
+  else if (type === 'material' && typeof openMatAdd === 'function') openMatAdd();
+}
+
+/* 부팅 시: 모바일이면 홈 화면으로 진입 */
+if (isMobileView()) {
+  document.body.classList.add('mhome');
+  renderMobileHome();
+}
+syncMobileTab();
+
+/* 화면 크기 변경(회전/리사이즈) 대응 */
+window.addEventListener('resize', () => {
+  if (!isMobileView()) {
+    // 데스크톱 전환 시 홈 오버레이 제거 (CSS상 영향 없지만 상태 정리)
+    document.body.classList.remove('mhome');
+  }
+  syncMobileTab();
+});
 
 </script>
 
