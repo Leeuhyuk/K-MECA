@@ -7,6 +7,14 @@
     <div class="mc"><div class="mc-lbl"><i class="ti ti-building-factory" style="color:var(--tx-ok);"></i>완제품 보유 재고</div><div class="mc-val" style="color:var(--tx-ok);">13개</div></div></div>
     <div class="sec-lbl" id="inv-sec-lbl"><i class="ti ti-packages"></i>재고 목록</div>
 
+    <!-- 탭 전환 -->
+    <div class="inv-tabbar" style="display:flex;gap:4px;border-bottom:1px solid var(--br);margin-bottom:14px;">
+      <button class="inv-tab active" data-invtab="list" onclick="switchInvTab('list')"><i class="ti ti-packages"></i> 재고 목록</button>
+      <button class="inv-tab" data-invtab="ledger" onclick="switchInvTab('ledger')"><i class="ti ti-history"></i> 입출고 이력</button>
+    </div>
+
+    <!-- 재고 목록 탭 -->
+    <div id="inv-tab-list">
     <div class="toolbar">
       <select id="inv-filter-type" onchange="renderInventory()" style="min-width:140px;">
         <option value="">전체 세부유형</option>
@@ -391,15 +399,18 @@
       </tbody>
     </table></div>
     </div>
+    </div><!-- /inv-tab-list -->
 
-    <!-- 입출고 이력 -->
-    <div class="card" style="margin-top:16px;">
-      <div class="card-hd">
-        <span class="card-ttl"><i class="ti ti-history"></i>입출고 이력</span>
-        <select id="inv-ledger-inv" onchange="renderInventoryLedger()" style="font-size:12px;padding:4px 8px;border:1px solid var(--br);border-radius:var(--rm);background:var(--bg-p);color:var(--tx);">
-          <option value="">전체 품목</option>
-        </select>
+    <!-- 입출고 이력 탭 -->
+    <div id="inv-tab-ledger" style="display:none;">
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-history"></i>입출고 이력</span>
+          <select id="inv-ledger-inv" onchange="renderInventoryLedger()" style="font-size:12px;padding:4px 8px;border:1px solid var(--br);border-radius:var(--rm);background:var(--bg-p);color:var(--tx);">
+            <option value="">전체 품목</option>
+          </select>
+        </div>
+        <div style="overflow-x:auto;" id="inv-ledger-table"></div>
       </div>
-      <div style="overflow-x:auto;" id="inv-ledger-table"></div>
-    </div>
+    </div><!-- /inv-tab-ledger -->
   </div>

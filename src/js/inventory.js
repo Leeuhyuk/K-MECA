@@ -1,4 +1,12 @@
 /* ════════ [복구] 실시간 재고 관리 (inventory) ════════ */
+function switchInvTab(tab) {
+  document.querySelectorAll('.inv-tab').forEach(b => b.classList.toggle('active', b.dataset.invtab === tab));
+  const list = document.getElementById('inv-tab-list');
+  const ledger = document.getElementById('inv-tab-ledger');
+  if (list)   list.style.display   = (tab === 'list')   ? 'block' : 'none';
+  if (ledger) ledger.style.display = (tab === 'ledger') ? 'block' : 'none';
+  if (tab === 'ledger') renderInventoryLedger();
+}
 function renderInventory() {
   // 현재 분류 한정 집합
   const catItems = inventory.filter(i => (i.category || '생산부품') === invCategory);

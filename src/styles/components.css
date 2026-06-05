@@ -242,6 +242,33 @@
   to { transform: translateX(0); }
 }
 
+/* ── 재고 탭바 ── */
+.inv-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--tx-t);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all .15s;
+  margin-bottom: -1px;
+}
+.inv-tab:hover { color: var(--tx); }
+.inv-tab.active {
+  color: var(--tx-i);
+  border-bottom-color: var(--tx-i);
+}
+
+/* ── 열 순서 변경 (드래그) ── */
+th.col-dragging { opacity: 0.4; }
+th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
+[data-reorderable] th { position: relative; }
+
 /* ── 인라인 편집 / 셀 선택 / 열 폭 조절 ── */
 #mat-table td.cell-sel {
   outline: 2px solid var(--accent, #4f8ef7);
