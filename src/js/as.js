@@ -20,7 +20,20 @@ function renderAS(){
     else if (fil && a.status!==fil) return false;
     if (q && ![getClientName(a.clientId),a.productName,a.symptom,a.id].join(' ').toLowerCase().includes(q)) return false;
     return true;
-  }).sort((a,b)=>(b.recvDate||'').localeCompare(a.recvDate||''));
+  });
+  if (sortState.as.key) {
+    const k = sortState.as.key, asc = sortState.as.asc ? 1 : -1;
+    list.sort((a, b) => {
+      let va, vb;
+      if (k === 'client') { va = getClientName(a.clientId); vb = getClientName(b.clientId); }
+      else { va = a[k] == null ? '' : a[k]; vb = b[k] == null ? '' : b[k]; }
+      if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * asc;
+      return String(va).localeCompare(String(vb), 'ko-KR') * asc;
+    });
+  } else {
+    list.sort((a,b)=>(b.recvDate||'').localeCompare(a.recvDate||''));
+  }
+  const _asth = (k, l, s) => `<th onclick="toggleSort('as','${k}')" style="cursor:pointer;user-select:none;${s||''}">${l} ${sortIcon('as',k)}</th>`;
   const rows = list.length ? list.map(a=>`
     <tr>
       <td style="font-weight:700;">${a.id}</td>
@@ -47,7 +60,11 @@ function renderAS(){
     <div class="card">
       <div class="card-hd"><span class="card-ttl"><i class="ti ti-tool"></i>A/S 접수 대장</span><span style="font-size:11px;color:var(--tx-t);">${list.length}건 표시</span></div>
       <div style="overflow-x:auto;"><table>
-        <thead><tr><th>접수번호</th><th>접수일</th><th>고객사</th><th>제품</th><th>증상</th><th style="text-align:center;">보증</th><th style="text-align:center;">상태</th><th>담당자</th><th style="text-align:right;">수리비</th><th style="text-align:center;">관리</th></tr></thead>
+        <thead><tr>
+          ${_asth('id','접수번호')}${_asth('recvDate','접수일')}${_asth('client','고객사')}${_asth('productName','제품')}
+          <th>증상</th>${_asth('warranty','보증','text-align:center;')}${_asth('status','상태','text-align:center;')}
+          ${_asth('owner','담당자')}${_asth('cost','수리비','text-align:right;')}<th style="text-align:center;">관리</th>
+        </tr></thead>
         <tbody>${rows}</tbody>
       </table></div>
     </div>`;

@@ -19,6 +19,14 @@ function renderWorkers() {
     if (_wfs && w.status !== _wfs) return false;
     return true;
   });
+  if (sortState.workers.key) {
+    const k = sortState.workers.key, asc = sortState.workers.asc ? 1 : -1;
+    filteredWorkers.sort((a, b) => {
+      const va = a[k] == null ? '' : a[k], vb = b[k] == null ? '' : b[k];
+      if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * asc;
+      return String(va).localeCompare(String(vb), 'ko-KR') * asc;
+    });
+  }
   const el = inp('workers-table'); if (!el) return;
   const canManage = (currentRole==='admin');
   const ROLE_OPT = (sel)=>['admin','manager','staff'].map(r=>`<option value="${r}"${(sel||'staff')===r?' selected':''}>${ROLE_LABEL[r]}</option>`).join('');
@@ -44,7 +52,13 @@ function renderWorkers() {
       ? empty('검색 조건에 맞는 직원이 없습니다.')
       : `<table>
       <thead>
-        <tr><th>사번</th><th>이름</th><th>부서</th><th>직급</th><th>고용형태</th><th>입사일</th><th>연락처</th><th>월 급여</th><th>상태</th><th>계정 역할</th><th>승인</th><th>관리</th></tr>
+        <tr>
+          ${['id:사번','name:이름','dept:부서','position:직급','empType:고용형태','hireDate:입사일'].map(s=>{const[k,l]=s.split(':');return`<th onclick="toggleSort('workers','${k}')" style="cursor:pointer;user-select:none;">${l} ${sortIcon('workers',k)}</th>`;}).join('')}
+          <th>연락처</th>
+          <th onclick="toggleSort('workers','salary')" style="cursor:pointer;user-select:none;">월 급여 ${sortIcon('workers','salary')}</th>
+          <th onclick="toggleSort('workers','status')" style="cursor:pointer;user-select:none;">상태 ${sortIcon('workers','status')}</th>
+          <th>계정 역할</th><th>승인</th><th>관리</th>
+        </tr>
       </thead>
       <tbody>
         ${filteredWorkers.map(w => `

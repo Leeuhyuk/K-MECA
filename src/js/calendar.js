@@ -47,7 +47,8 @@ function renderCalendar() {
   var lastDate = new Date(calYear, calMonth + 1, 0).getDate();
   var days = ['일', '월', '화', '수', '목', '금', '토'];
 
-  var html = '<table style="width:100%;border-collapse:collapse;min-width:700px;">' +
+  var html = '<table style="width:100%;border-collapse:collapse;min-width:700px;table-layout:fixed;">' +
+    '<colgroup>' + days.map(function(){ return '<col style="width:14.285%;">'; }).join('') + '</colgroup>' +
     '<thead><tr>' +
     days.map(function(d, i) {
       return '<th style="padding:8px 4px;font-size:12px;font-weight:600;color:' +

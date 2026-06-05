@@ -76,14 +76,26 @@ function renderRfq() {
     return true;
   });
 
+  if (sortState.rfq.key) {
+    const k = sortState.rfq.key, asc = sortState.rfq.asc ? 1 : -1;
+    rows.sort((a, b) => {
+      let va, vb;
+      if (k === 'client') { va = getClientName(a.clientId); vb = getClientName(b.clientId); }
+      else if (k === 'product') { va = getProductName(a.productId); vb = getProductName(b.productId); }
+      else { va = a[k] == null ? '' : a[k]; vb = b[k] == null ? '' : b[k]; }
+      if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * asc;
+      return String(va).localeCompare(String(vb), 'ko-KR') * asc;
+    });
+  }
+
   const cont = inp('rfq-table');
   if (!rows.length) { cont.innerHTML = '<div class="empty"><i class="ti ti-inbox"></i>해당 조건의 견적요청서가 없습니다.</div>'; return; }
-
+  const _rfqth = (k, l) => `<th onclick="toggleSort('rfq','${k}')" style="cursor:pointer;user-select:none;">${l} ${sortIcon('rfq',k)}</th>`;
   cont.innerHTML = `<table style="min-width:980px;">
     <thead><tr>
-      <th>문서번호</th><th>요청일</th><th>고객사</th><th>연결제품</th>
-      <th>공급처</th><th>품목명</th><th>규격</th><th>수량</th>
-      <th>희망단가</th><th>상태</th><th>비고</th><th>관리</th>
+      ${_rfqth('id','문서번호')}${_rfqth('date','요청일')}${_rfqth('client','고객사')}${_rfqth('product','연결제품')}
+      ${_rfqth('supplier','공급처')}${_rfqth('itemName','품목명')}<th>규격</th>${_rfqth('qty','수량')}
+      ${_rfqth('targetPrice','희망단가')}${_rfqth('status','상태')}<th>비고</th><th>관리</th>
     </tr></thead>
     <tbody>${rows.map(r => `
       <tr>
@@ -352,15 +364,28 @@ function renderPo() {
     return true;
   });
 
+  if (sortState.po.key) {
+    const k = sortState.po.key, asc = sortState.po.asc ? 1 : -1;
+    rows.sort((a, b) => {
+      let va, vb;
+      if (k === 'client') { va = getClientName(a.clientId); vb = getClientName(b.clientId); }
+      else if (k === 'product') { va = getProductName(a.productId); vb = getProductName(b.productId); }
+      else if (k === 'totalAmt') { va = (Number(a.unitPrice)||0)*(Number(a.qty)||0); vb = (Number(b.unitPrice)||0)*(Number(b.qty)||0); }
+      else { va = a[k] == null ? '' : a[k]; vb = b[k] == null ? '' : b[k]; }
+      if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * asc;
+      return String(va).localeCompare(String(vb), 'ko-KR') * asc;
+    });
+  }
+
   const cont = inp('po-table');
   if (!rows.length) { cont.innerHTML = '<div class="empty"><i class="ti ti-inbox"></i>해당 조건의 구매발주서가 없습니다.</div>'; return; }
-
+  const _poth = (k, l) => `<th onclick="toggleSort('po','${k}')" style="cursor:pointer;user-select:none;">${l} ${sortIcon('po',k)}</th>`;
   cont.innerHTML = `<table style="min-width:1130px;">
     <thead><tr>
       <th style="width:24px;padding:6px 3px;text-align:center;"><input type="checkbox" id="po-check-all" onclick="poToggleAll(this.checked)" style="width:12px;height:12px;cursor:pointer;vertical-align:middle;"></th>
-      <th>발주번호</th><th>발행일</th><th>고객사</th><th>연결제품</th>
-      <th>공급처</th><th>품목명</th><th>규격</th><th>수량</th>
-      <th>단가</th><th>금액</th><th>결제조건</th><th>납품방법</th><th>상태</th><th>비고</th><th>관리</th>
+      ${_poth('id','발주번호')}${_poth('date','발행일')}${_poth('client','고객사')}${_poth('product','연결제품')}
+      ${_poth('supplier','공급처')}${_poth('itemName','품목명')}<th>규격</th>${_poth('qty','수량')}
+      ${_poth('unitPrice','단가')}${_poth('totalAmt','금액')}<th>결제조건</th><th>납품방법</th>${_poth('status','상태')}<th>비고</th><th>관리</th>
     </tr></thead>
     <tbody>${rows.map(p => `
       <tr>

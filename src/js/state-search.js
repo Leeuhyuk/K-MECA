@@ -9,7 +9,14 @@ const sortState = {
   claims: { key: null, asc: true },
   deliveries: { key: null, asc: true },
   checks: { key: null, asc: true },
-  process: { key: null, asc: true }
+  process: { key: null, asc: true },
+  as:       { key: null, asc: true },
+  partners: { key: null, asc: true },
+  workers:  { key: null, asc: true },
+  bom:      { key: null, asc: true },
+  clients:  { key: null, asc: true },
+  rfq:      { key: null, asc: true },
+  po:       { key: null, asc: true },
 };
 
 function toggleSort(table, key) {
@@ -28,6 +35,13 @@ function toggleSort(table, key) {
   else if (table === 'deliveries') renderDeliveries();
   else if (table === 'defects' || table === 'claims' || table === 'checks') renderQuality();
   else if (table === 'process') renderProcDetail();
+  else if (table === 'as') renderAS();
+  else if (table === 'partners') renderPartners();
+  else if (table === 'workers') renderWorkers();
+  else if (table === 'bom') renderBom();
+  else if (table === 'clients') renderClients();
+  else if (table === 'rfq') renderRfq();
+  else if (table === 'po') renderPo();
 }
 
 function sortIcon(table, key) {
