@@ -132,6 +132,26 @@ tr:hover td { background: var(--bg-s); }
 .sidebar { transition: margin-left .2s ease; }
 body.sb-collapsed .sidebar { display: none; }
 
+/* ── 사이드바 자동 숨김 ── */
+body.sb-autohide .sidebar {
+  position: fixed;
+  top: 0; left: 0; height: 100vh;
+  z-index: 1500;
+  transform: translateX(-100%);
+  transition: transform .22s cubic-bezier(.4,0,.2,1);
+  box-shadow: 2px 0 18px rgba(0,0,0,.38);
+}
+body.sb-autohide.sb-peek .sidebar { transform: translateX(0); }
+.sb-hotzone {
+  position: fixed;
+  top: 0; left: 0;
+  width: 12px; height: 100vh;
+  z-index: 1499;
+}
+body:not(.sb-autohide) .sb-hotzone { display: none; }
+/* 자동 숨김 활성 시 토글 버튼 강조 */
+#sb-autohide-btn.active { color: var(--tx-i); }
+
 /* 뱃지 및 프로그레스 */
 .bd { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 4px; border: 1px solid; white-space: nowrap; font-weight: 600; }
 .bd-ok { background: var(--bg-ok); color: var(--tx-ok); border-color: var(--br-ok); }
@@ -926,6 +946,9 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     <div style="display:flex; align-items:center; gap:10px;">
       <button class="theme-btn" id="menu-toggle-btn" onclick="toggleSidebar()" title="사이드바 접기/펴기" style="display: inline-flex; font-size: 18px; padding: 4px 8px; align-items: center; justify-content: center;">
         <i class="ti ti-menu-2"></i>
+      </button>
+      <button class="theme-btn" id="sb-autohide-btn" onclick="toggleSidebarAutoHide()" title="사이드바 자동 숨김" style="display: inline-flex; font-size: 17px; padding: 4px 8px; align-items: center; justify-content: center;">
+        <i class="ti ti-layout-sidebar-left-collapse"></i>
       </button>
       <button class="theme-btn" id="back-btn" onclick="goBack()" title="이전: 이전 화면으로 돌아가기" style="display: inline-flex; font-size: 16px; gap: 4px; padding: 4px 8px;">
         <i class="ti ti-arrow-left"></i>
@@ -6383,6 +6406,42 @@ function toggleSidebar() {
   const c = document.body.classList.toggle('sb-collapsed');
   try { localStorage.setItem('mes_sbCollapsed', c ? '1' : ''); } catch(e){}
 }
+
+/* ── 사이드바 자동 숨김 모드 ── */
+function ensureSidebarHotzone() {
+  let hz = document.getElementById('sb-hotzone');
+  if (!hz) {
+    hz = document.createElement('div');
+    hz.id = 'sb-hotzone';
+    hz.className = 'sb-hotzone';
+    hz.addEventListener('mouseenter', () => document.body.classList.add('sb-peek'));
+    document.body.appendChild(hz);
+  }
+  const sb = document.querySelector('.sidebar');
+  if (sb && !sb.dataset.autohideBound) {
+    sb.dataset.autohideBound = '1';
+    sb.addEventListener('mouseleave', () => document.body.classList.remove('sb-peek'));
+  }
+}
+function setSidebarAutoHide(on) {
+  document.body.classList.toggle('sb-autohide', on);
+  if (on) document.body.classList.remove('sb-collapsed', 'sb-peek');
+  try { localStorage.setItem('mes_sbAutoHide', on ? '1' : ''); } catch(e){}
+  ensureSidebarHotzone();
+  updateAutoHideBtn();
+}
+function toggleSidebarAutoHide() {
+  setSidebarAutoHide(!document.body.classList.contains('sb-autohide'));
+}
+function updateAutoHideBtn() {
+  const btn = document.getElementById('sb-autohide-btn');
+  if (!btn) return;
+  const on = document.body.classList.contains('sb-autohide');
+  btn.classList.toggle('active', on);
+  const ic = btn.querySelector('i');
+  if (ic) ic.className = on ? 'ti ti-layout-sidebar-left-expand' : 'ti ti-layout-sidebar-left-collapse';
+  btn.title = on ? '사이드바 자동 숨김: 켜짐 (클릭하면 고정)' : '사이드바 자동 숨김: 꺼짐 (클릭하면 자동 숨김)';
+}
 function toggleMobileSidebar() {
   const sidebar = document.querySelector('.sidebar');
   const backdrop = document.getElementById('sidebar-backdrop');
@@ -11261,6 +11320,9 @@ function toggleTheme() {
 syncFilterDropdowns();
 initTheme();
 if (localStorage.getItem('mes_sbCollapsed')==='1') document.body.classList.add('sb-collapsed');   // 사이드바 접힘 상태 복원
+if (localStorage.getItem('mes_sbAutoHide')==='1') { document.body.classList.add('sb-autohide'); }  // 자동 숨김 모드 복원
+if (typeof ensureSidebarHotzone === 'function') ensureSidebarHotzone();
+if (typeof updateAutoHideBtn === 'function') updateAutoHideBtn();
 _goTo('dashboard', null);   // 실행 시 항상 종합 대시보드를 먼저 표시
 renderAlerts();
 updateTrashBadge();

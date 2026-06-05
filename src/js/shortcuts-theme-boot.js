@@ -107,6 +107,9 @@ function toggleTheme() {
 syncFilterDropdowns();
 initTheme();
 if (localStorage.getItem('mes_sbCollapsed')==='1') document.body.classList.add('sb-collapsed');   // 사이드바 접힘 상태 복원
+if (localStorage.getItem('mes_sbAutoHide')==='1') { document.body.classList.add('sb-autohide'); }  // 자동 숨김 모드 복원
+if (typeof ensureSidebarHotzone === 'function') ensureSidebarHotzone();
+if (typeof updateAutoHideBtn === 'function') updateAutoHideBtn();
 _goTo('dashboard', null);   // 실행 시 항상 종합 대시보드를 먼저 표시
 renderAlerts();
 updateTrashBadge();

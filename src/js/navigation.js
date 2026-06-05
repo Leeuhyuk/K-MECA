@@ -61,6 +61,42 @@ function toggleSidebar() {
   const c = document.body.classList.toggle('sb-collapsed');
   try { localStorage.setItem('mes_sbCollapsed', c ? '1' : ''); } catch(e){}
 }
+
+/* ── 사이드바 자동 숨김 모드 ── */
+function ensureSidebarHotzone() {
+  let hz = document.getElementById('sb-hotzone');
+  if (!hz) {
+    hz = document.createElement('div');
+    hz.id = 'sb-hotzone';
+    hz.className = 'sb-hotzone';
+    hz.addEventListener('mouseenter', () => document.body.classList.add('sb-peek'));
+    document.body.appendChild(hz);
+  }
+  const sb = document.querySelector('.sidebar');
+  if (sb && !sb.dataset.autohideBound) {
+    sb.dataset.autohideBound = '1';
+    sb.addEventListener('mouseleave', () => document.body.classList.remove('sb-peek'));
+  }
+}
+function setSidebarAutoHide(on) {
+  document.body.classList.toggle('sb-autohide', on);
+  if (on) document.body.classList.remove('sb-collapsed', 'sb-peek');
+  try { localStorage.setItem('mes_sbAutoHide', on ? '1' : ''); } catch(e){}
+  ensureSidebarHotzone();
+  updateAutoHideBtn();
+}
+function toggleSidebarAutoHide() {
+  setSidebarAutoHide(!document.body.classList.contains('sb-autohide'));
+}
+function updateAutoHideBtn() {
+  const btn = document.getElementById('sb-autohide-btn');
+  if (!btn) return;
+  const on = document.body.classList.contains('sb-autohide');
+  btn.classList.toggle('active', on);
+  const ic = btn.querySelector('i');
+  if (ic) ic.className = on ? 'ti ti-layout-sidebar-left-expand' : 'ti ti-layout-sidebar-left-collapse';
+  btn.title = on ? '사이드바 자동 숨김: 켜짐 (클릭하면 고정)' : '사이드바 자동 숨김: 꺼짐 (클릭하면 자동 숨김)';
+}
 function toggleMobileSidebar() {
   const sidebar = document.querySelector('.sidebar');
   const backdrop = document.getElementById('sidebar-backdrop');
