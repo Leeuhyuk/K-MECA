@@ -1,0 +1,227 @@
+
+<!-- ══ 클라우드 로그인 게이트 ══ -->
+<div id="cloud-login" style="display:none;position:fixed;inset:0;z-index:99999;background:#0b1020;align-items:center;justify-content:center;">
+  <div style="width:340px;max-width:92%;background:var(--bg-s,#161b2e);border:1px solid var(--br,#2a3350);border-radius:14px;padding:28px 26px;box-shadow:0 12px 40px rgba(0,0,0,.5);">
+    <div style="text-align:center;margin-bottom:18px;">
+      <i class="ti ti-cloud-lock" style="font-size:34px;color:#4dabf7;"></i>
+      <div style="font-size:17px;font-weight:800;margin-top:6px;color:#e9ecf5;">MES Pro 클라우드 로그인</div>
+      <div style="font-size:11.5px;color:#8a93ad;margin-top:3px;">팀이 같은 데이터를 공유합니다</div>
+    </div>
+    <input id="cl-name" type="text" placeholder="이름 (신규 가입 시 입력)" autocomplete="name" style="width:100%;height:40px;margin-bottom:8px;padding:0 12px;border-radius:8px;border:1px solid var(--br,#2a3350);background:#0e1426;color:#e9ecf5;">
+    <input id="cl-email" type="email" placeholder="이메일" autocomplete="username" style="width:100%;height:40px;margin-bottom:8px;padding:0 12px;border-radius:8px;border:1px solid var(--br,#2a3350);background:#0e1426;color:#e9ecf5;">
+    <input id="cl-pw" type="password" placeholder="비밀번호" autocomplete="current-password" onkeydown="if(event.key==='Enter')cloudLogin()" style="width:100%;height:40px;margin-bottom:14px;padding:0 12px;border-radius:8px;border:1px solid var(--br,#2a3350);background:#0e1426;color:#e9ecf5;">
+    <button onclick="cloudLogin()" style="width:100%;height:42px;border:none;border-radius:8px;background:#1971c2;color:#fff;font-weight:700;font-size:14px;cursor:pointer;">로그인</button>
+    <button onclick="cloudSignup()" style="width:100%;height:36px;margin-top:8px;border:1px solid var(--br,#2a3350);border-radius:8px;background:transparent;color:#8a93ad;font-size:12px;cursor:pointer;">신규 계정 만들기</button>
+    <div id="cl-msg" style="font-size:11.5px;color:#ff8787;margin-top:10px;min-height:16px;text-align:center;"></div>
+  </div>
+</div>
+
+<!-- ══ 클라우드 상태 칩 ══ -->
+<div id="cloud-chip" style="display:none;position:fixed;right:12px;bottom:12px;z-index:9000;align-items:center;gap:8px;background:var(--bg-s,#161b2e);border:1px solid var(--br,#2a3350);border-radius:20px;padding:5px 12px;font-size:11px;box-shadow:0 4px 14px rgba(0,0,0,.3);">
+  <i id="cloud-chip-icon" class="ti ti-cloud-check" style="color:#37b24d;"></i>
+  <span id="cloud-chip-txt" style="color:var(--tx-s,#aeb6cc);">클라우드 연결됨</span>
+</div>
+
+<!-- 모바일 사이드바 백드롭 -->
+<div id="sidebar-backdrop" class="sidebar-backdrop" onclick="toggleMobileSidebar()"></div>
+
+<!-- 토스트 알림 영역 -->
+<div id="toast-container"></div>
+
+<!-- ══ 모바일 전용 홈 화면 (≤680px에서만 표시) ══ -->
+<div id="mobile-home"></div>
+
+<!-- ══ 모바일 전용 하단 탭바 (≤680px에서만 표시) ══ -->
+<div id="mobile-tabbar">
+  <button class="mtab" data-tab="home" onclick="mobileTab('home')"><i class="ti ti-home-2"></i>홈</button>
+  <button class="mtab" data-tab="clients" onclick="mobileTab('clients')"><i class="ti ti-building-community"></i>수주</button>
+  <button class="mtab" data-tab="materials" onclick="mobileTab('materials')"><i class="ti ti-truck-loading"></i>자재</button>
+  <button class="mtab" data-tab="alerts" onclick="mobileTab('alerts')"><i class="ti ti-bell"></i>알림<span class="mtab-badge" id="mtab-alert-badge" style="display:none;">0</span></button>
+  <button class="mtab" data-tab="more" onclick="mobileTab('more')"><i class="ti ti-menu-2"></i>더보기</button>
+</div>
+
+<!-- 공용 삭제/일반 알림 확인 모달 -->
+<div class="overlay" id="confirmDlg">
+  <div class="dlg">
+    <div class="dlg-title" id="dlgTitleContainer" style="color:var(--tx-d);"><i class="ti ti-alert-triangle"></i><span id="dlgTitle">휴지통 전체 비우기</span></div>
+    <div class="dlg-msg" id="dlgMsg">휴지통 내부 <strong>총 21건</strong>의 모든 백업 데이터를 영구 파기하시겠습니까?<br><span style="color:var(--tx-d); font-weight:700;">비워진 메모리 데이터는 복구 조작을 진행할 수 없습니다.</span></div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeDlg()">취소</button>
+      <button class="btn btn-danger" id="dlgOkBtn"><i class="ti ti-trash"></i>실행</button>
+    </div>
+  </div>
+</div>
+
+<!-- 공정 단계 변경 모달 (단계 단일화 - 상태 자동 파생) -->
+<div class="overlay" id="kanbanEditModal">
+  <div class="dlg custom-modal">
+    <div class="dlg-title" style="color:var(--tx-i);"><i class="ti ti-layout-kanban"></i><span>공정 단계 변경</span></div>
+    <div style="margin-top:12px;">
+      <div class="ff" style="margin-bottom:10px;">
+        <label>대상 제품</label>
+        <input type="text" id="km-prod-name" readonly="" style="width:100%; background:var(--bg-s); color:var(--tx-s);">
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+        <div class="ff">
+          <label>공정 단계 <span style="color:var(--tx-i); font-weight:700;">*</span></label>
+          <select id="km-stage" style="width:100%;" onchange="onKmStageChange()"></select>
+        </div>
+        <div class="ff">
+          <label>자동 파생 상태</label>
+          <div id="km-status-preview" style="height:32px; display:flex; align-items:center; padding:0 10px; background:var(--bg-s); border:1px solid var(--br); border-radius:var(--rm); font-size:12px; font-weight:600;"></div>
+        </div>
+      </div>
+      <div id="km-context-row" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; font-size:11px;"></div>
+      <div class="ff">
+        <label>공정 메모</label>
+        <textarea id="km-memo" rows="3" placeholder="작업 특이사항이나 진행 상태 기록" style="width:100%;"></textarea>
+      </div>
+    </div>
+    <div class="dlg-actions" style="margin-top:14px;">
+      <button class="btn" onclick="closeKanbanModal()">취소</button>
+      <button class="btn btn-primary" id="kmSaveBtn"><i class="ti ti-device-floppy"></i>저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 관리자 권한 인증 모달 (초기 비밀번호 문구 제거됨) -->
+<div class="overlay" id="adminAuthModal" style="z-index:10001;">
+  <div class="dlg" style="max-width: 360px;">
+    <div class="dlg-title" style="color:var(--tx-i);"><i class="ti ti-shield-lock"></i><span>관리자 권한 인증</span></div>
+    <div class="dlg-msg" style="margin-bottom: 12px;">데이터를 수정, 추가 또는 삭제하려면 관리자 비밀번호를 입력해주십시오.</div>
+    <div class="ff" style="margin-bottom: 16px;">
+      <label>비밀번호 입력</label>
+      <input type="password" id="adminPasswordInput" placeholder="비밀번호를 입력하세요" style="width: 100%; text-align: center; letter-spacing: 0.5em; font-size: 16px;">
+      <div id="adminAuthError" style="color: var(--tx-d); font-size: 11px; margin-top: 4px; display: none; font-weight: 600;">
+        <i class="ti ti-x"></i> 비밀번호가 일치하지 않습니다.
+      </div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeAdminAuth()">취소</button>
+      <button class="btn btn-primary" onclick="verifyAdminPassword()"><i class="ti ti-key"></i>인증하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 관리자 비밀번호 변경 모달 -->
+<div class="overlay" id="adminPasswordChangeModal">
+  <div class="dlg" style="max-width: 360px;">
+    <div class="dlg-title" style="color:var(--tx-w);"><i class="ti ti-settings-automation"></i><span>관리자 비밀번호 변경</span></div>
+    <div class="fg" style="margin-top: 14px;">
+      <div class="ff">
+        <label>현재 비밀번호 *</label>
+        <input type="password" id="currentPasswordInput" placeholder="현재 비밀번호">
+      </div>
+      <div class="ff">
+        <label>새 비밀번호 *</label>
+        <input type="password" id="newPasswordInput" placeholder="새 비밀번호">
+      </div>
+      <div class="ff">
+        <label>새 비밀번호 확인 *</label>
+        <input type="password" id="newPasswordConfirmInput" placeholder="새 비밀번호 확인">
+      </div>
+    </div>
+    <div class="dlg-actions" style="margin-top: 16px;">
+      <button class="btn" onclick="closeAdminPasswordChange()">취소</button>
+      <button class="btn btn-primary" onclick="submitAdminPasswordChange()"><i class="ti ti-device-floppy"></i>변경하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 왼쪽 사이드바 네비게이션 -->
+<div class="sidebar">
+  <div class="logo">
+    <div class="logo-title"><i class="ti ti-building-factory-2"></i>MES Pro</div>
+    <div class="logo-sub">제조실행 시스템 v3.8</div>
+  </div>
+  <div class="nav-g">
+    <div class="nav-lbl">메인 대시보드</div>
+    <div class="ni active" onclick="go('dashboard',this)"><i class="ti ti-layout-dashboard"></i>종합 대시보드</div>
+    <div class="ni" onclick="go('clients',this)"><i class="ti ti-building-community"></i>수주 정보 관리</div>
+    <div class="ni" onclick="go('materials',this)"><i class="ti ti-truck-loading"></i>자재 수급/발주</div>
+    <div class="ni" onclick="go('deliveries',this)"><i class="ti ti-truck-delivery"></i>납품 현황<span class="nbadge" id="dlvBadge" style="background:#2b8a3e;">0</span></div>
+    <div class="ni" onclick="go('calendar',this)"><i class="ti ti-calendar-event"></i>납기 캘린더</div>
+  </div>
+  <div class="nav-g">
+    <div class="nav-lbl">공정 관리</div>
+    <div class="ni" onclick="go('orders',this)"><i class="ti ti-clipboard-list"></i>생산 지시 등록</div>
+    <div class="ni" onclick="go('quality',this)"><i class="ti ti-shield-check"></i>품질 및 검사</div>
+    <div class="ni" onclick="go('claims',this)"><i class="ti ti-message-report"></i>고객 클레임</div>
+    <div class="ni" onclick="go('as',this)"><i class="ti ti-tool"></i>고객 A/S<span class="nbadge" id="asBadge" style="display:none;background:#e8590c;">0</span></div>
+  </div>
+  <div class="nav-g">
+    <div class="nav-lbl">재고 관리</div>
+    <div class="ni" onclick="goInventory('finished',this)"><i class="ti ti-building-factory"></i>완제품 재고</div>
+    <div class="ni" onclick="goInventory('parts',this)"><i class="ti ti-tools"></i>생산부품 재고</div>
+    <div class="ni" onclick="goInventory('office',this)"><i class="ti ti-printer"></i>사무비품 재고</div>
+  </div>
+  <div class="nav-g">
+    <div class="nav-lbl">문서 관리</div>
+    <div class="ni" onclick="go('rfq',this)"><i class="ti ti-file-description"></i>견적요청서<span class="nbadge" id="rfqBadge" style="display:none;background:#868e96;">0</span></div>
+    <div class="ni" onclick="go('po',this)"><i class="ti ti-file-invoice"></i>구매발주서<span class="nbadge" id="poBadge" style="display:none;background:#868e96;">0</span></div>
+  </div>
+  <div class="nav-g">
+    <div class="nav-lbl">경영 관리</div>
+    <div class="ni" onclick="go('salesdoc',this)"><i class="ti ti-file-text"></i>견적/수주</div>
+    <div class="ni" onclick="go('statement',this)"><i class="ti ti-receipt"></i>거래명세표</div>
+    <div class="ni" onclick="go('taxinvoice',this)"><i class="ti ti-file-dollar"></i>세금계산서</div>
+    <div class="ni" onclick="go('partners',this)"><i class="ti ti-address-book"></i>거래처 관리</div>
+    <div class="ni" onclick="go('bom',this)"><i class="ti ti-sitemap"></i>BOM · 자재명세</div>
+    <div class="ni" onclick="go('finance',this)"><i class="ti ti-coin"></i>재무 관리</div>
+    <div class="ni" onclick="go('workers',this)"><i class="ti ti-id-badge-2"></i>인사 관리</div>
+    <div class="ni" onclick="openCompanySettings()"><i class="ti ti-building"></i>회사정보 설정</div>
+  </div>
+  <div class="nav-g">
+    <div class="nav-lbl">시스템 관리</div>
+    <div class="ni" onclick="go('alimtalk',this)"><i class="ti ti-brand-kakao"></i>알림톡 설정</div>
+    <div class="ni" onclick="go('permissions',this)"><i class="ti ti-user-shield"></i>권한 관리</div>
+    <div class="ni" onclick="go('alerts',this)"><i class="ti ti-bell"></i>알림<span class="nbadge" id="alertBadge">17</span></div>
+    <div class="ni" onclick="go('trash',this)"><i class="ti ti-trash"></i>휴지통<span class="nbadge" id="trashBadge" style="background:#868e96;">0</span></div>
+  </div>
+</div>
+
+<!-- 우측 메인 컨텐츠 영역 -->
+<div class="main">
+  <div class="topbar">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <button class="theme-btn" id="menu-toggle-btn" onclick="toggleSidebar()" title="사이드바 접기/펴기" style="display: inline-flex; font-size: 18px; padding: 4px 8px; align-items: center; justify-content: center;">
+        <i class="ti ti-menu-2"></i>
+      </button>
+      <button class="theme-btn" id="back-btn" onclick="goBack()" title="이전: 이전 화면으로 돌아가기" style="display: inline-flex; font-size: 16px; gap: 4px; padding: 4px 8px;">
+        <i class="ti ti-arrow-left"></i>
+      </button>
+      <div class="tb-title" id="ptitle">종합 대시보드</div>
+    </div>
+
+    <!-- 통합 글로벌 검색창 -->
+    <div class="global-search-wrapper" style="position: relative; width: 340px; margin: 0 auto 0 20px;">
+      <i class="ti ti-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--tx-t); font-size: 14px; pointer-events: none; z-index: 2;"></i>
+      <input type="text" id="global-search-input" placeholder="통합 검색 (제품, 고객사, 자재, 생산지시, 재고, 직원...)" style="width: 100%; padding: 6px 36px 6px 34px; height: 34px; border-radius: 20px; font-size: 12px; background: rgba(255,255,255,0.06); border: 1px solid var(--br); transition: all 0.2s;" oninput="onGlobalSearch(this.value)" onfocus="onGlobalSearchFocus()" onkeydown="onGlobalSearchKeyDown(event)">
+      <i class="ti ti-x" id="global-search-clear" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--tx-t); font-size: 14px; cursor: pointer; display: none; z-index: 2;" onclick="clearGlobalSearch()"></i>
+      
+      <!-- 실시간 검색 결과 드롭다운 -->
+      <div id="global-search-results" style="position: absolute; top: 40px; left: 0; width: 440px; background: var(--bg-p); border: 1px solid var(--br-s); border-radius: var(--rl); box-shadow: var(--shadow); z-index: 9999; max-height: 480px; overflow-y: auto; display: none; backdrop-filter: blur(20px); border-color: rgba(255,255,255,0.12);">
+      </div>
+    </div>
+
+    <div class="tb-right">
+      <!-- 관리자 모드 활성화 상태 전용 영역 -->
+      <div id="topbar-admin-area" style="display: inline-flex; align-items: center; gap: 8px;">
+        <span class="pill pill-ok" style="border-radius: 6px;"><i class="ti ti-lock-open"></i> 관리자</span>
+        <button class="btn btn-sm" onclick="openAdminPasswordChange()" title="비밀번호 변경" style="height: 26px; padding: 0 8px; margin-right: 4px;"><i class="ti ti-key"></i> 변경</button>
+        <button class="btn btn-sm btn-danger" onclick="lockAdmin()" title="관리자 권한 잠금" style="height: 26px; padding: 0 8px;"><i class="ti ti-lock"></i> 잠금</button>
+      </div>
+
+      <!-- XLS 백업/복구 -->
+      <button class="theme-btn xls-btn" onclick="exportAllXLS()" title="전체 데이터 XLS 백업" style="font-size:13px; padding:4px 9px; display:flex; align-items:center;">
+        <i class="ti ti-file-spreadsheet" style="font-size:15px;"></i>
+      </button>
+      <button class="theme-btn xls-btn" onclick="inp('xls-import-input').click()" title="XLS에서 데이터 복구" style="font-size:13px; padding:4px 9px; display:flex; align-items:center;">
+        <i class="ti ti-upload" style="font-size:15px;"></i>
+      </button>
+      <input type="file" id="xls-import-input" accept=".xlsx,.xls" style="display:none;" onchange="importAllXLS(this)">
+
+      <button class="theme-btn" onclick="toggleTheme()" title="화면 테마 전환"><i class="ti ti-sun" id="themeIcon"></i></button>
+      <span style="font-size:12px; font-weight: 600; color:var(--tx-s);" id="clock">2026-05-30 10:15:19</span>
+    </div>
+  </div>

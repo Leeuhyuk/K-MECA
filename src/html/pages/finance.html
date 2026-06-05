@@ -1,0 +1,43 @@
+  <!-- ══════ 재무 관리 ══════ -->
+  <div class="content" id="pg-finance">
+    <div class="toolbar" id="finance-tabs">
+      <button class="btn btn-primary" data-fintab="dashboard" onclick="switchFinTab('dashboard')"><i class="ti ti-chart-pie"></i>재무 현황</button>
+      <button class="btn" data-fintab="revenue" onclick="switchFinTab('revenue')"><i class="ti ti-trending-up"></i>매출</button>
+      <button class="btn" data-fintab="purchase" onclick="switchFinTab('purchase')"><i class="ti ti-trending-down"></i>매입/지출</button>
+      <button class="btn" data-fintab="labor" onclick="switchFinTab('labor')"><i class="ti ti-cash"></i>인건비</button>
+      <button class="btn" data-fintab="cost" onclick="switchFinTab('cost')"><i class="ti ti-calculator"></i>제품원가</button>
+      <button class="btn" data-fintab="pnl" onclick="switchFinTab('pnl')"><i class="ti ti-report-money"></i>손익(P&L)</button>
+      <button class="btn" data-fintab="ar" onclick="switchFinTab('ar')"><i class="ti ti-receipt"></i>미수금/미지급</button>
+      <button class="btn" data-fintab="etc" onclick="switchFinTab('etc')"><i class="ti ti-list-details"></i>기타 수입/비용</button>
+      <button class="btn btn-primary" onclick="openFinanceAdd()" style="margin-left:auto;"><i class="ti ti-plus"></i>기타 항목 등록</button>
+    </div>
+    <div id="finance-body"></div>
+  </div>
+
+  <!-- 고객 A/S · 사후관리 -->
+  <div class="content" id="pg-as">
+    <div class="toolbar">
+      <select id="as-filter" onchange="renderAS()" style="height:32px;">
+        <option value="">전체 상태</option><option value="open">미완료(접수·처리중)</option><option>접수</option><option>처리중</option><option>완료</option><option>보류</option>
+      </select>
+      <input id="as-search" oninput="renderAS()" placeholder="고객/제품/증상 검색" style="height:32px;min-width:180px;">
+      <button class="btn btn-primary" onclick="openAsAdd()" style="margin-left:auto;"><i class="ti ti-plus"></i>A/S 접수 등록</button>
+    </div>
+    <div id="as-body"></div>
+  </div>
+
+  <!-- 권한 관리 (RBAC) -->
+  <div class="content" id="pg-permissions">
+    <div id="perm-body"></div>
+  </div>
+
+  <!-- BOM · 자재명세 -->
+  <div class="content" id="pg-bom">
+    <div class="toolbar">
+      <label style="font-size:12px;color:var(--tx-s);align-self:center;">제품 선택</label>
+      <select id="bom-product" onchange="onBomProductChange()" style="height:32px;min-width:240px;"></select>
+      <button class="btn" onclick="applyBomCost()" title="BOM 재료비를 제품 원가에 반영"><i class="ti ti-arrow-bar-to-down"></i>재료비 원가 반영</button>
+      <button class="btn btn-primary" onclick="openBomAdd()" style="margin-left:auto;"><i class="ti ti-plus"></i>자재 추가</button>
+    </div>
+    <div id="bom-body"></div>
+  </div>

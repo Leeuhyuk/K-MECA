@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MES Pro — 제조실행 생산관리 시스템</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<!-- Firebase (클라우드 공유 동기화) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+<style>
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  .animate-spin { display: inline-block; animation: spin 1s linear infinite; }
+</style>
+<!-- 내장 데이터 (파일 저장 시 자동 업데이트) -->
+<script id="embedded-data" type="application/json">{"_savedAt":"2026-05-30T10:01:42.255Z","clients":[{"id":"CL-006","name":"현대리바트","manager":"","tel":"","email":"","date":"2026-05-25","note":""},{"id":"CL-007","name":"한컴라이프케어","manager":"","tel":"","email":"","date":"2026-05-26","note":""},{"id":"CL-008","name":"큐로시험소","manager":"","tel":"","email":"","date":"2026-05-27","note":""}],"products":[{"id":"PR-003","clientId":"CL-006","name":"등판내구성 시험기","spec":"AC 220 V ","qty":1,"unit":"대","price":0,"deliveryDate":"","processStage":"가공/제작","status":"생산중","processMemo":"","note":""},{"id":"PR-004","clientId":"CL-006","name":"스위밸 주행시험기","spec":"AC 220 V","qty":1,"unit":"대","price":0,"deliveryDate":"","processStage":"가공/제작","status":"생산중","processMemo":"","note":""},{"id":"PR-005","clientId":"CL-006","name":"좌판 내구성 시험기","spec":"AC 220 V","qty":1,"unit":"대","price":0,"deliveryDate":"","processStage":"가공/제작","status":"생산중","processMemo":"","note":""},{"id":"PR-006","clientId":"CL-006","name":"안정성 시험 추","spec":"","qty":14,"unit":"대","price":0,"deliveryDate":"","processStage":"가공/제작","status":"생산중","processMemo":"","note":""},{"id":"PR-007","clientId":"CL-006","name":"캐스터 주행성 시험기","spec":"AC 220 V","qty":1,"unit":"대","price":0,"deliveryDate":"","processStage":"가공/제작","status":"생산중","processMemo":"","note":""},{"id":"PR-008","clientId":"CL-006","name":"좌면 구조 내구성 시험기","spec":"AC 220 V","qty":1,"unit":"대","price":0,"deliveryDate":"","processStage":"가공/제작","status":"생산중","processMemo":"","note":""},{"id":"PR-009","clientId":"CL-006","name":"팔걸이 내구성 시험기","spec":"AC 220 V","qty":1,"unit":"대","price":0,"deliveryDate":"","processStage":"가공/제작","status":"생산중","processMemo":"","note":""},{"id":"PR-010","clientId":"CL-006","name":"오발 압축 시험기","spec":"AC 220 V","qty":1,"unit":"대","price":0,"deliveryDate":"","processStage":"가공/제작","status":"생산중","processMemo":"","note":""},{"id":"PR-011","clientId":"CL-006","name":"캐스터 하중 주행 시험기","spec":"AC 220 V","qty":1,"unit":"대","price":0,"deliveryDate":"","processStage":"가공/제작","status":"생산중","processMemo":"","note":""},{"id":"PR-012","clientId":"CL-006","name":"CMD 더미","spec":"","qty":1,"unit":"대","price":0,"deliveryDate":"","processStage":"설계/도면","status":"설계중","processMemo":"","note":""},{"id":"PR-013","clientId":"CL-007","name":"시야범위 시험기","spec":"","qty":1,"unit":"대","price":0,"deliveryDate":"","processStage":"가공/제작","status":"생산중","processMemo":"","note":""},{"id":"PR-014","clientId":"CL-007","name":"표면검사기","spec":"AC220V","qty":1,"unit":"대","price":0,"deliveryDate":"","processStage":"완료","status":"완료","processMemo":"","note":""},{"id":"PR-015","clientId":"CL-008","name":"기계적내구력전처리","spec":"AC220V","qty":1,"unit":"대","price":0,"deliveryDate":"","processStage":"설계/도면","status":"설계중","processMemo":"","note":""},{"id":"PR-016","clientId":"CL-006","name":"윈치크레인","spec":"수동","qty":6,"unit":"대","price":0,"deliveryDate":"","processStage":"가공/제작","status":"생산중","processMemo":"","note":""}],"materials":[{"id":"MT-072","productId":"PR-009","name":"프로파일발주","supplier":"예주산업","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-29","expectedDate":"","status":"발주중","note":""},{"id":"MT-071","productId":"PR-008","name":"프로파일발주","supplier":"예주산업","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-29","expectedDate":"","status":"발주중","note":""},{"id":"MT-070","productId":"PR-005","name":"프로파일 발주","supplier":"예주산업","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-29","expectedDate":"","status":"발주중","note":""},{"id":"MT-069","productId":"PR-003","name":"프로파일발주","supplier":"예주산업","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-29","expectedDate":"","status":"발주중","note":""},{"id":"MT-068","productId":"PR-010","name":"감속기","supplier":"제이씨인터내쇼날","unitPrice":266300,"qty":1,"unit":"EA","orderDate":"2026-05-29","expectedDate":"","status":"발주중","note":""},{"id":"MT-067","productId":"PR-009","name":"감속기","supplier":"제이씨인터내쇼날","unitPrice":203800,"qty":2,"unit":"EA","orderDate":"2026-05-29","expectedDate":"","status":"발주중","note":""},{"id":"MT-066","productId":"PR-008","name":"감속기","supplier":"제이씨인터내쇼날","unitPrice":203800,"qty":2,"unit":"EA","orderDate":"2026-05-29","expectedDate":"","status":"발주중","note":""},{"id":"MT-065","productId":"PR-005","name":"감속기","supplier":"㈜제이씨인터내쇼날","unitPrice":203800,"qty":1,"unit":"EA","orderDate":"2026-05-29","expectedDate":"","status":"발주중","note":""},{"id":"MT-064","productId":"PR-003","name":"감속기발주","supplier":"제이씨인터내쇼날","unitPrice":378800,"qty":1,"unit":"EA","orderDate":"2026-05-29","expectedDate":"","status":"발주중","note":""},{"id":"MT-063","productId":"PR-016","name":"각파이프절단","supplier":"가래비철강","unitPrice":0,"qty":6,"unit":"SET","orderDate":"2026-05-28","expectedDate":"","status":"발주전","note":""},{"id":"MT-062","productId":"PR-003","name":"베어링","supplier":"대성베어링","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-28","expectedDate":"","status":"입고완료","note":""},{"id":"MT-061","productId":"PR-004","name":"베어링","supplier":"대성베어링","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-28","expectedDate":"","status":"입고완료","note":""},{"id":"MT-060","productId":"PR-016","name":"선반가공","supplier":"성신테크","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-28","expectedDate":"","status":"발주중","note":""},{"id":"MT-059","productId":"PR-016","name":"베어링","supplier":"대성베어링","unitPrice":2100,"qty":6,"unit":"EA","orderDate":"2026-05-28","expectedDate":"","status":"입고완료","note":""},{"id":"MT-058","productId":"PR-016","name":"레이저가공","supplier":"모티브","unitPrice":0,"qty":6,"unit":"SET","orderDate":"2026-05-28","expectedDate":"","status":"발주중","note":""},{"id":"MT-057","productId":"PR-009","name":"베어링","supplier":"대성베어링","unitPrice":4500,"qty":1,"unit":"EA","orderDate":"2026-05-28","expectedDate":"","status":"입고완료","note":""},{"id":"MT-056","productId":"PR-010","name":"베어링","supplier":"대성베어링","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-28","expectedDate":"","status":"입고완료","note":""},{"id":"MT-055","productId":"PR-011","name":"베어링","supplier":"대성베어링","unitPrice":9700,"qty":1,"unit":"EA","orderDate":"2026-05-28","expectedDate":"","status":"입고완료","note":""},{"id":"MT-054","productId":"PR-013","name":"베어링","supplier":"대성베어링","unitPrice":9240,"qty":1,"unit":"EA","orderDate":"2026-05-28","expectedDate":"","status":"입고완료","note":""},{"id":"MT-053","productId":"PR-007","name":"에어실린더외","supplier":"동우유공압","unitPrice":280600,"qty":1,"unit":"EA","orderDate":"2026-05-28","expectedDate":"","status":"입고완료","note":""},{"id":"MT-052","productId":"PR-011","name":"에어실린더","supplier":"동우유공압","unitPrice":106000,"qty":1,"unit":"EA","orderDate":"2026-05-28","expectedDate":"","status":"입고완료","note":""},{"id":"MT-051","productId":"PR-004","name":"에어실린더","supplier":"동우유공압","unitPrice":176000,"qty":1,"unit":"EA","orderDate":"2026-05-28","expectedDate":"","status":"입고완료","note":""},{"id":"MT-050","productId":"PR-009","name":"액츄에이터","supplier":"KNL메카","unitPrice":0,"qty":2,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"발주중","note":""},{"id":"MT-049","productId":"PR-008","name":"액츄에이터","supplier":"KNL메카","unitPrice":0,"qty":2,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"발주중","note":""},{"id":"MT-048","productId":"PR-005","name":"액츄에이터","supplier":"KNL메카","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"발주중","note":""},{"id":"MT-047","productId":"PR-009","name":"가공소재","supplier":"신진에스엠","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"입고완료","note":""},{"id":"MT-046","productId":"PR-008","name":"가공소재","supplier":"신진에스엠","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"입고완료","note":""},{"id":"MT-045","productId":"PR-007","name":"가공소재","supplier":"신진에스엠","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"입고완료","note":""},{"id":"MT-044","productId":"PR-005","name":"가공소재","supplier":"신진에스엠","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"입고완료","note":""},{"id":"MT-043","productId":"PR-003","name":"가공소재","supplier":"신진에스엠","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"입고완료","note":""},{"id":"MT-042","productId":"PR-010","name":"각파이프","supplier":"가래비철강","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"입고완료","note":""},{"id":"MT-041","productId":"PR-011","name":"각파이프","supplier":"가래비철강","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"입고완료","note":""},{"id":"MT-040","productId":"PR-010","name":"프로파일","supplier":"미정","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"발주전","note":""},{"id":"MT-039","productId":"PR-009","name":"프로파일","supplier":"미정","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"발주전","note":""},{"id":"MT-038","productId":"PR-005","name":"프로파일","supplier":"미정","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"발주전","note":""},{"id":"MT-037","productId":"PR-008","name":"프로파일","supplier":"미정","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"발주전","note":""},{"id":"MT-036","productId":"PR-007","name":"각파이프","supplier":"가래비철강","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"입고완료","note":""},{"id":"MT-035","productId":"PR-006","name":"MDF CNC가공","supplier":"목리","unitPrice":196000,"qty":14,"unit":"SET","orderDate":"2026-05-27","expectedDate":"","status":"발주중","note":""},{"id":"MT-034","productId":"PR-011","name":"레이저가공","supplier":"모티브","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"입고완료","note":""},{"id":"MT-033","productId":"PR-010","name":"레이저가공","supplier":"모티브","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"입고완료","note":""},{"id":"MT-032","productId":"PR-009","name":"레이저가공","supplier":"모티브","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"입고완료","note":""},{"id":"MT-031","productId":"PR-008","name":"레이저가공","supplier":"모티브","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"입고완료","note":""},{"id":"MT-030","productId":"PR-007","name":"레이저가공","supplier":"모티브","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"입고완료","note":""},{"id":"MT-029","productId":"PR-006","name":"레이저가공","supplier":"모티브","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"입고완료","note":""},{"id":"MT-028","productId":"PR-005","name":"레이저가공","supplier":"모티브","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"입고완료","note":""},{"id":"MT-027","productId":"PR-011","name":"명판발주","supplier":"동현자동화","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"발주중","note":""},{"id":"MT-026","productId":"PR-010","name":"명판발주","supplier":"동현자동화","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"발주중","note":""},{"id":"MT-025","productId":"PR-009","name":"명판발주","supplier":"동현자동화","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"발주중","note":""},{"id":"MT-024","productId":"PR-008","name":"명판발주","supplier":"동현자동화","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"발주중","note":""},{"id":"MT-023","productId":"PR-007","name":"명판발주","supplier":"동현자동화","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"발주중","note":""},{"id":"MT-022","productId":"PR-005","name":"명판발주","supplier":"동현자동화","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"발주중","note":""},{"id":"MT-021","productId":"PR-004","name":"명판 발주","supplier":"동현자동화","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"발주중","note":""},{"id":"MT-020","productId":"PR-003","name":"명판 발주","supplier":"동현자동화","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"발주중","note":""},{"id":"MT-019","productId":"PR-013","name":"선반가공","supplier":"성신테크","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"발주전","note":"도면첨부"},{"id":"MT-018","productId":"PR-015","name":"AC모터&감속기","supplier":"한구체인모터","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"발주전","note":""},{"id":"MT-017","productId":"PR-015","name":"선반가공","supplier":"성신테크","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"발주전","note":"도면 첨부"},{"id":"MT-016","productId":"PR-015","name":"레이저가공","supplier":"모티브","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"발주중","note":"도면 첨부"},{"id":"MT-015","productId":"PR-015","name":"밀링가공","supplier":"비아정밀","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-27","expectedDate":"","status":"발주중","note":"도면 첨부"},{"id":"MT-014","productId":"PR-004","name":"LM가이드","supplier":"신우상공사","unitPrice":0,"qty":2,"unit":"EA","orderDate":"2026-05-26","expectedDate":"","status":"발주중","note":""},{"id":"MT-013","productId":"PR-004","name":"AC 모터&감속기","supplier":"한국체인모터","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-26","expectedDate":"","status":"발주중","note":""},{"id":"MT-012","productId":"PR-004","name":"밀링가공품","supplier":"비아정밀","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-26","expectedDate":"","status":"발주중","note":""},{"id":"MT-011","productId":"PR-004","name":"샤프트","supplier":"원에스티","unitPrice":0,"qty":2,"unit":"EA","orderDate":"2026-05-26","expectedDate":"","status":"발주중","note":""},{"id":"MT-010","productId":"PR-004","name":"레이저가공","supplier":"모티브","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-26","expectedDate":"","status":"입고완료","note":""},{"id":"MT-009","productId":"PR-013","name":"레이저 자재","supplier":"모티브","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-26","expectedDate":"","status":"입고완료","note":"도면 제공"},{"id":"MT-008","productId":"PR-003","name":"선반가공","supplier":"성신테크","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-21","expectedDate":"","status":"발주중","note":""},{"id":"MT-007","productId":"PR-003","name":"베어링","supplier":"대성베어링","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-22","expectedDate":"","status":"발주중","note":""},{"id":"MT-006","productId":"PR-003","name":"AC모터& 감속기","supplier":"한국체인모터","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-20","expectedDate":"","status":"발주중","note":""},{"id":"MT-005","productId":"PR-003","name":"열처리 샤프트","supplier":"원에스티","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-20","expectedDate":"","status":"발주중","note":""},{"id":"MT-004","productId":"PR-003","name":"볼스크류 & LM가이드","supplier":"두기텍","unitPrice":0,"qty":0,"unit":"EA","orderDate":"2026-05-19","expectedDate":"","status":"발주중","note":""},{"id":"MT-003","productId":"PR-003","name":"TM스크류","supplier":"신우상공사","unitPrice":0,"qty":0,"unit":"EA","orderDate":"2026-05-19","expectedDate":"","status":"발주중","note":"도면 첨부"},{"id":"MT-002","productId":"PR-003","name":"레이저 가공","supplier":"모티브","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-13","expectedDate":"2026-05-26","status":"입고완료","note":""},{"id":"MT-001","productId":"PR-003","name":"밀링가공","supplier":"원일엠텍","unitPrice":0,"qty":0,"unit":"EA","orderDate":"2026-05-13","expectedDate":"2026-06-08","status":"발주중","note":"도면 첨부"},{"id":"MT-073","productId":"PR-010","name":"프로파일발주","supplier":"예주산업","unitPrice":0,"qty":1,"unit":"EA","orderDate":"2026-05-29","expectedDate":"","status":"발주중","note":""}],"workOrders":[],"workers":[{"id":"E-003","name":"박지호","line":"B","role":"검사","tin":"08:00","tout":"","ot":"0h","status":"정비지원"},{"id":"E-004","name":"최유진","line":"C","role":"조립","tin":"08:00","tout":"","ot":"2.0h","status":"근무중"}],"defects":[{"id":"DF-001","productId":"PR-001","type":"치수 불량","stage":"가공/제작","qty":1,"date":"2026-05-18","status":"완료","cause":"공구 마모","action":"재가공","note":""},{"id":"DF-002","productId":"PR-001","type":"체결 불량","stage":"조립","qty":2,"date":"2026-05-20","status":"완료","cause":"토크 미달","action":"재조립","note":""}],"claims":[{"id":"CLM-001","date":"2026-05-25","clientId":"CL-006","productId":"PR-003","content":"ㄹ머머머멈 추가ㄴㅇㄹㄴㅁㅇㄹㄴㄹㅇㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹ","status":"접수","response":""}],"checkRecords":[],"alerts":[{"type":"err","title":"[자재발주 미처리] 각파이프절단 — 윈치크레인","sub":"공급처: 가래비철강 · 입고예정: 미설정","auto":true,"createdAt":"2026-05-30"},{"type":"err","title":"[자재발주 미처리] 프로파일 — 좌면 구조 내구성 시험기","sub":"공급처: 미정 · 입고예정: 미설정","auto":true,"createdAt":"2026-05-27"},{"type":"err","title":"[자재발주 미처리] 선반가공 — 시야범위 시험기","sub":"공급처: 성신테크 · 입고예정: 미설정","auto":true,"createdAt":"2026-05-27"},{"type":"err","title":"[자재발주 미처리] 프로파일 — 좌판 내구성 시험기","sub":"공급처: 미정 · 입고예정: 미설정","auto":true,"createdAt":"2026-05-27"},{"type":"err","title":"[자재발주 미처리] 프로파일 — 팔걸이 내구성 시험기","sub":"공급처: 미정 · 입고예정: 미설정","auto":true,"createdAt":"2026-05-27"},{"type":"err","title":"[자재발주 미처리] 명판 발주 — 등판내구성 시험기","sub":"공급처: 동현자동화 · 입고예정: 미설정","auto":true,"createdAt":"2026-05-27"},{"type":"err","title":"[자재발주 미처리] 명판 발주 — 스위밸 주행시험기","sub":"공급처: 동현자동화 · 입고예정: 미설정","auto":true,"createdAt":"2026-05-27"},{"type":"err","title":"[자재발주 미처리] 명판발주 — 좌판 내구성 시험기","sub":"공급처: 동현자동화 · 입고예정: 미설정","auto":true,"createdAt":"2026-05-27"},{"type":"err","title":"[자재발주 미처리] 명판발주 — 캐스터 주행성 시험기","sub":"공급처: 동현자동화 · 입고예정: 미설정","auto":true,"createdAt":"2026-05-27"},{"type":"err","title":"[자재발주 미처리] 명판발주 — 좌면 구조 내구성 시험기","sub":"공급처: 동현자동화 · 입고예정: 미설정","auto":true,"createdAt":"2026-05-27"},{"type":"err","title":"[자재발주 미처리] 명판발주 — 팔걸이 내구성 시험기","sub":"공급처: 동현자동화 · 입고예정: 미설정","auto":true,"createdAt":"2026-05-27"},{"type":"err","title":"[자재발주 미처리] 명판발주 — 오발 압축 시험기","sub":"공급처: 동현자동화 · 입고예정: 미설정","auto":true,"createdAt":"2026-05-27"},{"type":"err","title":"[자재발주 미처리] 명판발주 — 캐스터 하중 주행 시험기","sub":"공급처: 동현자동화 · 입고예정: 미설정","auto":true,"createdAt":"2026-05-27"},{"type":"err","title":"[자재발주 미처리] 선반가공 — 기계적내구력전처리","sub":"공급처: 성신테크 · 입고예정: 미설정","auto":true,"createdAt":"2026-05-27"},{"type":"err","title":"[자재발주 미처리] AC모터&감속기 — 기계적내구력전처리","sub":"공급처: 한구체인모터 · 입고예정: 미설정","auto":true,"createdAt":"2026-05-27"},{"type":"err","title":"[자재발주 미처리] 프로파일 — 오발 압축 시험기","sub":"공급처: 미정 · 입고예정: 미설정","auto":true,"createdAt":"2026-05-27"},{"type":"err","title":"[자재발주 미처리] MDF CNC가공 — 안정성 시험 추","sub":"공급처: 모 · 입고예정: 미설정","auto":true,"createdAt":"2026-05-27"}],"inventory":[{"id":"INV-017","name":"레이저 자재","type":"자재","unit":"EA","qty":1,"minQty":0,"location":"입고 대기 구역","note":"자재발주 MT-009 자동 입고"},{"id":"INV-016","name":"레이저가공","type":"자재","unit":"EA","qty":1,"minQty":0,"location":"입고 대기 구역","note":"자재발주 MT-010 자동 입고"},{"id":"INV-015","name":"레이저 가공","type":"자재","unit":"EA","qty":1,"minQty":0,"location":"입고 대기 구역","note":"자재발주 MT-002 자동 입고"},{"id":"INV-014","name":"31313","type":"완제품","unit":"대","qty":1,"minQty":0,"location":"완제품 창고","note":"PR-012 생산완료 자동등록 · 2026-05-24"},{"id":"INV-013","name":"32432","type":"완제품","unit":"대","qty":1,"minQty":0,"location":"완제품 창고","note":"PR-011 생산완료 자동등록 · 2026-05-24"},{"id":"INV-012","name":"23424","type":"완제품","unit":"대","qty":1,"minQty":0,"location":"완제품 창고","note":"PR-010 생산완료 자동등록 · 2026-05-23"},{"id":"INV-011","name":"팔걸이 내구성 시험기","type":"완제품","unit":"대","qty":2,"minQty":0,"location":"완제품 창고","note":"PR-003 생산완료 자동등록 · 2026-05-23"},{"id":"INV-010","name":"ㄴㄻㄹㄴㅇㄻㄴㄹ","type":"완제품","unit":"대","qty":1,"minQty":0,"location":"완제품 창고","note":"PR-008 생산완료 자동등록 · 2026-05-23"},{"id":"INV-009","name":"ㄴㄻㄴㄹㄴ","type":"완제품","unit":"대","qty":2,"minQty":0,"location":"완제품 창고","note":"PR-007 생산완료 자동등록 · 2026-05-23"},{"id":"INV-008","name":"ㅈㄷㄱ23324ㅈㄱㄷ342","type":"완제품","unit":"대","qty":1,"minQty":0,"location":"완제품 창고","note":"PR-009 생산완료 자동등록 · 2026-05-23"},{"id":"INV-007","name":"등판내구성 시험기","type":"완제품","unit":"대","qty":2,"minQty":0,"location":"완제품 창고","note":"PR-001 생산완료 자동등록 · 2026-05-23"},{"id":"INV-006","name":"서보모터","type":"자재","unit":"EA","qty":1,"minQty":0,"location":"입고 대기 구역","note":"자재발주 MT-001 자동 입고"},{"id":"INV-005","name":"123123","type":"자재","unit":"EA","qty":1,"minQty":0,"location":"입고 대기 구역","note":"자재발주 MT-002 자동 입고"},{"id":"INV-003","name":"등판내구성 시험기 프레임","type":"반제품","unit":"SET","qty":12,"minQty":3,"location":"용접장 임시 보관 구역","note":""},{"id":"INV-004","name":"좌판시험기 완제품","type":"완제품","unit":"대","qty":2,"minQty":0,"location":"출하 완제품 대기 구역","note":""}],"deliveries":[],"stages":["설계/도면","자재발주","가공/제작","조립","배선/전기","검사/시험","완료","납품"],"trash":[],"partners":[{"id":"BP-001","name":"예주산업","type":"공급처","manager":"김예주","tel":"031-123-4567","mobile":"010-1234-5678","email":"kim@yeju.co.kr","fax":"031-123-4568","bizNo":"123-45-67890","address":"경기도 화성시 봉담읍 산업단지로 10","note":"알루미늄 프로파일 전문 공급"},{"id":"BP-002","name":"제이씨인터내쇼날","type":"공급처","manager":"이진철","tel":"031-234-5678","mobile":"010-2345-6789","email":"lee@jci.co.kr","fax":"","bizNo":"234-56-78901","address":"경기도 안양시 만안구 산업로 55","note":"감속기·모터 전문 공급"},{"id":"BP-003","name":"모티브","type":"외주처","manager":"박모범","tel":"031-345-6789","mobile":"010-3456-7890","email":"park@motive.co.kr","fax":"","bizNo":"345-67-89012","address":"경기도 평택시 청북읍 현곡2로 20","note":"레이저 가공 전문"},{"id":"BP-004","name":"대성베어링","type":"공급처","manager":"최대성","tel":"02-456-7890","mobile":"010-4567-8901","email":"choi@daesung.co.kr","fax":"","bizNo":"456-78-90123","address":"서울시 구로구 구로동 디지털로 100","note":"베어링 전문 유통"},{"id":"BP-005","name":"성신테크","type":"외주처","manager":"정성신","tel":"031-567-8901","mobile":"010-5678-9012","email":"jung@sungshin.co.kr","fax":"","bizNo":"567-89-01234","address":"경기도 수원시 팔달구 인계로 30","note":"선반·밀링 정밀 가공"},{"id":"BP-006","name":"동우유공압","type":"공급처","manager":"송동우","tel":"032-678-9012","mobile":"010-6789-0123","email":"song@dongwoo.co.kr","fax":"","bizNo":"678-90-12345","address":"인천시 남동구 논현동 유통단지 5","note":"에어실린더·유공압 부품"},{"id":"BP-007","name":"신우상공사","type":"공급처","manager":"신민호","tel":"031-789-0123","mobile":"010-7890-1234","email":"shin@sinwoo.co.kr","fax":"","bizNo":"789-01-23456","address":"경기도 시흥시 정왕동 테크노파크","note":"LM가이드·볼스크류 전문"},{"id":"BP-008","name":"현대리바트","type":"구매처","manager":"김현대","tel":"031-890-1234","mobile":"010-8901-2345","email":"kim@hyundai-livart.co.kr","fax":"031-890-1235","bizNo":"890-12-34567","address":"경기도 이천시 부발읍 공단로 50","note":"의자 내구성 시험기 주요 납품처"},{"id":"BP-009","name":"한컴라이프케어","type":"구매처","manager":"이한컴","tel":"031-901-2345","mobile":"010-9012-3456","email":"lee@hancom-lifecare.co.kr","fax":"","bizNo":"901-23-45678","address":"경기도 성남시 분당구 황새울로 200","note":"방호 장비 시험기 납품"},{"id":"BP-010","name":"큐로시험소","type":"구매처","manager":"박큐로","tel":"031-012-3456","mobile":"010-0123-4567","email":"park@quro.co.kr","fax":"","bizNo":"012-34-56789","address":"경기도 용인시 처인구 원삼면 산업로 15","note":"기계적 내구력 시험기 납품"}],"rfqList":[{"id":"Q-260530-0001","date":"2026-05-30","dueDate":"2026-06-06","clientId":"CL-006","productId":"PR-003","supplier":"예주산업","supplierEmail":"kim@yeju.co.kr","itemName":"알루미늄 프로파일 40×40","spec":"40×40mm, 6063-T5","qty":20,"unit":"M","targetPrice":8500,"status":"요청중","note":""},{"id":"Q-260530-0002","date":"2026-05-30","dueDate":"2026-06-07","clientId":"CL-006","productId":"PR-009","supplier":"제이씨인터내쇼날","supplierEmail":"lee@jci.co.kr","itemName":"감속기 KF60-1/20-200W","spec":"비율 1:20, 200W, 플랜지형","qty":2,"unit":"EA","targetPrice":200000,"status":"회신완료","note":"도면 전달 완료"},{"id":"Q-260529-0001","date":"2026-05-29","dueDate":"2026-06-05","clientId":"CL-007","productId":"PR-013","supplier":"모티브","supplierEmail":"park@motive.co.kr","itemName":"레이저 가공","spec":"SUS304, t3.0mm","qty":1,"unit":"SET","targetPrice":0,"status":"채택","note":"도면 첨부 완료"},{"id":"Q-260528-0001","date":"2026-05-28","dueDate":"2026-06-04","clientId":"CL-006","productId":"PR-008","supplier":"동우유공압","supplierEmail":"song@dongwoo.co.kr","itemName":"에어실린더","spec":"ø50×150 stroke, SMC호환","qty":2,"unit":"EA","targetPrice":180000,"status":"미채택","note":"타사 제품으로 대체"}],"poList":[{"id":"P-260530-0001","date":"2026-05-30","dueDate":"2026-06-13","clientId":"CL-006","productId":"PR-009","supplier":"제이씨인터내쇼날","supplierEmail":"lee@jci.co.kr","itemName":"감속기","spec":"KF60-1/20-200W, 플랜지형","qty":2,"unit":"EA","unitPrice":203800,"payMethod":"현금","dlvMethod":"직납","status":"발송완료","note":""},{"id":"P-260530-0002","date":"2026-05-30","dueDate":"2026-06-10","clientId":"CL-006","productId":"PR-003","supplier":"예주산업","supplierEmail":"kim@yeju.co.kr","itemName":"알루미늄 프로파일 40×40","spec":"6063-T5, 4M 기준","qty":20,"unit":"M","unitPrice":8500,"payMethod":"현금","dlvMethod":"택배","status":"작성중","note":""},{"id":"P-260529-0001","date":"2026-05-29","dueDate":"2026-06-07","clientId":"CL-007","productId":"PR-013","supplier":"대성베어링","supplierEmail":"choi@daesung.co.kr","itemName":"베어링","spec":"6205-2RS","qty":1,"unit":"EA","unitPrice":9240,"payMethod":"현금","dlvMethod":"택배","status":"입고완료","note":""},{"id":"P-260528-0001","date":"2026-05-28","dueDate":"2026-06-05","clientId":"CL-006","productId":"PR-007","supplier":"동우유공압","supplierEmail":"song@dongwoo.co.kr","itemName":"에어실린더 外","spec":"ø50×150 stroke 外 5종","qty":1,"unit":"LOT","unitPrice":280600,"payMethod":"현금","dlvMethod":"직납","status":"확인완료","note":"거래명세표 수령 완료"}]}</script>
+<style>
+<!--#include styles/base.css-->
+<!--#include styles/components.css-->
+<!--#include styles/responsive.css-->
+<!--#include styles/mobile.css-->
+</style>
+</head>
+<body>
+<!--#include html/layout-top.html-->
+<!--#include html/pages/dashboard.html-->
+<!--#include html/pages/clients.html-->
+<!--#include html/pages/materials.html-->
+<!--#include html/pages/inventory.html-->
+<!--#include html/pages/deliveries.html-->
+<!--#include html/pages/orders.html-->
+<!--#include html/pages/quality.html-->
+<!--#include html/pages/claims.html-->
+<!--#include html/pages/workers.html-->
+<!--#include html/pages/finance.html-->
+<!--#include html/pages/alerts.html-->
+<!--#include html/pages/trash.html-->
+<!--#include html/pages/partners.html-->
+<!--#include html/pages/rfq.html-->
+<!--#include html/pages/po.html-->
+<!--#include html/pages/pg-calendar.html-->
+<!--#include html/pages/pg-alimtalk.html-->
+<script>
+<!--#include js/data-storage.js-->
+<!--#include js/state-search.js-->
+<!--#include js/helpers-auth.js-->
+<!--#include js/navigation.js-->
+<!--#include js/dashboard.js-->
+<!--#include js/deliveries.js-->
+<!--#include js/calendar.js-->
+<!--#include js/bom.js-->
+<!--#include js/clients-products.js-->
+<!--#include js/materials.js-->
+<!--#include js/table-inline-edit.js-->
+<!--#include js/inventory.js-->
+<!--#include js/orders.js-->
+<!--#include js/process.js-->
+<!--#include js/quality-claims.js-->
+<!--#include js/workers-attendance.js-->
+<!--#include js/alerts.js-->
+<!--#include js/trash.js-->
+<!--#include js/shortcuts-theme-boot.js-->
+<!--#include js/rbac.js-->
+<!--#include js/cloud-sync.js-->
+<!--#include js/utils-email.js-->
+<!--#include js/print-docs.js-->
+<!--#include js/partners.js-->
+<!--#include js/hr-tabs.js-->
+<!--#include js/finance.js-->
+<!--#include js/as.js-->
+<!--#include js/alimtalk.js-->
+<!--#include js/mobile.js-->
+</script>
+
+
+<!-- ══ 거래처 등록/수정 모달 ══ -->
+<div class="overlay" id="partner-modal" style="z-index:10000;">
+  <div class="dlg" style="max-width:580px; width:95%;">
+    <div class="dlg-title" id="partner-modal-ttl"><i class="ti ti-address-book" style="color:var(--tx-i);"></i>거래처 등록</div>
+    <div class="fg fg2" style="gap:10px; margin-bottom:14px;">
+      <div class="ff"><label>거래처명 *</label><input id="bp-name" placeholder="예: 예주산업"></div>
+      <div class="ff"><label>유형 *</label>
+        <select id="bp-type"><option>공급처</option><option>구매처</option><option>외주처</option><option>기타</option></select>
+      </div>
+      <div class="ff"><label>담당자</label><input id="bp-mgr" placeholder="홍길동"></div>
+      <div class="ff"><label>전화번호</label><input id="bp-tel" placeholder="031-000-0000"></div>
+      <div class="ff"><label>휴대폰</label><input id="bp-mobile" placeholder="010-0000-0000"></div>
+      <div class="ff"><label>이메일 *</label><input id="bp-email" type="email" placeholder="contact@company.com"></div>
+      <div class="ff"><label>팩스</label><input id="bp-fax" placeholder="031-000-0001"></div>
+      <div class="ff"><label>사업자번호</label><input id="bp-bizno" placeholder="123-45-67890"></div>
+      <div class="ff" style="grid-column:span 2;"><label>주소</label><input id="bp-addr" placeholder="경기도 화성시 ..."></div>
+      <div class="ff" style="grid-column:span 2;"><label>비고</label><input id="bp-note" placeholder="특이사항"></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('partner-modal')">취소</button>
+      <button class="btn btn-primary" id="bp-save-btn" onclick="savePartnerForm()"><i class="ti ti-check"></i>저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 거래처 선택 피커 모달 ══ -->
+<div class="overlay" id="client-picker-modal" style="z-index:10000;">
+  <div class="dlg" style="max-width:520px; width:95%;">
+    <div class="dlg-title"><i class="ti ti-search" style="color:var(--tx-i);"></i>고객사 선택</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <input id="cp-q" placeholder="고객사명·담당자·이메일 검색..." style="flex:1;" oninput="renderClientPickerList()">
+    </div>
+    <div id="cp-list" style="max-height:320px;overflow-y:auto;border:1px solid var(--br);border-radius:var(--rm);"></div>
+    <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;">
+      <button class="btn btn-sm" onclick="closeModal('client-picker-modal'); openClientAdd();"><i class="ti ti-plus"></i>신규 고객사 등록</button>
+      <button class="btn" onclick="closeModal('client-picker-modal')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="partner-picker-modal" style="z-index:10000;">
+  <div class="dlg" style="max-width:520px; width:95%;">
+    <div class="dlg-title"><i class="ti ti-search" style="color:var(--tx-i);"></i>거래처 선택</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <input id="pp-q" placeholder="거래처명·담당자·이메일 검색..." style="flex:1;" oninput="renderPickerList()">
+      <select id="pp-ft" onchange="renderPickerList()" style="min-width:90px;">
+        <option value="">전체</option><option>공급처</option><option>구매처</option><option>외주처</option><option>기타</option>
+      </select>
+    </div>
+    <div id="pp-list" style="max-height:320px;overflow-y:auto;border:1px solid var(--br);border-radius:var(--rm);"></div>
+    <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;">
+      <button class="btn btn-sm" onclick="openPartnerModalFromPicker()"><i class="ti ti-plus"></i>신규 거래처 등록</button>
+      <button class="btn" onclick="closeModal('partner-picker-modal')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 견적요청서 등록/수정 팝업 모달 ══ -->
+<div class="overlay" id="rfq-modal">
+  <div class="dlg" style="max-width:680px; width:96%;">
+    <div class="dlg-title" id="rfq-modal-ttl"><i class="ti ti-file-description" style="color:var(--tx-i);"></i>견적요청서 등록</div>
+    <div class="fg fg4" style="gap:10px; margin-bottom:14px;">
+      <div class="ff"><label>문서번호</label><input id="rq-id" readonly></div>
+      <div class="ff"><label>요청일자 *</label><input id="rq-date" type="date"></div>
+      <div class="ff"><label>상태</label>
+        <select id="rq-status"><option>요청전</option><option>요청중</option><option>회신완료</option><option>채택</option><option>미채택</option></select>
+      </div>
+      <div class="ff"><label>연결 고객사</label><select id="rq-client" onchange="onRfqClientChange()"><option value="">-- 선택 --</option></select></div>
+      <div class="ff"><label>연결 제품</label><select id="rq-product"><option value="">-- 선택 --</option></select></div>
+      <div class="ff" style="grid-column:span 2;"><label>공급처/협력사 *</label>
+        <div style="display:flex;gap:4px;">
+          <input id="rq-supplier" placeholder="공급처명" style="flex:1;">
+          <button type="button" class="btn btn-sm" onclick="openPartnerPicker(function(p){inp('rq-supplier').value=p.name;inp('rq-semail').value=p.email||'';})" style="white-space:nowrap;"><i class="ti ti-search"></i>찾기</button>
+        </div>
+      </div>
+      <div class="ff" style="grid-column:span 2;"><label>공급처 이메일</label><input id="rq-semail" type="email" placeholder="supplier@example.com"></div>
+      <div class="ff" style="grid-column:span 2;"><label>품목명 *</label><input id="rq-item" placeholder="예: 서보모터 200W"></div>
+      <div class="ff" style="grid-column:span 2;"><label>규격/사양</label><input id="rq-spec" placeholder="예: 220V, ISO규격 등"></div>
+      <div class="ff"><label>수량</label><input id="rq-qty" type="number" placeholder="1" min="0" value="1"></div>
+      <div class="ff"><label>단위</label>
+        <select id="rq-unit"><option>EA</option><option>대</option><option>SET</option><option>kg</option><option>M</option><option>L</option><option>BOX</option></select>
+      </div>
+      <div class="ff"><label>희망 단가 (원)</label><input id="rq-target" type="number" placeholder="0" min="0"></div>
+      <div class="ff"><label>비고</label><input id="rq-note" placeholder="특이사항, 도면 첨부 여부 등"></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('rfq-modal')">취소</button>
+      <button class="btn btn-primary" id="rfq-save-btn" onclick="saveRfqForm()"><i class="ti ti-check"></i>등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 구매발주서 등록/수정 팝업 모달 ══ -->
+<div class="overlay" id="po-modal">
+  <div class="dlg" style="max-width:700px; width:96%;">
+    <div class="dlg-title" id="po-modal-ttl"><i class="ti ti-file-invoice" style="color:var(--tx-i);"></i>구매발주서 등록</div>
+    <div class="fg fg4" style="gap:10px; margin-bottom:14px;">
+      <div class="ff"><label>발주번호</label><input id="po-id" readonly></div>
+      <div class="ff"><label>발행일자 *</label><input id="po-date" type="date"></div>
+      <div class="ff"><label>발주 상태</label>
+        <select id="po-status"><option>작성중</option><option>발송완료</option><option>확인완료</option><option>입고완료</option></select>
+      </div>
+      <div class="ff"><label>연결 고객사</label><select id="po-client-sel" onchange="onPoClientChange()"><option value="">-- 선택 --</option></select></div>
+      <div class="ff"><label>연결 제품</label><select id="po-product-sel"><option value="">-- 선택 --</option></select></div>
+      <div class="ff" style="grid-column:span 2;"><label>공급처/협력사 *</label>
+        <div style="display:flex;gap:4px;">
+          <input id="po-supplier" placeholder="발주할 공급처명" style="flex:1;">
+          <button type="button" class="btn btn-sm" onclick="openPartnerPicker(function(p){inp('po-supplier').value=p.name;inp('po-semail').value=p.email||'';})" style="white-space:nowrap;"><i class="ti ti-search"></i>찾기</button>
+        </div>
+      </div>
+      <div class="ff" style="grid-column:span 2;"><label>공급처 이메일</label><input id="po-semail" type="email" placeholder="supplier@example.com"></div>
+      <div class="ff" style="grid-column:span 2;"><label>품목명 *</label><input id="po-item" placeholder="예: 볼스크류 SFU1605"></div>
+      <div class="ff" style="grid-column:span 2;"><label>규격/사양</label><input id="po-spec" placeholder="예: 치수, 재질 등"></div>
+      <div class="ff"><label>수량</label><input id="po-qty" type="number" placeholder="1" min="0" value="1"></div>
+      <div class="ff"><label>단위</label>
+        <select id="po-unit"><option>EA</option><option>대</option><option>SET</option><option>kg</option><option>M</option><option>L</option><option>BOX</option></select>
+      </div>
+      <div class="ff"><label>단가 (원)</label><input id="po-price" type="number" placeholder="0" min="0"></div>
+      <div class="ff"><label>결제 조건</label>
+        <select id="po-pay"><option>현금</option><option>T/T</option><option>어음</option><option>카드</option><option>외상</option></select>
+      </div>
+      <div class="ff"><label>납품 방법</label>
+        <select id="po-dlv"><option>직납</option><option>택배</option><option>지입</option><option>화물</option><option>방문수령</option></select>
+      </div>
+      <div class="ff"><label>비고</label><input id="po-note" placeholder="특이사항 등"></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('po-modal')">취소</button>
+      <button class="btn btn-primary" id="po-save-btn" onclick="savePoForm()"><i class="ti ti-check"></i>등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 거래명세표 / 세금계산서 공용 모달 ══ -->
+<div class="overlay" id="salesdoc-modal">
+  <div class="dlg" style="max-width:700px; width:96%;">
+    <div class="dlg-title" id="sd-modal-ttl"><i class="ti ti-receipt" style="color:var(--tx-i);"></i>문서 등록</div>
+    <div class="fg fg4" style="gap:10px; margin-bottom:14px;">
+      <div class="ff"><label>문서번호</label><input id="sd-id" readonly></div>
+      <div class="ff"><label>발행일자 *</label><input id="sd-date" type="date"></div>
+      <div class="ff"><label>상태</label><select id="sd-status"></select></div>
+      <div class="ff"><label>공급받는 고객사 *</label>
+        <div style="display:flex;gap:4px;">
+          <select id="sd-client" onchange="onSalesDocClientChange()" style="flex:1;"><option value="">-- 선택 --</option></select>
+          <button type="button" class="btn btn-sm" onclick="openClientPicker(function(c){ inp('sd-client').value=c.id; onSalesDocClientChange(); if(c.email && !v('sd-email')) sv('sd-email', c.email); })" style="white-space:nowrap;"><i class="ti ti-search"></i>찾기</button>
+        </div>
+      </div>
+      <div class="ff"><label>연결 제품</label><select id="sd-product"><option value="">-- 선택 --</option></select></div>
+      <div class="ff" style="grid-column:span 3;"><label>고객 이메일</label><input id="sd-email" type="email" placeholder="client@example.com"></div>
+      <div class="ff" style="grid-column:span 2;"><label>품목명 *</label><input id="sd-item" placeholder="예: 등판내구성 시험기"></div>
+      <div class="ff" style="grid-column:span 2;"><label>규격/사양</label><input id="sd-spec" placeholder="예: AC 220V"></div>
+      <div class="ff"><label>수량</label><input id="sd-qty" type="number" min="0" value="1"></div>
+      <div class="ff"><label>단위</label>
+        <select id="sd-unit"><option>EA</option><option>대</option><option>SET</option><option>kg</option><option>M</option><option>L</option><option>BOX</option></select>
+      </div>
+      <div class="ff"><label>단가 (원)</label><input id="sd-price" type="number" min="0" placeholder="0"></div>
+      <div class="ff"><label>비고</label><input id="sd-note" placeholder="특이사항"></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('salesdoc-modal')">취소</button>
+      <button class="btn btn-primary" id="sd-save-btn" onclick="saveSalesDoc()"><i class="ti ti-check"></i>등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 견적서 / 수주 공용 모달 ══ -->
+<div class="overlay" id="sodoc-modal">
+  <div class="dlg" style="max-width:700px; width:96%;">
+    <div class="dlg-title" id="so2-modal-ttl"><i class="ti ti-file-text" style="color:var(--tx-i);"></i>견적서 등록</div>
+    <div class="fg fg4" style="gap:10px; margin-bottom:14px;">
+      <div class="ff"><label>문서번호</label><input id="so2-id" readonly></div>
+      <div class="ff"><label>발행일자 *</label><input id="so2-date" type="date"></div>
+      <div class="ff"><label>상태</label><select id="so2-status"></select></div>
+      <div class="ff"><label>고객사 *</label><select id="so2-client" onchange="onSODocClientChange()"><option value="">-- 선택 --</option></select></div>
+      <div class="ff" style="grid-column:span 2;"><label>미등록 고객사 직접입력</label><input id="so2-client-text" placeholder="목록에 없으면 업체명 직접 입력"></div>
+      <div class="ff"><label>고객 이메일</label><input id="so2-email" type="email" placeholder="client@example.com"></div>
+      <div class="ff" style="grid-column:span 2;"><label>품목명 *</label><input id="so2-item" placeholder="예: 등판내구성 시험기"></div>
+      <div class="ff" style="grid-column:span 2;"><label>규격/사양</label><input id="so2-spec" placeholder="예: ISO 7173"></div>
+      <div class="ff"><label>수량</label><input id="so2-qty" type="number" min="0" value="1"></div>
+      <div class="ff"><label>단위</label>
+        <select id="so2-unit"><option>대</option><option>EA</option><option>SET</option><option>kg</option><option>M</option><option>L</option><option>BOX</option></select>
+      </div>
+      <div class="ff"><label>단가 (원)</label><input id="so2-price" type="number" min="0" placeholder="0"></div>
+      <div class="ff"><label>납기 희망일</label><input id="so2-due" type="date"></div>
+      <div class="ff" style="grid-column:span 4;"><label>비고</label><input id="so2-note" placeholder="특이사항"></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('sodoc-modal')">취소</button>
+      <button class="btn btn-primary" id="so2-save-btn" onclick="saveSODoc()"><i class="ti ti-check"></i>등록</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══ 수주처 등록 모달 ══ -->
+<div class="overlay" id="ca-modal">
+  <div class="dlg" style="max-width:600px;width:96%;">
+    <div class="dlg-title" id="ca-modal-ttl"><i class="ti ti-building-plus" style="color:var(--tx-i);"></i>신규 수주처 등록</div>
+    <div class="fg fg4" style="gap:10px;margin-bottom:14px;">
+      <div class="ff"><label>고객사 코드</label><input id="ca-id" readonly></div>
+      <div class="ff"><label>업체명 *</label><input id="ca-name" placeholder="예: 현대리바트"></div>
+      <div class="ff"><label>담당자명</label><input id="ca-mgr" placeholder="담당자 성함"></div>
+      <div class="ff"><label>연락처</label><input id="ca-tel" placeholder="031-1234-5678"></div>
+      <div class="ff"><label>이메일</label><input id="ca-email" placeholder="contact@company.com"></div>
+      <div class="ff"><label>수주 계약일</label><input id="ca-date" type="date"></div>
+      <div class="ff" style="grid-column:span 2;"><label>특이사항</label><input id="ca-note" placeholder="기타 참고사항"></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('ca-modal')">취소</button>
+      <button class="btn btn-primary" id="ca-save-btn" onclick="saveClient()"><i class="ti ti-check"></i>저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 제품 등록 모달 ══ -->
+<div class="overlay" id="prod-modal">
+  <div class="dlg" style="max-width:640px;width:96%;">
+    <div class="dlg-title" id="prod-modal-ttl"><i class="ti ti-box" style="color:var(--tx-i);"></i>신규 제품 등록</div>
+    <div class="fg fg4" style="gap:10px;margin-bottom:14px;">
+      <div class="ff"><label>제품 코드</label><input id="pra-id" readonly></div>
+      <div class="ff"><label>모델명 *</label><input id="pra-name" placeholder="예: 서보드라이브 120A"></div>
+      <div class="ff"><label>규격/사양</label><input id="pra-spec" placeholder="예: AC220V 3상"></div>
+      <div class="ff"><label>납기기한</label><input id="pra-due" type="date"></div>
+      <div class="ff"><label>수량</label><input id="pra-qty" type="number" value="1" min="1"></div>
+      <div class="ff"><label>단위</label>
+        <select id="pra-unit"><option>대</option><option>EA</option><option>Set</option><option>개</option><option>식</option></select>
+      </div>
+      <div class="ff"><label>수주 단가 (원)</label><input id="pra-price" type="number" value="0" min="0" oninput="updateProdCostPreview()"></div>
+      <div class="ff"><label>공정 단계</label>
+        <select id="pra-stage" onchange="onPraStageChange()"></select>
+      </div>
+      <div class="ff"><label>재료비 / 단위 (원)</label><input id="pra-matcost" type="number" value="0" min="0" oninput="updateProdCostPreview()"></div>
+      <div class="ff"><label>노무비 / 단위 (원)</label><input id="pra-laborcost" type="number" value="0" min="0" oninput="updateProdCostPreview()"></div>
+      <div class="ff"><label>경비 / 단위 (원)</label><input id="pra-ovhcost" type="number" value="0" min="0" oninput="updateProdCostPreview()"></div>
+      <div class="ff"><label>제조원가 / 공헌이익 (자동)</label>
+        <div id="pra-cost-preview" style="height:32px;display:flex;align-items:center;padding:0 10px;background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rm);font-size:11.5px;"></div>
+      </div>
+      <div class="ff" style="grid-column:span 2;"><label>자동 파생 상태</label>
+        <div id="pra-status-preview" style="height:32px;display:flex;align-items:center;padding:0 10px;background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rm);font-size:12px;"></div>
+      </div>
+      <div class="ff" style="grid-column:span 2;"><label>특기사항</label><input id="pra-note"></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('prod-modal')">취소</button>
+      <button class="btn btn-primary" id="pra-save-btn" onclick="saveProdModal()"><i class="ti ti-check"></i><span id="pra-save-txt">등록</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 고객 A/S 접수 모달 ══ -->
+<div class="overlay" id="as-modal">
+  <div class="dlg" style="max-width:680px;width:96%;">
+    <div class="dlg-title" id="as-modal-ttl"><i class="ti ti-tool" style="color:var(--tx-i);"></i>A/S 접수 등록</div>
+    <div class="fg fg4" style="gap:10px;margin-bottom:14px;">
+      <div class="ff"><label>접수번호</label><input id="asa-id" readonly></div>
+      <div class="ff"><label>접수일</label><input id="asa-recv" type="date"></div>
+      <div class="ff"><label>고객사 *</label><select id="asa-client"></select></div>
+      <div class="ff"><label>대상 제품</label><input id="asa-product" placeholder="예: 등판내구성 시험기"></div>
+      <div class="ff" style="grid-column:span 4;"><label>증상 / 접수 내용 *</label><input id="asa-symptom" placeholder="고객이 접수한 고장/요청 내용"></div>
+      <div class="ff"><label>보증 구분</label>
+        <select id="asa-warranty"><option>보증</option><option>유상</option></select>
+      </div>
+      <div class="ff"><label>처리 상태</label>
+        <select id="asa-status"><option>접수</option><option>처리중</option><option>완료</option><option>보류</option></select>
+      </div>
+      <div class="ff"><label>담당자</label><select id="asa-owner"></select></div>
+      <div class="ff"><label>수리비 (유상, 원)</label><input id="asa-cost" type="number" value="0" min="0"></div>
+      <div class="ff" style="grid-column:span 4;"><label>처리 내용</label><input id="asa-action" placeholder="조치/수리 내역"></div>
+      <div class="ff"><label>처리 완료일</label><input id="asa-done" type="date"></div>
+      <div class="ff" style="grid-column:span 3;"><label>비고</label><input id="asa-note"></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('as-modal')">취소</button>
+      <button class="btn btn-primary" onclick="saveAsModal()"><i class="ti ti-check"></i>저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ BOM 자재 추가/수정 모달 ══ -->
+<div class="overlay" id="bom-modal">
+  <div class="dlg" style="max-width:560px;width:96%;">
+    <div class="dlg-title" id="bom-modal-ttl"><i class="ti ti-sitemap" style="color:var(--tx-i);"></i>자재 추가</div>
+    <div class="fg fg4" style="gap:10px;margin-bottom:14px;">
+      <div class="ff" style="grid-column:span 3;"><label>자재명 *</label><input id="bma-name" placeholder="예: 볼스크류 SFU1605"></div>
+      <div class="ff"><label>규격</label><input id="bma-spec" placeholder="예: 1605"></div>
+      <div class="ff"><label>소요량 / 대 *</label><input id="bma-qty" type="number" min="0" step="0.01" value="1"></div>
+      <div class="ff"><label>단위</label>
+        <select id="bma-unit"><option>EA</option><option>SET</option><option>M</option><option>kg</option><option>L</option><option>BOX</option><option>식</option></select>
+      </div>
+      <div class="ff" style="grid-column:span 2;"><label>단가 (원)</label><input id="bma-price" type="number" min="0" value="0"></div>
+      <div class="ff" style="grid-column:span 4;"><label>반제품 연결 (선택 시 단가는 하위 BOM에서 자동 롤업)</label>
+        <select id="bma-sub" onchange="onBmaSubChange()"></select>
+      </div>
+      <div class="ff" style="grid-column:span 4;"><label>공급처 (발주처)</label>
+        <div style="display:flex;gap:4px;">
+          <input id="bma-supplier" placeholder="발주할 공급처명 (발주서 자동생성에 사용)" style="flex:1;">
+          <button type="button" class="btn btn-sm" onclick="openPartnerPicker(function(p){inp('bma-supplier').value=p.name;})" style="white-space:nowrap;"><i class="ti ti-search"></i>찾기</button>
+        </div>
+      </div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('bom-modal')">취소</button>
+      <button class="btn btn-primary" onclick="saveBomModal()"><i class="ti ti-check"></i>저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 자재 발주 등록 모달 ══ -->
+<div class="overlay" id="mat-modal">
+  <div class="dlg" style="max-width:720px;width:96%;">
+    <div class="dlg-title" id="mat-modal-ttl"><i class="ti ti-package-import" style="color:var(--tx-i);"></i>자재 수급/발주 등록</div>
+    <div class="fg fg4" style="gap:10px;margin-bottom:14px;">
+      <div class="ff"><label>자재 코드</label><input id="ma-id" readonly></div>
+      <div class="ff"><label>연결 고객사 *</label><select id="ma-client" onchange="onAddMatClientChange()"></select></div>
+      <div class="ff" style="grid-column:span 2;"><label>해당 품목 제품 *</label><select id="ma-product"></select></div>
+      <div class="ff" style="grid-column:span 2;"><label>자재명 *</label><input id="ma-name" placeholder="예: 서보모터용 하우징"></div>
+      <div class="ff" style="grid-column:span 2;"><label>구매 공급처 *</label>
+        <div style="display:flex;gap:4px;">
+          <input id="ma-supplier" placeholder="공급 협력사명" style="flex:1;">
+          <button type="button" class="btn btn-sm" onclick="openPartnerPicker(function(p){inp('ma-supplier').value=p.name;})" style="white-space:nowrap;"><i class="ti ti-search"></i>찾기</button>
+        </div>
+      </div>
+      <div class="ff"><label>매입 단가 (원)</label><input id="ma-price" type="number" placeholder="0" min="0"></div>
+      <div class="ff"><label>수량</label><input id="ma-qty" type="number" placeholder="0" min="0"></div>
+      <div class="ff"><label>단위</label>
+        <select id="ma-unit"><option>EA</option><option>대</option><option>SET</option><option>kg</option><option>M</option><option>L</option><option>BOX</option><option>ton</option></select>
+      </div>
+      <div class="ff"><label>입고 상황</label>
+        <select id="ma-status"><option>발주전</option><option>발주중</option><option>입고완료</option><option>지연</option></select>
+      </div>
+      <div class="ff"><label>발주 일자</label><input id="ma-odate" type="date"></div>
+      <div class="ff"><label>입고 예정일</label><input id="ma-edate" type="date"></div>
+      <div class="ff" style="grid-column:span 2;"><label>참고사항</label><input id="ma-note" placeholder="가공 도면 유무 등"></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('mat-modal')">취소</button>
+      <button class="btn btn-primary" id="mat-save-btn" onclick="saveMaterialForm()"><i class="ti ti-check"></i>등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 재고 등록 모달 ══ -->
+<div class="overlay" id="inv-modal">
+  <div class="dlg" style="max-width:580px;width:96%;">
+    <div class="dlg-title" id="inv-modal-ttl"><i class="ti ti-package" style="color:var(--tx-i);"></i>재고 품목 등록</div>
+    <div class="fg fg4" style="gap:10px;margin-bottom:14px;">
+      <div class="ff"><label>재고 코드</label><input id="inva-id" readonly></div>
+      <div class="ff" style="grid-column:span 3;"><label>품목명 *</label><input id="inva-name" placeholder="예: LM 가이드 레일"></div>
+      <div class="ff"><label>재고 구분 *</label>
+        <select id="inva-category"><option>완제품</option><option>생산부품</option><option>사무비품</option></select>
+      </div>
+      <div class="ff"><label>세부 유형</label>
+        <select id="inva-type"><option>자재</option><option>반제품</option><option>완제품</option><option>비품</option><option>소모품</option><option>기타</option></select>
+      </div>
+      <div class="ff"><label>단위 *</label>
+        <select id="inva-unit"><option>EA</option><option>대</option><option>SET</option><option>kg</option><option>M</option><option>L</option><option>BOX</option><option>ton</option></select>
+      </div>
+      <div class="ff"><label>현재고 수량 *</label><input id="inva-qty" type="number" value="0" min="0"></div>
+      <div class="ff"><label>최소 안전 재고 *</label><input id="inva-minQty" type="number" value="10" min="0"></div>
+      <div class="ff" style="grid-column:span 2;"><label>보관 위치</label><input id="inva-location" placeholder="예: A-4 선반"></div>
+      <div class="ff" style="grid-column:span 2;"><label>참고사항</label><input id="inva-note" placeholder="기타 메모"></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('inv-modal')">취소</button>
+      <button class="btn btn-primary" id="inv-save-btn" onclick="saveInventoryForm()"><i class="ti ti-check"></i>저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 생산 지시 등록 모달 ══ -->
+<div class="overlay" id="order-modal">
+  <div class="dlg" style="max-width:680px;width:96%;">
+    <div class="dlg-title" id="order-modal-ttl"><i class="ti ti-clipboard-plus" style="color:var(--tx-i);"></i>생산 지시 등록</div>
+    <div class="fg fg4" style="gap:10px;margin-bottom:14px;">
+      <div class="ff"><label>지시 번호</label><input id="oa-id" readonly></div>
+      <div class="ff"><label>연결 고객사</label><select id="oa-client" onchange="onAddOrderClientChange()"></select></div>
+      <div class="ff" style="grid-column:span 2;"><label>생산 대상 제품</label><select id="oa-product"></select></div>
+      <div class="ff"><label>투입 설비 라인</label>
+        <select id="oa-line"><option>라인 A</option><option>라인 B</option><option>라인 C</option></select>
+      </div>
+      <div class="ff"><label>생산 목표량</label><input id="oa-qty" type="number" placeholder="0" min="0"></div>
+      <div class="ff"><label>현재 실적량</label><input id="oa-done" type="number" placeholder="0" min="0"></div>
+      <div class="ff"><label>작업 개시일</label><input id="oa-start" type="date"></div>
+      <div class="ff"><label>납기 기한</label><input id="oa-due" type="date"></div>
+      <div class="ff"><label>작업 상태</label>
+        <select id="oa-status"><option>대기</option><option>진행중</option><option>완료</option><option>지연</option></select>
+      </div>
+      <div class="ff"><label>담당 감독자</label><select id="oa-mgr"></select></div>
+      <div class="ff" style="grid-column:span 2;"><label>지시 메모</label><input id="oa-note" placeholder="작업 지시 사항"></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('order-modal')">취소</button>
+      <button class="btn btn-primary" id="order-save-btn" onclick="saveOrderForm()"><i class="ti ti-check"></i>지시 등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 불량 등록 모달 ══ -->
+<div class="overlay" id="defect-modal">
+  <div class="dlg" style="max-width:640px;width:96%;">
+    <div class="dlg-title" id="defect-modal-ttl"><i class="ti ti-alert-triangle" style="color:var(--tx-d);"></i>불량 리포트 등록</div>
+    <div class="fg fg3" style="gap:10px;margin-bottom:14px;">
+      <div class="ff"><label>식별 코드</label><input id="df-id" readonly></div>
+      <div class="ff"><label>발생일자</label><input id="df-date" type="date"></div>
+      <div class="ff"><label>고객사</label><select id="df-client" onchange="onQcClientChange()"></select></div>
+      <div class="ff"><label>발생 제품</label><select id="df-product"></select></div>
+      <div class="ff"><label>발생 공정</label><select id="df-stage"></select></div>
+      <div class="ff"><label>불량 유형 *</label><input id="df-type" placeholder="예: 조립 결합 유격"></div>
+      <div class="ff"><label>부적합 수량 *</label><input id="df-qty" type="number" placeholder="1" min="1"></div>
+      <div class="ff"><label>귀책 원인</label><input id="df-cause" placeholder="원인 분석"></div>
+      <div class="ff"><label>처리 방안</label><input id="df-action" placeholder="조치 방법"></div>
+      <div class="ff"><label>처리 상태</label>
+        <select id="df-status"><option>조치중</option><option>완료</option><option>보류</option></select>
+      </div>
+      <div class="ff" style="grid-column:span 2;"><label>비고</label><input id="df-note" placeholder="추가 메모"></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('defect-modal')">취소</button>
+      <button class="btn btn-primary" id="df-save-btn" onclick="addDefect()"><i class="ti ti-check"></i>저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 클레임 등록 모달 ══ -->
+<div class="overlay" id="claim-modal">
+  <div class="dlg" style="max-width:580px;width:96%;">
+    <div class="dlg-title" id="claim-modal-ttl"><i class="ti ti-message-report" style="color:var(--tx-w);"></i>고객 클레임 등록</div>
+    <div class="fg fg3" style="gap:10px;margin-bottom:14px;">
+      <div class="ff"><label>클레임 코드</label><input id="cl-id" readonly></div>
+      <div class="ff"><label>접수일</label><input id="cl-date" type="date"></div>
+      <div class="ff"><label>유형</label>
+        <select id="cl-kind"><option>클레임</option><option>AS</option><option>기타</option></select>
+      </div>
+      <div class="ff"><label>제기처(고객사)</label><select id="cl-client" onchange="fillProductSelect('cl-product', this.value)"></select></div>
+      <div class="ff" style="grid-column:span 2;"><label>미등록 고객사 직접입력</label><input id="cl-client-text" placeholder="목록에 없으면 업체명 직접 입력"></div>
+      <div class="ff"><label>대상 제품</label><select id="cl-product"></select></div>
+      <div class="ff" style="grid-column:span 2;"><label>미등록 제품 직접입력</label><input id="cl-product-text" placeholder="목록에 없으면 제품·품목명 직접 입력"></div>
+      <div class="ff"><label>처리 상태</label>
+        <select id="cl-status"><option>접수</option><option>처리중</option><option>완료</option></select>
+      </div>
+      <div class="ff" style="grid-column:span 2;"><label>클레임 사양</label><input id="cl-spec" placeholder="예: AC 220V 모터 유격 또는 상세 사양 기재"></div>
+      <div class="ff" style="grid-column:span 3;"><label>불만/요청 내용 *</label><textarea id="cl-content" rows="4" placeholder="클레임/AS 요청 내용을 구체적으로 기재" style="width:100%; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx); padding:8px; font-size:12px; font-family:inherit; resize:vertical;"></textarea></div>
+      <div class="ff" style="grid-column:span 3;"><label>조치 방안</label><textarea id="cl-response" rows="4" placeholder="검토 조치 피드백" style="width:100%; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx); padding:8px; font-size:12px; font-family:inherit; resize:vertical;"></textarea></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('claim-modal')">취소</button>
+      <button class="btn btn-primary" id="cl-save-btn" onclick="addClaim()"><i class="ti ti-check"></i>등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 고객 클레임 상세 보기 모달 ══ -->
+<div class="overlay" id="claim-detail-modal">
+  <div class="dlg" style="max-width:640px;width:96%;">
+    <div class="dlg-title"><i class="ti ti-message-report" style="color:var(--tx-d);"></i>고객 클레임 상세</div>
+    <div id="claim-detail-body" style="margin-bottom:14px;"></div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('claim-detail-modal')">닫기</button>
+      <button class="btn btn-primary" id="claim-detail-edit-btn"><i class="ti ti-edit"></i>수정</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 검사 기록 모달 ══ -->
+<div class="overlay" id="check-modal">
+  <div class="dlg" style="max-width:580px;width:96%;">
+    <div class="dlg-title" id="check-modal-ttl"><i class="ti ti-clipboard-check" style="color:var(--tx-ok);"></i>납품 검사 기록</div>
+    <div class="fg fg3" style="gap:10px;margin-bottom:14px;">
+      <div class="ff"><label>검사 코드</label><input id="ck-id" readonly></div>
+      <div class="ff"><label>검사 일자</label><input id="ck-date" type="date"></div>
+      <div class="ff"><label>고객사</label><select id="ck-client" onchange="fillProductSelect('ck-product', this.value)"></select></div>
+      <div class="ff" style="grid-column:span 2;"><label>검사 제품</label><select id="ck-product"></select></div>
+      <div class="ff"><label>검사원 *</label><input id="ck-inspector" placeholder="검사 담당자"></div>
+      <div class="ff"><label>외관 검사</label>
+        <select id="ck-visual"><option>합격</option><option>불합격</option><option>조건부합격</option></select>
+      </div>
+      <div class="ff"><label>치수 계측</label>
+        <select id="ck-dim"><option>합격</option><option>불합격</option><option>조건부합격</option></select>
+      </div>
+      <div class="ff"><label>기능 검사</label>
+        <select id="ck-func"><option>합격</option><option>불합격</option><option>조건부합격</option></select>
+      </div>
+      <div class="ff"><label>종합 판정</label>
+        <select id="ck-result"><option>합격</option><option>불합격</option><option>조건부합격</option></select>
+      </div>
+      <div class="ff" style="grid-column:span 2;"><label>검사 비고</label><input id="ck-note" placeholder="특이 사항"></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('check-modal')">취소</button>
+      <button class="btn btn-primary" id="ck-save-btn" onclick="addCheckRecord()"><i class="ti ti-check"></i>저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 작업원 등록 모달 ══ -->
+<div class="overlay" id="worker-modal">
+  <div class="dlg" style="max-width:520px;width:96%;">
+    <div class="dlg-title" id="worker-modal-ttl"><i class="ti ti-user-plus" style="color:var(--tx-i);"></i>직원 등록</div>
+    <div class="fg fg4" style="gap:10px;margin-bottom:14px;">
+      <div class="ff"><label>사번</label><input id="wa-id" readonly></div>
+      <div class="ff" style="grid-column:span 3;"><label>성함 *</label><input id="wa-name" placeholder="홍길동"></div>
+      <div class="ff"><label>부서</label>
+        <select id="wa-dept"><option>생산부</option><option>품질관리부</option><option>자재구매부</option><option>영업부</option><option>관리부</option><option>경영지원부</option></select>
+      </div>
+      <div class="ff"><label>직급/직책</label><input id="wa-position" placeholder="사원 / 주임 / 반장"></div>
+      <div class="ff"><label>고용형태</label>
+        <select id="wa-emptype"><option>정규직</option><option>계약직</option><option>일용직</option><option>파견직</option></select>
+      </div>
+      <div class="ff"><label>입사일</label><input id="wa-hire" type="date"></div>
+      <div class="ff" style="grid-column:span 2;"><label>연락처</label><input id="wa-phone" placeholder="010-0000-0000"></div>
+      <div class="ff" style="grid-column:span 4;"><label>이메일 (로그인 계정 연결용)</label><input id="wa-email" type="email" placeholder="직원 로그인 이메일과 동일하게"></div>
+      <div class="ff"><label>월 급여 (원)</label><input id="wa-salary" type="number" min="0" placeholder="3000000"></div>
+      <div class="ff"><label>연차 부여일수</label><input id="wa-annual" type="number" min="0" step="0.5" placeholder="15"></div>
+      <div class="ff"><label>배정 라인</label>
+        <select id="wa-line"><option>A</option><option>B</option><option>C</option></select>
+      </div>
+      <div class="ff"><label>담당 공정</label><input id="wa-role" placeholder="가공 / 조립 / 검사"></div>
+      <div class="ff"><label>현재 상태</label>
+        <select id="wa-status"><option>근무중</option><option>정비지원</option><option>결근</option><option>휴가</option></select>
+      </div>
+      <div class="ff"><label>출근 시간</label><input id="wa-in" placeholder="08:00"></div>
+      <div class="ff"><label>연장 근무 (시간)</label><input id="wa-ot" placeholder="0h"></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('worker-modal')">취소</button>
+      <button class="btn btn-primary" id="wa-save-btn" onclick="saveWorkerForm()"><i class="ti ti-check"></i>등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 근태 기록 등록/수정 모달 ══ -->
+<div class="overlay" id="att-modal">
+  <div class="dlg" style="max-width:480px;width:96%;">
+    <div class="dlg-title" id="att-modal-ttl"><i class="ti ti-clock-check" style="color:var(--tx-i);"></i>근태 기록 등록</div>
+    <div class="fg fg2" style="gap:10px;margin-bottom:14px;">
+      <div class="ff" style="grid-column:span 2;"><label>직원 *</label><select id="at-worker"></select></div>
+      <div class="ff"><label>일자 *</label><input id="at-date" type="date"></div>
+      <div class="ff"><label>근태 상태</label>
+        <select id="at-status"><option>정상</option><option>지각</option><option>조퇴</option><option>연장근무</option><option>외근</option><option>결근</option><option>휴가</option></select>
+      </div>
+      <div class="ff"><label>출근 시간</label><input id="at-in" type="time"></div>
+      <div class="ff"><label>퇴근 시간</label><input id="at-out" type="time"></div>
+      <div class="ff" style="grid-column:span 2;"><label>비고</label><input id="at-note" placeholder="특이사항"></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('att-modal')">취소</button>
+      <button class="btn btn-primary" id="at-save-btn" onclick="saveAttendance()"><i class="ti ti-check"></i>등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 휴가 신청 등록/수정 모달 ══ -->
+<div class="overlay" id="leave-modal">
+  <div class="dlg" style="max-width:500px;width:96%;">
+    <div class="dlg-title" id="leave-modal-ttl"><i class="ti ti-beach" style="color:var(--tx-i);"></i>휴가 신청 등록</div>
+    <div class="fg fg2" style="gap:10px;margin-bottom:14px;">
+      <div class="ff" style="grid-column:span 2;"><label>직원 *</label><select id="lv-worker"></select></div>
+      <div class="ff"><label>휴가 유형 *</label>
+        <select id="lv-type" onchange="recalcLeaveDays()"><option>연차</option><option>오전반차</option><option>오후반차</option><option>병가</option><option>공가</option><option>경조사</option><option>예비군/민방위</option><option>무급휴가</option><option>기타</option></select>
+      </div>
+      <div class="ff"><label>일수</label><input id="lv-days" type="number" min="0" step="0.5" placeholder="1"></div>
+      <div class="ff"><label>시작일 *</label><input id="lv-start" type="date" onchange="recalcLeaveDays()"></div>
+      <div class="ff"><label>종료일 *</label><input id="lv-end" type="date" onchange="recalcLeaveDays()"></div>
+      <div class="ff" style="grid-column:span 2;"><label>사유</label><input id="lv-reason" placeholder="예: 개인 사유, 가족 행사 등"></div>
+      <div class="ff"><label>처리 상태</label>
+        <select id="lv-status"><option>신청</option><option>승인</option><option>반려</option></select>
+      </div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('leave-modal')">취소</button>
+      <button class="btn btn-primary" id="lv-save-btn" onclick="saveLeave()"><i class="ti ti-check"></i>등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 기타 수입/비용 등록 모달 ══ -->
+<div class="overlay" id="finance-modal">
+  <div class="dlg" style="max-width:480px;width:96%;">
+    <div class="dlg-title" id="finance-modal-ttl"><i class="ti ti-coin" style="color:var(--tx-i);"></i>기타 수입/비용 등록</div>
+    <div class="fg fg2" style="gap:10px;margin-bottom:14px;">
+      <div class="ff"><label>구분 *</label>
+        <select id="fin-type"><option value="비용">비용 (지출)</option><option value="수입">수입</option></select>
+      </div>
+      <div class="ff"><label>일자 *</label><input id="fin-date" type="date"></div>
+      <div class="ff"><label>분류</label>
+        <select id="fin-cat"><option>임대료</option><option>공과금</option><option>세금</option><option>보험료</option><option>소모품비</option><option>운반비</option><option>수수료</option><option>이자수익</option><option>잡수입</option><option>기타</option></select>
+      </div>
+      <div class="ff"><label>금액 (원) *</label><input id="fin-amount" type="number" min="0" placeholder="0"></div>
+      <div class="ff" style="grid-column:span 2;"><label>내용 *</label><input id="fin-title" placeholder="예: 6월 공장 임대료"></div>
+      <div class="ff" style="grid-column:span 2;"><label>비고</label><input id="fin-note" placeholder="특이사항"></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('finance-modal')">취소</button>
+      <button class="btn btn-primary" onclick="saveFinanceEntry()"><i class="ti ti-check"></i>저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 알림 직접 등록 모달 ══ -->
+<div class="overlay" id="alert-modal">
+  <div class="dlg" style="max-width:500px;width:96%;">
+    <div class="dlg-title" id="alert-modal-ttl"><i class="ti ti-alert-triangle" style="color:var(--tx-w);"></i>시스템 알림 직접 등록</div>
+    <div class="fg fg3" style="gap:10px;margin-bottom:14px;">
+      <div class="ff" style="grid-column:span 3;">
+        <label>알림 등급 *</label>
+        <select id="ala-type" style="width:100%; height:32px; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx); padding:0 8px; font-size:12px;">
+          <option value="info">일반 정보 (Info)</option>
+          <option value="warn">경고 확인 (Warn)</option>
+          <option value="err">긴급 위험 (Err)</option>
+        </select>
+      </div>
+      <div class="ff" style="grid-column:span 3;">
+        <label>알림 제목 *</label>
+        <input id="ala-title" placeholder="예: [안전 수칙] 공장 내 마스크 착용 필수" style="width:100%; height:32px; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx); padding:0 8px; font-size:12px;">
+      </div>
+      <div class="ff" style="grid-column:span 3;">
+        <label>알림 세부 설명 *</label>
+        <textarea id="ala-sub" rows="3" placeholder="예: 먼지 발생 구역 안전 수칙을 준수바랍니다." style="width:100%; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx); padding:8px; font-size:12px; font-family:inherit; resize:vertical;"></textarea>
+      </div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('alert-modal')">취소</button>
+      <button class="btn btn-primary" onclick="addCustomAlert()"><i class="ti ti-check"></i>등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 공정 단계 설정 모달 ══ -->
+<div class="overlay" id="stage-modal">
+  <div class="dlg" style="max-width:440px;width:96%;">
+    <div class="dlg-title"><i class="ti ti-list-numbers" style="color:var(--tx-i);"></i>공정 단계 설정</div>
+    <div class="fg" style="gap:10px;margin-bottom:14px;">
+      <div class="ff"><label>단계 목록 (쉼표 구분)</label><input id="stage-input" style="width:100%;"></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('stage-modal')">취소</button>
+      <button class="btn btn-primary" onclick="saveStages(); closeModal('stage-modal');"><i class="ti ti-check"></i>저장</button>
+    </div>
+  </div>
+</div>
+
+</body></html>

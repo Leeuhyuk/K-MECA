@@ -1,0 +1,153 @@
+@media(max-width: 1024px) {
+  .metrics, .row2, .row3, .sum-row, .fg4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fg3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* KPI 카드 크기 통일 (종합 대시보드 제외) — 자재 페이지 카드처럼 최소 너비 고정 + 자동 줄바꿈.
+   인라인 repeat(6,1fr) 등 페이지별 그리드 override 를 !important 로 일괄 통일. (데스크톱 ≥681px) */
+@media(min-width: 681px) {
+  .content:not(#pg-dashboard) .metrics {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+  }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media(max-width: 680px) {
+  .sidebar {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 9999;
+    width: 240px;
+    min-width: 240px;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.3);
+    animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    background: var(--bg-p);
+  }
+  .sidebar.mobile-open {
+    display: flex;
+  }
+  .pc-only {
+    display: none !important; /* 모바일 환경에서 PC 전용 요소 완벽 숨김 */
+  }
+  /* 인라인 grid-template(예: repeat(6,1fr))까지 강제로 접도록 !important 사용 */
+  .metrics, .sum-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important; /* 모바일에서 2열 배치로 정보 밀도 유지 */
+  }
+  .row2, .row3, .fg2, .fg3, .fg4 {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  /* 페이지 내부 탭 바(직원·재무·견적/수주 등) 가로 스크롤 허용 */
+  .toolbar { flex-wrap: wrap; gap: 6px; }
+  /* 모달이 화면을 넘지 않도록 */
+  .dlg { max-width: 94vw !important; max-height: 90vh; overflow-y: auto; }
+  .xls-btn {
+    display: none !important;
+  }
+  #clock {
+    display: none !important;
+  }
+  #menu-toggle-btn {
+    display: flex !important;
+  }
+  #topbar-admin-area {
+    display: flex !important; /* 모바일 탑바에 로그아웃 버튼 노출 */
+    align-items: center;
+  }
+  .tb-title {
+    white-space: nowrap !important; /* 세로줄 바꿈 원천 차단 */
+    font-size: 14px !important;
+  }
+  .mat-sticky-header {
+    position: static !important; /* 모바일에서 고정 헤더 비활성화, 스크롤 연동 */
+    margin: 0 0 12px 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border-bottom: none !important;
+    background: none !important;
+  }
+  .dash-sticky-header {
+    position: static !important; /* 모바일에서 대시보드 고정 헤더 비활성화, 스크롤 연동 */
+    margin: 0 0 16px 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border-bottom: none !important;
+    background: none !important;
+  }
+  .global-search-wrapper {
+    width: auto !important;
+    flex: 1;
+    min-width: 120px;
+    margin: 0 10px !important;
+  }
+  #global-search-input {
+    padding: 6px 12px 6px 28px !important;
+  }
+  .global-search-wrapper i.ti-search {
+    left: 8px !important;
+  }
+  /* 통합 검색 결과창: 화면 밖으로 잘리지 않게 좌우 여백 두고 전체 폭 사용 */
+  #global-search-results {
+    position: fixed !important;
+    top: var(--mh-results-top, 54px) !important;  /* 홈 검색창 바로 아래로 동적 배치 */
+    left: 10px !important;
+    right: 10px !important;
+    width: auto !important;
+    max-height: 60vh !important;
+  }
+  
+  /* 모바일 테이블 상태 선택기 활성화 및 최적화 */
+  .stat-sel {
+    padding-right: 8px !important;
+  }
+  
+  /* 모바일 테이블 최적화 */
+  th, td {
+    padding: 6px 8px !important;
+    font-size: 11.5px !important;
+  }
+  table {
+    font-size: 11px !important;
+  }
+  /* 가로 스크롤 시 첫 열 고정 해제 — 모바일에서 첫 열이 계속 표시되며 겹쳐 보이는 문제 방지 */
+  .content th:first-child, .content td:first-child {
+    position: static !important;
+    z-index: auto !important;
+  }
+  /* 모바일: 표의 수정·삭제 버튼 숨김 (단, 품질 검사·고객 클레임 화면은 유지) */
+  .edit-btn, .del-btn,
+  button[onclick^="openWorkerEdit"], button[onclick^="openAttendanceEdit"], button[onclick^="openLeaveEdit"] {
+    display: none !important;
+  }
+  #pg-quality .edit-btn, #pg-quality .del-btn,
+  #pg-claims .edit-btn, #pg-claims .del-btn {
+    display: inline-flex !important;
+  }
+
+  /* ── 모바일 레이아웃 보정 ── */
+  /* 1) 하단 클라우드 이메일 칩 숨김 (하단 탭바와 중첩 + 개인정보 노출 방지) */
+  #cloud-chip { display: none !important; }
+
+  /* 2) 상단 탑바 가로 넘침으로 인한 우측 잘림 방지 */
+  .topbar { padding: 8px 10px !important; gap: 6px; }
+  #back-btn { display: none !important; }           /* 하단 탭/드로어로 이동 가능하므로 제거 */
+  /* 탑바의 검색 입력은 숨기되, 결과 드롭다운(#global-search-results)은 모바일 홈 검색이 재사용하므로 wrapper는 폭 0으로만 접음 */
+  .global-search-wrapper { width: 0 !important; min-width: 0 !important; flex: 0 0 0 !important; margin: 0 !important; overflow: visible !important; }
+  .global-search-wrapper > #global-search-input,
+  .global-search-wrapper > i.ti-search,
+  .global-search-wrapper > #global-search-clear { display: none !important; }
+  .tb-right { gap: 6px !important; flex-shrink: 0; }
+  #topbar-admin-area .pill,
+  #topbar-admin-area button[onclick^="openAdminPasswordChange"] { display: none !important; } /* 관리자 라벨·변경 버튼 숨김, 잠금/로그아웃만 유지 */
+
+  /* 3) 수주(고객사) 카드 헤더 세로 글자 깨짐 해결: 이름 최소폭 확보 + 버튼 줄바꿈 */
+  #pg-clients .client-hd { flex-wrap: wrap; row-gap: 8px; }
+  #pg-clients .client-hd > div:nth-child(2) { min-width: 150px !important; }   /* 이름이 0폭으로 줄어 세로로 깨지는 것 방지 */
+  #pg-clients .client-hd > div[onclick^="event.stopPropagation"] { flex-wrap: wrap; justify-content: flex-end; }
+}
+
+@media print {
+  @page { size: A4; margin: 20mm; }
+  .sidebar, .main > .topbar { display: none !important; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}

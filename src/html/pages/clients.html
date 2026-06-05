@@ -1,0 +1,28 @@
+  <!-- ══════ 2. 수주 관리 ══════ -->
+  <div class="content" id="pg-clients">
+    <div class="sum-row" id="client-summary">
+    <div class="sum-box"><i class="ti ti-building-community si" style="color:var(--tx-i);"></i><div><div class="sn">3</div><div class="sl">진행 고객사</div></div></div>
+    <div class="sum-box"><i class="ti ti-archive si" style="color:#868e96;"></i><div><div class="sn">0</div><div class="sl">종료 프로젝트</div></div></div>
+    <div class="sum-box"><i class="ti ti-loader si" style="color:#e8590c;"></i><div><div class="sn">11</div><div class="sl">실시간 조업</div></div></div>
+    <div class="sum-box"><i class="ti ti-coin si" style="color:var(--tx-i);"></i><div><div class="sn">₩0</div><div class="sl">전체 수주 총계</div></div></div></div>
+    <div class="sec-lbl"><i class="ti ti-building-community"></i>수주 의뢰 업체 및 상세 품목 현황</div>
+    <div class="toolbar">
+      <button class="btn" id="btn-show-closed" onclick="toggleClosedView()" style="border-color: var(--br);"><i class="ti ti-archive"></i>종료 프로젝트 (0)</button>
+      <input type="text" id="clients-q" placeholder="업체명 또는 담당자 검색..." style="min-width:200px;" oninput="renderClients()">
+      <button class="btn btn-primary" onclick="openClientAdd()" style="margin-left:auto;"><i class="ti ti-plus"></i>신규 수주처 등록</button>
+    </div>
+    <!-- 고객사 추가 패널 -->
+    <div id="client-list">
+      <div class="empty"><i class="ti ti-loader animate-spin"></i>데이터를 불러오는 중...</div>
+    </div>
+    <!-- 고객사 360도 뷰 패널 -->
+    <div id="client-360-wrapper" style="display:none;margin-top:16px;">
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl" id="client-360-title"><i class="ti ti-building-community"></i>고객사 종합 현황</span>
+          <button class="btn btn-sm" onclick="document.getElementById('client-360-wrapper').style.display='none'"><i class="ti ti-x"></i>닫기</button>
+        </div>
+        <div id="client-360-panel" style="padding:0 4px 8px;"></div>
+      </div>
+    </div>
+  </div>

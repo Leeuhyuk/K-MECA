@@ -1,0 +1,142 @@
+  <!-- ══════ 6. 품질 및 검사 관리 ══════ -->
+  <div class="content" id="pg-quality">
+    <div class="metrics" id="qc-kpi">
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-alert-triangle" style="color:var(--tx-w);"></i>공정 내 불량 유실수</div><div class="mc-val">3개</div><div class="mc-sub">2회 검출</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-loader" style="color:var(--tx-i);"></i>개선/조치중 품질장애</div><div class="mc-val" style="color:var(--tx-i);">0건</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-message-report" style="color:var(--tx-d);"></i>해외/고객사 제기 클레임</div><div class="mc-val">1건</div><div class="mc-sub">처리중 1건</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-clipboard-check" style="color:var(--tx-ok);"></i>납품전수검사</div><div class="mc-val" style="color:var(--tx-ok);">0/0건</div><div class="mc-sub">통과/검사기록</div></div></div>
+    <div class="row2">
+      <div class="card" style="grid-column:1 / -1;">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-alert-triangle" style="color:var(--tx-w);"></i>공정 내 불량 기록 관리</span>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <input type="text" id="df-q" placeholder="제품·유형 검색..." style="min-width:130px; height:26px; font-size:11px; padding:0 8px; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx);" oninput="renderQuality()">
+          <select id="df-fs" style="height:26px; font-size:11px; padding:0 6px; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx);" onchange="renderQuality()">
+            <option value="">전체 상태</option>
+            <option>조치중</option>
+            <option>완료</option>
+            <option>보류</option>
+          </select>
+          <button class="btn btn-sm" onclick="exportDefectsCSV()"><i class="ti ti-download"></i>전체 엑셀 CSV 내보내기</button>
+            <button class="btn btn-sm btn-primary" onclick="openDefectAdd()"><i class="ti ti-plus"></i>불량 리포트</button>
+          </div>
+        </div>
+        
+        <!-- 불량 추가/수정 패널 -->
+        <div id="defect-table" style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr><th>코드</th><th>일자</th><th>제품</th><th>발생공정</th><th>하자유형</th><th>수량</th><th>상태</th><th>비고</th><th>관리 작업</th></tr>
+      </thead>
+      <tbody>
+        
+          <tr>
+            <td>DF-001</td>
+            <td>2026-05-18</td>
+            <td style="font-weight:600;">PR-001</td>
+            <td>가공/제작</td>
+            <td style="font-weight:700; color:var(--tx-d);">치수 불량</td>
+            <td style="font-weight:700;">1</td>
+            <td>
+              <select class="stat-sel" onchange="changeDefectStatus('DF-001', this.value)">
+                <option>조치중</option>
+                <option selected="">완료</option>
+                <option>보류</option>
+              </select>
+            </td>
+            <td><span style="font-size:11px; color:var(--tx-t);">—</span></td>
+            <td>
+              <button class="edit-btn" onclick="openDefectEdit('DF-001')"><i class="ti ti-edit"></i></button>
+              <button class="del-btn" onclick="deleteDefect('DF-001')"><i class="ti ti-trash"></i></button>
+            </td>
+          </tr>
+          <tr>
+            <td>DF-002</td>
+            <td>2026-05-20</td>
+            <td style="font-weight:600;">PR-001</td>
+            <td>조립</td>
+            <td style="font-weight:700; color:var(--tx-d);">체결 불량</td>
+            <td style="font-weight:700;">2</td>
+            <td>
+              <select class="stat-sel" onchange="changeDefectStatus('DF-002', this.value)">
+                <option>조치중</option>
+                <option selected="">완료</option>
+                <option>보류</option>
+              </select>
+            </td>
+            <td><span style="font-size:11px; color:var(--tx-t);">—</span></td>
+            <td>
+              <button class="edit-btn" onclick="openDefectEdit('DF-002')"><i class="ti ti-edit"></i></button>
+              <button class="del-btn" onclick="deleteDefect('DF-002')"><i class="ti ti-trash"></i></button>
+            </td>
+          </tr>
+      </tbody>
+    </table></div>
+      </div>
+      
+      <div class="card" style="display:none;"><!-- 사이드바 '고객 클레임' 전용 페이지와 중복되어 숨김 -->
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-message-report" style="color:var(--tx-d);"></i>납품 후 고객사 클레임 내역</span>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <input type="text" id="cl-q" placeholder="업체·제품·내용 검색..." style="min-width:130px; height:26px; font-size:11px; padding:0 8px; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx);" oninput="renderQuality()">
+            <select id="cl-fs" style="height:26px; font-size:11px; padding:0 6px; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx);" onchange="renderQuality()">
+              <option value="">전체 상태</option>
+              <option>접수</option>
+              <option>처리중</option>
+              <option>완료</option>
+            </select>
+            <button class="btn btn-sm" onclick="exportClaimsCSV()"><i class="ti ti-download"></i>전체 엑셀 CSV 내보내기</button>
+            <button class="btn btn-sm btn-primary" onclick="openClaimAdd()"><i class="ti ti-plus"></i>클레임 등록</button>
+          </div>
+        </div>
+        
+        <!-- 클레임 추가/수정 패널 -->
+        <div id="claim-table" style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr><th>인입일</th><th>의뢰 고객사</th><th>해당 제품</th><th>피드백 본문</th><th>조치 방안</th><th>상태</th><th>관리 작업</th></tr>
+      </thead>
+      <tbody>
+        
+          <tr>
+            <td>2026-05-25</td>
+            <td style="font-weight:600;">현대리바트</td>
+            <td>등판내구성 시험기</td>
+            <td style="font-weight:600; color:var(--tx-d);">ㄹ머머머멈 추가ㄴㅇㄹㄴㅁㅇㄹㄴㄹㅇㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹㄹ</td>
+            <td style="font-size:11px;">—</td>
+            <td>
+              <select class="stat-sel" onchange="changeClaimStatus('CLM-001', this.value)">
+                <option selected="">접수</option>
+                <option>처리중</option>
+                <option>완료</option>
+              </select>
+            </td>
+            <td>
+              <button class="edit-btn" onclick="openClaimEdit('CLM-001')"><i class="ti ti-edit"></i></button>
+              <button class="del-btn" onclick="deleteClaim('CLM-001')"><i class="ti ti-trash"></i></button>
+            </td>
+          </tr>
+      </tbody>
+    </table></div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-hd">
+        <span class="card-ttl"><i class="ti ti-clipboard-check"></i>최종 출하 납품 전수/샘플링 체크리스트</span>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <input type="text" id="ck-q" placeholder="제품·검사원 검색..." style="min-width:130px; height:26px; font-size:11px; padding:0 8px; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx);" oninput="renderQuality()">
+          <select id="ck-fs" style="height:26px; font-size:11px; padding:0 6px; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx);" onchange="renderQuality()">
+            <option value="">전체 결과</option>
+            <option>합격</option>
+            <option>불합격</option>
+            <option>조건부합격</option>
+          </select>
+          <button class="btn btn-sm" onclick="exportChecksCSV()"><i class="ti ti-download"></i>전체 엑셀 CSV 내보내기</button>
+          <button class="btn btn-sm btn-primary" onclick="openCheckAdd()"><i class="ti ti-plus"></i>검사 기록 추가</button>
+        </div>
+      </div>
+      <!-- 검사 기록 추가/수정 패널 -->
+      <div id="check-table" style="overflow-x:auto;"><div class="empty"><i class="ti ti-inbox"></i>검색 조건에 맞는 검사 기록이 없습니다.</div></div>
+    </div>
+  </div>

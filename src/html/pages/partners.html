@@ -1,0 +1,21 @@
+  <!-- ══════ 거래처 관리 ══════ -->
+  <div class="content" id="pg-partners">
+    <div class="metrics" id="bp-kpi">
+      <div class="mc clickable" onclick="filterPartners('')"><div class="mc-lbl"><i class="ti ti-address-book"></i>전체 거래처</div><div class="mc-val" id="bp-kpi-total">0개사</div></div>
+      <div class="mc clickable" onclick="kpiFilter('bp-ft','공급처','renderPartners')"><div class="mc-lbl"><i class="ti ti-package-import" style="color:var(--tx-i);"></i>공급처</div><div class="mc-val" id="bp-kpi-sup" style="color:var(--tx-i);">0</div></div>
+      <div class="mc clickable" onclick="kpiFilter('bp-ft','구매처','renderPartners')"><div class="mc-lbl"><i class="ti ti-building-community" style="color:var(--tx-ok);"></i>구매처</div><div class="mc-val" id="bp-kpi-buy" style="color:var(--tx-ok);">0</div></div>
+      <div class="mc clickable" onclick="kpiFilter('bp-ft','외주처','renderPartners')"><div class="mc-lbl"><i class="ti ti-tools" style="color:var(--tx-w);"></i>외주처</div><div class="mc-val" id="bp-kpi-out" style="color:var(--tx-w);">0</div></div>
+    </div>
+    <div class="toolbar">
+      <select id="bp-ft" onchange="renderPartners()">
+        <option value="">전체 유형</option>
+        <option>공급처</option><option>구매처</option><option>외주처</option><option>기타</option>
+      </select>
+      <input type="text" id="bp-q" placeholder="거래처명·담당자·이메일 검색..." style="min-width:200px;" oninput="renderPartners()">
+      <button class="btn btn-primary" onclick="openPartnerModal()"><i class="ti ti-plus"></i>거래처 등록</button>
+      <button class="btn" onclick="exportPartnersXLS()"><i class="ti ti-file-spreadsheet"></i>전체 엑셀 CSV 내보내기</button>
+    </div>
+    <div class="card">
+      <div id="bp-table" style="overflow-x:auto;"><div class="empty"><i class="ti ti-inbox"></i>등록된 거래처가 없습니다.</div></div>
+    </div>
+  </div>

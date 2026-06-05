@@ -1,0 +1,41 @@
+  <!-- ══════ 7. 직원 관리 (명부/근태/휴가) ══════ -->
+  <div class="content" id="pg-workers">
+    <div class="toolbar" id="emp-tabs">
+      <button class="btn btn-primary" data-emptab="roster" onclick="switchEmpTab('roster')"><i class="ti ti-id-badge-2"></i>직원 명부</button>
+      <button class="btn" data-emptab="att" onclick="switchEmpTab('att')"><i class="ti ti-clock-check"></i>근태 관리</button>
+      <button class="btn" data-emptab="leave" onclick="switchEmpTab('leave')"><i class="ti ti-beach"></i>휴가 관리</button>
+    </div>
+
+    <div id="emp-tab-roster">
+    <div class="metrics">
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-users"></i>전체 등록 직원</div><div class="mc-val" id="w-total">—</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-user-check"></i>현재 근무 인원</div><div class="mc-val" id="w-att">—</div><div class="mc-sub" id="w-abs">—</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-id-badge-2"></i>정규직 / 계약직</div><div class="mc-val" id="w-emptype">—</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-cash"></i>월 인건비 합계</div><div class="mc-val" id="w-payroll">—</div><div class="mc-sub">연 환산 <span id="w-payroll-y">—</span></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <span class="card-ttl"><i class="ti ti-users"></i>직원 인사 정보 관리</span>
+        <div style="display:flex; gap:6px;">
+          <input type="text" id="workers-q" placeholder="이름·부서·직급·담당 검색..." style="min-width:150px; height:28px; font-size:11px; padding:0 8px; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx);" oninput="renderWorkers()">
+          <select id="workers-fs" style="height:28px; font-size:11px; padding:0 6px; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx);" onchange="renderWorkers()">
+            <option value="">전체 상태</option>
+            <option>근무중</option>
+            <option>정비지원</option>
+            <option>결근</option>
+            <option>휴가</option>
+          </select>
+          <button class="btn btn-sm" onclick="exportWorkersCSV()"><i class="ti ti-download"></i>전체 엑셀 CSV 내보내기</button>
+          <button class="btn btn-sm btn-primary" onclick="openWorkerAdd()"><i class="ti ti-plus"></i>신규 직원 등록</button>
+        </div>
+      </div>
+      
+      <!-- 인력 등록 패널 -->
+      <div id="workers-table" style="overflow-x:auto;"></div>
+    </div>
+    </div><!-- /emp-tab-roster -->
+
+    <div id="emp-tab-att" style="display:none;"></div>
+    <div id="emp-tab-leave" style="display:none;"></div>
+  </div>
