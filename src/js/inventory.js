@@ -64,13 +64,13 @@ function renderInventory() {
   if (!rows.length) { cont.innerHTML = empty(`${invCategory} 분류에 등록된 재고가 없습니다. [신규 재고 품목 등록] 버튼으로 추가하세요.`); }
   const tColor = {자재:'bd-info',완제품:'bd-ok',반제품:'bd-warn',소모품:'bd-neu',비품:'bd-neu'};
   if (rows.length) cont.innerHTML = '<table style="min-width:900px;"><thead><tr>' +
-    '<th data-field="id" data-type="text" onclick="toggleSort(\'inventory\', \'id\')" style="cursor:pointer; user-select:none;">재고코드 ' + sortIcon('inventory', 'id') + '</th>' +
-    '<th data-field="name" data-type="text" onclick="toggleSort(\'inventory\', \'name\')" style="cursor:pointer; user-select:none;">품목명 ' + sortIcon('inventory', 'name') + '</th>' +
-    '<th data-field="type" data-type="text" onclick="toggleSort(\'inventory\', \'type\')" style="cursor:pointer; user-select:none;">분류 ' + sortIcon('inventory', 'type') + '</th>' +
-    '<th data-field="qty" data-type="number" onclick="toggleSort(\'inventory\', \'qty\')" style="cursor:pointer; user-select:none;">현재고 ' + sortIcon('inventory', 'qty') + '</th>' +
-    '<th data-field="minQty" data-type="number" onclick="toggleSort(\'inventory\', \'minQty\')" style="cursor:pointer; user-select:none;">안전재고 ' + sortIcon('inventory', 'minQty') + '</th>' +
-    '<th data-field="location" data-type="text" onclick="toggleSort(\'inventory\', \'location\')" style="cursor:pointer; user-select:none;">보관위치 ' + sortIcon('inventory', 'location') + '</th>' +
-    '<th data-field="note" data-type="text" onclick="toggleSort(\'inventory\', \'note\')" style="cursor:pointer; user-select:none;">참고 ' + sortIcon('inventory', 'note') + '</th>' +
+    '<th onclick="toggleSort(\'inventory\', \'id\')" style="cursor:pointer; user-select:none;">재고코드 ' + sortIcon('inventory', 'id') + '</th>' +
+    '<th onclick="toggleSort(\'inventory\', \'name\')" style="cursor:pointer; user-select:none;">품목명 ' + sortIcon('inventory', 'name') + '</th>' +
+    '<th onclick="toggleSort(\'inventory\', \'type\')" style="cursor:pointer; user-select:none;">분류 ' + sortIcon('inventory', 'type') + '</th>' +
+    '<th onclick="toggleSort(\'inventory\', \'qty\')" style="cursor:pointer; user-select:none;">현재고 ' + sortIcon('inventory', 'qty') + '</th>' +
+    '<th onclick="toggleSort(\'inventory\', \'minQty\')" style="cursor:pointer; user-select:none;">안전재고 ' + sortIcon('inventory', 'minQty') + '</th>' +
+    '<th onclick="toggleSort(\'inventory\', \'location\')" style="cursor:pointer; user-select:none;">보관위치 ' + sortIcon('inventory', 'location') + '</th>' +
+    '<th onclick="toggleSort(\'inventory\', \'note\')" style="cursor:pointer; user-select:none;">참고 ' + sortIcon('inventory', 'note') + '</th>' +
     '<th>관리</th>' +
     '</tr></thead><tbody>' + rows.map(i=>{
       const low = i.qty < (i.minQty||0);
@@ -101,7 +101,6 @@ function renderInventory() {
       }).join('');
   }
   renderInventoryLedger();
-  setTimeout(() => { const c = inp('inventory-table'); if (c && typeof gridify==='function') gridify(c, { data: () => inventory, save: () => saveStorage('inventory', inventory), rerender: renderInventory, idField: 'id' }); }, 0);
 }
 function adjustStock(id, delta) {
   const i = inventory.find(x=>x.id===id); if (!i) return;

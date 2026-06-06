@@ -1,10 +1,12 @@
 /* ── 화면 폭별 UI 전체 자동 축소 (데스크톱 전용, 인쇄 제외) ──
    px 기반 폰트·아이콘·여백을 zoom 으로 비율 축소. 모바일(≤680px)은 기존 레이아웃 유지.
    더 좁은 폭 규칙이 뒤에 와서 우선 적용됨(단계적으로 더 작아짐). */
-@media screen and (min-width: 681px) and (max-width: 1600px) { body { zoom: .95; } }
-@media screen and (min-width: 681px) and (max-width: 1366px) { body { zoom: .90; } }
-@media screen and (min-width: 681px) and (max-width: 1100px) { body { zoom: .85; } }
-@media screen and (min-width: 681px) and (max-width: 900px)  { body { zoom: .80; } }
+/* zoom 으로 축소하면 height:100vh 가 함께 줄어 화면 하단에 빈 여백이 생김 →
+   100vh 를 zoom 비율로 나눠 보정해 뷰포트를 꽉 채운다. */
+@media screen and (min-width: 681px) and (max-width: 1600px) { body { zoom: .95; height: calc(100vh / .95); } }
+@media screen and (min-width: 681px) and (max-width: 1366px) { body { zoom: .90; height: calc(100vh / .90); } }
+@media screen and (min-width: 681px) and (max-width: 1100px) { body { zoom: .85; height: calc(100vh / .85); } }
+@media screen and (min-width: 681px) and (max-width: 900px)  { body { zoom: .80; height: calc(100vh / .80); } }
 
 @media(max-width: 1024px) {
   .metrics, .row2, .row3, .sum-row, .fg4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -17,6 +19,19 @@
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
   }
 }
+/* ── 데스크톱 표 목록 페이지(.list-page): 마지막 표 카드를 창 바닥까지 채워
+   하단 빈 여백 제거 + 단일 스크롤. 표 헤더 고정·첫 열 고정은 표 래퍼 내부
+   스크롤로 그대로 유지(회귀 위험 최소화). 모바일(≤680px)은 기존 레이아웃 유지. */
+@media (min-width: 681px) {
+  .content.list-page.active { display: flex; flex-direction: column; }
+  .content.list-page > .card:last-child {
+    flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column;
+  }
+  .content.list-page > .card:last-child > :last-child {
+    flex: 1 1 auto; min-height: 0; max-height: none;
+  }
+}
+
 @keyframes spin { to { transform: rotate(360deg); } }
 @media(max-width: 680px) {
   .sidebar {

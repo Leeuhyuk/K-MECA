@@ -63,11 +63,11 @@ function renderPartners() {
   if (!rows.length) { cont.innerHTML = '<div class="empty"><i class="ti ti-inbox"></i>해당 조건의 거래처가 없습니다.</div>'; return; }
 
   const typeColor = { '공급처':'bd-info', '구매처':'bd-ok', '외주처':'bd-warn', '기타':'bd-neu' };
-  const _bpth = (k, l, s, t) => `<th data-field="${k}" data-type="${t||'text'}" onclick="toggleSort('partners','${k}')" style="cursor:pointer;user-select:none;${s||''}">${l} ${sortIcon('partners',k)}</th>`;
+  const _bpth = (k, l, s) => `<th onclick="toggleSort('partners','${k}')" style="cursor:pointer;user-select:none;${s||''}">${l} ${sortIcon('partners',k)}</th>`;
   cont.innerHTML = `<table style="min-width:900px;">
     <thead><tr>
       ${_bpth('id','코드')}${_bpth('name','거래처명')}${_bpth('type','유형')}${_bpth('manager','담당자')}
-      <th data-field="tel" data-type="text">전화번호</th><th data-field="email" data-type="text">이메일</th><th data-field="bizNo" data-type="text">사업자번호</th><th data-field="note" data-type="text">비고</th><th style="text-align:center;">납기이행률</th><th>거래금액</th><th>관리</th>
+      <th>전화번호</th><th>이메일</th><th>사업자번호</th><th>비고</th><th style="text-align:center;">납기이행률</th><th>거래금액</th><th>관리</th>
     </tr></thead>
     <tbody>${rows.map(p => {
       var perf = (p.type === '공급처' || p.type === '외주처') ? getPartnerPerformance(p.name) : null;
@@ -98,7 +98,6 @@ function renderPartners() {
     }).join('')}
     </tbody>
   </table>`;
-  setTimeout(() => { const c = inp('bp-table'); if (c && typeof gridify==='function') gridify(c, { data: () => partners, save: () => saveStorage('partners', partners), rerender: renderPartners, idField: 'id' }); }, 0);
 }
 
 function openPartnerModal(id) {
