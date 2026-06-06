@@ -282,14 +282,9 @@ function _showSaveBanner(type) {
 function _buildHTML() {
   const now = new Date().toISOString();
   localStorage.setItem('mes__savedAt', now);
-  const payload = JSON.stringify({
-    _savedAt: now,
-    clients, products, materials, workOrders, workers,
-    defects, claims, checkRecords, alerts: alertsList,
-    inventory, deliveries, stages: processStages, trash,
-    rfqList, poList, partners, financeData, attendance, leaves,
-    statementList, taxList, quoteList, orderList
-  });
+  // 데이터는 더 이상 HTML에 굽지 않는다. 실데이터는 Firebase + mes-data.json이 담당.
+  // 배포물(HTML)에 데이터가 들어가지 않도록 embedded-data는 항상 빈 객체.
+  const payload = '{}';
   let html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
   const O = '<script id="embedded-data" type="application/json">';
   const C = '<' + '/script>';
