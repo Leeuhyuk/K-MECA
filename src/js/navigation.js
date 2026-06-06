@@ -55,21 +55,19 @@ function onPraStageChange(clientId) {
   }
 }
 
-/* ════ 유튜브 방식 사이드바: 미니(아이콘) ↔ 전체(오버레이) ════
-   ☰ 클릭:
-     - 전체 모드 → 미니 모드 (축소)
-     - 미니 모드 → 전체 확장 (오버레이)
-     - 미니 확장 상태 → 닫기
-   미니 아이콘 클릭 → 바로 페이지 이동 (축소 유지)
+/* ════ 유튜브 방식 사이드바: 미니(아이콘) ↔ 전체(고정) ════
+   ☰ 클릭: 전체 고정 모드 ↔ 미니 레일 모드 전환
+   미니 레일에 마우스 hover → 오버레이로 자동 펼침 (벗어나면 닫힘)
+   미니 아이콘 클릭 → 바로 페이지 이동
 */
 function toggleSidebar() {
   if (window.innerWidth <= 680) { toggleMobileSidebar(); return; }
   const body = document.body;
   if (body.classList.contains('sb-mini')) {
-    // 미니 모드에서 ☰ → 오버레이 확장 토글
-    body.classList.toggle('sb-expanded');
+    // 미니 → 전체 고정 모드로 복귀
+    body.classList.remove('sb-mini', 'sb-expanded', 'sb-collapsed');
   } else {
-    // 전체 모드에서 ☰ → 미니 모드로 전환
+    // 전체 → 미니 레일 모드로 전환
     body.classList.add('sb-mini');
     body.classList.remove('sb-expanded', 'sb-collapsed');
     _initSbMini();
@@ -88,7 +86,8 @@ function expandSidebar() {
   try { localStorage.setItem('mes_sbMini', ''); } catch(e){}
 }
 
-/* 미니 레일 초기화: 각 .ni에 data-label 부여 + 오버레이 배경 생성 */
+/* 미니 레일 초기화: 각 .ni에 data-label 부여 + 오버레이 배경 + hover 펼침 */
+let _sbHoverTimer = null;
 function _initSbMini() {
   // data-label (툴팁용)
   document.querySelectorAll('.sidebar .ni').forEach(ni => {
@@ -103,6 +102,21 @@ function _initSbMini() {
     ov.className = 'sb-overlay';
     ov.addEventListener('click', closeSbOverlay);
     document.body.appendChild(ov);
+  }
+  // 미니 레일 hover → 오버레이 펼침 (마우스 벗어나면 닫힘, 깜빡임 방지 딜레이)
+  const sb = document.querySelector('.sidebar');
+  if (sb && !sb.dataset.hoverBound) {
+    sb.dataset.hoverBound = '1';
+    sb.addEventListener('mouseenter', () => {
+      if (_sbHoverTimer) { clearTimeout(_sbHoverTimer); _sbHoverTimer = null; }
+      if (document.body.classList.contains('sb-mini')) document.body.classList.add('sb-expanded');
+    });
+    sb.addEventListener('mouseleave', () => {
+      if (_sbHoverTimer) clearTimeout(_sbHoverTimer);
+      _sbHoverTimer = setTimeout(() => {
+        document.body.classList.remove('sb-expanded');
+      }, 180);
+    });
   }
 }
 function toggleMobileSidebar() {
