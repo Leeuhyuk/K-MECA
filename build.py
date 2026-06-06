@@ -9,8 +9,8 @@
 
 특징:
   - src/index.template.html 의 <!--#include 경로--> 마커를 해당 파일 내용으로 치환.
-  - 앱이 실행 중 자동저장으로 MESPro.html 안에 써둔 데이터(embedded-data)는
-    재빌드해도 보존한다(기존 MESPro.html 에서 읽어 다시 주입). → 데이터 유실 방지.
+  - 데이터는 HTML에 굽지 않는다. 실데이터는 Firebase + mes-data.json(내보내기)로 관리.
+    빌드 결과물의 embedded-data 는 항상 템플릿의 빈 {} 그대로 출력한다(데이터 유출 방지).
 """
 import os
 import re
@@ -42,13 +42,8 @@ def build():
             out_lines.append(line)
     result = "\n".join(out_lines)
 
-    # 실행 중 저장된 데이터(embedded-data) 보존: 기존 빌드 결과물에서 가져와 재주입
-    if os.path.exists(OUT):
-        current = read(OUT)
-        mm = EMBEDDED_RE.search(current)
-        if mm:
-            data_block = mm.group(0)
-            result = EMBEDDED_RE.sub(lambda _: data_block, result, count=1)
+    # (제거됨) 기존 아티팩트의 embedded-data 재주입 로직 — 데이터는 Firebase/mes-data.json이 담당.
+    # 빌드는 항상 템플릿의 빈 embedded-data({})를 그대로 출력해 데이터 유출을 차단한다.
 
     with open(OUT, "w", encoding="utf-8", newline="") as f:
         f.write(result)

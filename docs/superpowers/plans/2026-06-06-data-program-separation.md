@@ -12,6 +12,20 @@
 
 ---
 
+## 범위 확장 (2026-06-06, Task5 빌드 검증 중 발견)
+
+빌드 검증에서 **embedded-data 외에도 실데이터가 소스에 더 박혀 있음**이 드러나 사용자가 "전체 제거"를 승인. 추가 작업:
+
+- **build.py 보존 로직 제거** (45-51행): 기존 아티팩트의 embedded-data를 새 빌드에 재주입하던 로직. 이제 데이터는 Firebase로 이동했으므로 불필요·위험 → 제거해 빌드가 항상 템플릿의 빈 `{}`를 출력하게.
+- **data-storage.js 시드 기본값 전체 비우기**: `default*` 배열 17종(rfq/po/partners/clients/statement/tax/quote/products/materials/workOrders/workers/defects/claims/checkRecords/alerts/inventory/AS/bom)을 `[]`로. 실제 거래처·공급처 연락처/사업자번호/단가 포함.
+- **자동삽입 마이그레이션 블록 제거** (204-215행, 642-653행): `if (partners.length <= 10) partners = defaultPartners; ...` — 데모 시드 주입용이며, 빈 기본값과 결합 시 사용자 데이터를 덮어쓸 수 있는 잠재 버그. 완전 제거.
+- **HTML 4개 페이지의 미리 그려진 데모 데이터 비우기**: materials.html(필터 select 옵션 + mat-table tbody ~1600줄), dashboard.html(proc-fc 등 select + 칸반/공정표), deliveries.html, quality.html. 모두 부팅 시 JS(`syncFilterDropdowns`/`renderMaterials`/`renderProcess`/`renderDeliveries`/`renderClaims`)가 데이터 배열로부터 재생성하므로 정적 데모 제거는 안전.
+- **검증 기준**: `grep -c "현대리바트\|한컴라이프케어\|제이씨인터내쇼날" MESPro.html` → `0` (단, `placeholder="예: ..."` 의도적 입력 힌트는 별도 처리/허용).
+
+이 확장 작업은 정밀·대량 surgery라 결정적 Python 스크립트 + grep 검증으로 수행하고, 마지막에 리뷰 서브에이전트로 검증한다.
+
+---
+
 ## File Structure
 
 - `src/index.template.html` — 수정: embedded-data 씨앗을 빈 `{}`로

@@ -221,6 +221,15 @@
       </button>
       <input type="file" id="xls-import-input" accept=".xlsx,.xls" style="display:none;" onchange="importAllXLS(this)">
 
+      <!-- JSON 데이터 파일 백업/복구 (프로그램 ↔ 데이터 분리) -->
+      <button class="theme-btn xls-btn" onclick="exportDataJSON()" title="전체 데이터 JSON 백업(mes-data.json)" style="font-size:13px; padding:4px 9px; display:flex; align-items:center;">
+        <i class="ti ti-file-code-2" style="font-size:15px;"></i>
+      </button>
+      <button class="theme-btn xls-btn" onclick="inp('json-import-input').click()" title="JSON에서 데이터 복구" style="font-size:13px; padding:4px 9px; display:flex; align-items:center;">
+        <i class="ti ti-database-import" style="font-size:15px;"></i>
+      </button>
+      <input type="file" id="json-import-input" accept=".json,application/json" style="display:none;" onchange="importDataJSON(this)">
+
       <button class="theme-btn" onclick="toggleTheme()" title="화면 테마 전환"><i class="ti ti-sun" id="themeIcon"></i></button>
       <span style="font-size:12px; font-weight: 600; color:var(--tx-s);" id="clock">2026-05-30 10:15:19</span>
     </div>
