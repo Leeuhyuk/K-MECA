@@ -23,7 +23,7 @@
         <div class="card-hd">
           <span class="card-ttl"><i class="ti ti-truck-delivery" style="color:#2b8a3e;"></i>납품 완료 리스트</span>
           <div style="display:flex; gap:6px; align-items:center;">
-            <select id="dlv-filter-client" onchange="renderDeliveries()" style="min-width:130px; height:28px; font-size:11px;"><option value="">전체 고객사</option><option value="CL-006">현대리바트</option><option value="CL-007">한컴라이프케어</option><option value="CL-008">큐로시험소</option></select>
+            <select id="dlv-filter-client" onchange="renderDeliveries()" style="min-width:130px; height:28px; font-size:11px;"><option value="">전체 고객사</option></select>
             <input type="text" id="dlv-q" placeholder="제품명·납품번호 검색..." style="width:200px; height:28px; font-size:11px;" oninput="renderDeliveries()">
             <button class="btn btn-sm" onclick="exportDeliveriesCSV()"><i class="ti ti-download"></i>전체 엑셀 CSV 내보내기</button>
           </div>
