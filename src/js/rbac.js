@@ -84,8 +84,15 @@ function applyColumnGating(){
 
 /* ════════ 기능 권한 (엑셀 CSV 내보내기 / PDF·인쇄 출력) ════════ */
 const PDF_BTN_SEL = '[onclick^="openRfqPrint"],[onclick^="openPoPrint"],[onclick^="openSalesDocPrint"],[onclick^="openSODocPrint"],[onclick^="printPayslip"],[onclick^="poBulkPrint"]';
-const FEATURE_DEFS = [ {key:'csv', label:'엑셀 CSV 내보내기', icon:'ti-file-spreadsheet'}, {key:'pdf', label:'PDF·인쇄 출력', icon:'ti-printer'} ];
+const FEATURE_DEFS = [ {key:'csv', label:'엑셀 CSV 내보내기', icon:'ti-file-spreadsheet'}, {key:'pdf', label:'PDF·인쇄 출력', icon:'ti-printer'}, {key:'edit', label:'셀 직접 편집', icon:'ti-edit'} ];
 function roleFeaturesConfig(){ return loadStorage('roleFeatures', {}); }   // { 역할:{ csv:bool, pdf:bool } } (true=허용, 기본 허용)
+/* 현재 역할이 셀 직접 편집 권한을 가지는지 (admin 항상 허용, 기본 허용) */
+function canEditFeature(){
+  if (typeof currentRole === 'undefined') return true;
+  if (currentRole === 'admin') return true;
+  const f = roleFeaturesConfig()[currentRole] || {};
+  return f.edit !== false;
+}
 function applyFeatureGating(){
   let css='';
   if (currentRole!=='admin'){
