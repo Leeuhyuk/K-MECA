@@ -115,7 +115,7 @@ function renderMaterials() {
         '<button class="del-btn" style="margin-left:4px;" onclick="deleteMat(\''+m.id+'\')"><i class="ti ti-trash"></i></button></td>' +
       '</tr>';
     }).join('') + '</tbody></table>';
-  if (typeof initMatInlineEdit === 'function') setTimeout(initMatInlineEdit, 0);
+  setTimeout(() => { const c = inp('mat-table'); if (c && typeof gridify==='function') gridify(c, { data: () => materials, save: () => saveStorage('materials', materials), rerender: renderMaterials, idField: 'id' }); }, 0);
 }
 function openMatAdd() {
   editMatId = null;
