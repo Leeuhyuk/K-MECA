@@ -133,11 +133,16 @@ tr:hover td { background: var(--bg-s); }
 body.sb-collapsed .sidebar { display: none; }
 
 /* ════ 유튜브 방식: 미니 레일 ↔ 전체 확장 ════ */
-/* 미니 레일 (아이콘만 48px) */
+/* 미니 레일 (아이콘만 48px) — 항상 fixed로 두어 펼침/닫힘 시 본문이 흔들리지 않음 */
 body.sb-mini .sidebar {
   width: 48px; min-width: 48px;
+  position: fixed;
+  top: 0; left: 0; height: 100vh;
+  z-index: 1500;
   overflow: hidden;
 }
+/* 미니 레일이 fixed라 문서 흐름에서 빠지므로, 본문에 48px 여백을 고정해 자리 확보 */
+body.sb-mini .main { margin-left: 48px; }
 body.sb-mini .sidebar .logo { padding: 12px 0; text-align: center; }
 body.sb-mini .sidebar .logo-title { justify-content: center; font-size: 0; gap: 0; }
 body.sb-mini .sidebar .logo-title i { font-size: 20px; }
@@ -187,12 +192,9 @@ body.sb-mini .sidebar .ni::after {
 }
 body.sb-mini .sidebar .ni:hover::after { opacity: 1; }
 
-/* ☰ 클릭 → 전체 확장 (오버레이) */
+/* hover/클릭 → 전체 확장 (오버레이) — fixed는 유지, width만 확장되어 본문 미영향 */
 body.sb-mini.sb-expanded .sidebar {
   width: 210px; min-width: 210px;
-  position: fixed;
-  top: 0; left: 0; height: 100vh;
-  z-index: 1500;
   box-shadow: 4px 0 20px rgba(0,0,0,.35);
   overflow-y: auto;
 }
