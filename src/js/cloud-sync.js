@@ -119,9 +119,19 @@ async function renderPermissions(){
     <div class="card" style="margin-bottom:16px;"><div class="card-hd"><span class="card-ttl"><i class="ti ti-columns-3"></i>역할별 표시 컬럼 (열 권한)</span>
       <span style="font-size:11px;color:var(--tx-t);">체크 해제 시 해당 역할에게 그 열이 숨겨짐 · 관리자는 항상 전체</span></div>
       <div id="perm-columns"></div></div>
-    <div class="card"><div class="card-hd"><span class="card-ttl"><i class="ti ti-tool"></i>역할별 기능 권한 (내보내기 · 출력)</span>
+    <div class="card" style="margin-bottom:16px;"><div class="card-hd"><span class="card-ttl"><i class="ti ti-tool"></i>역할별 기능 권한 (내보내기 · 출력)</span>
       <span style="font-size:11px;color:var(--tx-t);">엑셀 CSV 내보내기 / PDF·인쇄 출력 허용 여부 · 관리자는 항상 전체</span></div>
-      <div id="perm-features"></div></div>`;
+      <div id="perm-features"></div></div>
+    <div class="card"><div class="card-hd"><span class="card-ttl"><i class="ti ti-database-cog"></i>데이터 백업 · 복구</span>
+      <span style="font-size:11px;color:var(--tx-t);">전체 데이터를 파일로 내보내거나 파일에서 복구 · 관리자 전용</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 2px;">
+        <button class="btn btn-sm" onclick="exportAllXLS()"><i class="ti ti-file-spreadsheet"></i>엑셀(XLS) 내보내기</button>
+        <button class="btn btn-sm" onclick="inp('xls-import-input').click()"><i class="ti ti-upload"></i>엑셀(XLS) 불러오기</button>
+        <button class="btn btn-sm" onclick="exportDataJSON()"><i class="ti ti-file-code-2"></i>JSON 내보내기</button>
+        <button class="btn btn-sm" onclick="inp('json-import-input').click()"><i class="ti ti-database-import"></i>JSON 불러오기</button>
+        <input type="file" id="xls-import-input" accept=".xlsx,.xls" style="display:none;" onchange="importAllXLS(this)">
+        <input type="file" id="json-import-input" accept=".json,application/json" style="display:none;" onchange="importDataJSON(this)">
+      </div></div>`;
   renderPermMatrix();
   renderPermColumns();
   renderPermFeatures();
