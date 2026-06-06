@@ -55,47 +55,55 @@ function onPraStageChange(clientId) {
   }
 }
 
-/* 사이드바 토글 — 모바일은 드로어, 데스크톱은 접기/펴기(상태 저장) */
+/* ════ 유튜브 방식 사이드바: 미니(아이콘) ↔ 전체(오버레이) ════
+   ☰ 클릭:
+     - 전체 모드 → 미니 모드 (축소)
+     - 미니 모드 → 전체 확장 (오버레이)
+     - 미니 확장 상태 → 닫기
+   미니 아이콘 클릭 → 바로 페이지 이동 (축소 유지)
+*/
 function toggleSidebar() {
   if (window.innerWidth <= 680) { toggleMobileSidebar(); return; }
-  const c = document.body.classList.toggle('sb-collapsed');
-  try { localStorage.setItem('mes_sbCollapsed', c ? '1' : ''); } catch(e){}
+  const body = document.body;
+  if (body.classList.contains('sb-mini')) {
+    // 미니 모드에서 ☰ → 오버레이 확장 토글
+    body.classList.toggle('sb-expanded');
+  } else {
+    // 전체 모드에서 ☰ → 미니 모드로 전환
+    body.classList.add('sb-mini');
+    body.classList.remove('sb-expanded', 'sb-collapsed');
+    _initSbMini();
+  }
+  try { localStorage.setItem('mes_sbMini', body.classList.contains('sb-mini') ? '1' : ''); } catch(e){}
 }
 
-/* ── 사이드바 자동 숨김 모드 ── */
-function ensureSidebarHotzone() {
-  let hz = document.getElementById('sb-hotzone');
-  if (!hz) {
-    hz = document.createElement('div');
-    hz.id = 'sb-hotzone';
-    hz.className = 'sb-hotzone';
-    hz.addEventListener('mouseenter', () => document.body.classList.add('sb-peek'));
-    document.body.appendChild(hz);
+/* 미니 오버레이 닫기 (배경 딤 클릭 / 메뉴 이동 시) */
+function closeSbOverlay() {
+  document.body.classList.remove('sb-expanded');
+}
+
+/* 미니 레일 → 전체 모드로 복귀 */
+function expandSidebar() {
+  document.body.classList.remove('sb-mini', 'sb-expanded', 'sb-collapsed');
+  try { localStorage.setItem('mes_sbMini', ''); } catch(e){}
+}
+
+/* 미니 레일 초기화: 각 .ni에 data-label 부여 + 오버레이 배경 생성 */
+function _initSbMini() {
+  // data-label (툴팁용)
+  document.querySelectorAll('.sidebar .ni').forEach(ni => {
+    if (ni.dataset.label) return;
+    const txt = ni.textContent.replace(/[0-9]/g,'').trim();
+    ni.dataset.label = txt;
+  });
+  // 배경 오버레이
+  if (!document.getElementById('sb-overlay')) {
+    const ov = document.createElement('div');
+    ov.id = 'sb-overlay';
+    ov.className = 'sb-overlay';
+    ov.addEventListener('click', closeSbOverlay);
+    document.body.appendChild(ov);
   }
-  const sb = document.querySelector('.sidebar');
-  if (sb && !sb.dataset.autohideBound) {
-    sb.dataset.autohideBound = '1';
-    sb.addEventListener('mouseleave', () => document.body.classList.remove('sb-peek'));
-  }
-}
-function setSidebarAutoHide(on) {
-  document.body.classList.toggle('sb-autohide', on);
-  if (on) document.body.classList.remove('sb-collapsed', 'sb-peek');
-  try { localStorage.setItem('mes_sbAutoHide', on ? '1' : ''); } catch(e){}
-  ensureSidebarHotzone();
-  updateAutoHideBtn();
-}
-function toggleSidebarAutoHide() {
-  setSidebarAutoHide(!document.body.classList.contains('sb-autohide'));
-}
-function updateAutoHideBtn() {
-  const btn = document.getElementById('sb-autohide-btn');
-  if (!btn) return;
-  const on = document.body.classList.contains('sb-autohide');
-  btn.classList.toggle('active', on);
-  const ic = btn.querySelector('i');
-  if (ic) ic.className = on ? 'ti ti-layout-sidebar-left-expand' : 'ti ti-layout-sidebar-left-collapse';
-  btn.title = on ? '사이드바 자동 숨김: 켜짐 (클릭하면 고정)' : '사이드바 자동 숨김: 꺼짐 (클릭하면 자동 숨김)';
 }
 function toggleMobileSidebar() {
   const sidebar = document.querySelector('.sidebar');
@@ -116,9 +124,10 @@ function toggleMobileSidebar() {
 let pageHistory = [];
 
 function go(id, el) {
-  if (id === currentPage) {                // 같은 페이지 재클릭: 모바일 드로어만 닫기
+  if (id === currentPage) {                // 같은 페이지 재클릭: 드로어/오버레이만 닫기
     const sb = document.querySelector('.sidebar');
     if (sb && sb.classList.contains('mobile-open')) { sb.classList.remove('mobile-open'); document.getElementById('sidebar-backdrop')?.classList.remove('active'); }
+    closeSbOverlay();
     return;
   }
   if (currentPage) pageHistory.push(currentPage);
@@ -152,7 +161,7 @@ function _goTo(id, el) {
     });
   }
 
-  // Auto-close mobile drawer
+  // Auto-close mobile drawer + 미니 오버레이
   const sidebar = document.querySelector('.sidebar');
   const backdrop = document.getElementById('sidebar-backdrop');
   if (sidebar && sidebar.classList.contains('mobile-open')) {
@@ -161,6 +170,7 @@ function _goTo(id, el) {
   if (backdrop && backdrop.classList.contains('active')) {
     backdrop.classList.remove('active');
   }
+  closeSbOverlay();  // 유튜브 방식: 메뉴 이동 시 오버레이 자동 닫기
 
   const PN = {
     dashboard: '종합 대시보드', clients: '수주 정보 관리', materials: '자재 수급/발주',

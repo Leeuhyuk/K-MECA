@@ -128,29 +128,104 @@ tr:hover td { background: var(--bg-s); }
 *::-webkit-scrollbar-thumb { background: rgba(140,140,140,0.4); border-radius: 4px; }
 *::-webkit-scrollbar-thumb:hover { background: rgba(140,140,140,0.65); }
 *::-webkit-scrollbar-track { background: transparent; }
-/* ── 사이드바 접기(데스크톱) ── */
-.sidebar { transition: margin-left .2s ease; }
+/* ── 사이드바 접기(데스크톱) — 기존 완전 숨김 ── */
+.sidebar { transition: width .22s cubic-bezier(.4,0,.2,1), min-width .22s; }
 body.sb-collapsed .sidebar { display: none; }
 
-/* ── 사이드바 자동 숨김 ── */
-body.sb-autohide .sidebar {
+/* ════ 유튜브 방식: 미니 레일 ↔ 전체 확장 ════ */
+/* 미니 레일 (아이콘만 48px) */
+body.sb-mini .sidebar {
+  width: 48px; min-width: 48px;
+  overflow: hidden;
+}
+body.sb-mini .sidebar .logo { padding: 12px 0; text-align: center; }
+body.sb-mini .sidebar .logo-title { justify-content: center; font-size: 0; gap: 0; }
+body.sb-mini .sidebar .logo-title i { font-size: 20px; }
+body.sb-mini .sidebar .logo-sub { display: none; }
+body.sb-mini .sidebar .nav-lbl { display: none; }
+body.sb-mini .sidebar .ni {
+  flex-direction: column;
+  padding: 10px 0;
+  gap: 2px;
+  font-size: 0;        /* 텍스트 숨김 */
+  justify-content: center;
+  align-items: center;
+  border-left-width: 0;
+  position: relative;
+}
+body.sb-mini .sidebar .ni i {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+body.sb-mini .sidebar .ni .nbadge {
+  position: absolute;
+  top: 4px; right: 4px;
+  font-size: 8px;
+  padding: 0 4px;
+  min-width: 14px;
+  text-align: center;
+}
+/* 미니 레일 툴팁 */
+body.sb-mini .sidebar .ni::after {
+  content: attr(data-label);
+  position: absolute;
+  left: 52px; top: 50%;
+  transform: translateY(-50%);
+  background: var(--bg-p);
+  color: var(--tx);
+  border: 1px solid var(--br-s);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0,0,0,.2);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s;
+  z-index: 2000;
+}
+body.sb-mini .sidebar .ni:hover::after { opacity: 1; }
+
+/* ☰ 클릭 → 전체 확장 (오버레이) */
+body.sb-mini.sb-expanded .sidebar {
+  width: 210px; min-width: 210px;
   position: fixed;
   top: 0; left: 0; height: 100vh;
   z-index: 1500;
-  transform: translateX(-100%);
-  transition: transform .22s cubic-bezier(.4,0,.2,1);
-  box-shadow: 2px 0 18px rgba(0,0,0,.38);
+  box-shadow: 4px 0 20px rgba(0,0,0,.35);
+  overflow-y: auto;
 }
-body.sb-autohide.sb-peek .sidebar { transform: translateX(0); }
-.sb-hotzone {
+body.sb-mini.sb-expanded .sidebar .logo { padding: 18px 20px; text-align: left; }
+body.sb-mini.sb-expanded .sidebar .logo-title { font-size: 15px; gap: 8px; justify-content: flex-start; }
+body.sb-mini.sb-expanded .sidebar .logo-sub { display: block; }
+body.sb-mini.sb-expanded .sidebar .nav-lbl { display: block; }
+body.sb-mini.sb-expanded .sidebar .ni {
+  flex-direction: row;
+  padding: 9px 20px;
+  font-size: 13px;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  border-left-width: 3px;
+}
+body.sb-mini.sb-expanded .sidebar .ni i { font-size: 16px; }
+body.sb-mini.sb-expanded .sidebar .ni .nbadge {
+  position: static;
+  font-size: 10px;
+  padding: 1px 6px;
+  min-width: auto;
+}
+body.sb-mini.sb-expanded .sidebar .ni::after { display: none; }
+/* 배경 딤 오버레이 */
+.sb-overlay {
   position: fixed;
-  top: 0; left: 0;
-  width: 12px; height: 100vh;
+  inset: 0;
+  background: rgba(0,0,0,.4);
   z-index: 1499;
+  display: none;
 }
-body:not(.sb-autohide) .sb-hotzone { display: none; }
-/* 자동 숨김 활성 시 토글 버튼 강조 */
-#sb-autohide-btn.active { color: var(--tx-i); }
+body.sb-mini.sb-expanded .sb-overlay { display: block; }
 
 /* 뱃지 및 프로그레스 */
 .bd { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 4px; border: 1px solid; white-space: nowrap; font-weight: 600; }
@@ -938,9 +1013,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     <div style="display:flex; align-items:center; gap:10px;">
       <button class="theme-btn" id="menu-toggle-btn" onclick="toggleSidebar()" title="사이드바 접기/펴기" style="display: inline-flex; font-size: 18px; padding: 4px 8px; align-items: center; justify-content: center;">
         <i class="ti ti-menu-2"></i>
-      </button>
-      <button class="theme-btn" id="sb-autohide-btn" onclick="toggleSidebarAutoHide()" title="사이드바 자동 숨김" style="display: inline-flex; font-size: 17px; padding: 4px 8px; align-items: center; justify-content: center;">
-        <i class="ti ti-layout-sidebar-left-collapse"></i>
       </button>
       <button class="theme-btn" id="back-btn" onclick="goBack()" title="이전: 이전 화면으로 돌아가기" style="display: inline-flex; font-size: 16px; gap: 4px; padding: 4px 8px;">
         <i class="ti ti-arrow-left"></i>
@@ -6392,47 +6464,55 @@ function onPraStageChange(clientId) {
   }
 }
 
-/* 사이드바 토글 — 모바일은 드로어, 데스크톱은 접기/펴기(상태 저장) */
+/* ════ 유튜브 방식 사이드바: 미니(아이콘) ↔ 전체(오버레이) ════
+   ☰ 클릭:
+     - 전체 모드 → 미니 모드 (축소)
+     - 미니 모드 → 전체 확장 (오버레이)
+     - 미니 확장 상태 → 닫기
+   미니 아이콘 클릭 → 바로 페이지 이동 (축소 유지)
+*/
 function toggleSidebar() {
   if (window.innerWidth <= 680) { toggleMobileSidebar(); return; }
-  const c = document.body.classList.toggle('sb-collapsed');
-  try { localStorage.setItem('mes_sbCollapsed', c ? '1' : ''); } catch(e){}
+  const body = document.body;
+  if (body.classList.contains('sb-mini')) {
+    // 미니 모드에서 ☰ → 오버레이 확장 토글
+    body.classList.toggle('sb-expanded');
+  } else {
+    // 전체 모드에서 ☰ → 미니 모드로 전환
+    body.classList.add('sb-mini');
+    body.classList.remove('sb-expanded', 'sb-collapsed');
+    _initSbMini();
+  }
+  try { localStorage.setItem('mes_sbMini', body.classList.contains('sb-mini') ? '1' : ''); } catch(e){}
 }
 
-/* ── 사이드바 자동 숨김 모드 ── */
-function ensureSidebarHotzone() {
-  let hz = document.getElementById('sb-hotzone');
-  if (!hz) {
-    hz = document.createElement('div');
-    hz.id = 'sb-hotzone';
-    hz.className = 'sb-hotzone';
-    hz.addEventListener('mouseenter', () => document.body.classList.add('sb-peek'));
-    document.body.appendChild(hz);
+/* 미니 오버레이 닫기 (배경 딤 클릭 / 메뉴 이동 시) */
+function closeSbOverlay() {
+  document.body.classList.remove('sb-expanded');
+}
+
+/* 미니 레일 → 전체 모드로 복귀 */
+function expandSidebar() {
+  document.body.classList.remove('sb-mini', 'sb-expanded', 'sb-collapsed');
+  try { localStorage.setItem('mes_sbMini', ''); } catch(e){}
+}
+
+/* 미니 레일 초기화: 각 .ni에 data-label 부여 + 오버레이 배경 생성 */
+function _initSbMini() {
+  // data-label (툴팁용)
+  document.querySelectorAll('.sidebar .ni').forEach(ni => {
+    if (ni.dataset.label) return;
+    const txt = ni.textContent.replace(/[0-9]/g,'').trim();
+    ni.dataset.label = txt;
+  });
+  // 배경 오버레이
+  if (!document.getElementById('sb-overlay')) {
+    const ov = document.createElement('div');
+    ov.id = 'sb-overlay';
+    ov.className = 'sb-overlay';
+    ov.addEventListener('click', closeSbOverlay);
+    document.body.appendChild(ov);
   }
-  const sb = document.querySelector('.sidebar');
-  if (sb && !sb.dataset.autohideBound) {
-    sb.dataset.autohideBound = '1';
-    sb.addEventListener('mouseleave', () => document.body.classList.remove('sb-peek'));
-  }
-}
-function setSidebarAutoHide(on) {
-  document.body.classList.toggle('sb-autohide', on);
-  if (on) document.body.classList.remove('sb-collapsed', 'sb-peek');
-  try { localStorage.setItem('mes_sbAutoHide', on ? '1' : ''); } catch(e){}
-  ensureSidebarHotzone();
-  updateAutoHideBtn();
-}
-function toggleSidebarAutoHide() {
-  setSidebarAutoHide(!document.body.classList.contains('sb-autohide'));
-}
-function updateAutoHideBtn() {
-  const btn = document.getElementById('sb-autohide-btn');
-  if (!btn) return;
-  const on = document.body.classList.contains('sb-autohide');
-  btn.classList.toggle('active', on);
-  const ic = btn.querySelector('i');
-  if (ic) ic.className = on ? 'ti ti-layout-sidebar-left-expand' : 'ti ti-layout-sidebar-left-collapse';
-  btn.title = on ? '사이드바 자동 숨김: 켜짐 (클릭하면 고정)' : '사이드바 자동 숨김: 꺼짐 (클릭하면 자동 숨김)';
 }
 function toggleMobileSidebar() {
   const sidebar = document.querySelector('.sidebar');
@@ -6453,9 +6533,10 @@ function toggleMobileSidebar() {
 let pageHistory = [];
 
 function go(id, el) {
-  if (id === currentPage) {                // 같은 페이지 재클릭: 모바일 드로어만 닫기
+  if (id === currentPage) {                // 같은 페이지 재클릭: 드로어/오버레이만 닫기
     const sb = document.querySelector('.sidebar');
     if (sb && sb.classList.contains('mobile-open')) { sb.classList.remove('mobile-open'); document.getElementById('sidebar-backdrop')?.classList.remove('active'); }
+    closeSbOverlay();
     return;
   }
   if (currentPage) pageHistory.push(currentPage);
@@ -6489,7 +6570,7 @@ function _goTo(id, el) {
     });
   }
 
-  // Auto-close mobile drawer
+  // Auto-close mobile drawer + 미니 오버레이
   const sidebar = document.querySelector('.sidebar');
   const backdrop = document.getElementById('sidebar-backdrop');
   if (sidebar && sidebar.classList.contains('mobile-open')) {
@@ -6498,6 +6579,7 @@ function _goTo(id, el) {
   if (backdrop && backdrop.classList.contains('active')) {
     backdrop.classList.remove('active');
   }
+  closeSbOverlay();  // 유튜브 방식: 메뉴 이동 시 오버레이 자동 닫기
 
   const PN = {
     dashboard: '종합 대시보드', clients: '수주 정보 관리', materials: '자재 수급/발주',
@@ -11228,10 +11310,11 @@ function toggleTheme() {
 /* ════════ 프로그램 기동 초기화 ════════ */
 syncFilterDropdowns();
 initTheme();
-if (localStorage.getItem('mes_sbCollapsed')==='1') document.body.classList.add('sb-collapsed');   // 사이드바 접힘 상태 복원
-if (localStorage.getItem('mes_sbAutoHide')==='1') { document.body.classList.add('sb-autohide'); }  // 자동 숨김 모드 복원
-if (typeof ensureSidebarHotzone === 'function') ensureSidebarHotzone();
-if (typeof updateAutoHideBtn === 'function') updateAutoHideBtn();
+// 사이드바 미니 레일 모드 복원 (유튜브 방식)
+if (localStorage.getItem('mes_sbMini')==='1') {
+  document.body.classList.add('sb-mini');
+  if (typeof _initSbMini === 'function') _initSbMini();
+}
 _goTo('dashboard', null);   // 실행 시 항상 종합 대시보드를 먼저 표시
 renderAlerts();
 updateTrashBadge();
@@ -11283,17 +11366,17 @@ const BOOTSTRAP_ADMIN_EMAILS = ['lgs7942@naver.com', 'lgs79422@gmail.com'];
 /* 접근 제어 대상 페이지 (id는 사이드바 go()/goInventory와 일치) */
 const PAGE_LIST = [
   {id:'dashboard',label:'종합 대시보드'},{id:'clients',label:'수주 정보 관리'},{id:'materials',label:'자재 수급/발주'},
-  {id:'deliveries',label:'납품 현황'},{id:'orders',label:'생산 지시 등록'},{id:'bom',label:'BOM·자재명세'},
+  {id:'deliveries',label:'납품 현황'},{id:'calendar',label:'납기 캘린더'},{id:'orders',label:'생산 지시 등록'},{id:'bom',label:'BOM·자재명세'},
   {id:'quality',label:'품질 및 검사'},{id:'claims',label:'고객 클레임'},{id:'inventory',label:'재고 관리'},
   {id:'partners',label:'거래처 관리'},{id:'rfq',label:'견적요청서'},{id:'po',label:'구매발주서'},
   {id:'salesdoc',label:'견적/수주'},{id:'statement',label:'거래명세표'},{id:'taxinvoice',label:'세금계산서'},
   {id:'finance',label:'재무 관리'},{id:'workers',label:'인사 관리'},
-  {id:'as',label:'고객 A/S'},{id:'alerts',label:'알림'},{id:'trash',label:'휴지통'}
+  {id:'as',label:'고객 A/S'},{id:'alimtalk',label:'알림톡 설정'},{id:'alerts',label:'알림'},{id:'trash',label:'휴지통'}
 ];
 /* 역할별 기본 접근 페이지(관리자가 화면에서 편집 가능). admin은 항상 전체. */
 const DEFAULT_ROLE_PAGES = {
-  manager: ['dashboard','clients','materials','deliveries','orders','bom','quality','claims','inventory','partners','rfq','po','salesdoc','as'],
-  staff:   ['dashboard','orders','quality','inventory','deliveries']
+  manager: ['dashboard','clients','materials','deliveries','calendar','orders','bom','quality','claims','inventory','partners','rfq','po','salesdoc','as'],
+  staff:   ['dashboard','orders','quality','inventory','deliveries','calendar']
 };
 const ROLE_LABEL = { admin:'관리자', manager:'중간관리자', staff:'평사원' };
 

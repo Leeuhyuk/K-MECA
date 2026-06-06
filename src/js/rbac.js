@@ -4,17 +4,17 @@ const BOOTSTRAP_ADMIN_EMAILS = ['lgs7942@naver.com', 'lgs79422@gmail.com'];
 /* 접근 제어 대상 페이지 (id는 사이드바 go()/goInventory와 일치) */
 const PAGE_LIST = [
   {id:'dashboard',label:'종합 대시보드'},{id:'clients',label:'수주 정보 관리'},{id:'materials',label:'자재 수급/발주'},
-  {id:'deliveries',label:'납품 현황'},{id:'orders',label:'생산 지시 등록'},{id:'bom',label:'BOM·자재명세'},
+  {id:'deliveries',label:'납품 현황'},{id:'calendar',label:'납기 캘린더'},{id:'orders',label:'생산 지시 등록'},{id:'bom',label:'BOM·자재명세'},
   {id:'quality',label:'품질 및 검사'},{id:'claims',label:'고객 클레임'},{id:'inventory',label:'재고 관리'},
   {id:'partners',label:'거래처 관리'},{id:'rfq',label:'견적요청서'},{id:'po',label:'구매발주서'},
   {id:'salesdoc',label:'견적/수주'},{id:'statement',label:'거래명세표'},{id:'taxinvoice',label:'세금계산서'},
   {id:'finance',label:'재무 관리'},{id:'workers',label:'인사 관리'},
-  {id:'as',label:'고객 A/S'},{id:'alerts',label:'알림'},{id:'trash',label:'휴지통'}
+  {id:'as',label:'고객 A/S'},{id:'alimtalk',label:'알림톡 설정'},{id:'alerts',label:'알림'},{id:'trash',label:'휴지통'}
 ];
 /* 역할별 기본 접근 페이지(관리자가 화면에서 편집 가능). admin은 항상 전체. */
 const DEFAULT_ROLE_PAGES = {
-  manager: ['dashboard','clients','materials','deliveries','orders','bom','quality','claims','inventory','partners','rfq','po','salesdoc','as'],
-  staff:   ['dashboard','orders','quality','inventory','deliveries']
+  manager: ['dashboard','clients','materials','deliveries','calendar','orders','bom','quality','claims','inventory','partners','rfq','po','salesdoc','as'],
+  staff:   ['dashboard','orders','quality','inventory','deliveries','calendar']
 };
 const ROLE_LABEL = { admin:'관리자', manager:'중간관리자', staff:'평사원' };
 
