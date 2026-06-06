@@ -359,6 +359,64 @@ function saveAsFile() {
   showToast('파일이 다운로드되었습니다.', 'success');
 }
 
+/* ════════ 전체 데이터 JSON 파일 내보내기/가져오기 (프로그램 ↔ 데이터 분리) ════════ */
+const DATA_KEYS = [
+  'clients','products','materials','workOrders','workers','defects','claims',
+  'checkRecords','alerts','inventory','deliveries','stages','trash','rfqList',
+  'poList','partners','financeData','attendance','leaves','statementList',
+  'taxList','quoteList','orderList','inventoryLedger','alimtalkSettings'
+];
+
+function exportDataJSON() {
+  const out = { _savedAt: new Date().toISOString() };
+  DATA_KEYS.forEach(k => {
+    const raw = localStorage.getItem('mes_' + k);
+    if (raw != null) {
+      try { out[k] = JSON.parse(raw); } catch(e) { /* 손상 키는 건너뜀 */ }
+    }
+  });
+  const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `mes-data-${today().replace(/-/g,'')}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  showToast('데이터 파일(mes-data.json) 내보내기 완료', 'success');
+}
+
+function importDataJSON(input) {
+  const file = input.files[0];
+  if (!file) return;
+  confirm_('데이터 파일 가져오기',
+    `<strong>${file.name}</strong> 파일을 불러옵니다.<br>
+    <span style="color:var(--tx-d); font-size:12px;">⚠ 현재 저장된 모든 데이터가 파일의 내용으로 교체됩니다.</span>`,
+    () => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        let data;
+        try { data = JSON.parse(e.target.result); }
+        catch(err) { showToast('JSON 파싱 실패: ' + err.message, 'error'); return; }
+        if (!data || typeof data !== 'object' || Array.isArray(data)) {
+          showToast('올바른 데이터 파일이 아닙니다.', 'error'); return;
+        }
+        let applied = 0;
+        DATA_KEYS.forEach(k => {
+          if (data[k] != null) {
+            localStorage.setItem('mes_' + k, JSON.stringify(data[k]));
+            applied++;
+            if (typeof cloudQueueSave === 'function') cloudQueueSave(k);
+          }
+        });
+        localStorage.setItem('mes__savedAt', new Date().toISOString());
+        reloadAllData();
+        if (typeof _goTo === 'function') _goTo(currentPage || 'dashboard', null);
+        showToast(`데이터 가져오기 완료 — ${applied}개 항목 복원`, 'success');
+      };
+      reader.readAsText(file);
+    });
+  input.value = '';
+}
+
 /* ════════ XLS 전체 데이터 내보내기 ════════ */
 function exportAllXLS() {
   if (typeof XLSX === 'undefined') {
