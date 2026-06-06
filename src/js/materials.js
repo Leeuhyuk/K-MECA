@@ -88,7 +88,7 @@ function renderMaterials() {
     return '<th onclick="toggleSort(\'materials\',\''+key+'\')" style="cursor:pointer;user-select:none;"'+ef+'>'+label+' '+sortIcon('materials',key)+'</th>';
   };
   cont.innerHTML = '<table style="min-width:1080px;"><thead><tr>' +
-    thSort('id','자재코드') + thSort('client','구분고객사') + thSort('product','매칭제품') +
+    thSort('id','자재코드','id','text') + thSort('client','구분고객사') + thSort('product','매칭제품') +
     thSort('name','자재품명','name','text') + thSort('supplier','협력공급처','supplier','text') + thSort('unitPrice','구매단가','unitPrice','number') +
     thSort('qty','수량','qty','number') + thSort('totalAmt','매입총액') + thSort('orderDate','주문일자','orderDate','date') +
     thSort('expectedDate','입고예정일','expectedDate','date') + thSort('status','진행상황') + thSort('note','참고사항','note','textarea') +

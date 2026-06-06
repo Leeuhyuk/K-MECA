@@ -104,7 +104,7 @@
     if (!canWrite()) return;
     const cont = contById(contId), c = CFG[contId]; if (!c) return;
     const col = colOfField(cont, field), meta = metaAt(cont, col);
-    if (!meta.editable) return;
+    if (!meta.editable || field === c.idField) return;
     if (edit) commitEdit();
     const rec = recOf(c, id); if (!rec) return;
     const td = tdOf(cont, c, id, field); if (!td) return;
@@ -152,7 +152,7 @@
     }
     let col = colOfField(cont, field); const N = colCount(cont), step = dir==='right'?1:-1;
     col += step;
-    while (col>=0 && col<N){ if (metaAt(cont, col).editable) break; col += step; }
+    while (col>=0 && col<N){ if (metaAt(cont, col).editable && fieldAtCol(cont, col) !== c.idField) break; col += step; }
     if (col<0 || col>=N) return;
     const nf = fieldAtCol(cont, col); if (nf) setSel(contId, id, nf);
   }
@@ -183,7 +183,7 @@
       e.preventDefault(); startEdit(cont.id, sel.id, sel.field);
     } else if (k==='Delete' || k==='Backspace'){
       const col = colOfField(cont, sel.field), meta = metaAt(cont, col);
-      if (!meta.editable || !canWrite()) return;
+      if (!meta.editable || sel.field === c.idField || !canWrite()) return;
       const rec = recOf(c, sel.id);
       if (rec){ applyVal(rec, meta.type, sel.field, ''); persist(cont, c); }
     }
@@ -208,7 +208,7 @@
       const cells = rowStr.split('\t'), N = colCount(cont); let ci = 0;
       for (let col=startCol; col<N && ci<cells.length; col++, ci++){
         const meta = metaAt(cont, col);
-        if (meta.editable){ applyVal(rec, meta.type, meta.field, cells[ci].trim()); changed = true; }
+        if (meta.editable && meta.field !== c.idField){ applyVal(rec, meta.type, meta.field, cells[ci].trim()); changed = true; }
       }
     });
     if (changed) persist(cont, c);
