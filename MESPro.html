@@ -498,14 +498,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
   resize: none;
 }
 .cell-inp:focus { background: var(--bg3, #2a2a3e); }
-.col-rz {
-  position: absolute;
-  right: 0; top: 0;
-  width: 6px; height: 100%;
-  cursor: col-resize;
-  z-index: 2;
-}
-.col-rz:hover { background: rgba(79,142,247,.35); }
 
 @media(max-width: 1024px) {
   .metrics, .row2, .row3, .sum-row, .fg4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -8287,7 +8279,7 @@ function renderMaterials() {
   if (!rows.length) { cont.innerHTML = empty('자재 발주 내역이 없습니다.'); return; }
   const sColor = {발주전:'var(--tx-t)',발주중:'var(--tx-i)',입고완료:'var(--tx-ok)',지연:'var(--tx-d)'};
   const thSort = (key, label) => '<th onclick="toggleSort(\'materials\',\''+key+'\')" style="cursor:pointer;user-select:none;">'+label+' '+sortIcon('materials',key)+'</th>';
-  cont.innerHTML = '<table style="min-width:1080px;table-layout:fixed;"><thead><tr>' +
+  cont.innerHTML = '<table style="min-width:1080px;"><thead><tr>' +
     thSort('id','자재코드') + thSort('client','구분고객사') + thSort('product','매칭제품') +
     thSort('name','자재품명') + thSort('supplier','협력공급처') + thSort('unitPrice','구매단가') +
     thSort('qty','수량') + thSort('totalAmt','매입총액') + thSort('orderDate','주문일자') +
@@ -8432,14 +8424,11 @@ function importPoXLS(input) {
     { field: null,           type: 'text',   editable: false }, // 13 관리작업
   ];
 
-  const LS_WIDTHS = 'mat-col-widths-v1';
-
   let selMid = null;
   let selCol = -1;
   let editMid = null;
   let editCol = -1;
   let editOrig = '';
-  let rsIdx = -1, rsStartX = 0, rsStartW = 0, rsCg = null;
   let docBound = false;
 
   /* ──────────── 초기화 (renderMaterials 끝에서 setTimeout 0으로 호출) ──────────── */
@@ -8460,9 +8449,6 @@ function importPoXLS(input) {
       document.addEventListener('keydown', onDocKey, true); // capture:true
       document.addEventListener('paste', onDocPaste);
     }
-
-    // 매 렌더마다 새 table 에 colgroup + resize 핸들 부착
-    attachColgroup();
   }
 
   /* ──────────── 셀/행 헬퍼 ──────────── */
@@ -8512,7 +8498,7 @@ function importPoXLS(input) {
 
   /* ──────────── 단일 클릭 → 선택 ──────────── */
   function onContainerClick(e) {
-    if (e.target.closest('select, button, input, textarea, .col-rz')) return;
+    if (e.target.closest('select, button, input, textarea')) return;
     const td = tdFromEvent(e);
     if (!td) return;
     const mid = getMidFromTr(td.closest('tr'));
@@ -8523,7 +8509,7 @@ function importPoXLS(input) {
 
   /* ──────────── 더블클릭 → 편집 시작 ──────────── */
   function onContainerDblClick(e) {
-    if (e.target.closest('select, button, .col-rz')) return;
+    if (e.target.closest('select, button')) return;
     const td = tdFromEvent(e);
     if (!td) return;
     const mid = getMidFromTr(td.closest('tr'));
@@ -8727,75 +8713,6 @@ function importPoXLS(input) {
       renderMaterials();
       setTimeout(() => setSelected(savedMid, savedCol), 50);
     }
-  }
-
-  /* ──────────── 열 폭 조절 ──────────── */
-  function loadWidths() {
-    try { return JSON.parse(localStorage.getItem(LS_WIDTHS) || '{}'); } catch(err) { return {}; }
-  }
-  function saveWidths(w) { localStorage.setItem(LS_WIDTHS, JSON.stringify(w)); }
-
-  function attachColgroup() {
-    const table = document.querySelector('#mat-table table');
-    if (!table) return;
-
-    const widths = loadWidths();
-    // enhanceBulk 이후 실제 th 수 기준으로 colgroup 생성
-    const thList = table.querySelectorAll('thead th');
-    const colCount = thList.length;
-
-    let cg = table.querySelector('colgroup');
-    if (!cg) {
-      cg = document.createElement('colgroup');
-      for (let i = 0; i < colCount; i++) {
-        const col = document.createElement('col');
-        if (widths[i]) col.style.width = widths[i] + 'px';
-        cg.appendChild(col);
-      }
-      table.insertBefore(cg, table.firstChild);
-    }
-
-    // 헤더 각 <th>에 리사이즈 핸들 추가
-    thList.forEach((th, i) => {
-      if (th.querySelector('.col-rz')) return;
-      th.style.position = 'relative';
-      const rz = document.createElement('div');
-      rz.className = 'col-rz';
-      rz.addEventListener('mousedown', e => startResize(e, i, cg));
-      th.appendChild(rz);
-    });
-  }
-
-  function startResize(e, colIdx, cg) {
-    e.preventDefault(); e.stopPropagation();
-    rsIdx = colIdx; rsCg = cg;
-    rsStartX = e.clientX;
-    rsStartW = cg.children[colIdx] ? (cg.children[colIdx].offsetWidth || 100) : 100;
-    document.addEventListener('mousemove', doResize);
-    document.addEventListener('mouseup', endResize);
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-  }
-
-  function doResize(e) {
-    if (rsIdx < 0 || !rsCg) return;
-    const w = Math.max(40, rsStartW + (e.clientX - rsStartX));
-    if (rsCg.children[rsIdx]) rsCg.children[rsIdx].style.width = w + 'px';
-  }
-
-  function endResize() {
-    if (rsIdx < 0) return;
-    const widths = loadWidths();
-    Array.from(rsCg.children).forEach((col, i) => {
-      const w = parseInt(col.style.width);
-      if (w) widths[i] = w;
-    });
-    saveWidths(widths);
-    document.removeEventListener('mousemove', doResize);
-    document.removeEventListener('mouseup', endResize);
-    document.body.style.cursor = '';
-    document.body.style.userSelect = '';
-    rsIdx = -1; rsCg = null;
   }
 
   window.initMatInlineEdit = initMatInlineEdit;

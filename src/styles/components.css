@@ -292,11 +292,3 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
   resize: none;
 }
 .cell-inp:focus { background: var(--bg3, #2a2a3e); }
-.col-rz {
-  position: absolute;
-  right: 0; top: 0;
-  width: 6px; height: 100%;
-  cursor: col-resize;
-  z-index: 2;
-}
-.col-rz:hover { background: rgba(79,142,247,.35); }
