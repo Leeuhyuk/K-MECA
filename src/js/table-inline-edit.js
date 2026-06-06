@@ -1,24 +1,20 @@
-/* ════════ 자재 테이블 인라인 편집 / 붙여넣기 / 열 폭 조절 ════════ */
+/* ════════ 자재 테이블 인라인 편집 / 붙여넣기 ════════
+   열 순서 변경(table-reorder)과 공존하기 위해, 편집 대상 판정은 셀 위치가 아니라
+   현재 DOM 헤더의 data-field/data-type을 기준으로 한다. */
 (function () {
   'use strict';
 
-  // 열 설정 (0-based, materials 테이블 기준 — 0번은 체크박스)
-  const COLS = [
-    { field: null,           type: 'text',   editable: false }, // 0  체크박스
-    { field: null,           type: 'text',   editable: false }, // 1  자재코드
-    { field: null,           type: 'text',   editable: false }, // 2  구분고객사
-    { field: null,           type: 'text',   editable: false }, // 3  매칭제품
-    { field: 'name',         type: 'text',   editable: true  }, // 4  자재품명
-    { field: 'supplier',     type: 'text',   editable: true  }, // 5  협력공급처
-    { field: 'unitPrice',    type: 'number', editable: true  }, // 6  구매단가
-    { field: 'qty',          type: 'number', editable: true  }, // 7  수량
-    { field: null,           type: 'text',   editable: false }, // 8  매입총액
-    { field: 'orderDate',    type: 'date',   editable: true  }, // 9  주문일자
-    { field: 'expectedDate', type: 'date',   editable: true  }, // 10 입고예정일
-    { field: null,           type: 'select', editable: false }, // 11 진행상황
-    { field: 'note',         type: 'text',   editable: true  }, // 12 참고사항
-    { field: null,           type: 'text',   editable: false }, // 13 관리작업
-  ];
+  // 현재 DOM 상의 col(셀 인덱스)에 해당하는 헤더 메타 정보 조회
+  function getColMeta(col) {
+    const ths = document.querySelectorAll('#mat-table thead th');
+    const th = ths[col];
+    if (!th) return { field: null, type: 'text', editable: false };
+    const field = th.dataset.field || null;
+    return { field: field, type: th.dataset.type || 'text', editable: !!field };
+  }
+  function colCount() {
+    return document.querySelectorAll('#mat-table thead th').length;
+  }
 
   let selMid = null;
   let selCol = -1;
@@ -115,8 +111,8 @@
 
   /* ──────────── 편집 시작 ──────────── */
   function startEdit(mid, col, td) {
-    const cfg = COLS[col];
-    if (!cfg || !cfg.editable) return;
+    const meta = getColMeta(col);
+    if (!meta.editable) return;
     if (editMid) commitEdit();
 
     const m = materials.find(x => x.id === mid);
@@ -129,10 +125,10 @@
     const rawVal = getRawVal(m, col);
     td.classList.add('cell-edit');
 
-    const isNote = (col === 12);
+    const isNote = (meta.type === 'textarea');
     const el = document.createElement(isNote ? 'textarea' : 'input');
     if (!isNote) {
-      el.type = cfg.type === 'date' ? 'date' : cfg.type === 'number' ? 'number' : 'text';
+      el.type = meta.type === 'date' ? 'date' : meta.type === 'number' ? 'number' : 'text';
       if (el.type === 'number') el.min = '0';
     } else {
       el.rows = 2;
@@ -156,16 +152,11 @@
   }
 
   function getRawVal(m, col) {
-    switch (col) {
-      case 4: return m.name || '';
-      case 5: return m.supplier || '';
-      case 6: return String(m.unitPrice || 0);
-      case 7: return String(m.qty || 0);
-      case 9: return m.orderDate || '';
-      case 10: return m.expectedDate || '';
-      case 12: return m.note || '';
-      default: return '';
-    }
+    const meta = getColMeta(col);
+    if (!meta.field) return '';
+    const val = m[meta.field];
+    if (meta.type === 'number') return String(val || 0);
+    return val || '';
   }
 
   function commitEdit() {
@@ -197,25 +188,21 @@
   }
 
   function applyVal(m, col, val) {
-    switch (col) {
-      case 4: m.name = val; break;
-      case 5: m.supplier = val; break;
-      case 6: m.unitPrice = parseInt(val) || 0; break;
-      case 7: m.qty = parseInt(val) || 0; break;
-      case 9: m.orderDate = val; break;
-      case 10: m.expectedDate = val; break;
-      case 12: m.note = val; break;
-    }
+    const meta = getColMeta(col);
+    if (!meta.field) return;
+    if (meta.type === 'number') m[meta.field] = parseInt(val) || 0;
+    else m[meta.field] = val;
   }
 
-  /* ──────────── Tab 이동 ──────────── */
+  /* ──────────── Tab 이동 (다음 편집 가능 열로) ──────────── */
   function moveFocus(mid, col, dcol) {
+    const N = colCount();
     let c = col + dcol;
-    while (c >= 0 && c < COLS.length) {
-      if (COLS[c] && COLS[c].editable) break;
+    while (c >= 0 && c < N) {
+      if (getColMeta(c).editable) break;
       c += dcol;
     }
-    if (c < 0 || c >= COLS.length) return;
+    if (c < 0 || c >= N) return;
     setSelected(mid, c);
     setTimeout(() => {
       const td = getTd(mid, c);
@@ -248,7 +235,7 @@
       if (newMid) setSelected(newMid, selCol);
     } else if (e.key === 'ArrowRight') {
       e.preventDefault();
-      setSelected(selMid, Math.min(selCol + 1, COLS.length - 1));
+      setSelected(selMid, Math.min(selCol + 1, colCount() - 1));
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
       setSelected(selMid, Math.max(selCol - 1, 0));
@@ -256,7 +243,7 @@
       e.preventDefault();
       const td = getTd(selMid, selCol);
       if (td) startEdit(selMid, selCol, td);
-    } else if ((e.key === 'Delete' || e.key === 'Backspace') && COLS[selCol] && COLS[selCol].editable) {
+    } else if ((e.key === 'Delete' || e.key === 'Backspace') && getColMeta(selCol).editable) {
       const m = materials.find(x => x.id === selMid);
       if (m) {
         applyVal(m, selCol, '');
@@ -293,10 +280,11 @@
       if (!m) return;
 
       const cells = rowStr.split('\t');
+      const N = colCount();
       let ci = 0;
       // col과 ci를 함께 전진 — 비편집 열의 클립보드 값도 위치 맞춤을 위해 소비
-      for (let col = selCol; col < COLS.length && ci < cells.length; col++, ci++) {
-        if (COLS[col] && COLS[col].editable) {
+      for (let col = selCol; col < N && ci < cells.length; col++, ci++) {
+        if (getColMeta(col).editable) {
           applyVal(m, col, cells[ci].trim());
           changed = true;
         }

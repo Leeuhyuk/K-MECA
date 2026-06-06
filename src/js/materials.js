@@ -82,12 +82,16 @@ function renderMaterials() {
   if (!cont) return;
   if (!rows.length) { cont.innerHTML = empty('자재 발주 내역이 없습니다.'); return; }
   const sColor = {발주전:'var(--tx-t)',발주중:'var(--tx-i)',입고완료:'var(--tx-ok)',지연:'var(--tx-d)'};
-  const thSort = (key, label) => '<th onclick="toggleSort(\'materials\',\''+key+'\')" style="cursor:pointer;user-select:none;">'+label+' '+sortIcon('materials',key)+'</th>';
+  // editField/editType: 인라인 편집 대상 헤더에 부여 (열 순서가 바뀌어도 필드 기준으로 편집)
+  const thSort = (key, label, editField, editType) => {
+    const ef = editField ? ' data-field="'+editField+'" data-type="'+(editType||'text')+'"' : '';
+    return '<th onclick="toggleSort(\'materials\',\''+key+'\')" style="cursor:pointer;user-select:none;"'+ef+'>'+label+' '+sortIcon('materials',key)+'</th>';
+  };
   cont.innerHTML = '<table style="min-width:1080px;"><thead><tr>' +
     thSort('id','자재코드') + thSort('client','구분고객사') + thSort('product','매칭제품') +
-    thSort('name','자재품명') + thSort('supplier','협력공급처') + thSort('unitPrice','구매단가') +
-    thSort('qty','수량') + thSort('totalAmt','매입총액') + thSort('orderDate','주문일자') +
-    thSort('expectedDate','입고예정일') + thSort('status','진행상황') + thSort('note','참고사항') +
+    thSort('name','자재품명','name','text') + thSort('supplier','협력공급처','supplier','text') + thSort('unitPrice','구매단가','unitPrice','number') +
+    thSort('qty','수량','qty','number') + thSort('totalAmt','매입총액') + thSort('orderDate','주문일자','orderDate','date') +
+    thSort('expectedDate','입고예정일','expectedDate','date') + thSort('status','진행상황') + thSort('note','참고사항','note','textarea') +
     '<th>관리작업</th>' +
     '</tr></thead><tbody>' + rows.map(m=>{
       const prod = getProductById(m.productId);

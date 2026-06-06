@@ -6,9 +6,9 @@
   'use strict';
 
   // 적용 대상 테이블 컨테이너 id
-  // (mat-table은 인라인 편집이 고정 열 인덱스에 의존하므로 제외)
+  // (mat-table 인라인 편집은 헤더 data-field 기준이라 열 순서가 바뀌어도 안전)
   const TARGETS = [
-    'inventory-table', 'inv-ledger-table', 'orders-table',
+    'mat-table', 'inventory-table', 'inv-ledger-table', 'orders-table',
     'bp-table', 'rfq-table', 'po-table', 'workers-table', 'as-body',
     'defect-table', 'claim-table', 'check-table', 'dlv-table',
     'proc-detail-table', 'qt-table', 'st-table', 'tx-table', 'so-table', 'trash-table'
