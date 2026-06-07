@@ -255,6 +255,10 @@ textarea { height: auto; resize: vertical; }
 .btn-danger { background: var(--bg-d); color: var(--tx-d); border-color: var(--br-d); }
 .btn-danger:hover { background: #f03e3e; color: #fff; }
 .btn-sm { padding: 4px 10px; font-size: 11px; height: 26px; border-radius: 6px; }
+.btn-icon { padding: 6px; width: 32px; justify-content: center; gap: 0; }
+.btn-icon i { font-size: 16px; }
+.btn-sm.btn-icon { padding: 4px; width: 26px; }
+.btn-sm.btn-icon i { font-size: 14px; }
 
 .del-btn, .edit-btn, .restore-btn { padding: 3px 8px; font-size: 11px; height: 24px; border-radius: 4px; cursor: pointer; background: transparent; font-family: var(--f); display: inline-flex; align-items: center; gap: 4px; transition: all .15s; border: 1px solid; }
 .del-btn { border-color: var(--br-d); color: var(--tx-d); }
@@ -1360,7 +1364,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     <div class="toolbar">
       <button class="btn" id="btn-show-closed" onclick="toggleClosedView()" style="border-color: var(--br);"><i class="ti ti-archive"></i>종료 프로젝트 (0)</button>
       <input type="text" id="clients-q" placeholder="업체명 또는 담당자 검색..." style="min-width:200px;" oninput="renderClients()">
-      <button class="btn btn-primary" onclick="openClientAdd()" style="margin-left:auto;"><i class="ti ti-plus"></i>신규 수주처 등록</button>
+      <button class="btn btn-primary btn-icon" onclick="openClientAdd()" style="margin-left:auto;" title="신규 수주처 등록"><i class="ti ti-plus"></i></button>
     </div>
     <!-- 고객사 추가 패널 -->
     <div id="client-list">
@@ -1393,12 +1397,12 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
         <select id="mat-fp" onchange="renderMaterials()" style="min-width:170px;"><option value="">전체 제품 목록</option></select>
         <select id="mat-fs" onchange="renderMaterials()"><option value="">전체 입고 상태</option><option>발주전</option><option>발주중</option><option>입고완료</option><option>지연</option></select>
         <input type="text" id="mat-q" placeholder="자재명 또는 발주처 검색..." style="min-width:180px;" oninput="renderMaterials()">
-        <button class="btn btn-primary pc-only" onclick="openMatAdd()"><i class="ti ti-plus"></i>신규 자재 발주 요청</button>
-        <label class="btn pc-only" style="cursor:pointer; margin:0;" title="발주서 XLS 파일을 업로드하여 자재 수급에 자동 추가">
-          <i class="ti ti-file-import"></i>발주서 XLS 가져오기
+        <button class="btn btn-primary btn-icon pc-only" onclick="openMatAdd()" title="신규 자재 발주 요청"><i class="ti ti-plus"></i></button>
+        <label class="btn btn-icon pc-only" style="cursor:pointer; margin:0;" title="발주서 XLS 가져오기 (자재 수급에 자동 추가)">
+          <i class="ti ti-file-import"></i>
           <input type="file" id="xls-po-input" accept=".xls,.xlsx" style="display:none;" onchange="importPoXLS(this)">
         </label>
-        <button class="btn pc-only" onclick="exportMatCSV()"><i class="ti ti-download"></i>전체 엑셀 CSV 내보내기</button>
+        <button class="btn btn-icon pc-only" onclick="exportMatCSV()" title="엑셀 내보내기"><i class="ti ti-download"></i></button>
       </div>
     </div>
     
@@ -1449,8 +1453,8 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
         <option value="low">안전재고 미달</option>
       </select>
       <input type="text" id="inv-q" placeholder="재고명, 보관위치 검색..." style="min-width:200px;" oninput="renderInventory()">
-      <button class="btn btn-primary" onclick="openInvAdd()"><i class="ti ti-plus"></i>신규 재고 품목 등록</button>
-      <button class="btn" onclick="exportInvCSV()"><i class="ti ti-download"></i>전체 엑셀 CSV 내보내기</button>
+      <button class="btn btn-primary btn-icon" onclick="openInvAdd()" title="신규 재고 품목 등록"><i class="ti ti-plus"></i></button>
+      <button class="btn btn-icon" onclick="exportInvCSV()" title="엑셀 내보내기"><i class="ti ti-download"></i></button>
     </div>
 
     <!-- 재고 추가/수정 패널 -->
@@ -1519,7 +1523,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
           <div style="display:flex; gap:6px; align-items:center;">
             <select id="dlv-filter-client" onchange="renderDeliveries()" style="min-width:130px; height:28px; font-size:11px;"><option value="">전체 고객사</option></select>
             <input type="text" id="dlv-q" placeholder="제품명·납품번호 검색..." style="width:200px; height:28px; font-size:11px;" oninput="renderDeliveries()">
-            <button class="btn btn-sm" onclick="exportDeliveriesCSV()"><i class="ti ti-download"></i>전체 엑셀 CSV 내보내기</button>
+            <button class="btn btn-sm btn-icon" onclick="exportDeliveriesCSV()" title="엑셀 내보내기"><i class="ti ti-download"></i></button>
           </div>
         </div>
         <div id="dlv-table" style="overflow-x:auto;"><div class="empty"><i class="ti ti-inbox"></i>납품 기록이 없습니다. 공정관리에서 [납품] 단계로 변경하면 자동 등록됩니다.</div></div>
@@ -1576,7 +1580,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
         <option value="">전체 상태</option>
         <option>진행중</option><option>대기</option><option>완료</option><option>지연</option>
       </select>
-      <button class="btn btn-primary" onclick="openOrderAdd()" style="margin-left:auto;"><i class="ti ti-plus"></i>생산 지시 등록</button>
+      <button class="btn btn-primary btn-icon" onclick="openOrderAdd()" style="margin-left:auto;" title="생산 지시 등록"><i class="ti ti-plus"></i></button>
     </div>
 
     <!-- 지시서 등록/수정 패널 -->
@@ -1604,8 +1608,8 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
             <option>완료</option>
             <option>보류</option>
           </select>
-          <button class="btn btn-sm" onclick="exportDefectsCSV()"><i class="ti ti-download"></i>전체 엑셀 CSV 내보내기</button>
-            <button class="btn btn-sm btn-primary" onclick="openDefectAdd()"><i class="ti ti-plus"></i>불량 리포트</button>
+          <button class="btn btn-sm btn-icon" onclick="exportDefectsCSV()" title="엑셀 내보내기"><i class="ti ti-download"></i></button>
+            <button class="btn btn-sm btn-primary btn-icon" onclick="openDefectAdd()" title="불량 리포트 등록"><i class="ti ti-plus"></i></button>
           </div>
         </div>
         
@@ -1630,8 +1634,8 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
               <option>처리중</option>
               <option>완료</option>
             </select>
-            <button class="btn btn-sm" onclick="exportClaimsCSV()"><i class="ti ti-download"></i>전체 엑셀 CSV 내보내기</button>
-            <button class="btn btn-sm btn-primary" onclick="openClaimAdd()"><i class="ti ti-plus"></i>클레임 등록</button>
+            <button class="btn btn-sm btn-icon" onclick="exportClaimsCSV()" title="엑셀 내보내기"><i class="ti ti-download"></i></button>
+            <button class="btn btn-sm btn-primary btn-icon" onclick="openClaimAdd()" title="클레임 등록"><i class="ti ti-plus"></i></button>
           </div>
         </div>
         
@@ -1657,8 +1661,8 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
             <option>불합격</option>
             <option>조건부합격</option>
           </select>
-          <button class="btn btn-sm" onclick="exportChecksCSV()"><i class="ti ti-download"></i>전체 엑셀 CSV 내보내기</button>
-          <button class="btn btn-sm btn-primary" onclick="openCheckAdd()"><i class="ti ti-plus"></i>검사 기록 추가</button>
+          <button class="btn btn-sm btn-icon" onclick="exportChecksCSV()" title="엑셀 내보내기"><i class="ti ti-download"></i></button>
+          <button class="btn btn-sm btn-primary btn-icon" onclick="openCheckAdd()" title="검사 기록 추가"><i class="ti ti-plus"></i></button>
         </div>
       </div>
       <!-- 검사 기록 추가/수정 패널 -->
@@ -1680,8 +1684,8 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
             <option>처리중</option>
             <option>완료</option>
           </select>
-          <button class="btn btn-sm" onclick="exportClaimsCSV()"><i class="ti ti-download"></i>전체 엑셀 CSV 내보내기</button>
-          <button class="btn btn-sm btn-primary" onclick="openClaimAdd()"><i class="ti ti-plus"></i>클레임 등록</button>
+          <button class="btn btn-sm btn-icon" onclick="exportClaimsCSV()" title="엑셀 내보내기"><i class="ti ti-download"></i></button>
+          <button class="btn btn-sm btn-primary btn-icon" onclick="openClaimAdd()" title="클레임 등록"><i class="ti ti-plus"></i></button>
         </div>
       </div>
       <div id="claims-table-full" style="overflow-x:auto;"></div>
@@ -1716,8 +1720,8 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
             <option>결근</option>
             <option>휴가</option>
           </select>
-          <button class="btn btn-sm" onclick="exportWorkersCSV()"><i class="ti ti-download"></i>전체 엑셀 CSV 내보내기</button>
-          <button class="btn btn-sm btn-primary" onclick="openWorkerAdd()"><i class="ti ti-plus"></i>신규 직원 등록</button>
+          <button class="btn btn-sm btn-icon" onclick="exportWorkersCSV()" title="엑셀 내보내기"><i class="ti ti-download"></i></button>
+          <button class="btn btn-sm btn-primary btn-icon" onclick="openWorkerAdd()" title="신규 직원 등록"><i class="ti ti-plus"></i></button>
         </div>
       </div>
       
@@ -1741,7 +1745,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="btn" data-fintab="pnl" onclick="switchFinTab('pnl')"><i class="ti ti-report-money"></i>손익(P&L)</button>
       <button class="btn" data-fintab="ar" onclick="switchFinTab('ar')"><i class="ti ti-receipt"></i>미수금/미지급</button>
       <button class="btn" data-fintab="etc" onclick="switchFinTab('etc')"><i class="ti ti-list-details"></i>기타 수입/비용</button>
-      <button class="btn btn-primary" onclick="openFinanceAdd()" style="margin-left:auto;"><i class="ti ti-plus"></i>기타 항목 등록</button>
+      <button class="btn btn-primary btn-icon" onclick="openFinanceAdd()" style="margin-left:auto;" title="기타 항목 등록"><i class="ti ti-plus"></i></button>
     </div>
     <div id="finance-body"></div>
   </div>
@@ -1753,7 +1757,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
         <option value="">전체 상태</option><option value="open">미완료(접수·처리중)</option><option>접수</option><option>처리중</option><option>완료</option><option>보류</option>
       </select>
       <input id="as-search" oninput="renderAS()" placeholder="고객/제품/증상 검색" style="height:32px;min-width:180px;">
-      <button class="btn btn-primary" onclick="openAsAdd()" style="margin-left:auto;"><i class="ti ti-plus"></i>A/S 접수 등록</button>
+      <button class="btn btn-primary btn-icon" onclick="openAsAdd()" style="margin-left:auto;" title="A/S 접수 등록"><i class="ti ti-plus"></i></button>
     </div>
     <div id="as-body"></div>
   </div>
@@ -1768,8 +1772,8 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     <div class="toolbar">
       <label style="font-size:12px;color:var(--tx-s);align-self:center;">제품 선택</label>
       <select id="bom-product" onchange="onBomProductChange()" style="height:32px;min-width:240px;"></select>
-      <button class="btn" onclick="applyBomCost()" title="BOM 재료비를 제품 원가에 반영"><i class="ti ti-arrow-bar-to-down"></i>재료비 원가 반영</button>
-      <button class="btn btn-primary" onclick="openBomAdd()" style="margin-left:auto;"><i class="ti ti-plus"></i>자재 추가</button>
+      <button class="btn btn-icon" onclick="applyBomCost()" title="BOM 재료비를 제품 원가에 반영"><i class="ti ti-arrow-bar-to-down"></i></button>
+      <button class="btn btn-primary btn-icon" onclick="openBomAdd()" style="margin-left:auto;" title="자재 추가"><i class="ti ti-plus"></i></button>
     </div>
     <div id="bom-body"></div>
   </div>
@@ -1780,7 +1784,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="btn btn-primary" onclick="filterAlerts('all')">전체 알림</button>
       <button class="btn" onclick="filterAlerts('err')">긴급 위험 (Err)</button>
       <button class="btn" onclick="filterAlerts('warn')">경고 확인 (Warn)</button>
-      <button class="btn btn-primary" onclick="openAlertAdd()" style="margin-left:auto;"><i class="ti ti-plus"></i>알림 직접 등록</button>
+      <button class="btn btn-primary btn-icon" onclick="openAlertAdd()" style="margin-left:auto;" title="알림 직접 등록"><i class="ti ti-plus"></i></button>
     </div>
 
     <!-- 자동 감지 알림 유형별 체크 필터 패널 -->
@@ -1887,10 +1891,11 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
         <option>요청전</option><option>요청중</option><option>회신완료</option><option>채택</option><option>미채택</option>
       </select>
       <input type="text" id="rfq-q" placeholder="품목명·공급처 검색..." style="min-width:180px;" oninput="renderRfq()">
-      <button class="btn btn-primary" onclick="openRfqAdd()"><i class="ti ti-plus"></i>견적요청서 등록</button>
-      <button class="btn" onclick="openRfqPrint(null)"><i class="ti ti-printer"></i>전체 PDF 출력</button>
-      <button class="btn" onclick="exportRfqXLS()"><i class="ti ti-file-spreadsheet"></i>전체 엑셀 CSV 내보내기</button>
-      <button class="btn" style="margin-left:auto;" onclick="openEmailjsSettings()"><i class="ti ti-mail-cog"></i>이메일 연동설정</button>
+      <button class="btn btn-primary btn-icon" onclick="openRfqAdd()" title="견적요청서 등록"><i class="ti ti-plus"></i></button>
+      <button class="btn btn-icon" onclick="importRfqXLS()" title="엑셀 가져오기"><i class="ti ti-file-import"></i></button>
+      <button class="btn btn-icon" onclick="exportRfqXLS()" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
+      <button class="btn btn-icon" onclick="openRfqPrint(null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
+      <button class="btn btn-icon" style="margin-left:auto;" onclick="openEmailjsSettings()" title="이메일 연동설정"><i class="ti ti-mail-cog"></i></button>
     </div>
 
     <div class="card">
@@ -1913,10 +1918,11 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
         <option>작성중</option><option>발송완료</option><option>확인완료</option><option>입고완료</option>
       </select>
       <input type="text" id="po-q" placeholder="품목명·공급처 검색..." style="min-width:180px;" oninput="renderPo()">
-      <button class="btn btn-primary" onclick="openPoAdd()"><i class="ti ti-plus"></i>구매발주서 등록</button>
-      <button class="btn" onclick="openPoPrint(null)"><i class="ti ti-printer"></i>전체 PDF 출력</button>
-      <button class="btn" onclick="exportPoXLS()"><i class="ti ti-file-spreadsheet"></i>전체 엑셀 CSV 내보내기</button>
-      <button class="btn" style="margin-left:auto;" onclick="openEmailjsSettings()"><i class="ti ti-mail-cog"></i>이메일 연동설정</button>
+      <button class="btn btn-primary btn-icon" onclick="openPoAdd()" title="구매발주서 등록"><i class="ti ti-plus"></i></button>
+      <button class="btn btn-icon" onclick="importPoListXLS()" title="엑셀 가져오기"><i class="ti ti-file-import"></i></button>
+      <button class="btn btn-icon" onclick="exportPoXLS()" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
+      <button class="btn btn-icon" onclick="openPoPrint(null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
+      <button class="btn btn-icon" style="margin-left:auto;" onclick="openEmailjsSettings()" title="이메일 연동설정"><i class="ti ti-mail-cog"></i></button>
     </div>
 
     <!-- 선택 일괄 동작 바 -->
@@ -1946,10 +1952,10 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <select id="st-fc" onchange="renderSalesDoc('statement')" style="min-width:140px;"><option value="">전체 고객사</option></select>
       <select id="st-fs" onchange="renderSalesDoc('statement')"><option value="">전체 상태</option><option>작성</option><option>발송완료</option><option>수령확인</option></select>
       <input type="text" id="st-q" placeholder="품목명·고객사 검색..." style="min-width:180px;" oninput="renderSalesDoc('statement')">
-      <button class="btn btn-primary" onclick="openSalesDocAdd('statement')"><i class="ti ti-plus"></i>거래명세표 등록</button>
-      <button class="btn" onclick="openSalesDocPrint('statement',null)"><i class="ti ti-printer"></i>전체 PDF 출력</button>
-      <button class="btn" onclick="exportSalesDocCSV('statement')"><i class="ti ti-file-spreadsheet"></i>전체 엑셀 CSV 내보내기</button>
-      <button class="btn" style="margin-left:auto;" onclick="openEmailjsSettings()"><i class="ti ti-mail-cog"></i>이메일 연동설정</button>
+      <button class="btn btn-primary btn-icon" onclick="openSalesDocAdd('statement')" title="거래명세표 등록"><i class="ti ti-plus"></i></button>
+      <button class="btn btn-icon" onclick="exportSalesDocCSV('statement')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
+      <button class="btn btn-icon" onclick="openSalesDocPrint('statement',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
+      <button class="btn btn-icon" style="margin-left:auto;" onclick="openEmailjsSettings()" title="이메일 연동설정"><i class="ti ti-mail-cog"></i></button>
     </div>
     <div class="card"><div id="st-table" style="overflow-x:auto;"></div></div>
   </div>
@@ -1966,10 +1972,10 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <select id="tx-fc" onchange="renderSalesDoc('tax')" style="min-width:140px;"><option value="">전체 고객사</option></select>
       <select id="tx-fs" onchange="renderSalesDoc('tax')"><option value="">전체 상태</option><option>작성</option><option>발행완료</option><option>전송완료</option></select>
       <input type="text" id="tx-q" placeholder="품목명·고객사 검색..." style="min-width:180px;" oninput="renderSalesDoc('tax')">
-      <button class="btn btn-primary" onclick="openSalesDocAdd('tax')"><i class="ti ti-plus"></i>세금계산서 등록</button>
-      <button class="btn" onclick="openSalesDocPrint('tax',null)"><i class="ti ti-printer"></i>전체 PDF 출력</button>
-      <button class="btn" onclick="exportSalesDocCSV('tax')"><i class="ti ti-file-spreadsheet"></i>전체 엑셀 CSV 내보내기</button>
-      <button class="btn" style="margin-left:auto;" onclick="openEmailjsSettings()"><i class="ti ti-mail-cog"></i>이메일 연동설정</button>
+      <button class="btn btn-primary btn-icon" onclick="openSalesDocAdd('tax')" title="세금계산서 등록"><i class="ti ti-plus"></i></button>
+      <button class="btn btn-icon" onclick="exportSalesDocCSV('tax')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
+      <button class="btn btn-icon" onclick="openSalesDocPrint('tax',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
+      <button class="btn btn-icon" style="margin-left:auto;" onclick="openEmailjsSettings()" title="이메일 연동설정"><i class="ti ti-mail-cog"></i></button>
     </div>
     <div class="card"><div id="tx-table" style="overflow-x:auto;"></div></div>
   </div>
@@ -1992,10 +1998,10 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <select id="qt-fc" onchange="renderSODoc('quote')" style="min-width:140px;"><option value="">전체 고객사</option></select>
       <select id="qt-fs" onchange="renderSODoc('quote')"><option value="">전체 상태</option><option>작성</option><option>발송</option><option>협의중</option><option>보류</option><option>수주전환</option></select>
       <input type="text" id="qt-q" placeholder="품목명·고객사 검색..." style="min-width:180px;" oninput="renderSODoc('quote')">
-      <button class="btn btn-primary" onclick="openSODocAdd('quote')"><i class="ti ti-plus"></i>견적서 등록</button>
-      <button class="btn" onclick="openSODocPrint('quote',null)"><i class="ti ti-printer"></i>전체 PDF 출력</button>
-      <button class="btn" onclick="exportSODocCSV('quote')"><i class="ti ti-file-spreadsheet"></i>전체 엑셀 CSV 내보내기</button>
-      <button class="btn" style="margin-left:auto;" onclick="openEmailjsSettings()"><i class="ti ti-mail-cog"></i>이메일 연동설정</button>
+      <button class="btn btn-primary btn-icon" onclick="openSODocAdd('quote')" title="견적서 등록"><i class="ti ti-plus"></i></button>
+      <button class="btn btn-icon" onclick="exportSODocCSV('quote')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
+      <button class="btn btn-icon" onclick="openSODocPrint('quote',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
+      <button class="btn btn-icon" style="margin-left:auto;" onclick="openEmailjsSettings()" title="이메일 연동설정"><i class="ti ti-mail-cog"></i></button>
     </div>
     <div class="card"><div id="qt-table" style="overflow-x:auto;"></div></div>
     </div><!-- /sd-tab-quote -->
@@ -2011,9 +2017,9 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <select id="so-fc" onchange="renderSODoc('order')" style="min-width:140px;"><option value="">전체 고객사</option></select>
       <select id="so-fs" onchange="renderSODoc('order')"><option value="">전체 상태</option><option>수주확정</option><option>진행중</option><option>완료</option></select>
       <input type="text" id="so-q" placeholder="품목명·고객사 검색..." style="min-width:180px;" oninput="renderSODoc('order')">
-      <button class="btn" onclick="openSODocPrint('order',null)"><i class="ti ti-printer"></i>전체 PDF 출력</button>
-      <button class="btn" onclick="exportSODocCSV('order')"><i class="ti ti-file-spreadsheet"></i>전체 엑셀 CSV 내보내기</button>
-      <button class="btn" style="margin-left:auto;" onclick="openEmailjsSettings()"><i class="ti ti-mail-cog"></i>이메일 연동설정</button>
+      <button class="btn btn-icon" onclick="exportSODocCSV('order')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
+      <button class="btn btn-icon" onclick="openSODocPrint('order',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
+      <button class="btn btn-icon" style="margin-left:auto;" onclick="openEmailjsSettings()" title="이메일 연동설정"><i class="ti ti-mail-cog"></i></button>
     </div>
     <div class="card"><div id="so-table" style="overflow-x:auto;"></div></div>
     </div><!-- /sd-tab-order -->
@@ -8284,25 +8290,6 @@ function toggleTheme() {
   }
 }
 
-/* ════════ 프로그램 기동 초기화 ════════ */
-syncFilterDropdowns();
-initTheme();
-// 사이드바 미니 레일 모드 복원 (유튜브 방식)
-if (localStorage.getItem('mes_sbMini')==='1') {
-  document.body.classList.add('sb-mini');
-  if (typeof _initSbMini === 'function') _initSbMini();
-}
-_goTo('dashboard', null);   // 실행 시 항상 종합 대시보드를 먼저 표시
-renderAlerts();
-updateTrashBadge();
-updateDlvBadge();
-updateAsBadge();
-updateAdminUI();
-
-// 앱 초기화 완료 (데이터는 로컬 저장 + 파일 저장으로 관리)
-initAutoSave();
-initEmailjs();
-
 /* ════════════════════════════════════════════════════════════
    클라우드 동기화 (Firebase Auth + Firestore)
    ▶ 설정 방법:
@@ -8336,6 +8323,25 @@ const FIREBASE_CONFIG = {
 const CLOUD_KEYS = ['clients','products','materials','workOrders','workers','defects','claims','checkRecords','alerts','inventory','deliveries','stages','trash','rfqList','poList','partners','statementList','taxList','quoteList','orderList','financeData','attendance','leaves','asList','bomList','companyInfo'];
 let _fbAuth=null, _fbDb=null, _cloudUser=null;   // _cloudActive는 앞쪽(전역 상태)에서 선언됨
 const _cloudQueue=new Set(); let _cloudTimer=null; let _cloudUnsub=null;
+
+/* ════════ 프로그램 기동 초기화 (FIREBASE_CONFIG 선언 이후에 실행) ════════ */
+syncFilterDropdowns();
+initTheme();
+// 사이드바 미니 레일 모드 복원 (유튜브 방식)
+if (localStorage.getItem('mes_sbMini')==='1') {
+  document.body.classList.add('sb-mini');
+  if (typeof _initSbMini === 'function') _initSbMini();
+}
+_goTo('dashboard', null);   // 실행 시 항상 종합 대시보드를 먼저 표시
+renderAlerts();
+updateTrashBadge();
+updateDlvBadge();
+updateAsBadge();
+updateAdminUI();
+
+// 앱 초기화 완료 (데이터는 로컬 저장 + 파일 저장으로 관리)
+initAutoSave();
+initEmailjs();
 
 /* ════════ 권한(RBAC) 설정 ════════ */
 /* 첫 로그인 시 자동으로 '관리자'가 되는 소유자 이메일(소문자). 이 계정들은 항상 admin·즉시 활성. */
@@ -10016,7 +10022,93 @@ function exportPoXLS(id = null) {
   showToast(id ? `엑셀 구매발주서(${id})가 다운로드되었습니다.` : '엑셀 파일이 저장되었습니다.');
 }
 
-/* ════════ 거래명세표 / 세금계산서 (판매문서 공용 엔진) ════════ */
+/* ════════ 엑셀 가져오기 (견적요청서 / 구매발주서) ════════
+   내보내기(exportRfqXLS/exportPoXLS) 형식의 파일을 그대로 다시 읽어들임.
+   헤더명으로 열을 매칭하므로 열 순서가 달라도 동작. 고객사/연결제품은 이름으로 id 역매핑. */
+function _pickXlsxFile(onPick) {
+  const fi = document.createElement('input');
+  fi.type = 'file'; fi.accept = '.xlsx,.xls,.csv'; fi.style.display = 'none';
+  fi.onchange = () => { if (fi.files && fi.files[0]) onPick(fi.files[0]); fi.remove(); };
+  document.body.appendChild(fi); fi.click();
+}
+
+function _readXlsxRows(file, cb) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type:'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      cb(XLSX.utils.sheet_to_json(ws, { header:1, defval:'' }));
+    } catch(err) { showToast('엑셀 읽기 실패: ' + err.message, 'error'); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function _numFrom(val) { return Number(String(val).replace(/[,₩\s원]/g, '')) || 0; }
+
+function _importDocsXLS(cfg) {
+  if (!checkAdminAction()) return;
+  _pickXlsxFile(file => _readXlsxRows(file, aoa => {
+    // 헤더 행 탐색: 식별 헤더 + '품목명' 이 함께 있는 행
+    let hrow = -1, hdr = null;
+    for (let i = 0; i < aoa.length; i++) {
+      const row = aoa[i].map(c => String(c).trim());
+      if (row.includes(cfg.idHeader) && row.includes('품목명')) { hrow = i; hdr = row; break; }
+    }
+    if (hrow < 0) { showToast(`헤더 행(${cfg.idHeader}/품목명)을 찾을 수 없습니다.`, 'error'); return; }
+    const col = name => hdr.indexOf(name);
+    const get = (row, name) => { const i = col(name); return i < 0 ? '' : String(row[i] ?? '').trim(); };
+    const list = cfg.getList();
+    let added = 0, skipped = 0;
+    for (let r = hrow + 1; r < aoa.length; r++) {
+      const row = aoa[r];
+      if (!row || !row.length) continue;
+      const itemName = get(row, '품목명'), supplier = get(row, '공급처');
+      if (!itemName && !supplier) continue;                  // 빈 행 무시
+      if (!itemName || !supplier) { skipped++; continue; }    // 필수값 누락 행
+      const impId = get(row, cfg.idHeader);
+      const id = (impId && !list.some(x => x.id === impId)) ? impId : nextDocCode(cfg.prefix, list);
+      const clientName = get(row, '고객사'), productName = get(row, '연결제품');
+      const obj = {
+        id,
+        date: get(row, cfg.dateHeader) || today(),
+        clientId: clients.find(c => c.name === clientName)?.id || '',
+        productId: products.find(p => p.name === productName)?.id || '',
+        supplier, supplierEmail: get(row, '공급처이메일'),
+        itemName, spec: get(row, '규격/사양'),
+        qty: Number(get(row, '수량')) || 1, unit: get(row, '단위') || 'EA',
+        status: get(row, '상태') || cfg.defaultStatus, note: get(row, '비고')
+      };
+      cfg.extra(obj, row, get);
+      list.unshift(obj);
+      added++;
+    }
+    if (added) { saveStorage(cfg.key, list); cfg.render(); }
+    showToast(`${cfg.title} ${added}건 가져오기 완료${skipped ? ` (${skipped}건 건너뜀)` : ''}`, added ? 'success' : 'error');
+  }));
+}
+
+function importRfqXLS() {
+  _importDocsXLS({
+    key:'rfqList', prefix:'Q', title:'견적요청서', idHeader:'문서번호', dateHeader:'요청일',
+    defaultStatus:'요청전', getList:() => rfqList, render: renderRfq,
+    extra:(obj, row, get) => { obj.targetPrice = _numFrom(get(row, '희망단가')); }
+  });
+}
+
+function importPoListXLS() {
+  _importDocsXLS({
+    key:'poList', prefix:'P', title:'구매발주서', idHeader:'발주번호', dateHeader:'발행일',
+    defaultStatus:'작성중', getList:() => poList, render: renderPo,
+    extra:(obj, row, get) => {
+      obj.unitPrice  = _numFrom(get(row, '단가'));
+      obj.payMethod  = get(row, '결제조건') || '현금';
+      obj.dlvMethod  = get(row, '납품방법') || '직납';
+    }
+  });
+}
+
+/* ════════ 거래명세표 / 세금계산서 (판매문서 공용 엔진) ════════
 const SALES = {
   statement: { key:'statementList', prefix:'TS', title:'거래명세표', idp:'st', page:'statement', statuses:['작성','발송완료','수령확인'], titleIcon:'ti-receipt' },
   tax:       { key:'taxList',       prefix:'TX', title:'세금계산서', idp:'tx', page:'taxinvoice', statuses:['작성','발행완료','전송완료'], titleIcon:'ti-file-dollar' }
