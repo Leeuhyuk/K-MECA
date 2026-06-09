@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <!-- Firebase (클라우드 공유 동기화) -->
@@ -74,6 +75,32 @@ body { font-family: var(--f); background: var(--bg-t); color: var(--tx); height:
 .topbar { background: var(--bg-p); border-bottom: 1px solid var(--br); padding: 10px 24px; display: flex; align-items: center; justify-content: space-between; min-height: 52px; flex-shrink: 0; }
 .tb-title { font-size: 16px; font-weight: 600; }
 .tb-right { display: flex; align-items: center; gap: 12px; }
+.global-search-wrapper {
+  position: relative; width: 340px; height: 36px; margin: 0 auto 0 20px;
+  flex: 0 1 340px; min-width: 150px;
+}
+#global-search-input {
+  width: 100%; height: 36px; padding: 6px 78px 6px 18px;
+  border-radius: 20px; font-size: 12px;
+  background: rgba(255,255,255,0.06); border: 1px solid var(--br);
+  transition: border-color .2s, box-shadow .2s;
+}
+#global-search-clear {
+  position: absolute; right: 46px; top: 50%; transform: translateY(-50%);
+  width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%;
+  align-items: center; justify-content: center;
+  background: transparent; color: var(--tx-t); cursor: pointer; display: none; z-index: 3;
+}
+#global-search-clear i { font-size: 17px; }
+#global-search-clear:hover { background: var(--bg-s); color: var(--tx); }
+.global-search-btn {
+  position: absolute; top: 0; right: 0; width: 42px; height: 36px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--br); border-radius: 0 20px 20px 0;
+  background: var(--bg-s); color: var(--tx); cursor: pointer; z-index: 2;
+}
+.global-search-btn i { font-size: 20px; }
+.global-search-btn:hover { background: var(--bg-i); color: var(--tx-i); }
 .pill { font-size: 11px; padding: 4px 10px; border-radius: 20px; border: 1px solid; display: inline-flex; align-items: center; gap: 5px; font-weight: 500; }
 .pill-ok { background: var(--bg-ok); color: var(--tx-ok); border-color: var(--br-ok); }
 .pill-warn { background: var(--bg-w); color: var(--tx-w); border-color: var(--br-w); }
@@ -712,10 +739,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     margin: 0 10px !important;
   }
   #global-search-input {
-    padding: 6px 12px 6px 28px !important;
-  }
-  .global-search-wrapper i.ti-search {
-    left: 8px !important;
+    padding: 6px 74px 6px 14px !important;
   }
   /* 통합 검색 결과창: 화면 밖으로 잘리지 않게 좌우 여백 두고 전체 폭 사용 */
   #global-search-results {
@@ -762,11 +786,30 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
   /* 2) 상단 탑바 가로 넘침으로 인한 우측 잘림 방지 */
   .topbar { padding: 8px 10px !important; gap: 6px; }
   #back-btn { display: none !important; }           /* 하단 탭/드로어로 이동 가능하므로 제거 */
-  /* 탑바의 검색 입력은 숨기되, 결과 드롭다운(#global-search-results)은 모바일 홈 검색이 재사용하므로 wrapper는 폭 0으로만 접음 */
-  .global-search-wrapper { width: 0 !important; min-width: 0 !important; flex: 0 0 0 !important; margin: 0 !important; overflow: visible !important; }
+  /* 모바일 기본 상태는 돋보기만 표시하고, 클릭하면 검색 입력창을 탑바 위에 펼침 */
+  .global-search-wrapper {
+    width: 40px !important; min-width: 40px !important; height: 36px;
+    flex: 0 0 40px !important; margin: 0 2px !important; overflow: visible !important;
+  }
   .global-search-wrapper > #global-search-input,
-  .global-search-wrapper > i.ti-search,
   .global-search-wrapper > #global-search-clear { display: none !important; }
+  .global-search-wrapper .global-search-btn {
+    display: inline-flex !important; width: 40px; border-radius: 20px;
+  }
+  .global-search-wrapper.search-open {
+    position: fixed !important; left: 50px; right: 8px; top: 8px;
+    width: auto !important; min-width: 0 !important; z-index: 10000;
+  }
+  .global-search-wrapper.search-open > #global-search-input {
+    display: block !important; padding: 6px 74px 6px 14px !important;
+    background: var(--bg-p);
+  }
+  .global-search-wrapper.search-open > #global-search-clear[style*="display: flex"] {
+    display: flex !important;
+  }
+  .global-search-wrapper.search-open .global-search-btn {
+    width: 42px; border-radius: 0 20px 20px 0;
+  }
   .tb-right { gap: 6px !important; flex-shrink: 0; }
   #topbar-admin-area .pill,
   #topbar-admin-area button[onclick^="openAdminPasswordChange"] { display: none !important; } /* 관리자 라벨·변경 버튼 숨김, 잠금/로그아웃만 유지 */
@@ -1051,14 +1094,10 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     <div class="ni" onclick="go('bom',this)"><i class="ti ti-sitemap"></i>BOM · 자재명세</div>
     <div class="ni" onclick="go('finance',this)"><i class="ti ti-coin"></i>재무 관리</div>
     <div class="ni" onclick="go('workers',this)"><i class="ti ti-id-badge-2"></i>인사 관리</div>
-    <div class="ni" onclick="openCompanySettings()"><i class="ti ti-building"></i>회사정보 설정</div>
   </div>
   <div class="nav-g">
     <div class="nav-lbl">시스템 관리</div>
-    <div class="ni" onclick="go('alimtalk',this)"><i class="ti ti-brand-kakao"></i>알림톡 설정</div>
-    <div class="ni" onclick="go('permissions',this)"><i class="ti ti-user-shield"></i>권한 관리</div>
-    <div class="ni" onclick="go('alerts',this)"><i class="ti ti-bell"></i>알림<span class="nbadge" id="alertBadge">17</span></div>
-    <div class="ni" onclick="go('trash',this)"><i class="ti ti-trash"></i>휴지통<span class="nbadge" id="trashBadge" style="background:#868e96;">0</span></div>
+    <div class="ni" onclick="go('system',this)"><i class="ti ti-settings"></i>시스템 관리<span class="nbadge" id="alertBadge">17</span><span class="nbadge" id="trashBadge" style="display:none;background:#868e96;">0</span></div>
   </div>
 </div>
 
@@ -1076,10 +1115,10 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     </div>
 
     <!-- 통합 글로벌 검색창 -->
-    <div class="global-search-wrapper" style="position: relative; width: 340px; margin: 0 auto 0 20px;">
-      <i class="ti ti-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--tx-t); font-size: 14px; pointer-events: none; z-index: 2;"></i>
-      <input type="text" id="global-search-input" placeholder="통합 검색 (제품, 고객사, 자재, 생산지시, 재고, 직원...)" style="width: 100%; padding: 6px 36px 6px 34px; height: 34px; border-radius: 20px; font-size: 12px; background: rgba(255,255,255,0.06); border: 1px solid var(--br); transition: all 0.2s;" oninput="onGlobalSearch(this.value)" onfocus="onGlobalSearchFocus()" onkeydown="onGlobalSearchKeyDown(event)">
-      <i class="ti ti-x" id="global-search-clear" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--tx-t); font-size: 14px; cursor: pointer; display: none; z-index: 2;" onclick="clearGlobalSearch()"></i>
+    <div class="global-search-wrapper">
+      <input type="text" id="global-search-input" placeholder="통합 검색 (제품, 고객사, 자재, 생산지시, 재고, 직원...)" oninput="onGlobalSearch(this.value)" onfocus="onGlobalSearchFocus()" onkeydown="onGlobalSearchKeyDown(event)">
+      <button type="button" id="global-search-clear" onclick="clearGlobalSearch()" title="검색어 지우기" aria-label="검색어 지우기"><i class="ti ti-x"></i></button>
+      <button type="button" class="global-search-btn" onclick="toggleGlobalSearchBox()" title="검색"><i class="ti ti-search"></i></button>
       
       <!-- 실시간 검색 결과 드롭다운 -->
       <div id="global-search-results" style="position: absolute; top: 40px; left: 0; width: 440px; background: var(--bg-p); border: 1px solid var(--br-s); border-radius: var(--rl); box-shadow: var(--shadow); z-index: 9999; max-height: 480px; overflow-y: auto; display: none; backdrop-filter: blur(20px); border-color: rgba(255,255,255,0.12);">
@@ -1762,9 +1801,160 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     <div id="as-body"></div>
   </div>
 
-  <!-- 권한 관리 (RBAC) -->
-  <div class="content" id="pg-permissions">
-    <div id="perm-body"></div>
+  <!-- 시스템 관리 -->
+  <div class="content" id="pg-system">
+    <div class="toolbar" id="system-tabs" style="margin-bottom:16px;">
+      <button class="btn btn-primary" data-systab="permissions" onclick="switchSystemTab('permissions')"><i class="ti ti-user-shield"></i>권한 관리</button>
+      <button class="btn" data-systab="company" onclick="switchSystemTab('company')"><i class="ti ti-building"></i>회사 관리</button>
+      <button class="btn" data-systab="templates" onclick="switchSystemTab('templates')"><i class="ti ti-template"></i>양식 내보내기</button>
+      <button class="btn" data-systab="alimtalk" onclick="switchSystemTab('alimtalk')"><i class="ti ti-brand-kakao"></i>알림톡 설정</button>
+      <button class="btn" data-systab="alerts" onclick="switchSystemTab('alerts')"><i class="ti ti-bell"></i>알림 관리</button>
+      <button class="btn" data-systab="trash" onclick="switchSystemTab('trash')"><i class="ti ti-trash"></i>휴지통</button>
+    </div>
+
+    <div class="system-panel" id="system-panel-permissions"><div id="perm-body"></div></div>
+
+    <div class="system-panel" id="system-panel-company" style="display:none;">
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-building"></i>회사 정보 관리</span>
+          <span style="font-size:11px;color:var(--tx-t);">문서·이메일·인쇄 양식에 공통 적용</span>
+        </div>
+        <div id="system-company-summary" style="padding:4px 2px;"></div>
+        <div style="margin-top:14px;">
+          <button class="btn btn-primary" onclick="openCompanySettings()"><i class="ti ti-edit"></i>회사 정보 수정</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="system-panel" id="system-panel-templates" style="display:none;">
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-file-description"></i>견적요청서 엑셀 인쇄 양식</span>
+          <span id="rfq-template-status" style="font-size:11px;color:var(--tx-t);"></span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 2px;">
+          <button class="btn btn-sm" onclick="downloadDocXlsxTemplate('rfq')"><i class="ti ti-download"></i>기본 양식 내보내기</button>
+          <button class="btn btn-sm" onclick="registerDocXlsxTemplate('rfq')"><i class="ti ti-upload"></i>수정 양식 등록</button>
+          <button class="btn btn-sm" onclick="resetDocXlsxTemplate('rfq')"><i class="ti ti-restore"></i>기본 양식 복원</button>
+          <button class="btn btn-sm btn-primary" onclick="exportDocTemplateXLS('rfq')"><i class="ti ti-file-type-xls"></i>등록 양식으로 전체 출력</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-file-invoice"></i>구매발주서 엑셀 인쇄 양식</span>
+          <span id="po-template-status" style="font-size:11px;color:var(--tx-t);"></span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 2px;">
+          <button class="btn btn-sm" onclick="downloadDocXlsxTemplate('po')"><i class="ti ti-download"></i>기본 양식 내보내기</button>
+          <button class="btn btn-sm" onclick="registerDocXlsxTemplate('po')"><i class="ti ti-upload"></i>수정 양식 등록</button>
+          <button class="btn btn-sm" onclick="resetDocXlsxTemplate('po')"><i class="ti ti-restore"></i>기본 양식 복원</button>
+          <button class="btn btn-sm btn-primary" onclick="exportDocTemplateXLS('po')"><i class="ti ti-file-type-xls"></i>등록 양식으로 전체 출력</button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px;">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-file-text"></i>견적서 엑셀 인쇄 양식</span>
+          <span id="quote-template-status" style="font-size:11px;color:var(--tx-t);"></span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 2px;">
+          <button class="btn btn-sm" onclick="downloadDocXlsxTemplate('quote')"><i class="ti ti-download"></i>기본 양식 내보내기</button>
+          <button class="btn btn-sm" onclick="registerDocXlsxTemplate('quote')"><i class="ti ti-upload"></i>수정 양식 가져오기</button>
+          <button class="btn btn-sm" onclick="resetDocXlsxTemplate('quote')"><i class="ti ti-restore"></i>기본 양식 복원</button>
+          <button class="btn btn-sm btn-primary" onclick="exportDocTemplateXLS('quote')"><i class="ti ti-file-type-xls"></i>등록 양식으로 전체 출력</button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px;">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-receipt"></i>거래명세표 엑셀 인쇄 양식</span>
+          <span id="statement-template-status" style="font-size:11px;color:var(--tx-t);"></span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 2px;">
+          <button class="btn btn-sm" onclick="downloadDocXlsxTemplate('statement')"><i class="ti ti-download"></i>기본 양식 내보내기</button>
+          <button class="btn btn-sm" onclick="registerDocXlsxTemplate('statement')"><i class="ti ti-upload"></i>수정 양식 가져오기</button>
+          <button class="btn btn-sm" onclick="resetDocXlsxTemplate('statement')"><i class="ti ti-restore"></i>기본 양식 복원</button>
+          <button class="btn btn-sm btn-primary" onclick="exportDocTemplateXLS('statement')"><i class="ti ti-file-type-xls"></i>등록 양식으로 전체 출력</button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px;">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-file-dollar"></i>세금계산서 엑셀 인쇄 양식</span>
+          <span id="tax-template-status" style="font-size:11px;color:var(--tx-t);"></span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 2px;">
+          <button class="btn btn-sm" onclick="downloadDocXlsxTemplate('tax')"><i class="ti ti-download"></i>기본 양식 내보내기</button>
+          <button class="btn btn-sm" onclick="registerDocXlsxTemplate('tax')"><i class="ti ti-upload"></i>수정 양식 가져오기</button>
+          <button class="btn btn-sm" onclick="resetDocXlsxTemplate('tax')"><i class="ti ti-restore"></i>기본 양식 복원</button>
+          <button class="btn btn-sm btn-primary" onclick="exportDocTemplateXLS('tax')"><i class="ti ti-file-type-xls"></i>등록 양식으로 전체 출력</button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px;background:var(--bg-s);">
+        <div style="font-size:12px;color:var(--tx-s);line-height:1.8;">
+          기본 양식을 내보내 Excel에서 수정한 뒤 다시 등록하면, 등록한 양식으로 문서가 출력됩니다.
+          기존 PDF 출력과 일반 데이터 엑셀 내보내기는 각 문서 화면에서 계속 사용할 수 있습니다.
+        </div>
+        <div style="margin-top:10px;">
+          <button class="btn btn-sm btn-danger" onclick="resetAllDocXlsxTemplates()"><i class="ti ti-restore"></i>모든 양식 기본값 복원</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="system-panel" id="system-panel-alimtalk" style="display:none;">
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-brand-kakao" style="color:#f7e600;background:#3c1e1e;border-radius:5px;padding:2px 5px;"></i>카카오 알림톡 설정</span>
+        </div>
+        <div id="alimtalk-settings-body" style="padding:8px 4px;"></div>
+      </div>
+      <div class="card" style="margin-top:16px;">
+        <div class="card-hd"><span class="card-ttl"><i class="ti ti-info-circle"></i>템플릿 등록 안내</span></div>
+        <div style="padding:8px 4px;font-size:12px;color:var(--tx-s);line-height:2.2;">
+          <div><code>TPL_MAT_IN</code> — 자재 입고완료 안내</div>
+          <div><code>TPL_DLV_DUE</code> — 납기 임박 알림 (D-7)</div>
+          <div><code>TPL_AS_NEW</code> — A/S 접수 알림</div>
+          <div><code>TPL_PO_SENT</code> — 발주서 발송 안내</div>
+          <div><code>TPL_TEST</code> — 테스트용</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="system-panel" id="system-panel-alerts" style="display:none;">
+      <div class="toolbar" id="alerts-toolbar">
+        <button class="btn btn-primary" onclick="filterAlerts('all')">전체 알림</button>
+        <button class="btn" onclick="filterAlerts('err')">긴급 위험</button>
+        <button class="btn" onclick="filterAlerts('warn')">경고 확인</button>
+        <button class="btn btn-primary btn-icon" onclick="openAlertAdd()" style="margin-left:auto;" title="알림 직접 등록"><i class="ti ti-plus"></i></button>
+      </div>
+      <div class="card" style="margin-bottom:16px;padding:16px;background:var(--bg-s);">
+        <div style="font-size:13px;font-weight:700;color:var(--tx-s);margin-bottom:12px;"><i class="ti ti-settings" style="color:var(--tx-i);"></i> 자동 감지 알림 활성화 설정</div>
+        <div style="display:flex;flex-wrap:wrap;gap:16px;font-size:12px;color:var(--tx-s);">
+          <label><input type="checkbox" id="chk-mat_pending" onchange="toggleAlertSetting('mat_pending')"> 자재발주 미처리</label>
+          <label><input type="checkbox" id="chk-mat_delay" onchange="toggleAlertSetting('mat_delay')"> 입고 임박 자재</label>
+          <label><input type="checkbox" id="chk-prod_delivery" onchange="toggleAlertSetting('prod_delivery')"> 납기 위험 제품</label>
+          <label><input type="checkbox" id="chk-inv_low" onchange="toggleAlertSetting('inv_low')"> 안전재고 미달</label>
+          <label><input type="checkbox" id="chk-defect_open" onchange="toggleAlertSetting('defect_open')"> 미처리 불량</label>
+          <label><input type="checkbox" id="chk-wo_delayed" onchange="toggleAlertSetting('wo_delayed')"> 생산지시 지연</label>
+        </div>
+      </div>
+      <div id="alerts-list"></div>
+    </div>
+
+    <div class="system-panel" id="system-panel-trash" style="display:none;">
+      <div class="metrics">
+        <div class="mc"><div class="mc-lbl"><i class="ti ti-trash"></i>휴지통 보관 항목</div><div class="mc-val" id="trash-total">0건</div><div class="mc-sub">삭제된 데이터를 복구합니다.</div></div>
+        <div class="mc"><div class="mc-lbl"><i class="ti ti-alert-triangle" style="color:var(--tx-w);"></i>데이터 보존 기준</div><div class="mc-val">영구 보존</div><div class="mc-sub">저장소 용량 내에서 유지</div></div>
+      </div>
+      <div class="toolbar">
+        <select id="trash-filter-type" onchange="renderTrash()" style="min-width:140px;">
+          <option value="">전체 데이터 분류</option><option value="client">고객사</option><option value="product">완제품</option>
+          <option value="material">발주자재</option><option value="inventory">재고품목</option><option value="order">생산지시</option>
+          <option value="defect">불량기록</option><option value="claim">고객클레임</option><option value="check">검사기록</option><option value="worker">작업원</option>
+        </select>
+        <input type="text" id="trash-q" placeholder="항목명 또는 식별 코드 검색..." style="min-width:220px;" oninput="renderTrash()">
+        <button class="btn btn-danger" onclick="emptyTrash()"><i class="ti ti-trash-x"></i>휴지통 비우기</button>
+      </div>
+      <div class="card"><div id="trash-table" style="overflow-x:auto;"></div></div>
+    </div>
   </div>
 
   <!-- BOM · 자재명세 -->
@@ -1773,86 +1963,11 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <label style="font-size:12px;color:var(--tx-s);align-self:center;">제품 선택</label>
       <select id="bom-product" onchange="onBomProductChange()" style="height:32px;min-width:240px;"></select>
       <button class="btn btn-icon" onclick="applyBomCost()" title="BOM 재료비를 제품 원가에 반영"><i class="ti ti-arrow-bar-to-down"></i></button>
+      <button class="btn btn-icon" onclick="openBomMaterialImport()" title="자재 수급/발주 내역에서 가져오기"><i class="ti ti-package-import"></i></button>
       <button class="btn btn-primary btn-icon" onclick="openBomAdd()" style="margin-left:auto;" title="자재 추가"><i class="ti ti-plus"></i></button>
     </div>
     <div id="bom-body"></div>
   </div>
-
-  <!-- ══════ 8. 알림 로그 관리 ══════ -->
-  <div class="content" id="pg-alerts">
-    <div class="toolbar" id="alerts-toolbar">
-      <button class="btn btn-primary" onclick="filterAlerts('all')">전체 알림</button>
-      <button class="btn" onclick="filterAlerts('err')">긴급 위험 (Err)</button>
-      <button class="btn" onclick="filterAlerts('warn')">경고 확인 (Warn)</button>
-      <button class="btn btn-primary btn-icon" onclick="openAlertAdd()" style="margin-left:auto;" title="알림 직접 등록"><i class="ti ti-plus"></i></button>
-    </div>
-
-    <!-- 자동 감지 알림 유형별 체크 필터 패널 -->
-    <div class="card" style="margin-bottom:16px; padding:16px; border:1px solid var(--br); border-radius:var(--rl); background:var(--bg-s);">
-      <div style="font-size:13px; font-weight:700; color:var(--tx-s); margin-bottom:12px; display:flex; align-items:center; gap:6px;">
-        <i class="ti ti-settings" style="font-size:16px; color:var(--tx-i);"></i> 자동 감지 알림 활성화 설정
-      </div>
-      <div style="display:flex; flex-wrap:wrap; gap:16px; font-size:12px; color:var(--tx-s);">
-        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
-          <input type="checkbox" id="chk-mat_pending" onchange="toggleAlertSetting('mat_pending')"> 자재발주 미처리
-        </label>
-        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
-          <input type="checkbox" id="chk-mat_delay" onchange="toggleAlertSetting('mat_delay')"> 입고 임박 자재
-        </label>
-        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
-          <input type="checkbox" id="chk-prod_delivery" onchange="toggleAlertSetting('prod_delivery')"> 납기 위험 제품
-        </label>
-        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
-          <input type="checkbox" id="chk-inv_low" onchange="toggleAlertSetting('inv_low')"> 안전재고 미달
-        </label>
-        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
-          <input type="checkbox" id="chk-defect_open" onchange="toggleAlertSetting('defect_open')"> 미처리 불량
-        </label>
-        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
-          <input type="checkbox" id="chk-wo_delayed" onchange="toggleAlertSetting('wo_delayed')"> 생산지시 지연
-        </label>
-      </div>
-    </div>
-    <div id="alerts-list"></div>
-  </div>
-
-  <!-- ══════ 9. 휴지통 ══════ -->
-  <div class="content" id="pg-trash">
-    <div class="metrics">
-      <div class="mc">
-        <div class="mc-lbl"><i class="ti ti-trash"></i>휴지통 보관 항목</div>
-        <div class="mc-val" id="trash-total">0건</div>
-        <div class="mc-sub">실수로 삭제된 모든 제조 데이터를 즉각 복구합니다.</div>
-      </div>
-      <div class="mc">
-        <div class="mc-lbl"><i class="ti ti-alert-triangle" style="color:var(--tx-w);"></i>데이터 보존 기준</div>
-        <div class="mc-val">영구 보존</div>
-        <div class="mc-sub">브라우저 로컬 저장소 용량 내에서 유지</div>
-      </div>
-    </div>
-    
-    <div class="toolbar">
-      <select id="trash-filter-type" onchange="renderTrash()" style="min-width:140px;">
-        <option value="">전체 데이터 분류</option>
-        <option value="client">고객사</option>
-        <option value="product">완제품</option>
-        <option value="material">발주자재</option>
-        <option value="inventory">재고품목</option>
-        <option value="order">생산지시</option>
-        <option value="defect">불량기록</option>
-        <option value="claim">고객클레임</option>
-        <option value="check">검사기록</option>
-        <option value="worker">작업원</option>
-      </select>
-      <input type="text" id="trash-q" placeholder="항목명 또는 식별 코드 검색..." style="min-width:220px;" oninput="renderTrash()">
-      <button class="btn btn-danger" onclick="emptyTrash()"><i class="ti ti-trash-x"></i>휴지통 비우기 (영구 삭제)</button>
-    </div>
-
-    <div class="card">
-      <div id="trash-table" style="overflow-x:auto;"><div class="empty"><i class="ti ti-inbox"></i>휴지통에 삭제 및 대기 상태인 데이터가 존재하지 않습니다.</div></div>
-    </div>
-  </div>
-
 
   <!-- ══════ 거래처 관리 ══════ -->
   <div class="content list-page" id="pg-partners">
@@ -1928,6 +2043,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     <!-- 선택 일괄 동작 바 -->
     <div id="po-bulkbar" style="display:none;align-items:center;gap:8px;margin:0 0 12px;padding:9px 14px;background:var(--bg-i);border:1px solid var(--br-i);border-radius:8px;flex-wrap:wrap;">
       <span style="font-weight:700;font-size:12.5px;color:var(--tx-i);"><i class="ti ti-checkbox"></i> <span id="po-sel-count">0</span>건 선택됨</span>
+      <button class="btn btn-sm" id="po-clone-btn" onclick="poBulkClone()"><i class="ti ti-copy"></i>선택 복제</button>
       <button class="btn btn-sm" onclick="poBulkPrint()"><i class="ti ti-printer"></i>선택 PDF 출력</button>
       <button class="btn btn-sm" onclick="poBulkExport()"><i class="ti ti-file-spreadsheet"></i>선택 엑셀</button>
       <button class="btn btn-sm" onclick="poBulkEmail()"><i class="ti ti-mail"></i>선택 이메일</button>
@@ -2126,28 +2242,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     </div>
     <div id="cal-grid" style="overflow-x:auto;"></div>
     <div id="cal-detail" style="margin-top:16px;display:none;"></div>
-  </div>
-</div>
-
-<div id="pg-alimtalk" class="pg" style="display:none;">
-  <div class="page-content">
-    <div class="card">
-      <div class="card-hd">
-        <span class="card-ttl"><i class="ti ti-brand-kakao" style="color:#f7e600;background:#3c1e1e;border-radius:5px;padding:2px 5px;"></i>카카오 알림톡 설정</span>
-      </div>
-      <div id="alimtalk-settings-body" style="padding:8px 4px;"></div>
-    </div>
-    <div class="card" style="margin-top:16px;">
-      <div class="card-hd"><span class="card-ttl"><i class="ti ti-info-circle"></i>템플릿 등록 안내</span></div>
-      <div style="padding:8px 4px;font-size:12px;color:var(--tx-s);line-height:2.2;">
-        <div><code style="background:var(--bg-s);padding:1px 5px;border-radius:3px;">TPL_MAT_IN</code> — 자재 입고완료 안내</div>
-        <div><code style="background:var(--bg-s);padding:1px 5px;border-radius:3px;">TPL_DLV_DUE</code> — 납기 임박 알림 (D-7)</div>
-        <div><code style="background:var(--bg-s);padding:1px 5px;border-radius:3px;">TPL_AS_NEW</code> — A/S 접수 알림</div>
-        <div><code style="background:var(--bg-s);padding:1px 5px;border-radius:3px;">TPL_PO_SENT</code> — 발주서 발송 안내</div>
-        <div><code style="background:var(--bg-s);padding:1px 5px;border-radius:3px;">TPL_TEST</code> — 테스트용</div>
-        <div style="margin-top:8px;color:var(--tx-t);">※ SOLAPI 관리자 → 알림톡 → 템플릿 관리에서 위 코드로 등록 후 카카오 심사 완료 필요 (1~3 영업일)</div>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -2449,7 +2543,8 @@ const DATA_KEYS = [
   'clients','products','materials','workOrders','workers','defects','claims',
   'checkRecords','alerts','inventory','deliveries','stages','trash','rfqList',
   'poList','partners','financeData','attendance','leaves','statementList',
-  'taxList','quoteList','orderList','inventoryLedger','alimtalkSettings'
+  'taxList','quoteList','orderList','inventoryLedger','alimtalkSettings',
+  'docXlsxTemplates'
 ];
 
 function exportDataJSON() {
@@ -2757,6 +2852,108 @@ const sortState = {
   po:       { key: null, asc: true },
 };
 
+/* ════════ 공통 날짜 보기 전환 (전체 · 연도 · 월 · 일) ════════ */
+const dateViewState = (() => {
+  try { return JSON.parse(localStorage.getItem('mes_dateViewState') || '{}'); }
+  catch(e) { return {}; }
+})();
+const dateViewRenderers = {};
+function _dateViewSave() {
+  try { localStorage.setItem('mes_dateViewState', JSON.stringify(dateViewState)); } catch(e) {}
+}
+function _dateViewDefault(mode) {
+  const t = today();
+  if (mode === 'year') return t.slice(0,4);
+  if (mode === 'month') return t.slice(0,7);
+  if (mode === 'day') return t;
+  return '';
+}
+function ensureDateView(key, containerId, dates, renderer) {
+  const container = inp(containerId); if (!container || !container.parentNode) return;
+  dateViewRenderers[key] = renderer;
+  const state = dateViewState[key] || (dateViewState[key] = { mode:'all', value:'' });
+  let bar = inp('date-view-' + key);
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'date-view-' + key;
+    bar.style.cssText = 'display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 10px;padding:7px 10px;background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rm);';
+    container.parentNode.insertBefore(bar, container);
+  }
+  const years = [...new Set((dates||[]).map(d=>String(d||'').slice(0,4)).filter(y=>/^\d{4}$/.test(y)))].sort().reverse();
+  const yearOptions = years.map(y=>`<option value="${y}"${state.value===y?' selected':''}>${y}년</option>`).join('');
+  let valueControl = '';
+  if (state.mode === 'year') {
+    valueControl = `<select onchange="dateViewValueChange('${key}',this.value)" style="height:28px;min-width:96px;"><option value="">연도 선택</option>${yearOptions}</select>`;
+  } else if (state.mode === 'month') {
+    valueControl = `<input type="month" value="${state.value||''}" onchange="dateViewValueChange('${key}',this.value)" style="height:28px;width:135px;">`;
+  } else if (state.mode === 'day') {
+    valueControl = `<input type="date" value="${state.value||''}" onchange="dateViewValueChange('${key}',this.value)" style="height:28px;width:145px;">`;
+  }
+  bar.innerHTML = `
+    <span style="font-size:11px;font-weight:700;color:var(--tx-s);"><i class="ti ti-calendar-filter"></i> 날짜 보기</span>
+    <select onchange="dateViewModeChange('${key}',this.value)" style="height:28px;min-width:82px;">
+      <option value="all"${state.mode==='all'?' selected':''}>전체</option>
+      <option value="year"${state.mode==='year'?' selected':''}>연도</option>
+      <option value="month"${state.mode==='month'?' selected':''}>월</option>
+      <option value="day"${state.mode==='day'?' selected':''}>일</option>
+    </select>
+    ${state.mode!=='all'?`<button class="btn btn-sm btn-icon" onclick="dateViewMove('${key}',-1)" title="${state.mode==='year'?'이전 연도':state.mode==='month'?'이전 달':'전날'}"><i class="ti ti-chevron-left"></i></button>`:''}
+    ${valueControl}
+    ${state.mode!=='all'?`<button class="btn btn-sm btn-icon" onclick="dateViewMove('${key}',1)" title="${state.mode==='year'?'다음 연도':state.mode==='month'?'다음 달':'다음 날'}"><i class="ti ti-chevron-right"></i></button>
+    <button class="btn btn-sm" onclick="dateViewToday('${key}')" title="현재 ${state.mode==='year'?'연도':state.mode==='month'?'월':'날짜'}로 이동">오늘</button>`:''}
+    ${state.mode!=='all'&&state.value?`<button class="btn btn-sm" onclick="dateViewReset('${key}')" title="전체 보기"><i class="ti ti-x"></i></button>`:''}`;
+}
+function dateViewModeChange(key, mode) {
+  dateViewState[key] = { mode, value:_dateViewDefault(mode) };
+  _dateViewSave();
+  if (dateViewRenderers[key]) dateViewRenderers[key]();
+}
+function dateViewValueChange(key, value) {
+  const state = dateViewState[key] || { mode:'all', value:'' };
+  state.value = value; dateViewState[key] = state;
+  _dateViewSave();
+  if (dateViewRenderers[key]) dateViewRenderers[key]();
+}
+function dateViewReset(key) {
+  dateViewState[key] = { mode:'all', value:'' };
+  _dateViewSave();
+  if (dateViewRenderers[key]) dateViewRenderers[key]();
+}
+function dateViewMove(key, amount) {
+  const state = dateViewState[key]; if (!state || state.mode === 'all') return;
+  let value = state.value || _dateViewDefault(state.mode);
+  if (state.mode === 'year') {
+    value = String((parseInt(value,10) || new Date().getFullYear()) + amount);
+  } else if (state.mode === 'month') {
+    const parts = value.split('-');
+    const d = new Date(Number(parts[0]), (Number(parts[1])||1)-1 + amount, 1);
+    value = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+  } else if (state.mode === 'day') {
+    const parts = value.split('-');
+    const d = new Date(Number(parts[0]), (Number(parts[1])||1)-1, Number(parts[2])||1);
+    d.setDate(d.getDate() + amount);
+    value = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  state.value = value;
+  _dateViewSave();
+  if (dateViewRenderers[key]) dateViewRenderers[key]();
+}
+function dateViewToday(key) {
+  const state = dateViewState[key]; if (!state || state.mode === 'all') return;
+  state.value = _dateViewDefault(state.mode);
+  _dateViewSave();
+  if (dateViewRenderers[key]) dateViewRenderers[key]();
+}
+function dateViewMatch(key, dateValue) {
+  const state = dateViewState[key] || { mode:'all', value:'' };
+  if (state.mode === 'all' || !state.value) return true;
+  const d = String(dateValue||'');
+  if (state.mode === 'year') return d.slice(0,4) === state.value;
+  if (state.mode === 'month') return d.slice(0,7) === state.value;
+  if (state.mode === 'day') return d.slice(0,10) === state.value;
+  return true;
+}
+
 function toggleSort(table, key) {
   const state = sortState[table];
   if (!state) return;
@@ -2808,7 +3005,7 @@ function onGlobalSearch(q) {
     return;
   }
   
-  clearBtn.style.display = 'block';
+  clearBtn.style.display = 'flex';
   resultsDiv.style.display = 'block';
   
   let html = '';
@@ -2977,7 +3174,21 @@ function clearGlobalSearch() {
     input.value = '';
     resultsDiv.style.display = 'none';
     clearBtn.style.display = 'none';
+    input.focus();
   }
+}
+
+function toggleGlobalSearchBox() {
+  const wrapper = document.querySelector('.global-search-wrapper');
+  const input = document.getElementById('global-search-input');
+  if (!wrapper || !input) return;
+  if (window.matchMedia('(max-width: 680px)').matches && !wrapper.classList.contains('search-open')) {
+    wrapper.classList.add('search-open');
+    setTimeout(() => input.focus(), 0);
+    return;
+  }
+  input.focus();
+  onGlobalSearch(input.value);
 }
 
 function navToGlobalSearchResult(category, id, parentId) {
@@ -3097,6 +3308,7 @@ document.addEventListener('click', function(e) {
   if (wrapper && !wrapper.contains(e.target)) {
     const results = document.getElementById('global-search-results');
     if (results) results.style.display = 'none';
+    if (window.matchMedia('(max-width: 680px)').matches) wrapper.classList.remove('search-open');
   }
 });
 
@@ -3567,14 +3779,12 @@ function _goTo(id, el) {
   const PN = {
     dashboard: '종합 대시보드', clients: '수주 정보 관리', materials: '자재 수급/발주',
     orders: '생산 지시 등록', process: '실시간 공정 관리', quality: '품질 및 검사',
-    workers: '인사 관리', alerts: '시스템 알림 로그', inventory: '재고 관리',
-    trash: '휴지통 데이터 복구', deliveries: '납품 현황',
+    workers: '인사 관리', inventory: '재고 관리', deliveries: '납품 현황',
     rfq: '견적요청서 관리', po: '구매발주서 관리', partners: '거래처 관리',
-    finance: '재무 관리', claims: '고객 클레임 관리', as: '고객 A/S · 사후관리', bom: 'BOM · 자재명세', permissions: '권한 관리',
+    finance: '재무 관리', claims: '고객 클레임 관리', as: '고객 A/S · 사후관리', bom: 'BOM · 자재명세', system: '시스템 관리',
     statement: '거래명세표 관리', taxinvoice: '세금계산서 관리',
     salesdoc: '견적/수주 관리',
-    calendar: '납기 캘린더',
-    alimtalk: '알림톡 설정'
+    calendar: '납기 캘린더'
   };
   inp('ptitle').textContent = PN[id] || id;
   currentPage = id;
@@ -3621,7 +3831,7 @@ function _updateBackBtn() {
     const PN = {
       dashboard:'대시보드', clients:'수주관리', materials:'자재관리',
       orders:'생산지시', process:'공정관리', quality:'품질검사',
-      workers:'인사', alerts:'알림', inventory:'재고', trash:'휴지통', finance:'재무', claims:'클레임', statement:'거래명세표', taxinvoice:'세금계산서', salesdoc:'견적/수주'
+      workers:'인사', system:'시스템 관리', inventory:'재고', finance:'재무', claims:'클레임', statement:'거래명세표', taxinvoice:'세금계산서', salesdoc:'견적/수주'
     };
     btn.title = `이전: ${PN[pageHistory[pageHistory.length-1]] || '이전 화면'}으로 돌아가기`;
   } else {
@@ -3641,20 +3851,17 @@ function refreshPage(id) {
   else if (id === 'taxinvoice') renderSalesDoc('tax');
   else if (id === 'salesdoc') switchSalesTab(salesTab);
   else if (id === 'workers') switchEmpTab(empTab);
-  else if (id === 'alerts') renderAlerts();
   else if (id === 'process') { go('dashboard'); setTimeout(()=>switchDashTab('process'),50); return; }
   else if (id === 'inventory') renderInventory();
   else if (id === 'deliveries') { renderDeliveries(); if (currentDlvTab === 'closed') renderClosedProjects(); }
-  else if (id === 'trash') renderTrash();
   else if (id === 'rfq') renderRfq();
   else if (id === 'po') renderPo();
   else if (id === 'partners') renderPartners();
   else if (id === 'finance') renderFinance();
   else if (id === 'as') renderAS();
   else if (id === 'bom') renderBom();
-  else if (id === 'permissions') renderPermissions();
+  else if (id === 'system') renderSystem();
   else if (id === 'calendar') renderCalendar();
-  else if (id === 'alimtalk') { renderAlimtalkSettings(); }
   if (typeof watchBulk === 'function') watchBulk();   // 일괄 선택 체크박스 부착
 }
 
@@ -4037,6 +4244,7 @@ function renderClosedProjects() {
 }
 
 function renderDeliveries() {
+  ensureDateView('deliveries', 'dlv-table', deliveries.map(d=>d.deliveredAt), renderDeliveries);
   const fc = inp('dlv-filter-client');
   if (fc) {
     const cur = fc.value;
@@ -4046,6 +4254,7 @@ function renderDeliveries() {
   const fcVal = v('dlv-filter-client');
   const q = (v('dlv-q')||'').toLowerCase();
   let fil = deliveries.filter(d=>
+    dateViewMatch('deliveries', d.deliveredAt) &&
     (!fcVal || d.clientId===fcVal) &&
     (!q || [d.productName,getClientName(d.clientId),d.id].join(' ').toLowerCase().includes(q))
   );
@@ -4325,6 +4534,7 @@ function calShowDetail(dateStr) {
 
 /* ════════ BOM · 자재명세 ════════ */
 let editBomId = null;
+let bomMaterialImportRows = [];
 function bomFor(pid){ return bomList.filter(b=>b.productId===pid); }
 /* 라인 단위원가: 반제품(subProductId)이면 하위 BOM 재료비를 롤업, 아니면 단가 */
 function bomLineUnitCost(b, seen){ return b.subProductId ? bomMaterialCost(b.subProductId, seen) : (Number(b.unitPrice)||0); }
@@ -4509,6 +4719,98 @@ function onBmaSubChange(){
   const isSub = !!v('bma-sub');
   ['bma-price','bma-supplier'].forEach(id=>{ const el=inp(id); if(el){ el.disabled=isSub; el.style.opacity=isSub?0.5:1; } });
 }
+function _bomImportKey(name, unit){
+  return (name||'').trim().toLowerCase() + '|' + (unit||'EA').trim().toLowerCase();
+}
+function _bomImportEsc(value){
+  return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function openBomMaterialImport(){
+  const p = products.find(x=>x.id===bomProductId);
+  if (!p){ showToast('제품을 먼저 선택하세요.','error'); return; }
+  const grouped = {};
+  materials.filter(m=>m.productId===p.id && (m.name||'').trim()).forEach(m=>{
+    const key = _bomImportKey(m.name, m.unit);
+    if (!grouped[key]) grouped[key] = { key, name:m.name.trim(), unit:m.unit||'EA', totalQty:0, count:0, sourceIds:[], latest:null };
+    const row = grouped[key];
+    row.totalQty += Number(m.qty)||0;
+    row.count++;
+    row.sourceIds.push(m.id);
+    const stamp = (m.orderDate||'') + '|' + (m.id||'');
+    const latestStamp = row.latest ? ((row.latest.orderDate||'') + '|' + (row.latest.id||'')) : '';
+    if (!row.latest || stamp >= latestStamp) row.latest = m;
+  });
+  bomMaterialImportRows = Object.values(grouped).map(row=>{
+    const existing = bomList.find(b=>b.productId===p.id && !b.subProductId && _bomImportKey(b.name,b.unit)===row.key);
+    const productQty = Number(p.qty)||1;
+    const latestOrderQty = Number(row.latest?.qty)||0;
+    const suggestedQty = latestOrderQty > 0 ? Math.round((latestOrderQty / productQty) * 10000) / 10000 : 0;
+    row.existingId = existing ? existing.id : '';
+    row.currentQtyPer = existing ? (Number(existing.qtyPer)||0) : null;
+    row.productQty = productQty;
+    row.latestOrderQty = latestOrderQty;
+    row.qtyPer = suggestedQty || row.currentQtyPer || '';
+    return row;
+  }).sort((a,b)=>a.name.localeCompare(b.name,'ko-KR'));
+
+  inp('bom-material-import-info').innerHTML =
+    `<b>${_bomImportEsc(p.name)}</b>에 연결된 발주 내역 ${materials.filter(m=>m.productId===p.id).length}건을 ` +
+    `${bomMaterialImportRows.length}개 자재로 묶었습니다. 소요량은 최근 발주 수량 ÷ 제품 수량 ${Number(p.qty)||1}${_bomImportEsc(p.unit||'대')}로 계산했습니다.`;
+  inp('bom-material-import-body').innerHTML = bomMaterialImportRows.length ? bomMaterialImportRows.map((row,i)=>{
+    const latest = row.latest || {};
+    return `<tr>
+      <td style="text-align:center;"><input class="bom-import-check" type="checkbox" data-index="${i}" checked></td>
+      <td><b>${_bomImportEsc(row.name)}</b><div style="font-size:10px;color:var(--tx-t);">${row.count}건 · ${_bomImportEsc(row.unit)}</div></td>
+      <td>${_bomImportEsc(latest.supplier||'미지정')}</td>
+      <td style="text-align:right;">${row.totalQty}${_bomImportEsc(row.unit)}</td>
+      <td style="text-align:right;">${fmtW(Number(latest.unitPrice)||0)}</td>
+      <td style="text-align:right;">
+        <input class="bom-import-qty" data-index="${i}" type="number" min="0.0001" step="0.0001" value="${row.qtyPer}" placeholder="필수 입력" style="width:110px;text-align:right;"> ${_bomImportEsc(row.unit)}
+        <div style="font-size:10px;color:var(--tx-t);margin-top:3px;">${row.latestOrderQty}${_bomImportEsc(row.unit)} ÷ ${row.productQty}${_bomImportEsc(p.unit||'대')}</div>
+      </td>
+      <td>${row.existingId?`<span class="bd bd-info">기존 항목 갱신</span><div style="font-size:10px;color:var(--tx-t);margin-top:3px;">현재 ${row.currentQtyPer}${_bomImportEsc(row.unit)}</div>`:'<span class="bd bd-ok">신규 추가</span>'}</td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="7">${empty('선택한 제품에 연결된 자재 수급/발주 내역이 없습니다.')}</td></tr>`;
+  const all = inp('bom-material-import-all');
+  if (all) all.checked = bomMaterialImportRows.length > 0;
+  inp('bom-material-import-modal').classList.add('open');
+}
+function toggleBomMaterialImportAll(checked){
+  document.querySelectorAll('.bom-import-check').forEach(el=>{ el.checked = checked; });
+}
+function applyBomMaterialImport(){
+  if (!checkAdminAction()) return;
+  const selected = Array.from(document.querySelectorAll('.bom-import-check:checked'));
+  if (!selected.length){ showToast('반영할 자재를 선택하세요.','error'); return; }
+  let added = 0, updated = 0, skipped = 0;
+  selected.forEach(check=>{
+    const i = Number(check.dataset.index);
+    const row = bomMaterialImportRows[i];
+    const qtyEl = document.querySelector(`.bom-import-qty[data-index="${i}"]`);
+    const qtyPer = qtyEl ? parseFloat(qtyEl.value) : 0;
+    if (!row || !(qtyPer > 0)){ skipped++; return; }
+    const latest = row.latest || {};
+    const rec = {
+      productId: bomProductId, name: row.name, spec: '', qtyPer, unit: row.unit||'EA',
+      unitPrice: Number(latest.unitPrice)||0, supplier: (latest.supplier||'').trim(), subProductId: '',
+      sourceMaterialIds: row.sourceIds.slice(), lastSyncedAt: new Date().toISOString()
+    };
+    const existing = row.existingId ? bomList.find(b=>b.id===row.existingId) : null;
+    if (existing){
+      rec.spec = existing.spec||'';
+      Object.assign(existing, rec);
+      updated++;
+    } else {
+      bomList.push(Object.assign({ id: nextCode('BM', bomList) }, rec));
+      added++;
+    }
+  });
+  if (!added && !updated){ showToast('소요량이 입력된 항목이 없습니다.','error'); return; }
+  saveStorage('bomList', bomList);
+  closeModal('bom-material-import-modal');
+  renderBom();
+  showToast(`자재 발주 내역을 BOM에 반영했습니다. 신규 ${added}건 · 갱신 ${updated}건${skipped?` · 제외 ${skipped}건`:''}`);
+}
 function openBomAdd(){
   if (!bomProductId){ showToast('제품을 먼저 선택하세요.','error'); return; }
   editBomId = null;
@@ -4522,6 +4824,16 @@ function openBomEdit(id){
   editBomId = id;
   inp('bom-modal-ttl').innerHTML = '<i class="ti ti-edit" style="color:var(--tx-w);"></i>BOM 자재 수정';
   sv('bma-name',b.name); sv('bma-spec',b.spec||''); sv('bma-qty',b.qtyPer); sv('bma-unit',b.unit||'EA'); sv('bma-price',b.unitPrice||'0'); sv('bma-supplier',b.supplier||'');
+  inp('bma-sub').innerHTML = _bomSubOptions(b.subProductId||''); onBmaSubChange();
+  inp('bom-modal').classList.add('open');
+}
+function cloneBom(id){
+  if (!checkAdminAction()) return;
+  const b = bomList.find(x=>x.id===id); if(!b) return;
+  editBomId = null;
+  inp('bom-modal-ttl').innerHTML = '<i class="ti ti-copy" style="color:var(--tx-i);"></i>BOM 자재 복제 추가';
+  sv('bma-name',b.name); sv('bma-spec',b.spec||''); sv('bma-qty',b.qtyPer);
+  sv('bma-unit',b.unit||'EA'); sv('bma-price',b.unitPrice||'0'); sv('bma-supplier',b.supplier||'');
   inp('bma-sub').innerHTML = _bomSubOptions(b.subProductId||''); onBmaSubChange();
   inp('bom-modal').classList.add('open');
 }
@@ -4787,7 +5099,6 @@ document.addEventListener('keydown', function(e) {
     openCurrentPageRegistration();
   }
 });
-
 
 /* ════════ 2. 수주 및 제품 등록 관리 (드래그 앤 드롭 지원!) ════════ */
 function renderClients() {
@@ -5119,6 +5430,22 @@ function openProdEdit(clientId, productId) {
   onPraStageChange(); updateProdCostPreview();
   modal.classList.add('open');
 }
+function cloneProduct(clientId, productId) {
+  if (!checkAdminAction()) return;
+  const p = products.find(x => x.id === productId); if (!p) return;
+  editProductId = null;
+  const modal = inp('prod-modal');
+  modal.dataset.clientId = clientId;
+  inp('prod-modal-ttl').innerHTML = '<i class="ti ti-copy" style="color:var(--tx-i);"></i>제품 복제 등록 — ' + getClientName(clientId);
+  inp('pra-save-txt').textContent = '신규 등록';
+  inp('pra-stage').innerHTML = processStages.map(s=>'<option>'+s+'</option>').join('');
+  sv('pra-id', nextCode('PR', products)); sv('pra-name', p.name); sv('pra-spec', p.spec||'');
+  sv('pra-due', p.deliveryDate||''); sv('pra-qty', p.qty||1); sv('pra-unit', p.unit||'대');
+  sv('pra-price', p.price||0); sv('pra-stage', processStages[0]||p.processStage); sv('pra-note', p.note||'');
+  sv('pra-matcost', p.matCost||0); sv('pra-laborcost', p.laborCost||0); sv('pra-ovhcost', p.ovhCost||0);
+  onPraStageChange(); updateProdCostPreview();
+  modal.classList.add('open');
+}
 /* 제조원가 = 재료비+노무비+경비, 공헌이익 = 수주단가-제조원가 (단위 기준) */
 function prodUnitCost(p){ return (Number(p.matCost)||0)+(Number(p.laborCost)||0)+(Number(p.ovhCost)||0); }
 function updateProdCostPreview() {
@@ -5284,6 +5611,7 @@ function onAddMatClientChange() {
   if (sel) sel.innerHTML = '<option value="">-- 품목 선택 --</option>' + products.filter(p=>!cid||p.clientId===cid).map(p=>'<option value="'+p.id+'">'+p.name+'</option>').join('');
 }
 function renderMaterials() {
+  ensureDateView('materials', 'mat-table', materials.map(m=>m.orderDate), renderMaterials);
   const before = materials.filter(m=>m.status==='발주전').length;
   const shipping = materials.filter(m=>m.status==='발주중'||m.status==='지연').length;
   const done = materials.filter(m=>m.status==='입고완료').length;
@@ -5305,6 +5633,7 @@ function renderMaterials() {
 
   const fc=v('mat-fc'), fp=v('mat-fp'), fs=v('mat-fs'), q=(v('mat-q')||'').toLowerCase();
   let rows = materials.filter(m => {
+    if (!dateViewMatch('materials', m.orderDate)) return false;
     const prod = getProductById(m.productId);
     if (fc && (!prod || prod.clientId !== fc)) return false;
     if (fp && m.productId !== fp) return false;
@@ -5404,6 +5733,23 @@ function openMatEdit(id) {
   sv('ma-price', m.unitPrice||0); sv('ma-qty', m.qty||0);
   sv('ma-unit', m.unit||'EA'); sv('ma-status', m.status);
   sv('ma-odate', m.orderDate||''); sv('ma-edate', m.expectedDate||''); sv('ma-note', m.note||'');
+  inp('mat-modal').classList.add('open');
+}
+function cloneMat(id) {
+  if (!checkAdminAction()) return;
+  const m = materials.find(x=>x.id===id); if (!m) return;
+  editMatId = null;
+  inp('mat-modal-ttl').innerHTML = '<i class="ti ti-copy" style="color:var(--tx-i);"></i>자재 발주 복제 등록';
+  sv('ma-id', nextCode('MT', materials));
+  const prod = getProductById(m.productId);
+  fillClientSelect('ma-client', false);
+  sv('ma-client', prod?prod.clientId:'');
+  onAddMatClientChange();
+  sv('ma-product', m.productId);
+  sv('ma-name', m.name); sv('ma-supplier', m.supplier||'');
+  sv('ma-price', m.unitPrice||0); sv('ma-qty', m.qty||0);
+  sv('ma-unit', m.unit||'EA'); sv('ma-status', '발주전');
+  sv('ma-odate', today()); sv('ma-edate', m.expectedDate||''); sv('ma-note', m.note||'');
   inp('mat-modal').classList.add('open');
 }
 function saveMaterialForm() {
@@ -5971,6 +6317,7 @@ function renderInventoryLedger() {
 
 /* ════════ [복구] 생산 지시 (renderOrders) ════════ */
 function renderOrders() {
+  ensureDateView('orders', 'orders-table', workOrders.map(o=>o.start), renderOrders);
   const totalQty = workOrders.reduce((s,o)=>s+(o.qty||0),0);
   const totalDone = workOrders.reduce((s,o)=>s+(o.done||0),0);
   const inProg = workOrders.filter(o=>o.status==='진행중').length;
@@ -5992,6 +6339,7 @@ function renderOrders() {
 
   const q=(v('orders-q')||'').toLowerCase(), fs=v('orders-fs')||'';
   let fil = workOrders.filter(o=>{
+    if (!dateViewMatch('orders', o.start)) return false;
     if (fs && o.status!==fs) return false;
     if (q && ![o.id, o.manager||'', getProductName(o.productId), getClientName(o.clientId)].join(' ').toLowerCase().includes(q)) return false;
     return true;
@@ -6188,6 +6536,22 @@ function openOrderEdit(id) {
   sv('oa-status', o.status);
   fillWorkerSelect('oa-mgr', o.manager);
   sv('oa-note', o.note || '');
+  inp('order-modal').classList.add('open');
+}
+
+function cloneOrder(id) {
+  if (!checkAdminAction()) return;
+  const o = workOrders.find(x => x.id === id); if (!o) return;
+  editOrderId = null;
+  inp('order-modal-ttl').innerHTML = `<i class="ti ti-copy" style="color:var(--tx-i);"></i>생산 지시서 복제 발행 — ${o.id}`;
+  const saveBtn = inp('order-save-btn');
+  if (saveBtn) saveBtn.innerHTML = '<i class="ti ti-check"></i>신규 발행';
+  sv('oa-id', nextCode('WO', workOrders));
+  fillClientSelect('oa-client', false); sv('oa-client', o.clientId);
+  fillProductSelect('oa-product', o.clientId, o.productId);
+  sv('oa-line', o.line); sv('oa-qty', o.qty); sv('oa-done', 0);
+  sv('oa-start', today()); sv('oa-due', o.due||''); sv('oa-status', '대기');
+  fillWorkerSelect('oa-mgr', o.manager); sv('oa-note', o.note||'');
   inp('order-modal').classList.add('open');
 }
 
@@ -6812,6 +7176,9 @@ function exportProcessCSV() {
 
 /* ════════ 6. 품질 및 검사 관리 ════════ */
 function renderQuality() {
+  ensureDateView('defects', 'defect-table', defects.map(d=>d.date), renderQuality);
+  ensureDateView('qualityClaims', 'claim-table', claims.map(c=>c.date), renderQuality);
+  ensureDateView('checks', 'check-table', checkRecords.map(r=>r.date), renderQuality);
   const totDefect = defects.reduce((s, d) => s + d.qty, 0);
   const openDefect = defects.filter(d => d.status !== '완료').length;
   const claimOpen = claims.filter(c => c.status !== '완료').length;
@@ -6830,6 +7197,7 @@ function renderQuality() {
   const _dfq = (v('df-q')||'').toLowerCase();
   const _dffs = v('df-fs');
   let filteredDefects = defects.filter(d => {
+    if (!dateViewMatch('defects', d.date)) return false;
     const cname = getClientName(getProductById(d.productId)?.clientId);
     if (_dfq && ![d.id, getProductName(d.productId), cname, d.type, d.stage, d.cause||''].join(' ').toLowerCase().includes(_dfq)) return false;
     if (_dffs && d.status !== _dffs) return false;
@@ -6898,6 +7266,7 @@ function renderQuality() {
   const _clq = (v('cl-q')||'').toLowerCase();
   const _clfs = v('cl-fs');
   let filteredClaims = claims.filter(c => {
+    if (!dateViewMatch('qualityClaims', c.date)) return false;
     if (_clq && ![c.id, getClientName(c.clientId), getProductName(c.productId), c.content||''].join(' ').toLowerCase().includes(_clq)) return false;
     if (_clfs && c.status !== _clfs) return false;
     return true;
@@ -6967,6 +7336,7 @@ function renderQuality() {
   const _ckq = (v('ck-q')||'').toLowerCase();
   const _ckfs = v('ck-fs');
   let filteredChecks = checkRecords.filter(r => {
+    if (!dateViewMatch('checks', r.date)) return false;
     if (_ckq && ![getProductName(r.productId), getClientName(r.clientId), r.inspector||''].join(' ').toLowerCase().includes(_ckq)) return false;
     if (_ckfs && r.result !== _ckfs) return false;
     return true;
@@ -7036,6 +7406,7 @@ function renderQuality() {
 function _escHtml(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function renderClaims() {
+  ensureDateView('claims', 'claims-table-full', claims.map(c=>c.date), renderClaims);
   const kpi = inp('claims-kpi');
   if (kpi) {
     const ing  = claims.filter(c => c.status === '처리중').length;
@@ -7060,6 +7431,7 @@ function renderClaims() {
   const q = (v('claims-q')||'').toLowerCase();
   const fs = v('claims-fs');
   let list = claims.filter(c => {
+    if (!dateViewMatch('claims', c.date)) return false;
     if (q && ![c.id, c.kind||'', claimClientLabel(c), claimProductLabel(c), c.content||'', c.response||''].join(' ').toLowerCase().includes(q)) return false;
     if (fs && c.status !== fs) return false;
     return true;
@@ -7976,7 +8348,10 @@ function pushToTrash(type, name, originalId, data, cascadeData = null) {
 
 function updateTrashBadge() {
   const el = inp('trashBadge');
-  if (el) el.textContent = trash.length;
+  if (el) {
+    el.textContent = trash.length;
+    el.style.display = trash.length ? '' : 'none';
+  }
 }
 
 function restoreTrash(id) {
@@ -8320,7 +8695,7 @@ const FIREBASE_CONFIG = {
   measurementId: "G-PBGH98NRCT"
 };
 /* 클라우드로 공유할 데이터 키(테마/관리자비번 등 기기·보안 로컬값은 제외) */
-const CLOUD_KEYS = ['clients','products','materials','workOrders','workers','defects','claims','checkRecords','alerts','inventory','deliveries','stages','trash','rfqList','poList','partners','statementList','taxList','quoteList','orderList','financeData','attendance','leaves','asList','bomList','companyInfo'];
+const CLOUD_KEYS = ['clients','products','materials','workOrders','workers','defects','claims','checkRecords','alerts','inventory','deliveries','stages','trash','rfqList','poList','partners','statementList','taxList','quoteList','orderList','financeData','attendance','leaves','asList','bomList','companyInfo','docXlsxTemplates'];
 let _fbAuth=null, _fbDb=null, _cloudUser=null;   // _cloudActive는 앞쪽(전역 상태)에서 선언됨
 const _cloudQueue=new Set(); let _cloudTimer=null; let _cloudUnsub=null;
 
@@ -8354,7 +8729,7 @@ const PAGE_LIST = [
   {id:'partners',label:'거래처 관리'},{id:'rfq',label:'견적요청서'},{id:'po',label:'구매발주서'},
   {id:'salesdoc',label:'견적/수주'},{id:'statement',label:'거래명세표'},{id:'taxinvoice',label:'세금계산서'},
   {id:'finance',label:'재무 관리'},{id:'workers',label:'인사 관리'},
-  {id:'as',label:'고객 A/S'},{id:'alimtalk',label:'알림톡 설정'},{id:'alerts',label:'알림'},{id:'trash',label:'휴지통'}
+  {id:'as',label:'고객 A/S'},{id:'system',label:'시스템 관리'}
 ];
 /* 역할별 기본 접근 페이지(관리자가 화면에서 편집 가능). admin은 항상 전체. */
 const DEFAULT_ROLE_PAGES = {
@@ -8370,7 +8745,7 @@ function roleAllowedSet(role){
   return new Set((cfg && cfg[role]) || DEFAULT_ROLE_PAGES[role] || []);
 }
 function pageAllowed(id){
-  if (id==='permissions') return currentRole==='admin';  // 권한관리는 관리자 전용
+  if (id==='system') return currentRole==='admin';  // 시스템 관리는 관리자 전용
   if (!allowedPages) return true;                        // null = 전체(admin/로컬)
   return allowedPages.has(id);
 }
@@ -8607,7 +8982,7 @@ function cloudSubscribe(){
     if (!changed) return;
     allowedPages = roleAllowedSet(currentRole);   // 페이지 권한 재계산 후 재적용
     applyRoleGating(); applyColumnGating(); applyFeatureGating();
-    if (currentPage==='permissions' && !document.querySelector('.overlay.open')) { try{ renderPermissions(); }catch(e){} }
+    if (currentPage==='system' && systemTab==='permissions' && !document.querySelector('.overlay.open')) { try{ renderPermissions(); }catch(e){} }
     _cloudChip('synced'); setTimeout(()=>_cloudChip('online'), 1500);
   }, err=>{ console.warn('권한 실시간 동기화 오류', err); });
 
@@ -8617,7 +8992,7 @@ function cloudSubscribe(){
     saveStorageLocalOnly('cloudUsers_cache', cloudUsers);
     if (!document.querySelector('.overlay.open')){
       if (currentPage==='workers') { try{ renderWorkers(); }catch(e){} }
-      if (currentPage==='permissions') { try{ renderPermissions(); }catch(e){} }
+      if (currentPage==='system' && systemTab==='permissions') { try{ renderPermissions(); }catch(e){} }
     }
   }, err=>{ console.warn('계정 목록 동기화 오류', err); });
 }
@@ -8663,6 +9038,50 @@ function _cloudChip(state){
 }
 
 /* ════════ 권한 관리 화면 ════════ */
+let systemTab = 'permissions';
+function switchSystemTab(tab) {
+  systemTab = tab || 'permissions';
+  document.querySelectorAll('#system-tabs [data-systab]').forEach(btn => {
+    btn.classList.toggle('btn-primary', btn.dataset.systab === systemTab);
+  });
+  document.querySelectorAll('#pg-system .system-panel').forEach(panel => {
+    panel.style.display = panel.id === 'system-panel-' + systemTab ? '' : 'none';
+  });
+  if (systemTab === 'permissions') renderPermissions();
+  else if (systemTab === 'company') renderSystemCompany();
+  else if (systemTab === 'templates') renderDocTemplateManagement();
+  else if (systemTab === 'alimtalk') renderAlimtalkSettings();
+  else if (systemTab === 'alerts') renderAlerts();
+  else if (systemTab === 'trash') renderTrash();
+}
+function renderSystem() {
+  switchSystemTab(systemTab);
+}
+function renderSystemCompany() {
+  const el = inp('system-company-summary');
+  if (!el) return;
+  const ci = getCompanyInfo();
+  const row = (label, value) => `<div style="display:grid;grid-template-columns:130px 1fr;gap:12px;padding:9px 4px;border-bottom:1px solid var(--br);font-size:12px;"><strong style="color:var(--tx-s);">${label}</strong><span>${value || '미설정'}</span></div>`;
+  el.innerHTML =
+    row('회사명', ci.name) +
+    row('대표자', ci.ceo) +
+    row('사업자등록번호', ci.bizNo) +
+    row('주소', ci.address) +
+    row('연락처', [ci.tel, ci.fax].filter(Boolean).join(' / ')) +
+    row('이메일', ci.email) +
+    row('담당부서', ci.dept) +
+    row('업태 / 종목', [ci.bizType, ci.bizItem].filter(Boolean).join(' / '));
+}
+function renderDocTemplateManagement() {
+  const store = typeof _docTemplateStore === 'function' ? _docTemplateStore() : {};
+  ['rfq','po','quote','statement','tax'].forEach(type => {
+    const el = inp(type + '-template-status');
+    if (!el) return;
+    const saved = store[type];
+    el.textContent = saved ? `등록됨: ${saved.name}` : '기본 양식 사용 중';
+    el.style.color = saved ? 'var(--tx-ok)' : 'var(--tx-t)';
+  });
+}
 async function renderPermissions(){
   const body=inp('perm-body'); if(!body) return;
   if (!_cloudActive){ body.innerHTML=`<div class="card"><div class="empty"><i class="ti ti-cloud-off"></i>클라우드 로그인 후 사용할 수 있는 기능입니다. (Firebase 미설정 시 로컬 전용)</div></div>`; return; }
@@ -8855,10 +9274,10 @@ async function permToggleRolePage(role, pageId, on){
 /* ════════ 일괄 선택/동작 (테이블 비종속) — 체크박스 + 전체 선택 + 0건 시 비활성 ════════
    각 표의 행 삭제 버튼 onclick에서 id를 추출하므로 렌더 함수 수정 불필요. */
 const BULK_CFG = {
-  rfq:        {sel:'#rfq-table',        del:'deleteRfq',       edit:'openRfqEdit',    pdf:'openRfqPrint', csv:'exportRfqXLS', email:'openEmailModal'},
-  materials:  {sel:'#mat-table',        del:'deleteMat',       edit:'openMatEdit'},
+  rfq:        {sel:'#rfq-table',        del:'deleteRfq',       edit:'openRfqEdit',    clone:'cloneRfq', pdf:'openRfqPrint', csv:'exportRfqXLS', email:'openEmailModal'},
+  materials:  {sel:'#mat-table',        del:'deleteMat',       edit:'openMatEdit',    clone:'cloneMat'},
   inventory:  {sel:'#inventory-table',  del:'deleteInventory', edit:'openInvEdit'},
-  orders:     {sel:'#orders-table',     del:'deleteOrder',     edit:'openOrderEdit'},
+  orders:     {sel:'#orders-table',     del:'deleteOrder',     edit:'openOrderEdit',  clone:'cloneOrder'},
   defects:    {sel:'#defect-table',     del:'deleteDefect',    edit:'openDefectEdit'},
   checks:     {sel:'#check-table',      del:'deleteCheck',     edit:'openCheckEdit'},
   claims:     {sel:'#claims-table-full',del:'deleteClaim',     edit:'openClaimEdit'},
@@ -8866,46 +9285,51 @@ const BULK_CFG = {
   workers:    {sel:'#workers-table',    del:'deleteWorker',    edit:'openWorkerEdit'},
   as:         {sel:'#as-body',          del:'deleteAS',        edit:'openAsEdit'},
   partners:   {sel:'#bp-table',         del:'deletePartner',   edit:'openPartnerModal'},
-  statement:  {sel:'#st-table', type:'statement', del:'deleteSalesDoc', edit:'openSalesDocEdit', pdf:'openSalesDocPrint', email:'openEmailModal'},
-  tax:        {sel:'#tx-table', type:'tax',       del:'deleteSalesDoc', edit:'openSalesDocEdit', pdf:'openSalesDocPrint', email:'openEmailModal'},
-  quote:      {sel:'#qt-table', type:'quote',     del:'deleteSODoc',    edit:'openSODocEdit',    pdf:'openSODocPrint',    email:'openEmailModal'},
-  order:      {sel:'#so-table', type:'order',     del:'deleteSODoc',    edit:'openSODocEdit',    pdf:'openSODocPrint',    email:'openEmailModal'}
+  statement:  {sel:'#st-table', type:'statement', del:'deleteSalesDoc', edit:'openSalesDocEdit', clone:'cloneSalesDoc', pdf:'openSalesDocPrint', email:'openEmailModal'},
+  tax:        {sel:'#tx-table', type:'tax',       del:'deleteSalesDoc', edit:'openSalesDocEdit', clone:'cloneSalesDoc', pdf:'openSalesDocPrint', email:'openEmailModal'},
+  quote:      {sel:'#qt-table', type:'quote',     del:'deleteSODoc',    edit:'openSODocEdit',    clone:'cloneSODoc', pdf:'openSODocPrint', email:'openEmailModal'},
+  order:      {sel:'#so-table', type:'order',     del:'deleteSODoc',    edit:'openSODocEdit',    clone:'cloneSODoc', pdf:'openSODocPrint', email:'openEmailModal'},
+  products:   {sel:'#client-list',       del:'deleteProduct',   edit:'openProdEdit',   clone:'cloneProduct'},
+  bom:        {sel:'#bom-body',          del:'deleteBom',       edit:'openBomEdit',    clone:'cloneBom'}
 };
 const bulkSel = {};
 function _escRe(s){ return String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
 function enhanceBulk(key){
   const c=BULK_CFG[key]; if(!c) return;
   const cont=document.querySelector(c.sel); if(!cont) return;
-  const table=cont.querySelector('table'); if(!table) return;
-  const headRow=table.querySelector('thead tr'); if(!headRow) return;
-  if(table.dataset.bulk){ updateBulkBar(key); return; }
-  table.dataset.bulk='1';
-  bulkSel[key]=new Set();
+  const tables=[...cont.querySelectorAll('table')]; if(!tables.length) return;
+  if(!bulkSel[key] || tables.some(table=>!table.dataset.bulk)) bulkSel[key]=new Set();
   // (type,id) 시그니처 함수는 두 번째 인자가 id
   const delRe = c.type
     ? new RegExp(_escRe(c.del)+"\\(\\s*['\"][^'\"]*['\"]\\s*,\\s*['\"]([^'\"]+)['\"]")
     : new RegExp(_escRe(c.del)+"\\(\\s*['\"]([^'\"]+)['\"]");
-  const hideFns=[c.del,c.pdf,c.csv,c.email].filter(Boolean);
-  const th=document.createElement('th'); th.style.cssText='width:24px;padding:6px 3px;text-align:center;';
-  th.innerHTML=`<input type="checkbox" title="전체 선택" onclick="bulkToggleAll('${key}',this.checked)" style="width:12px;height:12px;accent-color:#1971c2;cursor:pointer;vertical-align:middle;">`;
-  headRow.insertBefore(th, headRow.firstChild);
-  [...table.querySelectorAll('tbody tr')].forEach(tr=>{
-    let id=null;
-    tr.querySelectorAll('[onclick]').forEach(b=>{ const m=(b.getAttribute('onclick')||'').match(delRe); if(m && id==null) id=m[1]; });
-    const td=document.createElement('td'); td.style.cssText='text-align:center;padding:6px 3px;';
-    if(id!=null){
-      td.innerHTML=`<input type="checkbox" data-bid="${id}" onclick="bulkToggle('${key}','${id.replace(/'/g,"\\'")}',this.checked)" style="width:12px;height:12px;accent-color:#1971c2;cursor:pointer;vertical-align:middle;">`;
-      tr.querySelectorAll('[onclick]').forEach(b=>{ const oc=b.getAttribute('onclick')||''; if(c.edit && oc.includes(c.edit+'(')) return; if(hideFns.some(fn=>oc.includes(fn+'('))) b.style.display='none'; });
-    }
-    tr.insertBefore(td, tr.firstChild);
+  const hideFns=[c.del,c.clone,c.pdf,c.csv,c.email].filter(Boolean);
+  tables.forEach(table=>{
+    if(table.dataset.bulk) return;
+    const headRow=table.querySelector('thead tr'); if(!headRow) return;
+    table.dataset.bulk='1';
+    const th=document.createElement('th'); th.style.cssText='width:24px;padding:6px 3px;text-align:center;';
+    th.innerHTML=`<input type="checkbox" title="전체 선택" onclick="bulkToggleAll('${key}',this.checked)" style="width:12px;height:12px;accent-color:#1971c2;cursor:pointer;vertical-align:middle;">`;
+    headRow.insertBefore(th, headRow.firstChild);
+    [...table.querySelectorAll('tbody tr')].forEach(tr=>{
+      let id=null;
+      tr.querySelectorAll('[onclick]').forEach(b=>{ const m=(b.getAttribute('onclick')||'').match(delRe); if(m && id==null) id=m[1]; });
+      const td=document.createElement('td'); td.style.cssText='text-align:center;padding:6px 3px;';
+      if(id!=null){
+        td.innerHTML=`<input type="checkbox" data-bid="${id}" onclick="bulkToggle('${key}','${id.replace(/'/g,"\\'")}',this.checked)" style="width:12px;height:12px;accent-color:#1971c2;cursor:pointer;vertical-align:middle;">`;
+        tr.querySelectorAll('[onclick]').forEach(b=>{ const oc=b.getAttribute('onclick')||''; if(c.edit && oc.includes(c.edit+'(')) return; if(hideFns.some(fn=>oc.includes(fn+'('))) b.style.display='none'; });
+      }
+      tr.insertBefore(td, tr.firstChild);
+    });
   });
-  ensureBulkBar(key, table);
+  ensureBulkBar(key, tables[0], cont);
   updateBulkBar(key);
 }
-function ensureBulkBar(key, table){
+function ensureBulkBar(key, table, cont){
   if(document.getElementById('bulkbar-'+key)) return;
   const c=BULK_CFG[key]; const wrap=table.parentElement; if(!wrap||!wrap.parentNode) return;
   let btns='';
+  if(c.clone) btns+=`<button class="btn btn-sm" data-clone onclick="bulkRun('${key}','clone')"><i class="ti ti-copy"></i>선택 복제</button>`;
   if(c.pdf)   btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','pdf')"><i class="ti ti-printer"></i>선택 PDF 출력</button>`;
   if(c.csv)   btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','csv')"><i class="ti ti-file-spreadsheet"></i>선택 엑셀</button>`;
   if(c.email) btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','email')"><i class="ti ti-mail"></i>선택 이메일</button>`;
@@ -8913,18 +9337,27 @@ function ensureBulkBar(key, table){
   const bar=document.createElement('div'); bar.id='bulkbar-'+key;
   bar.style.cssText='display:none;align-items:center;gap:8px;margin:0 0 12px;padding:9px 14px;background:var(--bg-i);border:1px solid var(--br-i);border-radius:8px;flex-wrap:wrap;';
   bar.innerHTML=`<span style="font-weight:700;font-size:12.5px;color:var(--tx-i);"><i class="ti ti-checkbox"></i> <span id="bulkcnt-${key}">0</span>건 선택됨</span>${btns}<button class="btn btn-sm" style="margin-left:auto;" onclick="bulkToggleAll('${key}',false)"><i class="ti ti-x"></i>선택 해제</button>`;
-  wrap.parentNode.insertBefore(bar, wrap);
+  if(key==='products' || key==='bom') cont.parentNode.insertBefore(bar, cont);
+  else wrap.parentNode.insertBefore(bar, wrap);
 }
 function updateBulkBar(key){
   const n=(bulkSel[key]||new Set()).size;
   const cnt=document.getElementById('bulkcnt-'+key); if(cnt) cnt.textContent=n;
   const bar=document.getElementById('bulkbar-'+key); if(bar) bar.style.display = n>0 ? 'flex' : 'none';   // 선택 시에만 표시
+  const clone=bar&&bar.querySelector('[data-clone]'); if(clone) clone.style.display = n===1 ? '' : 'none';
 }
 function bulkToggle(key,id,on){ const s=bulkSel[key]=bulkSel[key]||new Set(); if(on)s.add(id);else s.delete(id); updateBulkBar(key); }
 function bulkToggleAll(key,on){ const s=bulkSel[key]=new Set(); const cont=document.querySelector(BULK_CFG[key].sel); if(cont) cont.querySelectorAll('tbody input[type=checkbox][data-bid]').forEach(cb=>{ cb.checked=on; if(on) s.add(cb.getAttribute('data-bid')); }); updateBulkBar(key); }
 function bulkRun(key, action){
   const c=BULK_CFG[key]; const ids=[...(bulkSel[key]||[])]; if(!ids.length) return;
-  if(action==='delete'){
+  if(action==='clone' && c.clone){
+    if(ids.length!==1) return;
+    const id=ids[0];
+    if(key==='products'){
+      const p=products.find(x=>x.id===id); if(p) window[c.clone](p.clientId,id);
+    } else if(c.type) window[c.clone](c.type,id);
+    else window[c.clone](id);
+  } else if(action==='delete'){
     if(!confirm(`선택한 ${ids.length}건을 삭제하시겠습니까?`)) return;
     const oc=window.confirm; window.confirm=()=>true;
     const ocf=window.confirm_; window.confirm_=(t,m,fn)=>{ try{ fn&&fn(); }catch(e){} };   // 커스텀 확인창도 자동 승인
@@ -9004,6 +9437,7 @@ function openCompanySettings() {
 function saveCompanySettings() {
   saveStorage('companyInfo', { name:v('ci-name'), address:v('ci-addr'), tel:v('ci-tel'), fax:v('ci-fax'), bizNo:v('ci-bizno'), ceo:v('ci-ceo'), dept:v('ci-dept'), bizType:v('ci-biztype'), bizItem:v('ci-bizitem'), email:v('ci-email') });
   closeModal('company-modal');
+  if (typeof renderSystemCompany === 'function' && currentPage === 'system') renderSystemCompany();
   showToast('회사 정보가 저장되었습니다.');
 }
 
@@ -9421,6 +9855,7 @@ function _docPrintStyle() {
 
 /* ╦╦╦╦╦╦╦╦ 견적요청서 (RFQ) ╦╦╦╦╦╦╦╦ */
 function renderRfq() {
+  ensureDateView('rfq', 'rfq-table', rfqList.map(r=>r.date), renderRfq);
   const total   = rfqList.length;
   const pending = rfqList.filter(r => r.status === '요청중').length;
   const replied = rfqList.filter(r => r.status === '회신완료').length;
@@ -9443,6 +9878,7 @@ function renderRfq() {
 
   const fc = v('rfq-fc'), fs = v('rfq-fs'), q = v('rfq-q').toLowerCase();
   const rows = rfqList.filter(r => {
+    if (!dateViewMatch('rfq', r.date)) return false;
     if (fc && r.clientId !== fc) return false;
     if (fs && r.status !== fs)   return false;
     if (q && !r.itemName.toLowerCase().includes(q) && !r.supplier.toLowerCase().includes(q)) return false;
@@ -9585,6 +10021,27 @@ function openRfqEdit(id) {
   modal.classList.add('open');
 }
 
+function cloneRfq(id) {
+  if (!checkAdminAction()) return;
+  const r = rfqList.find(x => x.id === id); if (!r) return;
+  const modal = inp('rfq-modal');
+  delete modal.dataset.editId;
+  inp('rfq-modal-ttl').innerHTML = '<i class="ti ti-copy" style="color:var(--tx-i);"></i>견적요청서 복제 등록';
+  inp('rq-id').value = nextDocCode('Q', rfqList);
+  inp('rq-date').value = today();
+  inp('rq-status').value = '요청전';
+  _syncRfqClientDropdown(r.clientId);
+  inp('rq-client').value = r.clientId; onRfqClientChange();
+  inp('rq-product').value = r.productId||'';
+  inp('rq-supplier').value = r.supplier||''; inp('rq-semail').value = r.supplierEmail||'';
+  inp('rq-item').value = r.itemName||''; inp('rq-spec').value = r.spec||'';
+  inp('rq-qty').value = r.qty||1; inp('rq-unit').value = r.unit||'EA';
+  if (inp('rq-target')) inp('rq-target').value = r.targetPrice||'';
+  inp('rq-note').value = r.note||'';
+  inp('rfq-save-btn').onclick = saveRfqForm;
+  modal.classList.add('open');
+}
+
 function changeRfqStatus(id, val) {
   const r = rfqList.find(x => x.id === id);
   if (!r) return;
@@ -9706,6 +10163,7 @@ function exportRfqXLS(id = null) {
 
 /* ╦╦╦╦╦╦╦╦ 구매발주서 (PO) ╦╦╦╦╦╦╦╦ */
 function renderPo() {
+  ensureDateView('po', 'po-table', poList.map(p=>p.date), renderPo);
   const total  = poList.length;
   const sent   = poList.filter(p => p.status === '발송완료').length;
   const done   = poList.filter(p => p.status === '입고완료').length;
@@ -9731,6 +10189,7 @@ function renderPo() {
 
   const fc = v('po-fc'), fs = v('po-fs'), q = v('po-q').toLowerCase();
   const rows = poList.filter(p => {
+    if (!dateViewMatch('po', p.date)) return false;
     if (fc && p.clientId !== fc) return false;
     if (fs && p.status !== fs)   return false;
     if (q && !p.itemName.toLowerCase().includes(q) && !p.supplier.toLowerCase().includes(q)) return false;
@@ -9800,11 +10259,13 @@ function poToggleAll(checked){
 function poUpdateBulkBar(){
   const ids=poCheckedIds(), bar=inp('po-bulkbar');
   if(bar){ bar.style.display = ids.length ? 'flex' : 'none'; const cnt=inp('po-sel-count'); if(cnt) cnt.textContent=ids.length; }
+  const clone=inp('po-clone-btn'); if(clone) clone.style.display=ids.length===1?'':'none';
   const all=inp('po-check-all');
   if(all){ const total=document.querySelectorAll('#po-table .po-check').length;
     all.checked = total>0 && ids.length===total; all.indeterminate = ids.length>0 && ids.length<total; }
 }
 function poBulkPrint(){ const ids=poCheckedIds(); if(!ids.length) return; openPoPrint(ids, true); }   // 선택 건은 건별 개별 출력
+function poBulkClone(){ const ids=poCheckedIds(); if(ids.length===1) clonePo(ids[0]); }
 function poBulkExport(){ const ids=poCheckedIds(); if(!ids.length) return; exportPoXLS(ids); }
 function poBulkEmail(){ const ids=poCheckedIds(); if(ids.length!==1){ showToast('이메일은 한 건만 선택해 발송하세요.','info'); return; } openEmailModal(poList.find(x=>x.id===ids[0]),'po'); }
 function poBulkDelete(){
@@ -9901,6 +10362,27 @@ function openPoEdit(id) {
   if(inp('po-price')) inp('po-price').value = p.unitPrice||'';
   inp('po-pay').value = p.payMethod||'현금'; inp('po-dlv').value = p.dlvMethod||'직납';
   inp('po-note').value = p.note||'';
+  modal.classList.add('open');
+}
+
+function clonePo(id) {
+  if (!checkAdminAction()) return;
+  const p = poList.find(x => x.id === id); if (!p) return;
+  const modal = inp('po-modal');
+  delete modal.dataset.editId;
+  inp('po-modal-ttl').innerHTML = '<i class="ti ti-copy" style="color:var(--tx-i);"></i>구매발주서 복제 등록';
+  inp('po-id').value = nextDocCode('P', poList);
+  inp('po-date').value = today(); inp('po-status').value = '작성중';
+  _syncPoClientDropdown(p.clientId);
+  inp('po-client-sel').value = p.clientId; onPoClientChange();
+  inp('po-product-sel').value = p.productId||'';
+  inp('po-supplier').value = p.supplier||''; inp('po-semail').value = p.supplierEmail||'';
+  inp('po-item').value = p.itemName||''; inp('po-spec').value = p.spec||'';
+  inp('po-qty').value = p.qty||1; inp('po-unit').value = p.unit||'EA';
+  if (inp('po-price')) inp('po-price').value = p.unitPrice||'';
+  inp('po-pay').value = p.payMethod||'현금'; inp('po-dlv').value = p.dlvMethod||'직납';
+  inp('po-note').value = p.note||'';
+  inp('po-save-btn').onclick = savePoForm;
   modal.classList.add('open');
 }
 
@@ -10114,7 +10596,581 @@ function importPoListXLS() {
   });
 }
 
-/* ════════ 거래명세표 / 세금계산서 (판매문서 공용 엔진) ════════
+/* ════════ 엑셀 편집형 인쇄 양식 (견적요청서 / 구매발주서) ════════ */
+const DOC_XLS_TEMPLATE_INFO = {
+  rfq: { title:'견적요청서', file:'견적요청서_인쇄양식.xlsx' },
+  po:  { title:'구매발주서', file:'구매발주서_인쇄양식.xlsx' },
+  quote: { title:'견적서', file:'견적서_인쇄양식.xlsx' },
+  statement: { title:'거래명세표', file:'거래명세표_인쇄양식.xlsx' },
+  tax: { title:'세금계산서', file:'세금계산서_인쇄양식.xlsx' }
+};
+
+function _docTemplateStore() {
+  return loadStorage('docXlsxTemplates', {});
+}
+
+function _arrayToBase64(array) {
+  const bytes = new Uint8Array(array);
+  let out = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    out += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(out);
+}
+
+function _base64ToArray(value) {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+function _requireExcelJS() {
+  if (typeof ExcelJS === 'undefined') {
+    showToast('엑셀 인쇄 모듈을 불러오지 못했습니다. 인터넷 연결 후 다시 시도해 주세요.', 'error');
+    return false;
+  }
+  return true;
+}
+
+function _excelBorder(color='FFCCCCCC', style='thin') {
+  const edge = { style, color:{ argb:color } };
+  return { top:edge, left:edge, bottom:edge, right:edge };
+}
+
+function _mergeValue(ws, range, value) {
+  const parts = range.split(':');
+  if (parts.length > 1 && parts[0] !== parts[1]) ws.mergeCells(range);
+  ws.getCell(parts[0]).value = value;
+  return ws.getCell(parts[0]);
+}
+
+function _styleRange(ws, range, style) {
+  ws.getCell(range.split(':')[0]);
+  ws.getCell(range.split(':')[1] || range);
+  ws.getRows(1, ws.rowCount);
+  const bounds = range.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/);
+  if (!bounds) { Object.assign(ws.getCell(range), style); return; }
+  const c1 = ws.getColumn(bounds[1]).number, r1 = Number(bounds[2]);
+  const c2 = ws.getColumn(bounds[3]).number, r2 = Number(bounds[4]);
+  for (let r = r1; r <= r2; r++) {
+    for (let c = c1; c <= c2; c++) Object.assign(ws.getCell(r, c), style);
+  }
+}
+
+function _defaultDocTemplateBook(type) {
+  if (type === 'tax') return _defaultTaxTemplateBook();
+  const isPo = type === 'po';
+  const isRfq = type === 'rfq';
+  const isQuote = type === 'quote';
+  const isStatement = type === 'statement';
+  const titleMap = { rfq:'견 적 요 청 서', po:'구 매 발 주 서', quote:'견 적 서', statement:'거 래 명 세 표' };
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'MES Pro';
+  wb.created = new Date();
+  const ws = wb.addWorksheet('인쇄양식', {
+    pageSetup: {
+      paperSize:9, orientation:'portrait', fitToPage:true, fitToWidth:1, fitToHeight:1,
+      margins:{ left:0.25, right:0.25, top:0.3, bottom:0.3, header:0.15, footer:0.15 },
+      printArea:'A1:L42', horizontalCentered:true, verticalCentered:false
+    },
+    views:[{ showGridLines:false }]
+  });
+  ws.properties.defaultRowHeight = 16;
+  [4,10,10,10,7,7,9,9,10,10,10,12].forEach((width, i) => { ws.getColumn(i + 1).width = width; });
+
+  const navy = 'FF1A3A6E', lightBlue = 'FFEEF2FB', lightGray = 'FFF3F5F8';
+  const gray = 'FF666666', border = _excelBorder();
+  const font = { name:'맑은 고딕', size:9, color:{argb:'FF222222'} };
+  _styleRange(ws, 'A1:L42', { font, alignment:{ vertical:'middle' } });
+
+  const approvals = isPo
+    ? [['E1:F1','담 당'],['G1:H1','팀 장'],['I1:J1','이 사'],['K1:L1','대 표']]
+    : [['G1:H1','담 당'],['I1:J1','팀 장'],['K1:L1','대 표']];
+  approvals.forEach(([head, label]) => {
+    const start = head.split(':')[0], end = head.split(':')[1];
+    const startCol = start.match(/[A-Z]+/)[0], endCol = end.match(/[A-Z]+/)[0];
+    _mergeValue(ws, head, label);
+    _mergeValue(ws, `${startCol}2:${endCol}3`, '');
+    _styleRange(ws, `${startCol}1:${endCol}3`, {
+      border, alignment:{ horizontal:'center', vertical:'middle' }
+    });
+    ws.getCell(start).fill = { type:'pattern', pattern:'solid', fgColor:{argb:lightGray} };
+    ws.getCell(start).font = { name:'맑은 고딕', size:8, bold:true, color:{argb:gray} };
+  });
+  ws.getRow(1).height = 17; ws.getRow(2).height = 19; ws.getRow(3).height = 19;
+
+  _mergeValue(ws, 'A5:F5', '{{회사명}}');
+  _mergeValue(ws, 'A6:F6', '{{회사연락처}}');
+  _mergeValue(ws, 'A7:F7', '{{회사사업자정보}}');
+  _mergeValue(ws, 'G5:L6', titleMap[type] || DOC_XLS_TEMPLATE_INFO[type].title);
+  _mergeValue(ws, 'G7:L7', (isPo ? '발주번호  ' : '문서번호  ') + '{{문서번호}}');
+  ws.getCell('A5').font = { name:'맑은 고딕', size:15, bold:true, color:{argb:navy} };
+  ws.getCell('A6').font = ws.getCell('A7').font = { name:'맑은 고딕', size:8, color:{argb:'FF777777'} };
+  ws.getCell('G5').font = { name:'맑은 고딕', size:21, bold:true, color:{argb:navy} };
+  ws.getCell('G5').alignment = { horizontal:'right', vertical:'middle' };
+  ws.getCell('G7').font = { name:'맑은 고딕', size:9, bold:true, color:{argb:'FF555555'} };
+  ws.getCell('G7').alignment = { horizontal:'right', vertical:'middle' };
+  _styleRange(ws, 'A7:L7', { border:{ bottom:{style:'medium',color:{argb:navy}} } });
+  ws.getRow(5).height = 24; ws.getRow(6).height = 18; ws.getRow(7).height = 18;
+
+  const infoRows = isPo ? [
+    ['A9:B9','공급처(수신)','C9:L9','{{공급처}} 귀중'],
+    ['A10:B10','발행일자','C10:L10','{{발행일}}'],
+    ['A11:B11','결제조건','C11:F11','{{결제조건}}','G11:H11','납품방법','I11:L11','{{납품방법}}'],
+    ['A12:B12','납품지 주소','C12:L12','{{납품주소}}']
+  ] : isRfq ? [
+    ['A9:B9','수 신','C9:L9','{{공급처}} 귀중'],
+    ['A10:B10','발 신','C10:F10','{{회사명}} {{부서}}','G10:H10','발행일자','I10:L10','{{발행일}}'],
+    ['A11:B11','관련 프로젝트','C11:L11','{{고객사}} — {{연결제품}}'],
+    ['A12:B12','담당 연락처','C12:L12','{{부서}} {{회사전화}}']
+  ] : [
+    ['A9:B9','공급자','C9:F9','{{회사명}} ({{사업자번호}})','G9:H9','발행일자','I9:L9','{{발행일}}'],
+    ['A10:B10','공급받는자','C10:F10','{{고객사}} 귀중','G10:H10','관련 제품','I10:L10','{{연결제품}}'],
+    ['A11:B11','고객 이메일','C11:L11','{{고객이메일}}'],
+    ['A12:B12',isQuote?'견적 유효기간':'문서 상태','C12:L12',isQuote?'발행일로부터 30일':'{{상태}}']
+  ];
+  infoRows.forEach(parts => {
+    for (let i = 0; i < parts.length; i += 2) {
+      const range = parts[i], value = parts[i + 1];
+      const cell = _mergeValue(ws, range, value);
+      const isLabel = i % 4 === 0;
+      _styleRange(ws, range, {
+        border,
+        fill:isLabel ? {type:'pattern',pattern:'solid',fgColor:{argb:lightGray}} : undefined,
+        font:{ name:'맑은 고딕', size:isLabel ? 9 : 10, bold:isLabel || (range === 'C9:L9'), color:{argb:isLabel?'FF333333':navy} },
+        alignment:{ horizontal:isLabel?'left':'left', vertical:'middle', wrapText:true }
+      });
+      if (!isLabel && range !== 'C9:L9') cell.font = { name:'맑은 고딕', size:9, color:{argb:'FF222222'} };
+    }
+  });
+  [9,10,11,12].forEach(r => { ws.getRow(r).height = 21; });
+
+  _mergeValue(ws, 'A14:L14', isPo ? '■ 발주 품목' : isRfq ? '■ 견적 요청 품목' : isQuote ? '■ 견적 품목' : '■ 거래 품목');
+  _styleRange(ws, 'A14:L14', {
+    fill:{type:'pattern',pattern:'solid',fgColor:{argb:lightBlue}},
+    border:{left:{style:'medium',color:{argb:navy}}},
+    font:{name:'맑은 고딕',size:9,bold:true,color:{argb:navy}},
+    alignment:{vertical:'middle'}
+  });
+  ws.getRow(14).height = 19;
+
+  const headers = ['No.','품 목 명','규 격 / 사 양','수량','단위',isRfq?'희망 단가':'단 가 (원)',isRfq?'희망 금액':'공급가액','비 고'];
+  const headerRanges = ['A15:A15','B15:D15','E15:G15','H15:H15','I15:I15','J15:J15','K15:K15','L15:L15'];
+  headerRanges.forEach((range, i) => {
+    _mergeValue(ws, range, headers[i]);
+    _styleRange(ws, range, {
+      fill:{type:'pattern',pattern:'solid',fgColor:{argb:navy}},
+      border:_excelBorder('FFFFFFFF'),
+      font:{name:'맑은 고딕',size:8,bold:true,color:{argb:'FFFFFFFF'}},
+      alignment:{horizontal:'center',vertical:'middle',wrapText:true}
+    });
+  });
+  ws.getRow(15).height = 23;
+
+  for (let i = 1; i <= 12; i++) {
+    const row = 15 + i;
+    const cells = [
+      ['A'+row, `{{번호${i}}}`], [`B${row}:D${row}`, `{{품목명${i}}}`],
+      [`E${row}:G${row}`, `{{규격${i}}}`], ['H'+row, `{{수량${i}}}`],
+      ['I'+row, `{{단위${i}}}`], ['J'+row, `{{단가${i}}}`],
+      ['K'+row, `{{금액${i}}}`], ['L'+row, `{{품목비고${i}}}`]
+    ];
+    cells.forEach(([range, value], idx) => {
+      const cell = _mergeValue(ws, range, value);
+      _styleRange(ws, range, {
+        border, font:{name:'맑은 고딕',size:8.5,bold:idx===1,color:{argb:'FF222222'}},
+        alignment:{horizontal:[0,2,3,4].includes(idx)?'center':([5,6].includes(idx)?'right':'left'),vertical:'middle',wrapText:true}
+      });
+      if ([5,6].includes(idx)) cell.numFmt = '#,##0;[Red]-#,##0';
+    });
+    if (i % 2 === 0) _styleRange(ws, `A${row}:L${row}`, { fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFFAFBFC'}} });
+    ws.getRow(row).height = 19;
+  }
+
+  _mergeValue(ws, 'A28:J28', isPo ? '공급가액 합계' : '합 계');
+  ws.getCell('K28').value = '{{공급가액}}';
+  ws.getCell('L28').value = '';
+  _styleRange(ws, 'A28:L28', {
+    fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFF0F4FF'}},
+    border:{top:{style:'medium',color:{argb:navy}},left:border.left,right:border.right,bottom:border.bottom},
+    font:{name:'맑은 고딕',size:9,bold:true,color:{argb:navy}},
+    alignment:{horizontal:'right',vertical:'middle'}
+  });
+  ws.getCell('K28').numFmt = '#,##0;[Red]-#,##0'; ws.getRow(28).height = 21;
+
+  [['H30:I30',isRfq?'희망 공급가액':'공급가액','J30:L30','{{공급가액}}'],
+   ['H31:I31','부가세 (10%)','J31:L31','{{부가세}}'],
+   ['H32:I32',isPo?'발주 합계금액':isRfq?'희망 합계금액':'합계금액','J32:L32','{{합계금액}}']].forEach((parts, idx) => {
+    const label = _mergeValue(ws, parts[0], parts[1]);
+    const value = _mergeValue(ws, parts[2], parts[3]);
+    _styleRange(ws, `${parts[0].split(':')[0]}:${parts[2].split(':')[1]}`, {
+      border:_excelBorder(idx===2?navy:'FFDDE0E8',idx===2?'medium':'thin'),
+      fill:{type:'pattern',pattern:'solid',fgColor:{argb:idx===2?navy:lightGray}},
+      font:{name:'맑은 고딕',size:idx===2?11:9,bold:true,color:{argb:idx===2?'FFFFFFFF':'FF555555'}},
+      alignment:{horizontal:'right',vertical:'middle'}
+    });
+    value.numFmt = '#,##0" 원";[Red]-#,##0" 원"';
+    value.font = {name:'맑은 고딕',size:idx===2?12:9,bold:true,color:{argb:idx===2?'FFFFFFFF':navy}};
+    label.alignment = {horizontal:'left',vertical:'middle'};
+    ws.getRow(30 + idx).height = idx===2 ? 23 : 20;
+  });
+
+  _mergeValue(ws, 'A34:L34', isPo ? '◆ 특기사항 및 거래조건' : isRfq ? '◆ 특기사항 및 요청조건' : '◆ 비고');
+  _mergeValue(ws, 'A35:L35', isPo
+    ? '1. 상기 품목에 대하여 발주하오니 납기일에 맞추어 납품하여 주시기 바랍니다.'
+    : isRfq ? '1. 상기 품목에 대하여 견적을 요청드리오니 회신 기한 내 견적서를 제출해 주시기 바랍니다.'
+    : isQuote ? '위와 같이 견적서를 제출하오니 검토 후 발주 부탁드립니다.' : '위와 같이 거래 내역을 통보하오니 확인하여 주시기 바랍니다.');
+  _mergeValue(ws, 'A36:L36', isPo
+    ? '2. 납품 시 반드시 거래명세표를 동봉하여 주시기 바랍니다.'
+    : isRfq ? '2. 견적가격은 납품지 기준 공급가(VAT 별도)로 기재 바랍니다.' : '{{비고}}');
+  _mergeValue(ws, 'A37:L37', isPo
+    ? '3. 세금계산서는 납품 완료 후 익일 발행 바랍니다.'
+    : isRfq ? '3. 납품 가능 수량 및 납기일을 반드시 명시하여 주시기 바랍니다.' : '');
+  _styleRange(ws, 'A34:L37', {
+    border, fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFFAFBFC'}},
+    font:{name:'맑은 고딕',size:8,color:{argb:'FF444444'}},
+    alignment:{vertical:'middle',wrapText:true}
+  });
+  ws.getCell('A34').font = {name:'맑은 고딕',size:8.5,bold:true,color:{argb:navy}};
+  [34,35,36,37].forEach(r => { ws.getRow(r).height = 18; });
+
+  _mergeValue(ws, 'A39:G42', isPo
+    ? '위와 같이 발주하며, 본 발주서가 계약 효력을 갖습니다.\n{{발행일}}\n{{회사명}}'
+    : isRfq ? '본 견적요청서는 구매 의사의 표명이 아니며,\n견적 내용은 최종 발주 시 변경될 수 있습니다.'
+    : '{{발행일}}\n{{회사명}}');
+  ws.getCell('A39').alignment = {horizontal:'left',vertical:'bottom',wrapText:true};
+  ws.getCell('A39').font = {name:'맑은 고딕',size:8,color:{argb:'FF777777'}};
+  [['H39:I39','작 성','H40:I42'],['J39:K39','검 토','J40:K42'],['L39:L39',isPo?'대표이사':'승 인','L40:L42']].forEach(parts => {
+    _mergeValue(ws, parts[0], parts[1]);
+    _mergeValue(ws, parts[2], '(인)');
+    const area = `${parts[0].split(':')[0]}:${parts[2].split(':')[1]}`;
+    _styleRange(ws, area, {border,alignment:{horizontal:'center',vertical:'middle'}});
+    ws.getCell(parts[0].split(':')[0]).font = {name:'맑은 고딕',size:8,bold:true,color:{argb:'FF555555'}};
+    ws.getCell(parts[2].split(':')[0]).font = {name:'맑은 고딕',size:8,color:{argb:'FFBBBBBB'}};
+  });
+  [39,40,41,42].forEach(r => { ws.getRow(r).height = 18; });
+
+  const guide = wb.addWorksheet('사용방법', { views:[{showGridLines:false}] });
+  guide.columns = [{width:16},{width:105}];
+  [
+    ['엑셀 인쇄 양식 사용 방법',''],
+    ['1','인쇄양식 시트의 셀 위치, 문구, 색상, 열 너비, 행 높이를 Excel에서 수정합니다.'],
+    ['2','{{회사명}} 같은 표시값은 삭제하지 않고 원하는 셀로 이동할 수 있습니다.'],
+    ['3','기본 양식은 A4 한 페이지이며 품목은 12개까지 표시됩니다. 필요하면 {{품목명13}}부터 추가할 수 있습니다.'],
+    ['4','수정한 파일을 화면의 "수정한 엑셀 인쇄 양식 등록" 버튼으로 등록합니다.'],
+    ['공통 표시값','{{회사명}}, {{회사주소}}, {{회사전화}}, {{회사팩스}}, {{회사연락처}}, {{회사사업자정보}}, {{사업자번호}}, {{대표자}}, {{부서}}'],
+    ['문서 표시값','{{문서번호}}, {{발행일}}, {{공급처}}, {{공급처이메일}}, {{고객사}}, {{연결제품}}, {{결제조건}}, {{납품방법}}, {{납품주소}}, {{비고}}'],
+    ['금액 표시값','{{공급가액}}, {{부가세}}, {{합계금액}}'],
+    ['품목 표시값','{{번호1}}, {{품목명1}}, {{규격1}}, {{수량1}}, {{단위1}}, {{단가1}}, {{금액1}}, {{품목비고1}} ... 20']
+  ].forEach(row => guide.addRow(row));
+  _styleRange(guide, 'A1:B9', {font:{name:'맑은 고딕',size:10},alignment:{vertical:'middle',wrapText:true},border});
+  _mergeValue(guide, 'A1:B1', '엑셀 인쇄 양식 사용 방법');
+  guide.getCell('A1').font = {name:'맑은 고딕',size:16,bold:true,color:{argb:navy}};
+  guide.getCell('A1').fill = {type:'pattern',pattern:'solid',fgColor:{argb:lightBlue}};
+  return wb;
+}
+
+function _defaultTaxTemplateBook() {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('인쇄양식', {
+    pageSetup:{paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:1,printArea:'A1:L38',margins:{left:0.2,right:0.2,top:0.25,bottom:0.25,header:0.1,footer:0.1}},
+    views:[{showGridLines:false}]
+  });
+  [4,8,11,11,11,11,11,11,11,11,11,13].forEach((w,i)=>ws.getColumn(i+1).width=w);
+  const red='FFC0392B', blue='FF1C5AA8', gray='FFF3F3F3', border=_excelBorder('FFB9B9B9');
+  _mergeValue(ws,'A1:H2','전 자 세 금 계 산 서');
+  _mergeValue(ws,'I1:J2','승인번호');
+  _mergeValue(ws,'K1:L2','{{승인번호}}');
+  _styleRange(ws,'A1:L2',{border,alignment:{horizontal:'center',vertical:'middle'},font:{name:'맑은 고딕',size:10,bold:true}});
+  ws.getCell('A1').font={name:'맑은 고딕',size:18,bold:true,color:{argb:'FF222222'}};
+  ws.getCell('I1').fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFEAF1FB'}};
+  const party = (startRow, title, color, prefix) => {
+    _mergeValue(ws,`A${startRow}:A${startRow+4}`,title);
+    ws.getCell(`A${startRow}`).alignment={horizontal:'center',vertical:'middle',textRotation:90};
+    [['B','등록번호','C:F',`{{${prefix}사업자번호}}`,'G','종사업장','H:L',''],
+     ['B','상호(법인명)','C:F',`{{${prefix}회사명}}`,'G','성명','H:L',`{{${prefix}대표자}}`],
+     ['B','사업장','C:L',`{{${prefix}주소}}`],
+     ['B','업태','C:F',`{{${prefix}업태}}`,'G','종목','H:L',`{{${prefix}종목}}`],
+     ['B','이메일','C:L',`{{${prefix}이메일}}`]].forEach((parts,idx)=>{
+      for(let i=0;i<parts.length;i+=2){
+        const range=parts[i]+(startRow+idx)+(parts[i].includes(':')?'':'');
+        const actual=parts[i].includes(':') ? parts[i].replace(/(\D+):(\D+)/,`$1${startRow+idx}:$2${startRow+idx}`) : range;
+        _mergeValue(ws,actual,parts[i+1]);
+        _styleRange(ws,actual,{border,alignment:{vertical:'middle',wrapText:true},font:{name:'맑은 고딕',size:8,bold:i%4===0}});
+        if(i%4===0) ws.getCell(actual.split(':')[0]).fill={type:'pattern',pattern:'solid',fgColor:{argb:color}};
+      }
+    });
+    _styleRange(ws,`A${startRow}:L${startRow+4}`,{border});
+    ws.getCell(`A${startRow}`).fill={type:'pattern',pattern:'solid',fgColor:{argb:color}};
+    ws.getCell(`A${startRow}`).font={name:'맑은 고딕',size:9,bold:true,color:{argb:prefix==='공급자' ? red : blue}};
+  };
+  party(4,'공급자','FFFDECEC','공급자');
+  party(9,'공급받는자','FFEAF1FB','공급받는자');
+  const rows=[
+    [15,['작성일자','{{발행일}}','공급가액','{{공급가액}}','세액','{{부가세}}']],
+    [16,['비고','{{비고}}']]
+  ];
+  rows.forEach(([r,vals])=>{
+    const ranges=r===15?['A:B','C:D','E:F','G:H','I:J','K:L']:['A:B','C:L'];
+    ranges.forEach((cols,i)=>{const rg=cols.replace(':',r+':')+r;_mergeValue(ws,rg,vals[i]);_styleRange(ws,rg,{border,alignment:{vertical:'middle'},font:{name:'맑은 고딕',size:8,bold:i%2===0},fill:i%2===0?{type:'pattern',pattern:'solid',fgColor:{argb:gray}}:undefined});});
+  });
+  const heads=['월','일','품목','규격','수량','단가','공급가액','세액','비고'];
+  const ranges=['A','B','C:E','F:G','H','I','J','K','L'];
+  heads.forEach((h,i)=>{const rg=ranges[i].includes(':')?ranges[i].replace(':','17:')+'17':ranges[i]+'17';_mergeValue(ws,rg,h);_styleRange(ws,rg,{border,fill:{type:'pattern',pattern:'solid',fgColor:{argb:gray}},font:{name:'맑은 고딕',size:8,bold:true},alignment:{horizontal:'center'}});});
+  for(let i=1;i<=12;i++){
+    const r=17+i;
+    const vals=[`{{월${i}}}`,`{{일${i}}}`,`{{품목명${i}}}`,`{{규격${i}}}`,`{{수량${i}}}`,`{{단가${i}}}`,`{{금액${i}}}`,`{{세액${i}}}`,`{{품목비고${i}}}`];
+    ranges.forEach((col,j)=>{const rg=col.includes(':')?col.replace(':',r+':')+r:col+r;_mergeValue(ws,rg,vals[j]);_styleRange(ws,rg,{border,font:{name:'맑은 고딕',size:8},alignment:{horizontal:[0,1,3,4].includes(j)?'center':([5,6,7].includes(j)?'right':'left'),vertical:'middle'}});});
+  }
+  _mergeValue(ws,'A31:B32','합계금액'); _mergeValue(ws,'C31:D32','{{합계금액}}');
+  _mergeValue(ws,'E31:F32','현금'); _mergeValue(ws,'G31:H32','수표 / 어음');
+  _mergeValue(ws,'I31:J32','외상미수금'); _mergeValue(ws,'K31:L32','이 금액을 ( 청구 ) 함');
+  _styleRange(ws,'A31:L32',{border,font:{name:'맑은 고딕',size:9,bold:true},alignment:{horizontal:'center',vertical:'middle'}});
+  ws.getCell('C31').numFmt='#,##0" 원"';
+  _mergeValue(ws,'A33:F33','문서번호  {{문서번호}}');
+  _styleRange(ws,'A33:F33',{font:{name:'맑은 고딕',size:8,bold:true,color:{argb:'FF555555'}},alignment:{vertical:'middle'}});
+  _mergeValue(ws,'A34:L38','세금계산서 양식은 Excel에서 셀 위치·색상·문구를 수정한 뒤 시스템 관리에서 다시 등록할 수 있습니다.');
+  ws.getCell('A34').alignment={wrapText:true,vertical:'top'}; ws.getCell('A34').font={name:'맑은 고딕',size:8,color:{argb:'FF777777'}};
+  return wb;
+}
+
+function _downloadExcelBuffer(buffer, fileName) {
+  const blob = new Blob([buffer], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fileName;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+async function downloadDocXlsxTemplate(type) {
+  const info = DOC_XLS_TEMPLATE_INFO[type];
+  if (!info || !_requireExcelJS()) return;
+  try {
+    const buffer = await _defaultDocTemplateBook(type).xlsx.writeBuffer();
+    _downloadExcelBuffer(buffer, info.file);
+    showToast(`${info.title} PDF형 인쇄 양식을 다운로드했습니다.`);
+  } catch(err) {
+    showToast('엑셀 인쇄 양식 생성 실패: ' + err.message, 'error');
+  }
+}
+
+async function registerDocXlsxTemplate(type) {
+  const info = DOC_XLS_TEMPLATE_INFO[type];
+  if (!info || !_requireExcelJS()) return;
+  _pickXlsxFile(async file => {
+    if (file.size > 600 * 1024) {
+      showToast('인쇄 양식은 600KB 이하의 파일을 사용해 주세요.', 'error');
+      return;
+    }
+    try {
+      const data = await file.arrayBuffer();
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.load(data);
+      const ws = wb.worksheets[0];
+      let text = '';
+      ws.eachRow(row => row.eachCell(cell => { text += ' ' + String(cell.value ?? ''); }));
+      if (!text.includes('{{문서번호}}') || !text.includes('{{품목명1}}')) {
+        showToast('양식에 {{문서번호}}와 {{품목명1}} 표시값이 필요합니다.', 'error');
+        return;
+      }
+      const store = _docTemplateStore();
+      store[type] = { name:file.name, data:_arrayToBase64(data), savedAt:new Date().toISOString() };
+      saveStorage('docXlsxTemplates', store);
+      if (typeof renderDocTemplateManagement === 'function') renderDocTemplateManagement();
+      showToast(`${info.title} 인쇄 양식을 등록했습니다.`);
+    } catch(err) {
+      showToast('엑셀 인쇄 양식 등록 실패: ' + err.message, 'error');
+    }
+  });
+}
+
+function resetDocXlsxTemplate(type) {
+  const info = DOC_XLS_TEMPLATE_INFO[type];
+  if (!info) return;
+  const store = _docTemplateStore();
+  if (!store[type]) {
+    showToast(`${info.title}는 이미 기본 양식을 사용 중입니다.`, 'info');
+    return;
+  }
+  confirm_('기본 양식 복원',
+    `<strong>${info.title}</strong>의 등록된 사용자 양식을 삭제하고 기본 양식으로 되돌리시겠습니까?<br><span style="color:var(--tx-t);font-size:11px;">문서 데이터에는 영향을 주지 않습니다.</span>`,
+    () => {
+      const next = _docTemplateStore();
+      delete next[type];
+      saveStorage('docXlsxTemplates', next);
+      if (typeof renderDocTemplateManagement === 'function') renderDocTemplateManagement();
+      showToast(`${info.title}가 기본 양식으로 복원되었습니다.`);
+    },
+    'btn-primary',
+    'ti-restore'
+  );
+}
+
+function resetAllDocXlsxTemplates() {
+  const store = _docTemplateStore();
+  if (!Object.keys(store).length) {
+    showToast('모든 문서가 이미 기본 양식을 사용 중입니다.', 'info');
+    return;
+  }
+  confirm_('모든 양식 기본값 복원',
+    '등록된 모든 사용자 엑셀 양식을 삭제하고 내장 기본 양식으로 되돌리시겠습니까?<br><span style="color:var(--tx-t);font-size:11px;">실제 문서와 업무 데이터는 삭제되지 않습니다.</span>',
+    () => {
+      saveStorage('docXlsxTemplates', {});
+      if (typeof renderDocTemplateManagement === 'function') renderDocTemplateManagement();
+      showToast('모든 문서 양식이 기본값으로 복원되었습니다.');
+    },
+    'btn-danger',
+    'ti-restore'
+  );
+}
+
+async function _docTemplateArray(type) {
+  const saved = _docTemplateStore()[type];
+  if (saved && saved.data) return _base64ToArray(saved.data);
+  return await _defaultDocTemplateBook(type).xlsx.writeBuffer();
+}
+
+function _docTemplateGroups(type, id) {
+  const ids = Array.isArray(id) ? id : (id ? [id] : null);
+  if (type === 'rfq') {
+    const list = ids ? rfqList.filter(r => ids.includes(r.id)) : rfqList;
+    return list.map(r => ({ key:r.id, items:[r] }));
+  }
+  if (type === 'quote') {
+    const list = ids ? quoteList.filter(d => ids.includes(d.id)) : quoteList;
+    return list.map(d => ({key:d.id,items:[d]}));
+  }
+  if (type === 'statement' || type === 'tax') {
+    const list = salesList(type);
+    const targets = ids ? list.filter(d => ids.includes(d.id)) : list;
+    return targets.map(d => ({key:d.id,items:[d]}));
+  }
+  const list = ids ? poList.filter(p => ids.includes(p.id)) : poList;
+  const grouped = {};
+  list.forEach(p => {
+    const key = ids && ids.length === 1 ? p.id : (p.supplier || p.id);
+    (grouped[key] = grouped[key] || []).push(p);
+  });
+  return Object.entries(grouped).map(([key, items]) => ({ key, items }));
+}
+
+function _docTemplateValues(type, items) {
+  const ci = getCompanyInfo();
+  const first = items[0];
+  const amount = items.reduce((sum, item) => {
+    const price = type === 'rfq' ? item.targetPrice : item.unitPrice;
+    return sum + (Number(price) || 0) * (Number(item.qty) || 0);
+  }, 0);
+  const vat = Math.round(amount * 0.1);
+  const values = {
+    회사명:ci.name || '', 회사주소:ci.address || '', 회사전화:ci.tel || '',
+    회사팩스:ci.fax || '', 사업자번호:ci.bizNo || '', 대표자:ci.ceo || '',
+    회사연락처:[ci.address, ci.tel ? 'TEL. ' + ci.tel : '', ci.fax ? 'FAX. ' + ci.fax : ''].filter(Boolean).join(' | '),
+    회사사업자정보:[ci.bizNo ? '사업자등록번호: ' + ci.bizNo : '', ci.ceo ? '대표이사: ' + ci.ceo : ''].filter(Boolean).join(' | '),
+    부서:ci.dept || '', 문서종류:DOC_XLS_TEMPLATE_INFO[type].title,
+    문서번호:[...new Set(items.map(x => x.id))].join(', '),
+    발행일:first.date || '', 공급처:first.supplier || '',
+    공급처이메일:first.supplierEmail || '',
+    고객사:first.clientName || getClientName(first.clientId) || '',
+    고객이메일:first.clientEmail || '',
+    연결제품:first.productId ? getProductName(first.productId) : '',
+    결제조건:first.payMethod || '', 납품방법:first.dlvMethod || '', 상태:first.status || '',
+    납품주소:ci.address || '', 공급가액:amount, 부가세:vat,
+    합계금액:amount + vat, 비고:items.map(x => x.note || '').filter(Boolean).join(' / '),
+    승인번호:first.approvalNo || '',
+    공급자회사명:ci.name || '', 공급자사업자번호:ci.bizNo || '', 공급자대표자:ci.ceo || '',
+    공급자주소:ci.address || '', 공급자업태:ci.bizType || '', 공급자종목:ci.bizItem || '', 공급자이메일:ci.email || ''
+  };
+  const clientName = first.clientName || getClientName(first.clientId) || '';
+  const bp = partners.find(p => p.name === clientName) || {};
+  Object.assign(values, {
+    공급받는자회사명:clientName, 공급받는자사업자번호:bp.bizNo || '', 공급받는자대표자:bp.ceo || '',
+    공급받는자주소:bp.address || '', 공급받는자업태:bp.bizType || '', 공급받는자종목:bp.bizItem || '',
+    공급받는자이메일:first.clientEmail || bp.email || ''
+  });
+  for (let i = 1; i <= 20; i++) {
+    const item = items[i - 1];
+    const price = item ? Number(type === 'rfq' ? item.targetPrice : item.unitPrice) || 0 : '';
+    values['번호' + i] = item ? i : '';
+    values['품목명' + i] = item ? item.itemName || '' : '';
+    values['규격' + i] = item ? item.spec || '' : '';
+    values['수량' + i] = item ? Number(item.qty) || 0 : '';
+    values['단위' + i] = item ? item.unit || '' : '';
+    values['단가' + i] = item ? price : '';
+    values['금액' + i] = item ? price * (Number(item.qty) || 0) : '';
+    values['품목비고' + i] = item ? item.note || '' : '';
+    const dateParts = item && item.date ? item.date.split('-') : [];
+    values['월' + i] = item ? (dateParts[1] || '') : '';
+    values['일' + i] = item ? (dateParts[2] || '') : '';
+    values['세액' + i] = item ? Math.round(price * (Number(item.qty) || 0) * 0.1) : '';
+  }
+  return values;
+}
+
+function _fillDocTemplateSheet(ws, values) {
+  ws.eachRow(row => row.eachCell(cell => {
+    if (typeof cell.value !== 'string' || !cell.value.includes('{{')) return;
+    const exact = cell.value.match(/^\{\{([^{}]+)\}\}$/);
+    if (exact && Object.prototype.hasOwnProperty.call(values, exact[1])) {
+      cell.value = values[exact[1]];
+      return;
+    }
+    cell.value = cell.value.replace(/\{\{([^{}]+)\}\}/g, (all, key) =>
+      Object.prototype.hasOwnProperty.call(values, key) ? String(values[key]) : all
+    );
+  }));
+}
+
+function _safeSheetName(name, used) {
+  const base = String(name || '문서').replace(/[\\/?*[\]:]/g, '_').slice(0, 31) || '문서';
+  let out = base, n = 2;
+  while (used.has(out)) out = (base.slice(0, 27) + '_' + n++).slice(0, 31);
+  used.add(out);
+  return out;
+}
+
+async function exportDocTemplateXLS(type, id = null) {
+  const info = DOC_XLS_TEMPLATE_INFO[type];
+  if (!info || !_requireExcelJS()) return;
+  const groups = _docTemplateGroups(type, id);
+  if (!groups.length) { showToast('양식으로 출력할 문서가 없습니다.', 'error'); return; }
+  try {
+    const templateData = await _docTemplateArray(type);
+    const out = new ExcelJS.Workbook();
+    await out.xlsx.load(templateData);
+    const templateWs = out.worksheets[0];
+    const templateModel = JSON.parse(JSON.stringify(templateWs.model));
+    out.worksheets.slice(1).forEach(sheet => out.removeWorksheet(sheet.id));
+    const used = new Set();
+    groups.forEach((group, index) => {
+      let ws;
+      if (index === 0) {
+        ws = templateWs;
+      } else {
+        const sheetName = _safeSheetName(group.key, used);
+        ws = out.addWorksheet(sheetName);
+        const cloneModel = JSON.parse(JSON.stringify(templateModel));
+        cloneModel.id = ws.id;
+        cloneModel.name = sheetName;
+        ws.model = cloneModel;
+        _fillDocTemplateSheet(ws, _docTemplateValues(type, group.items));
+        return;
+      }
+      ws.name = _safeSheetName(group.key, used);
+      _fillDocTemplateSheet(ws, _docTemplateValues(type, group.items));
+    });
+    const suffix = groups.length === 1 ? groups[0].key : today();
+    const buffer = await out.xlsx.writeBuffer();
+    _downloadExcelBuffer(buffer, `${info.title}_${suffix}.xlsx`);
+    showToast(`${info.title} ${groups.length}건을 등록 양식으로 출력했습니다.`);
+  } catch(err) {
+    showToast('엑셀 양식 출력 실패: ' + err.message, 'error');
+  }
+}
+
+/* ════════ 거래명세표 / 세금계산서 (판매문서 공용 엔진) ════════ */
 const SALES = {
   statement: { key:'statementList', prefix:'TS', title:'거래명세표', idp:'st', page:'statement', statuses:['작성','발송완료','수령확인'], titleIcon:'ti-receipt' },
   tax:       { key:'taxList',       prefix:'TX', title:'세금계산서', idp:'tx', page:'taxinvoice', statuses:['작성','발행완료','전송완료'], titleIcon:'ti-file-dollar' }
@@ -10130,6 +11186,7 @@ function salesStatusColor(type, s) {
 
 function renderSalesDoc(type) {
   const cfg = SALES[type], idp = cfg.idp, list = salesList(type);
+  ensureDateView(type, idp+'-table', list.map(d=>d.date), ()=>renderSalesDoc(type));
   const amtOf = d => (d.unitPrice||0) * (d.qty||0);
   const total = list.length;
   const sent  = list.filter(d => d.status === cfg.statuses[1]).length;
@@ -10149,6 +11206,7 @@ function renderSalesDoc(type) {
   }
   const fc = v(idp+'-fc'), fs = v(idp+'-fs'), q = (v(idp+'-q')||'').toLowerCase();
   const rows = list.filter(d => {
+    if (!dateViewMatch(type, d.date)) return false;
     if (fc && d.clientId !== fc) return false;
     if (fs && d.status !== fs)   return false;
     if (q && !(d.itemName||'').toLowerCase().includes(q) && !getClientName(d.clientId).toLowerCase().includes(q)) return false;
@@ -10239,6 +11297,26 @@ function openSalesDocEdit(type, id) {
   sv('sd-price', d.unitPrice||'');
   sv('sd-note', d.note||'');
   sv('sd-status', d.status || cfg.statuses[0]);
+  modal.classList.add('open');
+}
+
+function cloneSalesDoc(type, id) {
+  if (!checkAdminAction()) return;
+  const cfg = SALES[type];
+  const d = salesList(type).find(x => x.id === id); if (!d) return;
+  const modal = inp('salesdoc-modal');
+  modal.dataset.type = type;
+  delete modal.dataset.editId;
+  inp('sd-modal-ttl').innerHTML = `<i class="ti ti-copy" style="color:var(--tx-i);"></i>${cfg.title} 복제 등록`;
+  inp('sd-save-btn').innerHTML = '<i class="ti ti-check"></i>등록';
+  inp('sd-status').innerHTML = cfg.statuses.map(s=>`<option>${s}</option>`).join('');
+  sv('sd-id', nextDocCode(cfg.prefix, salesList(type)));
+  sv('sd-date', today());
+  inp('sd-client').innerHTML = '<option value="">-- 선택 --</option>' + clients.map(c=>`<option value="${c.id}"${c.id===d.clientId?' selected':''}>${c.name}</option>`).join('');
+  fillProductSelect('sd-product', d.clientId, d.productId);
+  sv('sd-email', d.clientEmail||''); sv('sd-item', d.itemName||''); sv('sd-spec', d.spec||'');
+  sv('sd-qty', d.qty||1); sv('sd-unit', d.unit||'EA'); sv('sd-price', d.unitPrice||'');
+  sv('sd-note', d.note||''); sv('sd-status', cfg.statuses[0]);
   modal.classList.add('open');
 }
 
@@ -10564,6 +11642,7 @@ function updateOrderBadge() {
 
 function renderSODoc(type) {
   const cfg = SODOCS[type], idp = cfg.idp, list = soDocList(type);
+  ensureDateView(type, idp+'-table', list.map(d=>d.date), ()=>renderSODoc(type));
   const amtOf = d => (d.unitPrice||0)*(d.qty||0);
   const total = list.length;
   const sumAmt = list.reduce((s,d)=>s+Math.round(amtOf(d)*1.1),0);
@@ -10581,6 +11660,7 @@ function renderSODoc(type) {
   if (fcSel) { const cur = fcSel.value; fcSel.innerHTML = '<option value="">전체 고객사</option>' + clients.map(c=>`<option value="${c.id}"${c.id===cur?' selected':''}>${c.name}</option>`).join(''); }
   const fc = v(idp+'-fc'), fs = v(idp+'-fs'), q = (v(idp+'-q')||'').toLowerCase();
   const rows = list.filter(d => {
+    if (!dateViewMatch(type, d.date)) return false;
     if (fc && d.clientId !== fc) return false;
     if (fs && d.status !== fs) return false;
     if (q && !(d.itemName||'').toLowerCase().includes(q) && !soDocLabel(d).toLowerCase().includes(q)) return false;
@@ -10678,6 +11758,26 @@ function openSODocEdit(type, id) {
   sv('so2-due', d.deliveryDate||'');
   sv('so2-note', d.note||'');
   sv('so2-status', d.status || cfg.statuses[0]);
+  modal.classList.add('open');
+}
+
+function cloneSODoc(type, id) {
+  if (!checkAdminAction()) return;
+  const cfg = SODOCS[type];
+  const d = soDocList(type).find(x=>x.id===id); if (!d) return;
+  const modal = inp('sodoc-modal');
+  modal.dataset.type = type;
+  delete modal.dataset.editId;
+  inp('so2-modal-ttl').innerHTML = `<i class="ti ti-copy" style="color:var(--tx-i);"></i>${cfg.title} 복제 등록`;
+  inp('so2-save-btn').innerHTML = '<i class="ti ti-check"></i>등록';
+  inp('so2-status').innerHTML = cfg.statuses.map(s=>`<option>${s}</option>`).join('');
+  sv('so2-id', nextDocCode(cfg.prefix, soDocList(type)));
+  sv('so2-date', today());
+  inp('so2-client').innerHTML = '<option value="">-- 선택 (미등록 시 비움) --</option>' + clients.map(c=>`<option value="${c.id}"${c.id===d.clientId?' selected':''}>${c.name}</option>`).join('');
+  sv('so2-client-text', d.clientName||''); sv('so2-email', d.clientEmail||'');
+  sv('so2-item', d.itemName||''); sv('so2-spec', d.spec||'');
+  sv('so2-qty', d.qty||1); sv('so2-unit', d.unit||'대'); sv('so2-price', d.unitPrice||'');
+  sv('so2-due', d.deliveryDate||''); sv('so2-note', d.note||''); sv('so2-status', cfg.statuses[0]);
   modal.classList.add('open');
 }
 
@@ -12416,6 +13516,11 @@ function isMobileView() {
 function mobileTab(tab) {
   if (tab === 'more') { toggleMobileSidebar(); return; }
   if (tab === 'home') { showMobileHome(); return; }
+  if (tab === 'alerts') {
+    go('system');
+    if (currentPage === 'system') switchSystemTab('alerts');
+    return;
+  }
   // 나머지는 기존 페이지로 이동 (_goTo가 mhome 해제 + 탭 동기화 수행)
   go(tab);
 }
@@ -12433,7 +13538,8 @@ function showMobileHome() {
 function syncMobileTab() {
   const active = document.body.classList.contains('mhome')
     ? 'home'
-    : (['clients', 'materials', 'alerts'].includes(currentPage) ? currentPage : null);
+    : (currentPage === 'system' && systemTab === 'alerts' ? 'alerts'
+      : (['clients', 'materials'].includes(currentPage) ? currentPage : null));
   document.querySelectorAll('#mobile-tabbar .mtab').forEach(t => {
     t.classList.toggle('active', t.dataset.tab === active);
   });
@@ -12561,7 +13667,15 @@ function mhSearchKeyDown(e) {
 }
 
 /* 홈 → 페이지 이동 헬퍼 (홈 해제 후 이동) */
-function mobileGo(id) { document.body.classList.remove('mhome'); go(id); }
+function mobileGo(id) {
+  document.body.classList.remove('mhome');
+  if (id === 'alerts') {
+    go('system');
+    if (currentPage === 'system') switchSystemTab('alerts');
+    return;
+  }
+  go(id);
+}
 function mobileGoInv() { document.body.classList.remove('mhome'); goInventory('finished'); syncMobileTab(); }
 function mobileGoProcess() {
   document.body.classList.remove('mhome');
@@ -12898,6 +14012,33 @@ window.addEventListener('resize', () => {
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('bom-modal')">취소</button>
       <button class="btn btn-primary" onclick="saveBomModal()"><i class="ti ti-check"></i>저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 자재 수급/발주 → BOM 가져오기 모달 ══ -->
+<div class="overlay" id="bom-material-import-modal">
+  <div class="dlg" style="max-width:900px;width:96%;">
+    <div class="dlg-title"><i class="ti ti-package-import" style="color:var(--tx-i);"></i>자재 수급/발주 내역에서 BOM 가져오기</div>
+    <div id="bom-material-import-info" style="font-size:12px;color:var(--tx-s);margin-bottom:12px;"></div>
+    <div style="overflow-x:auto;max-height:55vh;" class="thin-scroll">
+      <table style="min-width:760px;">
+        <thead>
+          <tr>
+            <th style="width:40px;text-align:center;"><input id="bom-material-import-all" type="checkbox" onchange="toggleBomMaterialImportAll(this.checked)"></th>
+            <th>자재명</th><th>최근 공급처</th><th style="text-align:right;">발주 합계</th>
+            <th style="text-align:right;">최근 단가</th><th style="width:145px;text-align:right;">소요량 / 제품 1개</th><th>처리</th>
+          </tr>
+        </thead>
+        <tbody id="bom-material-import-body"></tbody>
+      </table>
+    </div>
+    <div style="font-size:11px;color:var(--tx-t);margin-top:10px;">
+      소요량은 최근 발주 수량을 제품 수량으로 나눈 값입니다. 실제 투입량과 다르면 입력값을 수정한 뒤 반영하세요.
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('bom-material-import-modal')">취소</button>
+      <button class="btn btn-primary" onclick="applyBomMaterialImport()"><i class="ti ti-check"></i>선택 항목 반영</button>
     </div>
   </div>
 </div>
