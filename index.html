@@ -1082,6 +1082,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
   </div>
   <div class="nav-g">
     <div class="nav-lbl">문서 관리</div>
+    <div class="ni" onclick="go('notes',this)"><i class="ti ti-notes"></i>메모·할 일<span class="nbadge" id="todoBadge" style="display:none;background:#e8590c;">0</span></div>
     <div class="ni" onclick="go('rfq',this)"><i class="ti ti-file-description"></i>견적요청서<span class="nbadge" id="rfqBadge" style="display:none;background:#868e96;">0</span></div>
     <div class="ni" onclick="go('po',this)"><i class="ti ti-file-invoice"></i>구매발주서<span class="nbadge" id="poBadge" style="display:none;background:#868e96;">0</span></div>
   </div>
@@ -1773,6 +1774,127 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     <div id="emp-tab-leave" style="display:none;"></div>
   </div>
 
+<!-- ══════ 메모·할 일 ══════ -->
+<div class="content list-page" id="pg-notes">
+  <style>
+    .memo-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+    .memo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+    .memo-card{border:1px solid var(--br);border-radius:var(--rl);background:var(--bg-p);padding:14px;min-width:0}
+    .memo-card-title{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .memo-card-body{font-size:12px;line-height:1.65;color:var(--tx-s);white-space:pre-wrap;margin:10px 0;max-height:115px;overflow:hidden}
+    .memo-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:10.5px;color:var(--tx-t)}
+    .memo-tag{padding:2px 7px;border-radius:999px;background:var(--bg-s);border:1px solid var(--br)}
+    .todo-board{display:grid;grid-template-columns:repeat(3,minmax(250px,1fr));gap:12px;overflow-x:auto}
+    .todo-col{background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rl);padding:10px;min-height:250px}
+    .todo-item{background:var(--bg-p);border:1px solid var(--br);border-radius:var(--rm);padding:11px;margin-top:8px}
+    @media(max-width:780px){.todo-board{grid-template-columns:1fr}.memo-grid{grid-template-columns:1fr}}
+  </style>
+
+  <div class="metrics" id="memo-kpi"></div>
+  <div class="memo-tabs">
+    <button class="btn btn-primary" data-memotab="memos" onclick="switchMemoTab('memos')"><i class="ti ti-notes"></i>전체 메모</button>
+    <button class="btn" data-memotab="todos" onclick="switchMemoTab('todos')"><i class="ti ti-list-check"></i>할 일</button>
+    <button class="btn" data-memotab="board" onclick="switchMemoTab('board')"><i class="ti ti-layout-kanban"></i>칸반</button>
+    <button class="btn" data-memotab="report" onclick="switchMemoTab('report')"><i class="ti ti-report-analytics"></i>AI 주간 보고</button>
+  </div>
+
+  <div class="toolbar">
+    <input id="memo-search" placeholder="제목·내용·태그·담당자 검색..." style="min-width:240px;" oninput="renderNotes()">
+    <select id="memo-filter" onchange="renderNotes()">
+      <option value="">전체 상태</option>
+      <option value="important">중요 항목</option>
+      <option value="overdue">기한 초과</option>
+      <option value="today">오늘 할 일</option>
+    </select>
+    <button class="btn btn-primary btn-icon" onclick="openMemoEditor()" title="새 메모"><i class="ti ti-plus"></i></button>
+    <button class="btn btn-icon" onclick="openTodoEditor()" title="새 할 일"><i class="ti ti-list-check"></i></button>
+  </div>
+  <div id="memo-content"></div>
+</div>
+
+<div class="overlay" id="memo-editor">
+  <div class="dlg" style="width:min(760px,96vw);max-width:760px;">
+    <div class="dlg-title"><i class="ti ti-notes"></i><span id="memo-editor-title">메모 작성</span></div>
+    <input type="hidden" id="memo-id">
+    <div style="display:grid;gap:12px;">
+      <div class="ff"><label>제목</label><input id="memo-title" maxlength="120" placeholder="메모 제목"></div>
+      <div class="ff"><label>내용</label><textarea id="memo-content-input" rows="9" placeholder="업무 내용, 회의 기록, 확인 사항을 입력하세요."></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 160px;gap:10px;">
+        <div class="ff"><label>태그</label><input id="memo-tags" placeholder="납기, 구매, 고객 (쉼표 구분)"></div>
+        <div class="ff"><label>연결 항목</label>
+          <select id="memo-entity" onchange="fillMemoEntityOptions()"><option value="">일반 메모</option><option value="product">제품</option><option value="material">자재</option><option value="order">생산지시</option><option value="claim">클레임</option><option value="as">고객 A/S</option></select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 140px;gap:10px;">
+        <div class="ff"><label>연결 번호</label><input id="memo-entity-id" list="memo-entity-options" placeholder="예: PR-001, MT-001"><datalist id="memo-entity-options"></datalist></div>
+        <label style="display:flex;align-items:end;gap:8px;padding-bottom:8px;font-size:12px;font-weight:700;"><input type="checkbox" id="memo-important"> 중요 메모</label>
+      </div>
+      <div class="ff">
+        <label>첨부파일 <span style="font-weight:400;color:var(--tx-t);">(파일당 1MB, 최대 5개)</span></label>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-sm" type="button" onclick="inp('memo-attachment-input').click()"><i class="ti ti-paperclip"></i>파일 추가</button>
+          <input id="memo-attachment-input" type="file" multiple style="display:none;" onchange="addMemoAttachments(this)">
+          <div id="memo-attachment-list" class="memo-meta"></div>
+        </div>
+      </div>
+      <details id="memo-history-wrap" style="display:none;border:1px solid var(--br);border-radius:var(--rm);padding:10px;">
+        <summary style="cursor:pointer;font-size:12px;font-weight:700;"><i class="ti ti-history"></i> 수정 이력</summary>
+        <div id="memo-history-list" style="margin-top:8px;"></div>
+      </details>
+      <div id="memo-ai-result" style="display:none;border:1px solid var(--br-i);background:var(--bg-i);border-radius:var(--rm);padding:12px;font-size:12px;"></div>
+    </div>
+    <div class="dlg-actions" style="margin-top:16px;flex-wrap:wrap;">
+      <button class="btn" onclick="runMemoAiSummary(event)"><i class="ti ti-sparkles"></i>Gemini 요약</button>
+      <button class="btn" id="memo-ai-todo-btn" style="display:none;" onclick="addAiTodos()"><i class="ti ti-list-check"></i>추출한 할 일 등록</button>
+      <span style="flex:1"></span>
+      <button class="btn" onclick="closeModal('memo-editor')">취소</button>
+      <button class="btn btn-primary" onclick="saveMemo()"><i class="ti ti-device-floppy"></i>저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="todo-editor">
+  <div class="dlg" style="width:min(560px,96vw);max-width:560px;">
+    <div class="dlg-title"><i class="ti ti-list-check"></i><span id="todo-editor-title">할 일 등록</span></div>
+    <input type="hidden" id="todo-id">
+    <div style="display:grid;gap:12px;">
+      <div class="ff"><label>할 일</label><input id="todo-title" maxlength="160" placeholder="처리할 업무"></div>
+      <div class="ff"><label>상세 내용</label><textarea id="todo-content" rows="4"></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="ff"><label>담당자</label><input id="todo-owner" placeholder="담당자 이름"></div>
+        <div class="ff"><label>마감일</label><input id="todo-due" type="date"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="ff"><label>시작일</label><input id="todo-start" type="date"></div>
+        <div class="ff"><label>알림일</label><input id="todo-reminder" type="date"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="ff"><label>상태</label><select id="todo-status"><option>대기</option><option>진행중</option><option>완료</option></select></div>
+        <div class="ff"><label>우선순위</label><select id="todo-priority"><option>보통</option><option>높음</option><option>긴급</option></select></div>
+      </div>
+      <div class="ff"><label>반복</label><select id="todo-repeat"><option value="">반복 없음</option><option value="daily">매일</option><option value="weekly">매주</option><option value="monthly">매월</option></select></div>
+      <div class="ff">
+        <label>체크리스트</label>
+        <div style="display:flex;gap:6px;"><input id="todo-check-new" placeholder="하위 할 일 입력" onkeydown="if(event.key==='Enter'){event.preventDefault();addTodoChecklistItem();}"><button type="button" class="btn btn-sm" onclick="addTodoChecklistItem()"><i class="ti ti-plus"></i></button></div>
+        <div id="todo-checklist" style="display:grid;gap:6px;margin-top:8px;"></div>
+      </div>
+      <div class="ff"><label>연결 메모</label><select id="todo-memo-id"><option value="">연결 안 함</option></select></div>
+    </div>
+    <div class="dlg-actions" style="margin-top:16px;">
+      <button class="btn" onclick="closeModal('todo-editor')">취소</button>
+      <button class="btn btn-primary" onclick="saveTodo()"><i class="ti ti-device-floppy"></i>저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="memo-report-modal">
+  <div class="dlg" style="width:min(760px,96vw);max-width:760px;">
+    <div class="dlg-title"><i class="ti ti-report-analytics"></i>AI 주간 업무 보고</div>
+    <div id="memo-report-result" style="white-space:pre-wrap;line-height:1.7;font-size:12px;max-height:65vh;overflow:auto;"></div>
+    <div class="dlg-actions" style="margin-top:16px;"><button class="btn" onclick="closeModal('memo-report-modal')">닫기</button></div>
+  </div>
+</div>
+
   <!-- ══════ 재무 관리 ══════ -->
   <div class="content" id="pg-finance">
     <div class="toolbar" id="finance-tabs">
@@ -1791,6 +1913,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
 
   <!-- 고객 A/S · 사후관리 -->
   <div class="content" id="pg-as">
+    <div class="metrics" id="as-kpi"></div>
     <div class="toolbar">
       <select id="as-filter" onchange="renderAS()" style="height:32px;">
         <option value="">전체 상태</option><option value="open">미완료(접수·처리중)</option><option>접수</option><option>처리중</option><option>완료</option><option>보류</option>
@@ -1807,6 +1930,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="btn btn-primary" data-systab="permissions" onclick="switchSystemTab('permissions')"><i class="ti ti-user-shield"></i>권한 관리</button>
       <button class="btn" data-systab="company" onclick="switchSystemTab('company')"><i class="ti ti-building"></i>회사 관리</button>
       <button class="btn" data-systab="templates" onclick="switchSystemTab('templates')"><i class="ti ti-template"></i>양식 내보내기</button>
+      <button class="btn" data-systab="api" onclick="switchSystemTab('api')"><i class="ti ti-key"></i>API 관리</button>
       <button class="btn" data-systab="alimtalk" onclick="switchSystemTab('alimtalk')"><i class="ti ti-brand-kakao"></i>알림톡 설정</button>
       <button class="btn" data-systab="alerts" onclick="switchSystemTab('alerts')"><i class="ti ti-bell"></i>알림 관리</button>
       <button class="btn" data-systab="trash" onclick="switchSystemTab('trash')"><i class="ti ti-trash"></i>휴지통</button>
@@ -1897,6 +2021,10 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
           <button class="btn btn-sm btn-danger" onclick="resetAllDocXlsxTemplates()"><i class="ti ti-restore"></i>모든 양식 기본값 복원</button>
         </div>
       </div>
+    </div>
+
+    <div class="system-panel" id="system-panel-api" style="display:none;">
+      <div id="api-settings-body"></div>
     </div>
 
     <div class="system-panel" id="system-panel-alimtalk" style="display:none;">
@@ -2010,7 +2138,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="btn btn-icon" onclick="importRfqXLS()" title="엑셀 가져오기"><i class="ti ti-file-import"></i></button>
       <button class="btn btn-icon" onclick="exportRfqXLS()" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
       <button class="btn btn-icon" onclick="openRfqPrint(null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
-      <button class="btn btn-icon" style="margin-left:auto;" onclick="openEmailjsSettings()" title="이메일 연동설정"><i class="ti ti-mail-cog"></i></button>
     </div>
 
     <div class="card">
@@ -2037,7 +2164,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="btn btn-icon" onclick="importPoListXLS()" title="엑셀 가져오기"><i class="ti ti-file-import"></i></button>
       <button class="btn btn-icon" onclick="exportPoXLS()" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
       <button class="btn btn-icon" onclick="openPoPrint(null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
-      <button class="btn btn-icon" style="margin-left:auto;" onclick="openEmailjsSettings()" title="이메일 연동설정"><i class="ti ti-mail-cog"></i></button>
     </div>
 
     <!-- 선택 일괄 동작 바 -->
@@ -2071,7 +2197,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="btn btn-primary btn-icon" onclick="openSalesDocAdd('statement')" title="거래명세표 등록"><i class="ti ti-plus"></i></button>
       <button class="btn btn-icon" onclick="exportSalesDocCSV('statement')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
       <button class="btn btn-icon" onclick="openSalesDocPrint('statement',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
-      <button class="btn btn-icon" style="margin-left:auto;" onclick="openEmailjsSettings()" title="이메일 연동설정"><i class="ti ti-mail-cog"></i></button>
     </div>
     <div class="card"><div id="st-table" style="overflow-x:auto;"></div></div>
   </div>
@@ -2091,7 +2216,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="btn btn-primary btn-icon" onclick="openSalesDocAdd('tax')" title="세금계산서 등록"><i class="ti ti-plus"></i></button>
       <button class="btn btn-icon" onclick="exportSalesDocCSV('tax')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
       <button class="btn btn-icon" onclick="openSalesDocPrint('tax',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
-      <button class="btn btn-icon" style="margin-left:auto;" onclick="openEmailjsSettings()" title="이메일 연동설정"><i class="ti ti-mail-cog"></i></button>
     </div>
     <div class="card"><div id="tx-table" style="overflow-x:auto;"></div></div>
   </div>
@@ -2117,7 +2241,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="btn btn-primary btn-icon" onclick="openSODocAdd('quote')" title="견적서 등록"><i class="ti ti-plus"></i></button>
       <button class="btn btn-icon" onclick="exportSODocCSV('quote')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
       <button class="btn btn-icon" onclick="openSODocPrint('quote',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
-      <button class="btn btn-icon" style="margin-left:auto;" onclick="openEmailjsSettings()" title="이메일 연동설정"><i class="ti ti-mail-cog"></i></button>
     </div>
     <div class="card"><div id="qt-table" style="overflow-x:auto;"></div></div>
     </div><!-- /sd-tab-quote -->
@@ -2135,7 +2258,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <input type="text" id="so-q" placeholder="품목명·고객사 검색..." style="min-width:180px;" oninput="renderSODoc('order')">
       <button class="btn btn-icon" onclick="exportSODocCSV('order')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
       <button class="btn btn-icon" onclick="openSODocPrint('order',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
-      <button class="btn btn-icon" style="margin-left:auto;" onclick="openEmailjsSettings()" title="이메일 연동설정"><i class="ti ti-mail-cog"></i></button>
     </div>
     <div class="card"><div id="so-table" style="overflow-x:auto;"></div></div>
     </div><!-- /sd-tab-order -->
@@ -2215,7 +2337,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
         <button class="btn btn-primary" id="email-submit-btn" onclick="doEmailJS()" disabled><i class="ti ti-send"></i>직접 발송 (EmailJS)</button>
       </div>
       <div style="font-size:10px; color:var(--tx-t); text-align:right;">
-        직접 발송은 <span style="color:var(--tx-i); cursor:pointer;" onclick="openEmailjsSettings()">EmailJS 설정</span> 필요 · 무료 200건/월
+        직접 발송 설정: 시스템 관리 → API 관리 → EmailJS
       </div>
     </div>
   </div>
@@ -2319,7 +2441,8 @@ function initFromEmbedded() {
       statementList:'statementList', taxList:'taxList',
       quoteList:'quoteList', orderList:'orderList',
       inventoryLedger:  'inventoryLedger',
-      alimtalkSettings: 'alimtalkSettings'
+      alimtalkSettings: 'alimtalkSettings',
+      memoList: 'memoList', todoList: 'todoList'
     };
     // 내장 데이터 타임스탬프가 localStorage보다 최신이면 덮어쓰기
     const embeddedTime = data._savedAt || '';
@@ -2396,6 +2519,9 @@ function reloadAllData() {
   if (!financeData.paidPayable) financeData.paidPayable = {};
   attendance   = loadStorage('attendance',   []);
   leaves       = loadStorage('leaves',       []);
+  memoList     = loadStorage('memoList',      []);
+  todoList     = loadStorage('todoList',      []);
+  memoAttachmentData = loadStorage('memoAttachmentData', {});
 
   // 자동 마이그레이션: 구형 예시 데이터만 존재하거나 비어있을 시 5개 추가 데이터 자동 삽입
   // (제거됨) 데모 시드 자동삽입 — 데이터는 Firebase가 담당
@@ -2539,7 +2665,7 @@ function saveAsFile() {
   const blob = new Blob([_buildHTML()], { type: 'text/html;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'MESPro.html';
+  a.download = 'index.html';
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   showToast('파일이 다운로드되었습니다.', 'success');
@@ -2550,7 +2676,7 @@ const DATA_KEYS = [
   'clients','products','materials','workOrders','workers','defects','claims',
   'checkRecords','alerts','inventory','deliveries','stages','trash','rfqList',
   'poList','partners','financeData','attendance','leaves','statementList',
-  'taxList','quoteList','orderList','inventoryLedger','alimtalkSettings',
+  'taxList','quoteList','orderList','inventoryLedger','alimtalkSettings','memoList','todoList','memoAttachmentData',
   'docXlsxTemplates'
 ];
 
@@ -2774,6 +2900,9 @@ let asList = loadStorage('asList', defaultAS);
 const defaultBom = [];
 let bomList = loadStorage('bomList', defaultBom);
 let bomProductId = '';   // BOM 화면에서 선택된 제품
+let memoList = loadStorage('memoList', []);
+let todoList = loadStorage('todoList', []);
+let memoAttachmentData = loadStorage('memoAttachmentData', {});
 let financeData = loadStorage('financeData', { entries: [], paidReceivable: {}, paidPayable: {} });
 // 구조 보정 (구버전 호환)
 if (!financeData.entries) financeData.entries = [];
@@ -3788,6 +3917,7 @@ function _goTo(id, el) {
     workers: '인사 관리', inventory: '재고 관리', deliveries: '납품 현황',
     rfq: '견적요청서 관리', po: '구매발주서 관리', partners: '거래처 관리',
     finance: '재무 관리', claims: '고객 클레임 관리', as: '고객 A/S · 사후관리', bom: 'BOM · 자재명세', system: '시스템 관리',
+    notes: '메모·할 일',
     statement: '거래명세표 관리', taxinvoice: '세금계산서 관리',
     salesdoc: '견적/수주 관리',
     calendar: '납기 캘린더'
@@ -3837,7 +3967,7 @@ function _updateBackBtn() {
     const PN = {
       dashboard:'대시보드', clients:'수주관리', materials:'자재관리',
       orders:'생산지시', process:'공정관리', quality:'품질검사',
-      workers:'인사', system:'시스템 관리', inventory:'재고', finance:'재무', claims:'클레임', statement:'거래명세표', taxinvoice:'세금계산서', salesdoc:'견적/수주'
+      workers:'인사', system:'시스템 관리', inventory:'재고', finance:'재무', claims:'클레임', notes:'메모·할 일', statement:'거래명세표', taxinvoice:'세금계산서', salesdoc:'견적/수주'
     };
     btn.title = `이전: ${PN[pageHistory[pageHistory.length-1]] || '이전 화면'}으로 돌아가기`;
   } else {
@@ -3866,6 +3996,7 @@ function refreshPage(id) {
   else if (id === 'finance') renderFinance();
   else if (id === 'as') renderAS();
   else if (id === 'bom') renderBom();
+  else if (id === 'notes') renderNotes();
   else if (id === 'system') renderSystem();
   else if (id === 'calendar') renderCalendar();
   if (typeof watchBulk === 'function') watchBulk();   // 일괄 선택 체크박스 부착
@@ -8761,7 +8892,7 @@ function toggleTheme() {
      5) 아래 FIREBASE_CONFIG 에 붙여넣기 → 저장 후 새로고침
    ※ apiKey/projectId 가 비어 있으면 자동으로 '로컬 전용 모드'로 동작합니다.
    ════════════════════════════════════════════════════════════ */
-const FIREBASE_CONFIG = {
+const DEFAULT_FIREBASE_CONFIG = {
   apiKey: "AIzaSyBh4BqIl3zzVEygG5FMN1-xKTlhZR1Od1I",
   authDomain: "k-meca.firebaseapp.com",
   databaseURL: "https://k-meca-default-rtdb.firebaseio.com",
@@ -8771,8 +8902,13 @@ const FIREBASE_CONFIG = {
   appId: "1:606055722429:web:f9352096fb4f97388536d4",
   measurementId: "G-PBGH98NRCT"
 };
+const FIREBASE_CONFIG = Object.assign(
+  {},
+  DEFAULT_FIREBASE_CONFIG,
+  loadStorage('firebaseConfig', {})
+);
 /* 클라우드로 공유할 데이터 키(테마/관리자비번 등 기기·보안 로컬값은 제외) */
-const CLOUD_KEYS = ['clients','products','materials','workOrders','workers','defects','claims','checkRecords','alerts','inventory','deliveries','stages','trash','rfqList','poList','partners','statementList','taxList','quoteList','orderList','financeData','attendance','leaves','asList','bomList','companyInfo','docXlsxTemplates'];
+const CLOUD_KEYS = ['clients','products','materials','workOrders','workers','defects','claims','checkRecords','alerts','inventory','deliveries','stages','trash','rfqList','poList','partners','statementList','taxList','quoteList','orderList','financeData','attendance','leaves','asList','bomList','memoList','todoList','companyInfo','docXlsxTemplates'];
 let _fbAuth=null, _fbDb=null, _cloudUser=null;   // _cloudActive는 앞쪽(전역 상태)에서 선언됨
 const _cloudQueue=new Set(); let _cloudTimer=null; let _cloudUnsub=null;
 
@@ -8789,6 +8925,7 @@ renderAlerts();
 updateTrashBadge();
 updateDlvBadge();
 updateAsBadge();
+updateTodoBadge();
 updateAdminUI();
 
 // 앱 초기화 완료 (데이터는 로컬 저장 + 파일 저장으로 관리)
@@ -8806,12 +8943,12 @@ const PAGE_LIST = [
   {id:'partners',label:'거래처 관리'},{id:'rfq',label:'견적요청서'},{id:'po',label:'구매발주서'},
   {id:'salesdoc',label:'견적/수주'},{id:'statement',label:'거래명세표'},{id:'taxinvoice',label:'세금계산서'},
   {id:'finance',label:'재무 관리'},{id:'workers',label:'인사 관리'},
-  {id:'as',label:'고객 A/S'},{id:'system',label:'시스템 관리'}
+  {id:'as',label:'고객 A/S'},{id:'notes',label:'메모·할 일'},{id:'system',label:'시스템 관리'}
 ];
 /* 역할별 기본 접근 페이지(관리자가 화면에서 편집 가능). admin은 항상 전체. */
 const DEFAULT_ROLE_PAGES = {
-  manager: ['dashboard','clients','materials','deliveries','calendar','orders','bom','quality','claims','inventory','partners','rfq','po','salesdoc','as'],
-  staff:   ['dashboard','orders','quality','inventory','deliveries','calendar']
+  manager: ['dashboard','clients','materials','deliveries','calendar','orders','bom','quality','claims','inventory','partners','rfq','po','salesdoc','as','notes'],
+  staff:   ['dashboard','orders','quality','inventory','deliveries','calendar','notes']
 };
 const ROLE_LABEL = { admin:'관리자', manager:'중간관리자', staff:'평사원' };
 
@@ -9023,6 +9160,7 @@ function cloudResyncGlobals(){
   taxList=L('taxList',taxList); quoteList=L('quoteList',quoteList); orderList=L('orderList',orderList);
   financeData=L('financeData',financeData); attendance=L('attendance',attendance); leaves=L('leaves',leaves);
   asList=L('asList',asList); bomList=L('bomList',bomList);
+  memoList=L('memoList',memoList); todoList=L('todoList',todoList);
 }
 /* 다른 사용자의 변경을 실시간 수신 → localStorage 갱신 → 전역 반영 → 현재 화면 새로고침 */
 function cloudSubscribe(){
@@ -9042,7 +9180,7 @@ function cloudSubscribe(){
     if (!document.querySelector('.overlay.open')) {
       try { refreshPage(currentPage); } catch(e){}
     }
-    try { updateDlvBadge(); updateAsBadge(); updateTrashBadge(); } catch(e){}
+    try { updateDlvBadge(); updateAsBadge(); updateTrashBadge(); updateTodoBadge(); } catch(e){}
     _cloudChip('synced'); setTimeout(()=>_cloudChip('online'), 1500);
   }, err=>{ console.warn('실시간 동기화 구독 오류', err); });
 
@@ -9127,6 +9265,7 @@ function switchSystemTab(tab) {
   if (systemTab === 'permissions') renderPermissions();
   else if (systemTab === 'company') renderSystemCompany();
   else if (systemTab === 'templates') renderDocTemplateManagement();
+  else if (systemTab === 'api') renderApiSettings();
   else if (systemTab === 'alimtalk') renderAlimtalkSettings();
   else if (systemTab === 'alerts') renderAlerts();
   else if (systemTab === 'trash') renderTrash();
@@ -9522,10 +9661,10 @@ function getEmailjsConfig() {
   return loadStorage('emailjsConfig', { serviceId:'', templateId:'', publicKey:'' });
 }
 function openEmailjsSettings() {
-  const cfg = getEmailjsConfig();
-  inp('ejs-service').value  = cfg.serviceId;
-  inp('ejs-template').value = cfg.templateId;
-  inp('ejs-pubkey').value   = cfg.publicKey;
+  if (typeof openApiSettings === 'function') {
+    openApiSettings('emailjs');
+    return;
+  }
   inp('emailjs-modal').classList.add('open');
 }
 function saveEmailjsSettings() {
@@ -13086,6 +13225,7 @@ function updateAsBadge(){
 }
 function renderAS(){
   const body = inp('as-body'); if(!body) return;
+  const kpi = inp('as-kpi');
   updateAsBadge();
   const fil = (inp('as-filter')?.value)||'';
   const q = ((inp('as-search')?.value)||'').toLowerCase();
@@ -13128,13 +13268,12 @@ function renderAS(){
         <button class="btn btn-sm btn-danger" onclick="deleteAS('${a.id}')" title="삭제"><i class="ti ti-trash"></i></button>
       </td>
     </tr>`).join('') : `<tr><td colspan="10">${empty('등록된 A/S 건이 없습니다.')}</td></tr>`;
-  body.innerHTML = `
-    <div class="metrics">
+  if (kpi) kpi.innerHTML = `
       <div class="mc"><div class="mc-lbl"><i class="ti ti-tool"></i>전체 A/S</div><div class="mc-val">${total}건</div></div>
       <div class="mc clickable${fil==='open'?' kpi-active':''}" onclick="kpiFilter('as-filter','open','renderAS')"><div class="mc-lbl"><i class="ti ti-loader" style="color:var(--tx-w);"></i>미완료(접수·처리중)</div><div class="mc-val" style="color:var(--tx-w);">${open}건</div></div>
       <div class="mc clickable${fil==='완료'?' kpi-active':''}" onclick="kpiFilter('as-filter','완료','renderAS')"><div class="mc-lbl"><i class="ti ti-checks" style="color:var(--tx-ok);"></i>처리 완료</div><div class="mc-val" style="color:var(--tx-ok);">${done}건</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-coin" style="color:var(--tx-i);"></i>유상 수리 합계</div><div class="mc-val" style="color:var(--tx-i);">${fmtW(paidCost)}</div></div>
-    </div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-coin" style="color:var(--tx-i);"></i>유상 수리 합계</div><div class="mc-val" style="color:var(--tx-i);">${fmtW(paidCost)}</div></div>`;
+  body.innerHTML = `
     <div class="card">
       <div class="card-hd"><span class="card-ttl"><i class="ti ti-tool"></i>A/S 접수 대장</span><span style="font-size:11px;color:var(--tx-t);">${list.length}건 표시</span></div>
       <div style="overflow-x:auto;"><table>
@@ -13321,10 +13460,8 @@ function renderAlimtalkSettings() {
 
   if (cfg.enabled) {
     html +=
-      '<div class="form-row"><label class="form-lbl">SOLAPI API Key</label>' +
-      '<input class="form-inp" id="at-apiKey" value="' + (cfg.apiKey || '') + '" placeholder="NCSXXXXX..."></div>' +
-      '<div class="form-row"><label class="form-lbl">SOLAPI API Secret</label>' +
-      '<input class="form-inp" id="at-apiSecret" type="password" value="' + (cfg.apiSecret || '') + '" placeholder="API Secret"></div>' +
+      '<div style="padding:10px 12px;border:1px solid var(--br);border-radius:var(--rm);background:var(--bg-s);font-size:12px;color:var(--tx-s);">' +
+      'SOLAPI API Key와 Secret은 <button class="btn btn-sm" style="margin-left:8px;" onclick="openApiSettings(\'solapi\')"><i class="ti ti-key"></i>API 관리에서 변경</button></div>' +
       '<div class="form-row"><label class="form-lbl">카카오 채널 ID (pfId)</label>' +
       '<input class="form-inp" id="at-pfId" value="' + (cfg.pfId || '') + '" placeholder="_xKBBxjxb"></div>' +
       '<div class="form-row"><label class="form-lbl">발신번호</label>' +
@@ -13365,12 +13502,8 @@ function alimtalkEventToggle(key, on) {
 }
 
 function saveAlimtalkSettings() {
-  var k  = document.getElementById('at-apiKey');
-  var s  = document.getElementById('at-apiSecret');
   var p  = document.getElementById('at-pfId');
   var ph = document.getElementById('at-senderPhone');
-  if (k)  alimtalkSettings.apiKey      = k.value.trim();
-  if (s)  alimtalkSettings.apiSecret   = s.value.trim();
   if (p)  alimtalkSettings.pfId        = p.value.trim();
   if (ph) alimtalkSettings.senderPhone = ph.value.trim();
   saveStorage('alimtalkSettings', alimtalkSettings);
@@ -13382,6 +13515,800 @@ async function testAlimtalk() {
   if (!manager) { showToast('모바일 번호가 등록된 직원이 없습니다.', 'error'); return; }
   await sendAlimtalk(manager.mobile, 'TPL_TEST', { '#{메시지}': 'MESPro 알림톡 테스트 메시지입니다.' });
   showToast('테스트 발송 요청 완료. SOLAPI 발송 내역을 확인하세요.');
+}
+
+/* ════════ 시스템 관리 - API 연결 관리 ════════ */
+
+function _apiEsc(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function getGeminiConfig() {
+  return loadStorage('geminiConfig', {
+    enabled: true,
+    apiKey: '',
+    model: 'gemini-3.1-flash-lite'
+  });
+}
+
+function _saveApiLocal(key, value) {
+  localStorage.setItem('mes_' + key, JSON.stringify(value));
+  if (typeof _triggerAutoSave === 'function') _triggerAutoSave();
+}
+
+function _apiStatus(configured, label) {
+  return '<span style="font-size:11px;font-weight:700;color:' +
+    (configured ? 'var(--tx-ok)' : 'var(--tx-t)') + ';">' +
+    '<i class="ti ' + (configured ? 'ti-circle-check' : 'ti-circle-dashed') + '"></i> ' +
+    (configured ? (label || '설정됨') : '미설정') + '</span>';
+}
+
+function _apiSecretInput(id, value, placeholder) {
+  return '<div style="display:flex;gap:6px;">' +
+    '<input class="form-inp" id="' + id + '" type="password" value="' + _apiEsc(value) +
+    '" placeholder="' + _apiEsc(placeholder || '') + '" autocomplete="off">' +
+    '<button class="btn btn-icon" type="button" onclick="toggleApiSecret(\'' + id +
+    '\',this)" title="키 표시/숨김"><i class="ti ti-eye"></i></button></div>';
+}
+
+function renderApiSettings() {
+  var body = inp('api-settings-body');
+  if (!body) return;
+
+  var gemini = getGeminiConfig();
+  var email = getEmailjsConfig();
+  var solapi = alimtalkSettings || {};
+  var firebaseCfg = loadStorage('firebaseConfig', {});
+  var activeFirebase = Object.assign({}, DEFAULT_FIREBASE_CONFIG, firebaseCfg);
+
+  body.innerHTML =
+    '<div class="card" style="margin-bottom:16px;background:var(--bg-s);border-color:#f59f00;">' +
+      '<div style="display:flex;gap:10px;align-items:flex-start;">' +
+        '<i class="ti ti-shield-lock" style="font-size:21px;color:#f59f00;"></i>' +
+        '<div style="font-size:12px;color:var(--tx-s);line-height:1.7;">' +
+          '<b style="color:var(--tx);">API 키 변경 안내</b><br>' +
+          '새 키를 발급한 뒤 아래 기존 값을 지우고 새 키를 입력하여 저장하세요. 저장 후 연결 테스트를 실행하고, 정상 확인 뒤 공급자 사이트에서 이전 키를 폐기하세요. ' +
+          '이 HTML 버전은 키를 현재 브라우저 저장소에 보관하므로 신뢰할 수 있는 사내 PC에서만 사용하세요. SOLAPI Secret과 Gemini 키는 향후 서버 함수로 이전하는 것이 가장 안전합니다.' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="card" id="api-card-gemini" style="margin-bottom:16px;">' +
+      '<div class="card-hd"><span class="card-ttl"><i class="ti ti-sparkles"></i>Gemini - 메모 AI 요약</span>' +
+        _apiStatus(!!gemini.apiKey, gemini.model) + '</div>' +
+      '<div style="display:grid;gap:12px;max-width:720px;">' +
+        '<label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;">' +
+          '<input type="checkbox" id="api-gemini-enabled" ' + (gemini.enabled !== false ? 'checked' : '') + '>메모 AI 요약 사용</label>' +
+        '<div class="form-row"><label class="form-lbl">Gemini API Key</label>' +
+          _apiSecretInput('api-gemini-key', gemini.apiKey, 'AIza...') + '</div>' +
+        '<div class="form-row"><label class="form-lbl">모델</label>' +
+          '<input class="form-inp" id="api-gemini-model" value="' + _apiEsc(gemini.model) + '" placeholder="gemini-3.1-flash-lite"></div>' +
+        '<div style="font-size:11px;color:var(--tx-t);line-height:1.6;">Google AI Studio에서 API 키를 발급합니다. 무료 티어 데이터는 서비스 개선에 사용될 수 있으므로 민감한 개인정보·원가 정보는 요약 전에 제외하는 것을 권장합니다.</div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+          '<button class="btn btn-primary" onclick="saveGeminiApiSettings()"><i class="ti ti-device-floppy"></i>저장</button>' +
+          '<button class="btn" onclick="testGeminiApi(event)"><i class="ti ti-plug-connected"></i>연결 테스트</button>' +
+          '<a class="btn" href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener"><i class="ti ti-external-link"></i>키 발급 페이지</a>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="card" id="api-card-solapi" style="margin-bottom:16px;">' +
+      '<div class="card-hd"><span class="card-ttl"><i class="ti ti-brand-kakao"></i>SOLAPI - 카카오 알림톡</span>' +
+        _apiStatus(!!(solapi.apiKey && solapi.apiSecret)) + '</div>' +
+      '<div style="display:grid;gap:12px;max-width:720px;">' +
+        '<div class="form-row"><label class="form-lbl">API Key</label>' +
+          _apiSecretInput('api-solapi-key', solapi.apiKey, 'NCS...') + '</div>' +
+        '<div class="form-row"><label class="form-lbl">API Secret</label>' +
+          _apiSecretInput('api-solapi-secret', solapi.apiSecret, 'SOLAPI API Secret') + '</div>' +
+        '<div style="font-size:11px;color:var(--tx-t);">키 저장 후 알림톡 설정 탭에서 채널 ID, 발신번호와 자동 발송 이벤트를 설정하세요.</div>' +
+        '<div><button class="btn btn-primary" onclick="saveSolapiApiSettings()"><i class="ti ti-device-floppy"></i>저장</button></div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="card" id="api-card-emailjs" style="margin-bottom:16px;">' +
+      '<div class="card-hd"><span class="card-ttl"><i class="ti ti-mail-cog"></i>EmailJS - 문서 이메일 발송</span>' +
+        _apiStatus(!!(email.serviceId && email.templateId && email.publicKey)) + '</div>' +
+      '<div style="display:grid;gap:12px;max-width:720px;">' +
+        '<div class="form-row"><label class="form-lbl">Service ID</label><input class="form-inp" id="api-email-service" value="' + _apiEsc(email.serviceId) + '" placeholder="service_xxxxxxx"></div>' +
+        '<div class="form-row"><label class="form-lbl">Template ID</label><input class="form-inp" id="api-email-template" value="' + _apiEsc(email.templateId) + '" placeholder="template_xxxxxxx"></div>' +
+        '<div class="form-row"><label class="form-lbl">Public Key</label>' + _apiSecretInput('api-email-key', email.publicKey, 'EmailJS Public Key') + '</div>' +
+        '<div><button class="btn btn-primary" onclick="saveEmailjsApiSettings()"><i class="ti ti-device-floppy"></i>저장</button></div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="card" id="api-card-firebase">' +
+      '<div class="card-hd"><span class="card-ttl"><i class="ti ti-brand-firebase"></i>Firebase - 로그인·클라우드 동기화</span>' +
+        _apiStatus(!!(activeFirebase.apiKey && activeFirebase.projectId), activeFirebase.projectId) + '</div>' +
+      '<div style="display:grid;gap:12px;max-width:720px;">' +
+        '<div class="form-row"><label class="form-lbl">API Key</label>' + _apiSecretInput('api-fb-key', activeFirebase.apiKey, 'Firebase Web API Key') + '</div>' +
+        '<div class="form-row"><label class="form-lbl">Auth Domain</label><input class="form-inp" id="api-fb-auth" value="' + _apiEsc(activeFirebase.authDomain) + '"></div>' +
+        '<div class="form-row"><label class="form-lbl">Database URL</label><input class="form-inp" id="api-fb-database" value="' + _apiEsc(activeFirebase.databaseURL) + '"></div>' +
+        '<div class="form-row"><label class="form-lbl">Project ID</label><input class="form-inp" id="api-fb-project" value="' + _apiEsc(activeFirebase.projectId) + '"></div>' +
+        '<div class="form-row"><label class="form-lbl">Storage Bucket</label><input class="form-inp" id="api-fb-storage" value="' + _apiEsc(activeFirebase.storageBucket) + '"></div>' +
+        '<div class="form-row"><label class="form-lbl">Messaging Sender ID</label><input class="form-inp" id="api-fb-sender" value="' + _apiEsc(activeFirebase.messagingSenderId) + '"></div>' +
+        '<div class="form-row"><label class="form-lbl">App ID</label><input class="form-inp" id="api-fb-app" value="' + _apiEsc(activeFirebase.appId) + '"></div>' +
+        '<div class="form-row"><label class="form-lbl">Measurement ID</label><input class="form-inp" id="api-fb-measurement" value="' + _apiEsc(activeFirebase.measurementId) + '"></div>' +
+        '<div style="font-size:11px;color:var(--tx-t);">Firebase 설정은 앱 시작 시 적용되므로 변경 후 자동으로 새로고침됩니다. Firebase 웹 API Key는 식별용 공개 설정이며 Firestore 보안 규칙과 로그인이 실제 접근을 보호합니다.</div>' +
+        '<div style="display:flex;gap:8px;"><button class="btn btn-primary" onclick="saveFirebaseApiSettings()"><i class="ti ti-refresh"></i>저장 후 새로고침</button>' +
+          '<button class="btn btn-danger" onclick="resetFirebaseApiSettings()"><i class="ti ti-restore"></i>기본 설정 복원</button></div>' +
+      '</div>' +
+    '</div>';
+}
+
+function toggleApiSecret(id, button) {
+  var field = inp(id);
+  if (!field) return;
+  field.type = field.type === 'password' ? 'text' : 'password';
+  var icon = button && button.querySelector('i');
+  if (icon) icon.className = field.type === 'password' ? 'ti ti-eye' : 'ti ti-eye-off';
+}
+
+function openApiSettings(provider) {
+  if (typeof go === 'function') go('system');
+  switchSystemTab('api');
+  setTimeout(function() {
+    var card = inp('api-card-' + provider);
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 50);
+}
+
+function saveGeminiApiSettings() {
+  var config = {
+    enabled: !!(inp('api-gemini-enabled') && inp('api-gemini-enabled').checked),
+    apiKey: v('api-gemini-key').trim(),
+    model: v('api-gemini-model').trim() || 'gemini-3.1-flash-lite'
+  };
+  _saveApiLocal('geminiConfig', config);
+  showToast('Gemini 메모 요약 설정이 저장되었습니다.', 'success');
+  renderApiSettings();
+}
+
+function saveSolapiApiSettings() {
+  alimtalkSettings.apiKey = v('api-solapi-key').trim();
+  alimtalkSettings.apiSecret = v('api-solapi-secret').trim();
+  _saveApiLocal('alimtalkSettings', alimtalkSettings);
+  showToast('SOLAPI 키가 저장되었습니다.', 'success');
+  renderApiSettings();
+}
+
+function saveEmailjsApiSettings() {
+  var config = {
+    serviceId: v('api-email-service').trim(),
+    templateId: v('api-email-template').trim(),
+    publicKey: v('api-email-key').trim()
+  };
+  _saveApiLocal('emailjsConfig', config);
+  if (config.publicKey && window.emailjs) emailjs.init({ publicKey: config.publicKey });
+  showToast('EmailJS 설정이 저장되었습니다.', 'success');
+  renderApiSettings();
+}
+
+function saveFirebaseApiSettings() {
+  var config = {
+    apiKey: v('api-fb-key').trim(),
+    authDomain: v('api-fb-auth').trim(),
+    databaseURL: v('api-fb-database').trim(),
+    projectId: v('api-fb-project').trim(),
+    storageBucket: v('api-fb-storage').trim(),
+    messagingSenderId: v('api-fb-sender').trim(),
+    appId: v('api-fb-app').trim(),
+    measurementId: v('api-fb-measurement').trim()
+  };
+  _saveApiLocal('firebaseConfig', config);
+  location.reload();
+}
+
+function resetFirebaseApiSettings() {
+  if (!confirm('Firebase 연결 설정을 프로그램 기본값으로 복원하시겠습니까?')) return;
+  localStorage.removeItem('mes_firebaseConfig');
+  location.reload();
+}
+
+function _geminiText(response) {
+  var candidates = response && response.candidates;
+  var parts = candidates && candidates[0] && candidates[0].content && candidates[0].content.parts;
+  return Array.isArray(parts) ? parts.map(function(part) { return part.text || ''; }).join('') : '';
+}
+
+async function callGeminiForMemo(prompt) {
+  var config = getGeminiConfig();
+  if (!config.enabled) throw new Error('Gemini 메모 요약 기능이 비활성화되어 있습니다.');
+  if (!config.apiKey) throw new Error('시스템 관리의 API 관리에서 Gemini API 키를 설정하세요.');
+
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
+    encodeURIComponent(config.model || 'gemini-3.1-flash-lite') +
+    ':generateContent?key=' + encodeURIComponent(config.apiKey);
+  var response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.2,
+        responseMimeType: 'application/json'
+      }
+    })
+  });
+  var data = await response.json().catch(function() { return {}; });
+  if (!response.ok) {
+    throw new Error((data.error && data.error.message) || ('Gemini API 오류 (' + response.status + ')'));
+  }
+  var text = _geminiText(data);
+  if (!text) throw new Error('Gemini에서 결과를 받지 못했습니다.');
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return { summary: text, keyPoints: [], actionItems: [], risks: [], suggestedTags: [] };
+  }
+}
+
+async function summarizeMemoWithGemini(text) {
+  var source = String(text || '').trim();
+  if (!source) throw new Error('요약할 메모가 없습니다.');
+  return callGeminiForMemo(
+    '다음 업무 메모를 한국어로 정리하세요. 반드시 JSON 객체만 반환하세요. ' +
+    '형식: {"summary":"3문장 이내 요약","keyPoints":["핵심 내용"],' +
+    '"actionItems":[{"text":"할 일","owner":"","dueDate":""}],' +
+    '"risks":["위험 또는 확인사항"],"suggestedTags":["태그"]}\n\n메모:\n' + source.substring(0, 20000)
+  );
+}
+
+async function testGeminiApi(ev) {
+  saveGeminiApiSettings();
+  var button = ev && ev.currentTarget;
+  if (button) {
+    button.disabled = true;
+    button.innerHTML = '<i class="ti ti-loader animate-spin"></i>테스트 중';
+  }
+  try {
+    var result = await callGeminiForMemo(
+      '연결 테스트입니다. 반드시 {"summary":"Gemini 연결 성공","keyPoints":[],"actionItems":[],"risks":[],"suggestedTags":[]} JSON만 반환하세요.'
+    );
+    showToast(result.summary || 'Gemini 연결에 성공했습니다.', 'success');
+  } catch (error) {
+    showToast(error.message || 'Gemini 연결에 실패했습니다.', 'error');
+  } finally {
+    renderApiSettings();
+  }
+}
+
+/* ════════ 메모·할 일 통합 관리 ════════ */
+let memoTab = 'memos';
+let _memoAiResult = null;
+let _memoAttachments = [];
+let _todoChecklist = [];
+
+function _memoEsc(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function _memoNow() { return new Date().toISOString(); }
+function _memoAuthor() {
+  return (_cloudUser && (_cloudUser.displayName || _cloudUser.email)) || '사용자';
+}
+function _memoTags(value) {
+  return String(value || '').split(',').map(function(x) { return x.trim(); }).filter(Boolean);
+}
+
+function switchMemoTab(tab) {
+  memoTab = tab || 'memos';
+  document.querySelectorAll('[data-memotab]').forEach(function(btn) {
+    btn.classList.toggle('btn-primary', btn.dataset.memotab === memoTab);
+  });
+  renderNotes();
+}
+
+function updateTodoBadge() {
+  var badge = inp('todoBadge');
+  if (!badge || typeof todoList === 'undefined') return;
+  var count = todoList.filter(function(item) { return item.status !== '완료'; }).length;
+  badge.textContent = count;
+  badge.style.display = count ? '' : 'none';
+}
+
+function renderNotes() {
+  var content = inp('memo-content');
+  if (!content) return;
+  updateTodoBadge();
+  scanTodoReminders();
+  renderMemoKpi();
+  document.querySelectorAll('[data-memotab]').forEach(function(btn) {
+    btn.classList.toggle('btn-primary', btn.dataset.memotab === memoTab);
+  });
+  if (memoTab === 'todos') renderTodoList();
+  else if (memoTab === 'board') renderTodoBoard();
+  else if (memoTab === 'report') renderWeeklyReportPanel();
+  else renderMemoCards();
+}
+
+function renderMemoKpi() {
+  var box = inp('memo-kpi');
+  if (!box) return;
+  var open = todoList.filter(function(t) { return t.status !== '완료'; }).length;
+  var overdue = todoList.filter(function(t) { return t.status !== '완료' && t.dueDate && t.dueDate < today(); }).length;
+  var important = memoList.filter(function(m) { return m.important; }).length;
+  box.innerHTML =
+    '<div class="mc"><div class="mc-lbl"><i class="ti ti-notes"></i>전체 메모</div><div class="mc-val">' + memoList.length + '</div></div>' +
+    '<div class="mc"><div class="mc-lbl"><i class="ti ti-list-check"></i>미완료 할 일</div><div class="mc-val" style="color:var(--tx-i);">' + open + '</div></div>' +
+    '<div class="mc"><div class="mc-lbl"><i class="ti ti-alert-triangle"></i>기한 초과</div><div class="mc-val" style="color:var(--tx-d);">' + overdue + '</div></div>' +
+    '<div class="mc"><div class="mc-lbl"><i class="ti ti-pin"></i>중요 메모</div><div class="mc-val" style="color:var(--tx-w);">' + important + '</div></div>';
+}
+
+function _memoQueryMatch(item, q) {
+  return !q || [item.title, item.content, item.owner, (item.tags || []).join(' '), item.summary]
+    .join(' ').toLowerCase().includes(q);
+}
+
+function renderMemoCards() {
+  var q = v('memo-search').trim().toLowerCase();
+  var filter = v('memo-filter');
+  var list = memoList.filter(function(m) {
+    if (!_memoQueryMatch(m, q)) return false;
+    return filter !== 'important' || m.important;
+  }).sort(function(a, b) {
+    return Number(!!b.important) - Number(!!a.important) || String(b.updatedAt).localeCompare(String(a.updatedAt));
+  });
+  var content = inp('memo-content');
+  if (!list.length) {
+    content.innerHTML = '<div class="card"><div class="empty"><i class="ti ti-notes"></i>등록된 메모가 없습니다.</div></div>';
+    return;
+  }
+  content.innerHTML = '<div class="memo-grid">' + list.map(function(m) {
+    var tags = (m.tags || []).map(function(tag) { return '<span class="memo-tag">#' + _memoEsc(tag) + '</span>'; }).join('');
+    var linked = m.entityType ? '<span><i class="ti ti-link"></i>' + _memoEsc(m.entityType + ' ' + (m.entityId || '')) + '</span>' : '';
+    var attachmentCount = (m.attachments || []).length;
+    return '<div class="memo-card">' +
+      '<div style="display:flex;align-items:center;gap:8px;"><div class="memo-card-title" style="flex:1;">' +
+      (m.important ? '<i class="ti ti-pin" style="color:var(--tx-w);"></i> ' : '') + _memoEsc(m.title) + '</div>' +
+      '<button class="btn btn-sm btn-icon" onclick="openMemoEditor(\'' + m.id + '\')" title="수정"><i class="ti ti-edit"></i></button>' +
+      '<button class="btn btn-sm btn-icon" onclick="deleteMemo(\'' + m.id + '\')" title="삭제"><i class="ti ti-trash"></i></button></div>' +
+      '<div class="memo-card-body">' + _memoEsc(m.content) + '</div>' +
+      (m.summary ? '<div style="font-size:11px;padding:8px;border-left:3px solid var(--tx-i);background:var(--bg-i);margin-bottom:9px;"><b>AI 요약</b><br>' + _memoEsc(m.summary) + '</div>' : '') +
+      '<div class="memo-meta">' + tags + linked +
+      (attachmentCount ? '<span><i class="ti ti-paperclip"></i>' + attachmentCount + '</span>' : '') +
+      '<span style="margin-left:auto;">' + _memoEsc(m.author || '') + ' · ' + _memoEsc(String(m.updatedAt || '').slice(0, 10)) + '</span></div>' +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+function _filteredTodos() {
+  var q = v('memo-search').trim().toLowerCase();
+  var filter = v('memo-filter');
+  return todoList.filter(function(t) {
+    if (!_memoQueryMatch(t, q)) return false;
+    if (filter === 'important') return t.priority === '긴급' || t.priority === '높음';
+    if (filter === 'overdue') return t.status !== '완료' && t.dueDate && t.dueDate < today();
+    if (filter === 'today') return t.status !== '완료' && t.dueDate === today();
+    return true;
+  });
+}
+
+function renderTodoList() {
+  var list = _filteredTodos().sort(function(a, b) {
+    return (a.status === '완료') - (b.status === '완료') || String(a.dueDate || '9999').localeCompare(String(b.dueDate || '9999'));
+  });
+  var content = inp('memo-content');
+  if (!list.length) {
+    content.innerHTML = '<div class="card"><div class="empty"><i class="ti ti-list-check"></i>등록된 할 일이 없습니다.</div></div>';
+    return;
+  }
+  content.innerHTML = '<div class="card" style="overflow-x:auto;"><table style="min-width:850px;"><thead><tr>' +
+    '<th>완료</th><th>할 일</th><th>담당자</th><th>마감일</th><th>우선순위</th><th>상태</th><th>관리</th></tr></thead><tbody>' +
+    list.map(function(t) {
+      var late = t.status !== '완료' && t.dueDate && t.dueDate < today();
+      return '<tr><td><input type="checkbox" ' + (t.status === '완료' ? 'checked' : '') + ' onchange="toggleTodoDone(\'' + t.id + '\',this.checked)"></td>' +
+        '<td><b style="' + (t.status === '완료' ? 'text-decoration:line-through;color:var(--tx-t);' : '') + '">' + _memoEsc(t.title) + '</b>' +
+        (t.content ? '<div style="font-size:10.5px;color:var(--tx-t);margin-top:3px;">' + _memoEsc(t.content) + '</div>' : '') + '</td>' +
+        '<td>' + _memoEsc(t.owner || '미지정') + '</td><td style="color:' + (late ? 'var(--tx-d)' : 'inherit') + ';">' + _memoEsc(t.dueDate || '미설정') + '</td>' +
+        '<td>' + _memoEsc(t.priority || '보통') + '</td><td><select onchange="setTodoStatus(\'' + t.id + '\',this.value)" style="height:27px;">' +
+        ['대기','진행중','완료'].map(function(s) { return '<option' + (s === t.status ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select></td>' +
+        '<td><button class="btn btn-sm btn-icon" onclick="openTodoEditor(\'' + t.id + '\')"><i class="ti ti-edit"></i></button> ' +
+        '<button class="btn btn-sm btn-icon" onclick="deleteTodo(\'' + t.id + '\')"><i class="ti ti-trash"></i></button></td></tr>';
+    }).join('') + '</tbody></table></div>';
+}
+
+function renderTodoBoard() {
+  var list = _filteredTodos();
+  var content = inp('memo-content');
+  content.innerHTML = '<div class="todo-board">' + ['대기','진행중','완료'].map(function(status) {
+    var rows = list.filter(function(t) { return t.status === status; });
+    return '<div class="todo-col"><div style="font-weight:800;font-size:12px;">' + status + ' <span class="memo-tag">' + rows.length + '</span></div>' +
+      rows.map(function(t) {
+        return '<div class="todo-item" onclick="openTodoEditor(\'' + t.id + '\')" style="cursor:pointer;">' +
+          '<div style="font-size:12px;font-weight:750;">' + _memoEsc(t.title) + '</div>' +
+          '<div class="memo-meta" style="margin-top:8px;"><span>' + _memoEsc(t.owner || '미지정') + '</span><span style="margin-left:auto;">' + _memoEsc(t.dueDate || '') + '</span></div></div>';
+      }).join('') + '</div>';
+  }).join('') + '</div>';
+}
+
+function openMemoEditor(id) {
+  var memo = memoList.find(function(m) { return m.id === id; });
+  sv('memo-id', memo ? memo.id : '');
+  sv('memo-title', memo ? memo.title : '');
+  sv('memo-content-input', memo ? memo.content : '');
+  sv('memo-tags', memo ? (memo.tags || []).join(', ') : '');
+  sv('memo-entity', memo ? memo.entityType : '');
+  sv('memo-entity-id', memo ? memo.entityId : '');
+  fillMemoEntityOptions();
+  inp('memo-important').checked = !!(memo && memo.important);
+  inp('memo-editor-title').textContent = memo ? '메모 수정' : '메모 작성';
+  _memoAiResult = memo && memo.aiResult ? memo.aiResult : null;
+  _memoAttachments = memo ? (memo.attachments || []).map(function(a) { return Object.assign({}, a); }) : [];
+  renderMemoAttachments();
+  renderMemoHistory(memo);
+  renderMemoAiResult();
+  inp('memo-editor').classList.add('open');
+}
+
+function saveMemo() {
+  var title = v('memo-title').trim();
+  var content = v('memo-content-input').trim();
+  if (!title || !content) { showToast('제목과 내용을 입력하세요.', 'error'); return; }
+  var id = v('memo-id');
+  var memo = memoList.find(function(m) { return m.id === id; });
+  if (!memo) {
+    memo = { id: nextCode('MEM', memoList), createdAt: _memoNow(), author: _memoAuthor(), history: [] };
+    memoList.unshift(memo);
+  } else {
+    memo.history = memo.history || [];
+    memo.history.unshift({
+      changedAt: _memoNow(), changedBy: _memoAuthor(),
+      title: memo.title || '', content: String(memo.content || '').slice(0, 5000), tags: (memo.tags || []).slice()
+    });
+    memo.history = memo.history.slice(0, 20);
+  }
+  memo.title = title;
+  memo.content = content;
+  memo.tags = _memoTags(v('memo-tags'));
+  memo.entityType = v('memo-entity');
+  memo.entityId = v('memo-entity-id').trim();
+  memo.important = inp('memo-important').checked;
+  memo.attachments = _memoAttachments.map(function(a) {
+    if (a.dataUrl) memoAttachmentData[a.id] = a.dataUrl;
+    return { id:a.id, name:a.name, type:a.type, size:a.size };
+  });
+  saveStorage('memoAttachmentData', memoAttachmentData);
+  memo.updatedAt = _memoNow();
+  if (_memoAiResult) {
+    memo.aiResult = _memoAiResult;
+    memo.summary = _memoAiResult.summary || '';
+  }
+  saveStorage('memoList', memoList);
+  closeModal('memo-editor');
+  renderNotes();
+  showToast('메모가 저장되었습니다.', 'success');
+}
+
+function deleteMemo(id) {
+  confirm_('메모 삭제', '이 메모를 삭제하시겠습니까? 연결된 할 일은 유지됩니다.', function() {
+    var memo = memoList.find(function(m) { return m.id === id; });
+    (memo && memo.attachments || []).forEach(function(a) { delete memoAttachmentData[a.id]; });
+    saveStorage('memoAttachmentData', memoAttachmentData);
+    memoList = memoList.filter(function(m) { return m.id !== id; });
+    saveStorage('memoList', memoList);
+    renderNotes();
+  });
+}
+
+function _fillTodoMemoOptions(selected) {
+  var select = inp('todo-memo-id');
+  select.innerHTML = '<option value="">연결 안 함</option>' + memoList.map(function(m) {
+    return '<option value="' + m.id + '"' + (m.id === selected ? ' selected' : '') + '>' + _memoEsc(m.id + ' · ' + m.title) + '</option>';
+  }).join('');
+}
+
+function openTodoEditor(id, preset) {
+  var todo = todoList.find(function(t) { return t.id === id; }) || preset || null;
+  sv('todo-id', todo && todo.id ? todo.id : '');
+  sv('todo-title', todo ? todo.title : '');
+  sv('todo-content', todo ? todo.content : '');
+  sv('todo-owner', todo ? todo.owner : '');
+  sv('todo-due', todo ? todo.dueDate : '');
+  sv('todo-start', todo ? todo.startDate : '');
+  sv('todo-reminder', todo ? todo.reminderDate : '');
+  sv('todo-status', todo ? todo.status : '대기');
+  sv('todo-priority', todo ? todo.priority : '보통');
+  sv('todo-repeat', todo ? todo.repeat : '');
+  _todoChecklist = todo ? (todo.checklist || []).map(function(x) { return Object.assign({}, x); }) : [];
+  renderTodoChecklist();
+  _fillTodoMemoOptions(todo ? todo.memoId : '');
+  inp('todo-editor-title').textContent = todo && todo.id ? '할 일 수정' : '할 일 등록';
+  inp('todo-editor').classList.add('open');
+}
+
+function saveTodo() {
+  var title = v('todo-title').trim();
+  if (!title) { showToast('할 일 내용을 입력하세요.', 'error'); return; }
+  var id = v('todo-id');
+  var todo = todoList.find(function(t) { return t.id === id; });
+  if (!todo) {
+    todo = { id: nextCode('TODO', todoList), createdAt: _memoNow(), author: _memoAuthor() };
+    todoList.unshift(todo);
+  }
+  todo.title = title;
+  todo.content = v('todo-content').trim();
+  todo.owner = v('todo-owner').trim();
+  todo.dueDate = v('todo-due');
+  todo.startDate = v('todo-start');
+  todo.reminderDate = v('todo-reminder');
+  todo.status = v('todo-status') || '대기';
+  todo.priority = v('todo-priority') || '보통';
+  todo.repeat = v('todo-repeat');
+  todo.checklist = _todoChecklist.slice();
+  todo.memoId = v('todo-memo-id');
+  todo.updatedAt = _memoNow();
+  saveStorage('todoList', todoList);
+  closeModal('todo-editor');
+  renderNotes();
+  showToast('할 일이 저장되었습니다.', 'success');
+}
+
+function setTodoStatus(id, status) {
+  var todo = todoList.find(function(t) { return t.id === id; });
+  if (!todo) return;
+  todo.status = status;
+  if (status === '완료' && todo.repeat) createNextRepeatedTodo(todo);
+  todo.updatedAt = _memoNow();
+  saveStorage('todoList', todoList);
+  renderNotes();
+}
+function toggleTodoDone(id, done) { setTodoStatus(id, done ? '완료' : '대기'); }
+function deleteTodo(id) {
+  confirm_('할 일 삭제', '선택한 할 일을 삭제하시겠습니까?', function() {
+    todoList = todoList.filter(function(t) { return t.id !== id; });
+    saveStorage('todoList', todoList);
+    renderNotes();
+  });
+}
+
+function renderMemoAiResult() {
+  var box = inp('memo-ai-result');
+  var button = inp('memo-ai-todo-btn');
+  if (!box || !button) return;
+  if (!_memoAiResult) { box.style.display = 'none'; button.style.display = 'none'; return; }
+  var points = (_memoAiResult.keyPoints || []).map(function(x) { return '<li>' + _memoEsc(x) + '</li>'; }).join('');
+  var actions = (_memoAiResult.actionItems || []).map(function(x) { return '<li>' + _memoEsc(x.text || x) + '</li>'; }).join('');
+  box.innerHTML = '<b><i class="ti ti-sparkles"></i> Gemini 요약</b><div style="margin-top:7px;">' +
+    _memoEsc(_memoAiResult.summary || '') + '</div>' +
+    (points ? '<div style="margin-top:8px;"><b>핵심 내용</b><ul style="margin:4px 0 0 18px;">' + points + '</ul></div>' : '') +
+    (actions ? '<div style="margin-top:8px;"><b>실행 항목</b><ul style="margin:4px 0 0 18px;">' + actions + '</ul></div>' : '');
+  box.style.display = '';
+  button.style.display = actions ? '' : 'none';
+}
+
+async function runMemoAiSummary(ev) {
+  var text = v('memo-content-input').trim();
+  if (!text) { showToast('요약할 메모 내용을 입력하세요.', 'error'); return; }
+  var button = ev && ev.currentTarget;
+  if (button) { button.disabled = true; button.innerHTML = '<i class="ti ti-loader animate-spin"></i>요약 중'; }
+  try {
+    _memoAiResult = await summarizeMemoWithGemini(text);
+    renderMemoAiResult();
+    showToast('Gemini 요약이 완료되었습니다.', 'success');
+  } catch (error) {
+    showToast(error.message || 'AI 요약에 실패했습니다.', 'error');
+  } finally {
+    if (button) { button.disabled = false; button.innerHTML = '<i class="ti ti-sparkles"></i>Gemini 요약'; }
+  }
+}
+
+function addAiTodos() {
+  var actions = (_memoAiResult && _memoAiResult.actionItems) || [];
+  if (!actions.length) return;
+  var memoId = v('memo-id');
+  actions.forEach(function(item) {
+    var text = typeof item === 'string' ? item : item.text;
+    if (!text) return;
+    todoList.unshift({
+      id: nextCode('TODO', todoList), title: text, content: 'Gemini 메모 요약에서 생성',
+      owner: item.owner || '', dueDate: item.dueDate || '', status: '대기',
+      priority: '보통', memoId: memoId, checklist: [], createdAt: _memoNow(), updatedAt: _memoNow(), author: _memoAuthor()
+    });
+  });
+  saveStorage('todoList', todoList);
+  updateTodoBadge();
+  inp('memo-ai-todo-btn').style.display = 'none';
+  showToast(actions.length + '개의 할 일이 등록되었습니다.', 'success');
+}
+
+function fillMemoEntityOptions() {
+  var type = v('memo-entity');
+  var list = [];
+  if (type === 'product') list = products.map(function(x) { return { id:x.id, label:x.name }; });
+  else if (type === 'material') list = materials.map(function(x) { return { id:x.id, label:x.name }; });
+  else if (type === 'order') list = workOrders.map(function(x) { return { id:x.id, label:getProductName(x.productId) }; });
+  else if (type === 'claim') list = claims.map(function(x) { return { id:x.id, label:x.content }; });
+  else if (type === 'as') list = asList.map(function(x) { return { id:x.id, label:x.productName || x.symptom }; });
+  var options = inp('memo-entity-options');
+  if (options) options.innerHTML = list.map(function(x) {
+    return '<option value="' + _memoEsc(x.id) + '">' + _memoEsc(x.label || '') + '</option>';
+  }).join('');
+}
+
+function addMemoAttachments(input) {
+  var files = Array.from(input.files || []);
+  if (_memoAttachments.length + files.length > 5) {
+    showToast('첨부파일은 최대 5개까지 등록할 수 있습니다.', 'error');
+    input.value = '';
+    return;
+  }
+  files.forEach(function(file) {
+    if (file.size > 1024 * 1024) {
+      showToast(file.name + ': 1MB를 초과하여 제외했습니다.', 'error');
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      _memoAttachments.push({
+        id: 'ATT-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+        name: file.name, type: file.type || 'application/octet-stream',
+        size: file.size, dataUrl: e.target.result
+      });
+      renderMemoAttachments();
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function renderMemoAttachments() {
+  var box = inp('memo-attachment-list');
+  if (!box) return;
+  box.innerHTML = _memoAttachments.map(function(a) {
+    return '<span class="memo-tag"><button type="button" onclick="downloadMemoAttachment(\'' + a.id +
+      '\')" style="border:0;background:none;color:inherit;cursor:pointer;padding:0;"><i class="ti ti-paperclip"></i>' +
+      _memoEsc(a.name) + '</button> <button type="button" onclick="removeMemoAttachment(\'' + a.id +
+      '\')" style="border:0;background:none;color:var(--tx-d);cursor:pointer;">×</button></span>';
+  }).join('');
+}
+
+function removeMemoAttachment(id) {
+  _memoAttachments = _memoAttachments.filter(function(a) { return a.id !== id; });
+  delete memoAttachmentData[id];
+  saveStorage('memoAttachmentData', memoAttachmentData);
+  renderMemoAttachments();
+}
+
+function downloadMemoAttachment(id) {
+  var pending = _memoAttachments.find(function(a) { return a.id === id; });
+  var saved = null;
+  memoList.some(function(m) {
+    saved = (m.attachments || []).find(function(a) { return a.id === id; });
+    return !!saved;
+  });
+  var dataUrl = memoAttachmentData[id] || (pending && pending.dataUrl);
+  if (!dataUrl) { showToast('이 첨부파일은 현재 기기에 저장되어 있지 않습니다.', 'error'); return; }
+  var link = document.createElement('a');
+  link.href = dataUrl;
+  link.download = (pending && pending.name) || (saved && saved.name) || 'attachment';
+  link.click();
+}
+
+function renderMemoHistory(memo) {
+  var wrap = inp('memo-history-wrap');
+  var box = inp('memo-history-list');
+  if (!wrap || !box) return;
+  var history = memo && memo.history ? memo.history : [];
+  wrap.style.display = history.length ? '' : 'none';
+  box.innerHTML = history.map(function(h) {
+    return '<div style="padding:8px 0;border-top:1px solid var(--br);font-size:11px;">' +
+      '<b>' + _memoEsc(h.changedBy || '사용자') + '</b> · ' + _memoEsc(String(h.changedAt || '').replace('T', ' ').slice(0, 16)) +
+      '<div style="color:var(--tx-t);margin-top:4px;">' + _memoEsc(h.title || '') + ' · ' +
+      _memoEsc(String(h.content || '').slice(0, 100)) + '</div></div>';
+  }).join('');
+}
+
+function addTodoChecklistItem() {
+  var text = v('todo-check-new').trim();
+  if (!text) return;
+  _todoChecklist.push({ id:'CHK-' + Date.now(), text:text, done:false });
+  sv('todo-check-new', '');
+  renderTodoChecklist();
+}
+
+function renderTodoChecklist() {
+  var box = inp('todo-checklist');
+  if (!box) return;
+  box.innerHTML = _todoChecklist.map(function(item) {
+    return '<label style="display:flex;align-items:center;gap:7px;font-size:12px;">' +
+      '<input type="checkbox" ' + (item.done ? 'checked' : '') + ' onchange="toggleTodoChecklistItem(\'' + item.id + '\',this.checked)">' +
+      '<span style="flex:1;' + (item.done ? 'text-decoration:line-through;color:var(--tx-t);' : '') + '">' + _memoEsc(item.text) + '</span>' +
+      '<button type="button" class="btn btn-sm btn-icon" onclick="removeTodoChecklistItem(\'' + item.id + '\')"><i class="ti ti-x"></i></button></label>';
+  }).join('');
+}
+
+function toggleTodoChecklistItem(id, done) {
+  var item = _todoChecklist.find(function(x) { return x.id === id; });
+  if (item) item.done = done;
+  renderTodoChecklist();
+}
+
+function removeTodoChecklistItem(id) {
+  _todoChecklist = _todoChecklist.filter(function(x) { return x.id !== id; });
+  renderTodoChecklist();
+}
+
+function createNextRepeatedTodo(todo) {
+  if (todo.repeatGeneratedAt === today()) return;
+  var base = todo.dueDate ? new Date(todo.dueDate + 'T00:00:00') : new Date();
+  if (todo.repeat === 'daily') base.setDate(base.getDate() + 1);
+  else if (todo.repeat === 'weekly') base.setDate(base.getDate() + 7);
+  else if (todo.repeat === 'monthly') base.setMonth(base.getMonth() + 1);
+  var next = Object.assign({}, todo, {
+    id: nextCode('TODO', todoList), status:'대기',
+    dueDate: base.toISOString().slice(0, 10),
+    checklist: (todo.checklist || []).map(function(x) { return { id:'CHK-' + Date.now() + Math.random(), text:x.text, done:false }; }),
+    createdAt:_memoNow(), updatedAt:_memoNow(), repeatGeneratedAt:''
+  });
+  todo.repeatGeneratedAt = today();
+  todoList.unshift(next);
+}
+
+function scanTodoReminders() {
+  if (typeof generateAlert !== 'function') return;
+  todoList.filter(function(t) {
+    return t.status !== '완료' && t.reminderDate && t.reminderDate <= today();
+  }).forEach(function(t) {
+    generateAlert(t.dueDate && t.dueDate < today() ? 'err' : 'warn',
+      '[할 일 알림] ' + t.title,
+      '담당: ' + (t.owner || '미지정') + ' · 마감: ' + (t.dueDate || '미설정'),
+      'todo_reminder');
+  });
+}
+
+function renderWeeklyReportPanel() {
+  var content = inp('memo-content');
+  var recent = memoList.filter(function(m) {
+    return new Date(m.updatedAt || m.createdAt || 0).getTime() >= Date.now() - 7 * 86400000;
+  }).length;
+  var open = todoList.filter(function(t) { return t.status !== '완료'; }).length;
+  content.innerHTML = '<div class="card"><div class="card-hd"><span class="card-ttl"><i class="ti ti-report-analytics"></i>최근 7일 업무 보고</span></div>' +
+    '<div style="font-size:12px;color:var(--tx-s);line-height:1.8;">최근 메모 <b>' + recent +
+    '건</b>과 미완료 할 일 <b>' + open + '건</b>을 Gemini가 진행 현황, 완료 업무, 지연 위험, 다음 주 계획으로 정리합니다.</div>' +
+    '<div style="margin-top:14px;"><button class="btn btn-primary" onclick="generateWeeklyMemoReport(event)"><i class="ti ti-sparkles"></i>주간 보고서 생성</button></div></div>';
+}
+
+async function generateWeeklyMemoReport(ev) {
+  var recentMemos = memoList.filter(function(m) {
+    return new Date(m.updatedAt || m.createdAt || 0).getTime() >= Date.now() - 7 * 86400000;
+  }).slice(0, 50);
+  var recentTodos = todoList.slice(0, 100);
+  if (!recentMemos.length && !recentTodos.length) {
+    showToast('보고서로 정리할 메모와 할 일이 없습니다.', 'error'); return;
+  }
+  var button = ev && ev.currentTarget;
+  if (button) { button.disabled = true; button.innerHTML = '<i class="ti ti-loader animate-spin"></i>생성 중'; }
+  try {
+    var reportData = {
+      memos: recentMemos.map(function(m) {
+        return { title:m.title, content:m.content, summary:m.summary, tags:m.tags, updatedAt:m.updatedAt };
+      }),
+      todos: recentTodos.map(function(t) {
+        return { title:t.title, content:t.content, owner:t.owner, dueDate:t.dueDate, status:t.status, priority:t.priority };
+      })
+    };
+    var result = await callGeminiForMemo(
+      '다음 업무 메모와 할 일로 한국어 주간 업무 보고서를 작성하세요. 반드시 JSON 객체만 반환하세요. ' +
+      '형식: {"summary":"전체 요약","completed":["완료"],"inProgress":["진행"],"risks":["지연 및 위험"],"nextWeek":["다음 계획"]}\n' +
+      JSON.stringify(reportData).substring(0, 30000)
+    );
+    var lines = ['[전체 요약]', result.summary || ''];
+    [['완료 업무',result.completed],['진행 업무',result.inProgress],['위험 및 지연',result.risks],['다음 주 계획',result.nextWeek]].forEach(function(row) {
+      if (row[1] && row[1].length) lines.push('\n[' + row[0] + ']\n- ' + row[1].join('\n- '));
+    });
+    inp('memo-report-result').textContent = lines.join('\n');
+    inp('memo-report-modal').classList.add('open');
+  } catch (error) {
+    showToast(error.message || '주간 보고서 생성에 실패했습니다.', 'error');
+  } finally {
+    if (button) { button.disabled = false; button.innerHTML = '<i class="ti ti-sparkles"></i>주간 보고서 생성'; }
+  }
 }
 
 /* ════════ 범용 테이블 열(컬럼) 순서 변경 — 헤더 드래그 + localStorage 저장 ════════
