@@ -8930,7 +8930,9 @@ function bulkRun(key, action){
     const ocf=window.confirm_; window.confirm_=(t,m,fn)=>{ try{ fn&&fn(); }catch(e){} };   // 커스텀 확인창도 자동 승인
     try{ ids.forEach(id=>{ try{ c.type ? window[c.del](c.type,id) : window[c.del](id); }catch(e){} }); }
     finally { window.confirm=oc; window.confirm_=ocf; }
-    bulkSel[key]=new Set(); showToast(`${ids.length}건이 삭제되었습니다.`);
+    bulkSel[key]=new Set();
+    updateBulkBar(key);
+    showToast(`${ids.length}건이 삭제되었습니다.`);
   } else if(action==='pdf' && c.pdf){
     if(c.type){ try{ window[c.pdf](c.type, ids); }catch(e){} }    // 선택 건 한 창에 개별 페이지
     else ids.forEach(id=>{ try{ window[c.pdf](id); }catch(e){} });
@@ -9749,7 +9751,11 @@ function renderPo() {
   }
 
   const cont = inp('po-table');
-  if (!rows.length) { cont.innerHTML = '<div class="empty"><i class="ti ti-inbox"></i>해당 조건의 구매발주서가 없습니다.</div>'; return; }
+  if (!rows.length) {
+    cont.innerHTML = '<div class="empty"><i class="ti ti-inbox"></i>해당 조건의 구매발주서가 없습니다.</div>';
+    poUpdateBulkBar();
+    return;
+  }
   const _poth = (k, l) => `<th onclick="toggleSort('po','${k}')" style="cursor:pointer;user-select:none;">${l} ${sortIcon('po',k)}</th>`;
   cont.innerHTML = `<table style="min-width:1130px;">
     <thead><tr>
