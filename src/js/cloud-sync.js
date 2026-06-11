@@ -10,6 +10,7 @@ function cloudResyncGlobals(){
   taxList=L('taxList',taxList); quoteList=L('quoteList',quoteList); orderList=L('orderList',orderList);
   financeData=L('financeData',financeData); attendance=L('attendance',attendance); leaves=L('leaves',leaves);
   asList=L('asList',asList); bomList=L('bomList',bomList);
+  memoList=L('memoList',memoList); todoList=L('todoList',todoList);
 }
 /* 다른 사용자의 변경을 실시간 수신 → localStorage 갱신 → 전역 반영 → 현재 화면 새로고침 */
 function cloudSubscribe(){
@@ -29,7 +30,7 @@ function cloudSubscribe(){
     if (!document.querySelector('.overlay.open')) {
       try { refreshPage(currentPage); } catch(e){}
     }
-    try { updateDlvBadge(); updateAsBadge(); updateTrashBadge(); } catch(e){}
+    try { updateDlvBadge(); updateAsBadge(); updateTrashBadge(); updateTodoBadge(); } catch(e){}
     _cloudChip('synced'); setTimeout(()=>_cloudChip('online'), 1500);
   }, err=>{ console.warn('실시간 동기화 구독 오류', err); });
 
@@ -46,7 +47,7 @@ function cloudSubscribe(){
     if (!changed) return;
     allowedPages = roleAllowedSet(currentRole);   // 페이지 권한 재계산 후 재적용
     applyRoleGating(); applyColumnGating(); applyFeatureGating();
-    if (currentPage==='permissions' && !document.querySelector('.overlay.open')) { try{ renderPermissions(); }catch(e){} }
+    if (currentPage==='system' && systemTab==='permissions' && !document.querySelector('.overlay.open')) { try{ renderPermissions(); }catch(e){} }
     _cloudChip('synced'); setTimeout(()=>_cloudChip('online'), 1500);
   }, err=>{ console.warn('권한 실시간 동기화 오류', err); });
 
@@ -56,7 +57,7 @@ function cloudSubscribe(){
     saveStorageLocalOnly('cloudUsers_cache', cloudUsers);
     if (!document.querySelector('.overlay.open')){
       if (currentPage==='workers') { try{ renderWorkers(); }catch(e){} }
-      if (currentPage==='permissions') { try{ renderPermissions(); }catch(e){} }
+      if (currentPage==='system' && systemTab==='permissions') { try{ renderPermissions(); }catch(e){} }
     }
   }, err=>{ console.warn('계정 목록 동기화 오류', err); });
 }
@@ -102,6 +103,51 @@ function _cloudChip(state){
 }
 
 /* ════════ 권한 관리 화면 ════════ */
+let systemTab = 'permissions';
+function switchSystemTab(tab) {
+  systemTab = tab || 'permissions';
+  document.querySelectorAll('#system-tabs [data-systab]').forEach(btn => {
+    btn.classList.toggle('btn-primary', btn.dataset.systab === systemTab);
+  });
+  document.querySelectorAll('#pg-system .system-panel').forEach(panel => {
+    panel.style.display = panel.id === 'system-panel-' + systemTab ? '' : 'none';
+  });
+  if (systemTab === 'permissions') renderPermissions();
+  else if (systemTab === 'company') renderSystemCompany();
+  else if (systemTab === 'templates') renderDocTemplateManagement();
+  else if (systemTab === 'api') renderApiSettings();
+  else if (systemTab === 'alimtalk') renderAlimtalkSettings();
+  else if (systemTab === 'alerts') renderAlerts();
+  else if (systemTab === 'trash') renderTrash();
+}
+function renderSystem() {
+  switchSystemTab(systemTab);
+}
+function renderSystemCompany() {
+  const el = inp('system-company-summary');
+  if (!el) return;
+  const ci = getCompanyInfo();
+  const row = (label, value) => `<div style="display:grid;grid-template-columns:130px 1fr;gap:12px;padding:9px 4px;border-bottom:1px solid var(--br);font-size:12px;"><strong style="color:var(--tx-s);">${label}</strong><span>${value || '미설정'}</span></div>`;
+  el.innerHTML =
+    row('회사명', ci.name) +
+    row('대표자', ci.ceo) +
+    row('사업자등록번호', ci.bizNo) +
+    row('주소', ci.address) +
+    row('연락처', [ci.tel, ci.fax].filter(Boolean).join(' / ')) +
+    row('이메일', ci.email) +
+    row('담당부서', ci.dept) +
+    row('업태 / 종목', [ci.bizType, ci.bizItem].filter(Boolean).join(' / '));
+}
+function renderDocTemplateManagement() {
+  const store = typeof _docTemplateStore === 'function' ? _docTemplateStore() : {};
+  ['rfq','po','quote','statement','tax'].forEach(type => {
+    const el = inp(type + '-template-status');
+    if (!el) return;
+    const saved = store[type];
+    el.textContent = saved ? `등록됨: ${saved.name}` : '기본 양식 사용 중';
+    el.style.color = saved ? 'var(--tx-ok)' : 'var(--tx-t)';
+  });
+}
 async function renderPermissions(){
   const body=inp('perm-body'); if(!body) return;
   if (!_cloudActive){ body.innerHTML=`<div class="card"><div class="empty"><i class="ti ti-cloud-off"></i>클라우드 로그인 후 사용할 수 있는 기능입니다. (Firebase 미설정 시 로컬 전용)</div></div>`; return; }
@@ -294,10 +340,10 @@ async function permToggleRolePage(role, pageId, on){
 /* ════════ 일괄 선택/동작 (테이블 비종속) — 체크박스 + 전체 선택 + 0건 시 비활성 ════════
    각 표의 행 삭제 버튼 onclick에서 id를 추출하므로 렌더 함수 수정 불필요. */
 const BULK_CFG = {
-  rfq:        {sel:'#rfq-table',        del:'deleteRfq',       edit:'openRfqEdit',    pdf:'openRfqPrint', csv:'exportRfqXLS', email:'openEmailModal'},
-  materials:  {sel:'#mat-table',        del:'deleteMat',       edit:'openMatEdit'},
+  rfq:        {sel:'#rfq-table',        del:'deleteRfq',       edit:'openRfqEdit',    clone:'cloneRfq', pdf:'openRfqPrint', csv:'exportRfqXLS', email:'openEmailModal'},
+  materials:  {sel:'#mat-table',        del:'deleteMat',       edit:'openMatEdit',    clone:'cloneMat'},
   inventory:  {sel:'#inventory-table',  del:'deleteInventory', edit:'openInvEdit'},
-  orders:     {sel:'#orders-table',     del:'deleteOrder',     edit:'openOrderEdit'},
+  orders:     {sel:'#orders-table',     del:'deleteOrder',     edit:'openOrderEdit',  clone:'cloneOrder'},
   defects:    {sel:'#defect-table',     del:'deleteDefect',    edit:'openDefectEdit'},
   checks:     {sel:'#check-table',      del:'deleteCheck',     edit:'openCheckEdit'},
   claims:     {sel:'#claims-table-full',del:'deleteClaim',     edit:'openClaimEdit'},
@@ -305,46 +351,51 @@ const BULK_CFG = {
   workers:    {sel:'#workers-table',    del:'deleteWorker',    edit:'openWorkerEdit'},
   as:         {sel:'#as-body',          del:'deleteAS',        edit:'openAsEdit'},
   partners:   {sel:'#bp-table',         del:'deletePartner',   edit:'openPartnerModal'},
-  statement:  {sel:'#st-table', type:'statement', del:'deleteSalesDoc', edit:'openSalesDocEdit', pdf:'openSalesDocPrint', email:'openEmailModal'},
-  tax:        {sel:'#tx-table', type:'tax',       del:'deleteSalesDoc', edit:'openSalesDocEdit', pdf:'openSalesDocPrint', email:'openEmailModal'},
-  quote:      {sel:'#qt-table', type:'quote',     del:'deleteSODoc',    edit:'openSODocEdit',    pdf:'openSODocPrint',    email:'openEmailModal'},
-  order:      {sel:'#so-table', type:'order',     del:'deleteSODoc',    edit:'openSODocEdit',    pdf:'openSODocPrint',    email:'openEmailModal'}
+  statement:  {sel:'#st-table', type:'statement', del:'deleteSalesDoc', edit:'openSalesDocEdit', clone:'cloneSalesDoc', pdf:'openSalesDocPrint', email:'openEmailModal'},
+  tax:        {sel:'#tx-table', type:'tax',       del:'deleteSalesDoc', edit:'openSalesDocEdit', clone:'cloneSalesDoc', pdf:'openSalesDocPrint', email:'openEmailModal'},
+  quote:      {sel:'#qt-table', type:'quote',     del:'deleteSODoc',    edit:'openSODocEdit',    clone:'cloneSODoc', pdf:'openSODocPrint', email:'openEmailModal'},
+  order:      {sel:'#so-table', type:'order',     del:'deleteSODoc',    edit:'openSODocEdit',    clone:'cloneSODoc', pdf:'openSODocPrint', email:'openEmailModal'},
+  products:   {sel:'#client-list',       del:'deleteProduct',   edit:'openProdEdit',   clone:'cloneProduct'},
+  bom:        {sel:'#bom-body',          del:'deleteBom',       edit:'openBomEdit',    clone:'cloneBom'}
 };
 const bulkSel = {};
 function _escRe(s){ return String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
 function enhanceBulk(key){
   const c=BULK_CFG[key]; if(!c) return;
   const cont=document.querySelector(c.sel); if(!cont) return;
-  const table=cont.querySelector('table'); if(!table) return;
-  const headRow=table.querySelector('thead tr'); if(!headRow) return;
-  if(table.dataset.bulk){ updateBulkBar(key); return; }
-  table.dataset.bulk='1';
-  bulkSel[key]=new Set();
+  const tables=[...cont.querySelectorAll('table')]; if(!tables.length) return;
+  if(!bulkSel[key] || tables.some(table=>!table.dataset.bulk)) bulkSel[key]=new Set();
   // (type,id) 시그니처 함수는 두 번째 인자가 id
   const delRe = c.type
     ? new RegExp(_escRe(c.del)+"\\(\\s*['\"][^'\"]*['\"]\\s*,\\s*['\"]([^'\"]+)['\"]")
     : new RegExp(_escRe(c.del)+"\\(\\s*['\"]([^'\"]+)['\"]");
-  const hideFns=[c.del,c.pdf,c.csv,c.email].filter(Boolean);
-  const th=document.createElement('th'); th.style.cssText='width:24px;padding:6px 3px;text-align:center;';
-  th.innerHTML=`<input type="checkbox" title="전체 선택" onclick="bulkToggleAll('${key}',this.checked)" style="width:12px;height:12px;accent-color:#1971c2;cursor:pointer;vertical-align:middle;">`;
-  headRow.insertBefore(th, headRow.firstChild);
-  [...table.querySelectorAll('tbody tr')].forEach(tr=>{
-    let id=null;
-    tr.querySelectorAll('[onclick]').forEach(b=>{ const m=(b.getAttribute('onclick')||'').match(delRe); if(m && id==null) id=m[1]; });
-    const td=document.createElement('td'); td.style.cssText='text-align:center;padding:6px 3px;';
-    if(id!=null){
-      td.innerHTML=`<input type="checkbox" data-bid="${id}" onclick="bulkToggle('${key}','${id.replace(/'/g,"\\'")}',this.checked)" style="width:12px;height:12px;accent-color:#1971c2;cursor:pointer;vertical-align:middle;">`;
-      tr.querySelectorAll('[onclick]').forEach(b=>{ const oc=b.getAttribute('onclick')||''; if(c.edit && oc.includes(c.edit+'(')) return; if(hideFns.some(fn=>oc.includes(fn+'('))) b.style.display='none'; });
-    }
-    tr.insertBefore(td, tr.firstChild);
+  const hideFns=[c.del,c.clone,c.pdf,c.csv,c.email].filter(Boolean);
+  tables.forEach(table=>{
+    if(table.dataset.bulk) return;
+    const headRow=table.querySelector('thead tr'); if(!headRow) return;
+    table.dataset.bulk='1';
+    const th=document.createElement('th'); th.style.cssText='width:24px;padding:6px 3px;text-align:center;';
+    th.innerHTML=`<input type="checkbox" title="전체 선택" onclick="bulkToggleAll('${key}',this.checked)" style="width:12px;height:12px;accent-color:#1971c2;cursor:pointer;vertical-align:middle;">`;
+    headRow.insertBefore(th, headRow.firstChild);
+    [...table.querySelectorAll('tbody tr')].forEach(tr=>{
+      let id=null;
+      tr.querySelectorAll('[onclick]').forEach(b=>{ const m=(b.getAttribute('onclick')||'').match(delRe); if(m && id==null) id=m[1]; });
+      const td=document.createElement('td'); td.style.cssText='text-align:center;padding:6px 3px;';
+      if(id!=null){
+        td.innerHTML=`<input type="checkbox" data-bid="${id}" onclick="bulkToggle('${key}','${id.replace(/'/g,"\\'")}',this.checked)" style="width:12px;height:12px;accent-color:#1971c2;cursor:pointer;vertical-align:middle;">`;
+        tr.querySelectorAll('[onclick]').forEach(b=>{ const oc=b.getAttribute('onclick')||''; if(c.edit && oc.includes(c.edit+'(')) return; if(hideFns.some(fn=>oc.includes(fn+'('))) b.style.display='none'; });
+      }
+      tr.insertBefore(td, tr.firstChild);
+    });
   });
-  ensureBulkBar(key, table);
+  ensureBulkBar(key, tables[0], cont);
   updateBulkBar(key);
 }
-function ensureBulkBar(key, table){
+function ensureBulkBar(key, table, cont){
   if(document.getElementById('bulkbar-'+key)) return;
   const c=BULK_CFG[key]; const wrap=table.parentElement; if(!wrap||!wrap.parentNode) return;
   let btns='';
+  if(c.clone) btns+=`<button class="btn btn-sm" data-clone onclick="bulkRun('${key}','clone')"><i class="ti ti-copy"></i>선택 복제</button>`;
   if(c.pdf)   btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','pdf')"><i class="ti ti-printer"></i>선택 PDF 출력</button>`;
   if(c.csv)   btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','csv')"><i class="ti ti-file-spreadsheet"></i>선택 엑셀</button>`;
   if(c.email) btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','email')"><i class="ti ti-mail"></i>선택 이메일</button>`;
@@ -352,24 +403,37 @@ function ensureBulkBar(key, table){
   const bar=document.createElement('div'); bar.id='bulkbar-'+key;
   bar.style.cssText='display:none;align-items:center;gap:8px;margin:0 0 12px;padding:9px 14px;background:var(--bg-i);border:1px solid var(--br-i);border-radius:8px;flex-wrap:wrap;';
   bar.innerHTML=`<span style="font-weight:700;font-size:12.5px;color:var(--tx-i);"><i class="ti ti-checkbox"></i> <span id="bulkcnt-${key}">0</span>건 선택됨</span>${btns}<button class="btn btn-sm" style="margin-left:auto;" onclick="bulkToggleAll('${key}',false)"><i class="ti ti-x"></i>선택 해제</button>`;
-  wrap.parentNode.insertBefore(bar, wrap);
+  if(key==='products' || key==='bom') cont.parentNode.insertBefore(bar, cont);
+  else wrap.parentNode.insertBefore(bar, wrap);
 }
 function updateBulkBar(key){
   const n=(bulkSel[key]||new Set()).size;
   const cnt=document.getElementById('bulkcnt-'+key); if(cnt) cnt.textContent=n;
   const bar=document.getElementById('bulkbar-'+key); if(bar) bar.style.display = n>0 ? 'flex' : 'none';   // 선택 시에만 표시
+  const clone=bar&&bar.querySelector('[data-clone]'); if(clone) clone.style.display = n===1 ? '' : 'none';
 }
 function bulkToggle(key,id,on){ const s=bulkSel[key]=bulkSel[key]||new Set(); if(on)s.add(id);else s.delete(id); updateBulkBar(key); }
 function bulkToggleAll(key,on){ const s=bulkSel[key]=new Set(); const cont=document.querySelector(BULK_CFG[key].sel); if(cont) cont.querySelectorAll('tbody input[type=checkbox][data-bid]').forEach(cb=>{ cb.checked=on; if(on) s.add(cb.getAttribute('data-bid')); }); updateBulkBar(key); }
 function bulkRun(key, action){
   const c=BULK_CFG[key]; const ids=[...(bulkSel[key]||[])]; if(!ids.length) return;
-  if(action==='delete'){
+  if(action==='clone' && c.clone){
+    if(ids.length!==1) return;
+    const id=ids[0];
+    if(key==='products'){
+      const p=products.find(x=>x.id===id); if(p) window[c.clone](p.clientId,id);
+    } else if(c.type) window[c.clone](c.type,id);
+    else window[c.clone](id);
+  } else if(action==='delete'){
     if(!confirm(`선택한 ${ids.length}건을 삭제하시겠습니까?`)) return;
     const oc=window.confirm; window.confirm=()=>true;
-    const ocf=window.confirm_; window.confirm_=(t,m,fn)=>{ try{ fn&&fn(); }catch(e){} };   // 커스텀 확인창도 자동 승인
-    try{ ids.forEach(id=>{ try{ c.type ? window[c.del](c.type,id) : window[c.del](id); }catch(e){} }); }
+    const ocf=window.confirm_; window.confirm_=(t,m,fn)=>{ fn&&fn(); };   // 커스텀 확인창도 자동 승인
+    let failed=0;
+    try{ ids.forEach(id=>{ try{ c.type ? window[c.del](c.type,id) : window[c.del](id); }catch(e){ failed++; console.warn('일괄 삭제 실패:', key, id, e); } }); }
     finally { window.confirm=oc; window.confirm_=ocf; }
-    bulkSel[key]=new Set(); showToast(`${ids.length}건이 삭제되었습니다.`);
+    bulkSel[key]=new Set();
+    updateBulkBar(key);
+    if(failed) showToast(`${ids.length-failed}건 삭제 완료, ${failed}건 실패 (콘솔 확인)`, 'error');
+    else showToast(`${ids.length}건이 삭제되었습니다.`);
   } else if(action==='pdf' && c.pdf){
     if(c.type){ try{ window[c.pdf](c.type, ids); }catch(e){} }    // 선택 건 한 창에 개별 페이지
     else ids.forEach(id=>{ try{ window[c.pdf](id); }catch(e){} });

@@ -38,8 +38,8 @@
     display: none;
     position: fixed;
     top: 0;
+    bottom: 0;
     left: 0;
-    height: 100vh;
     z-index: 9999;
     width: 240px;
     min-width: 240px;
@@ -50,6 +50,32 @@
   .sidebar.mobile-open {
     display: flex;
   }
+
+  /* ── 데스크톱 접힘(sb-mini) 상태여도 모바일에선 전체 사이드바(텍스트 메뉴)로 표시 ──
+     모바일 드로어가 48px 아이콘 레일로 나오고 본문에 48px 여백이 남던 문제 해결. */
+  body.sb-mini .main { margin-left: 0 !important; }
+  body.sb-mini .sidebar {
+    width: 240px !important; min-width: 240px !important;
+    overflow-y: auto !important;
+    z-index: 9999 !important;   /* 백드롭(9998) 위로 올려 흐릿함·클릭 차단 해결 (base의 z-index:1500 덮어쓰기) */
+  }
+  body.sb-mini .sidebar .logo { padding: 18px 20px !important; text-align: left !important; }
+  body.sb-mini .sidebar .logo-title { justify-content: flex-start !important; font-size: 15px !important; gap: 8px !important; }
+  body.sb-mini .sidebar .logo-sub { display: block !important; }
+  body.sb-mini .sidebar .nav-lbl { display: block !important; }
+  body.sb-mini .sidebar .ni {
+    flex-direction: row !important;
+    padding: 9px 20px !important;
+    gap: 10px !important;
+    font-size: 13px !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    border-left-width: 3px !important;
+  }
+  body.sb-mini .sidebar .ni i { font-size: 16px !important; }
+  body.sb-mini .sidebar .ni .nbadge { position: static !important; font-size: 10px !important; padding: 1px 6px !important; min-width: auto !important; }
+  body.sb-mini .sidebar .ni::after { display: none !important; }   /* 미니 레일 툴팁 제거 */
+
   .pc-only {
     display: none !important; /* 모바일 환경에서 PC 전용 요소 완벽 숨김 */
   }
@@ -62,6 +88,21 @@
   }
   /* 페이지 내부 탭 바(직원·재무·견적/수주 등) 가로 스크롤 허용 */
   .toolbar { flex-wrap: wrap; gap: 6px; }
+  /* 모바일 목록 툴바의 신규 등록 버튼은 필터·검색 바로 다음 위치에 표시 */
+  .toolbar > .btn:has(> .ti-plus) {
+    order: initial;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    border-radius: var(--rm);
+    padding: 0;
+    flex: 0 0 32px;
+  }
+  .toolbar > .btn:has(> .ti-plus) > .ti-plus {
+    font-size: 16px;
+  }
   /* 모달이 화면을 넘지 않도록 */
   .dlg { max-width: 94vw !important; max-height: 90vh; overflow-y: auto; }
   .xls-btn {
@@ -104,10 +145,7 @@
     margin: 0 10px !important;
   }
   #global-search-input {
-    padding: 6px 12px 6px 28px !important;
-  }
-  .global-search-wrapper i.ti-search {
-    left: 8px !important;
+    padding: 6px 74px 6px 14px !important;
   }
   /* 통합 검색 결과창: 화면 밖으로 잘리지 않게 좌우 여백 두고 전체 폭 사용 */
   #global-search-results {
@@ -154,11 +192,30 @@
   /* 2) 상단 탑바 가로 넘침으로 인한 우측 잘림 방지 */
   .topbar { padding: 8px 10px !important; gap: 6px; }
   #back-btn { display: none !important; }           /* 하단 탭/드로어로 이동 가능하므로 제거 */
-  /* 탑바의 검색 입력은 숨기되, 결과 드롭다운(#global-search-results)은 모바일 홈 검색이 재사용하므로 wrapper는 폭 0으로만 접음 */
-  .global-search-wrapper { width: 0 !important; min-width: 0 !important; flex: 0 0 0 !important; margin: 0 !important; overflow: visible !important; }
+  /* 모바일 기본 상태는 돋보기만 표시하고, 클릭하면 검색 입력창을 탑바 위에 펼침 */
+  .global-search-wrapper {
+    width: 40px !important; min-width: 40px !important; height: 36px;
+    flex: 0 0 40px !important; margin: 0 2px !important; overflow: visible !important;
+  }
   .global-search-wrapper > #global-search-input,
-  .global-search-wrapper > i.ti-search,
   .global-search-wrapper > #global-search-clear { display: none !important; }
+  .global-search-wrapper .global-search-btn {
+    display: inline-flex !important; width: 40px; border-radius: 20px;
+  }
+  .global-search-wrapper.search-open {
+    position: fixed !important; left: 50px; right: 8px; top: 8px;
+    width: auto !important; min-width: 0 !important; z-index: 10000;
+  }
+  .global-search-wrapper.search-open > #global-search-input {
+    display: block !important; padding: 6px 74px 6px 14px !important;
+    background: var(--bg-p);
+  }
+  .global-search-wrapper.search-open > #global-search-clear[style*="display: flex"] {
+    display: flex !important;
+  }
+  .global-search-wrapper.search-open .global-search-btn {
+    width: 42px; border-radius: 0 20px 20px 0;
+  }
   .tb-right { gap: 6px !important; flex-shrink: 0; }
   #topbar-admin-area .pill,
   #topbar-admin-area button[onclick^="openAdminPasswordChange"] { display: none !important; } /* 관리자 라벨·변경 버튼 숨김, 잠금/로그아웃만 유지 */
@@ -167,6 +224,20 @@
   #pg-clients .client-hd { flex-wrap: wrap; row-gap: 8px; }
   #pg-clients .client-hd > div:nth-child(2) { min-width: 150px !important; }   /* 이름이 0폭으로 줄어 세로로 깨지는 것 방지 */
   #pg-clients .client-hd > div[onclick^="event.stopPropagation"] { flex-wrap: wrap; justify-content: flex-end; }
+
+  /* BOM 제품·자재 탐색 영역 */
+  .bom-layout { grid-template-columns:1fr; }
+  .bom-product-pane { position:static; max-height:none; }
+  .bom-product-list { max-height:240px; }
+  .bom-detail-header { top:0; }
+  #bom-view-tabs { align-items: stretch; }
+  #bom-view-tabs #bom-material-search {
+    order: 10;
+    flex: 1 0 100%;
+    width: 100%;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+  }
 }
 
 @media print {

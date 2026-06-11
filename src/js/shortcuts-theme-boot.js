@@ -103,25 +103,6 @@ function toggleTheme() {
   }
 }
 
-/* ════════ 프로그램 기동 초기화 ════════ */
-syncFilterDropdowns();
-initTheme();
-// 사이드바 미니 레일 모드 복원 (유튜브 방식)
-if (localStorage.getItem('mes_sbMini')==='1') {
-  document.body.classList.add('sb-mini');
-  if (typeof _initSbMini === 'function') _initSbMini();
-}
-_goTo('dashboard', null);   // 실행 시 항상 종합 대시보드를 먼저 표시
-renderAlerts();
-updateTrashBadge();
-updateDlvBadge();
-updateAsBadge();
-updateAdminUI();
-
-// 앱 초기화 완료 (데이터는 로컬 저장 + 파일 저장으로 관리)
-initAutoSave();
-initEmailjs();
-
 /* ════════════════════════════════════════════════════════════
    클라우드 동기화 (Firebase Auth + Firestore)
    ▶ 설정 방법:
@@ -141,7 +122,7 @@ initEmailjs();
      5) 아래 FIREBASE_CONFIG 에 붙여넣기 → 저장 후 새로고침
    ※ apiKey/projectId 가 비어 있으면 자동으로 '로컬 전용 모드'로 동작합니다.
    ════════════════════════════════════════════════════════════ */
-const FIREBASE_CONFIG = {
+const DEFAULT_FIREBASE_CONFIG = {
   apiKey: "AIzaSyBh4BqIl3zzVEygG5FMN1-xKTlhZR1Od1I",
   authDomain: "k-meca.firebaseapp.com",
   databaseURL: "https://k-meca-default-rtdb.firebaseio.com",
@@ -151,7 +132,31 @@ const FIREBASE_CONFIG = {
   appId: "1:606055722429:web:f9352096fb4f97388536d4",
   measurementId: "G-PBGH98NRCT"
 };
+const FIREBASE_CONFIG = Object.assign(
+  {},
+  DEFAULT_FIREBASE_CONFIG,
+  loadStorage('firebaseConfig', {})
+);
 /* 클라우드로 공유할 데이터 키(테마/관리자비번 등 기기·보안 로컬값은 제외) */
-const CLOUD_KEYS = ['clients','products','materials','workOrders','workers','defects','claims','checkRecords','alerts','inventory','deliveries','stages','trash','rfqList','poList','partners','statementList','taxList','quoteList','orderList','financeData','attendance','leaves','asList','bomList','companyInfo'];
+const CLOUD_KEYS = ['clients','products','materials','workOrders','workers','defects','claims','checkRecords','alerts','inventory','inventoryLedger','deliveries','stages','trash','rfqList','poList','partners','statementList','taxList','quoteList','orderList','financeData','attendance','leaves','asList','bomList','memoList','todoList','companyInfo','docXlsxTemplates'];
 let _fbAuth=null, _fbDb=null, _cloudUser=null;   // _cloudActive는 앞쪽(전역 상태)에서 선언됨
 const _cloudQueue=new Set(); let _cloudTimer=null; let _cloudUnsub=null;
+
+/* ════════ 프로그램 기동 초기화 (FIREBASE_CONFIG 선언 이후에 실행) ════════ */
+syncFilterDropdowns();
+initTheme();
+// 사이드바 미니 레일 모드 복원 (유튜브 방식)
+if (localStorage.getItem('mes_sbMini')==='1') {
+  document.body.classList.add('sb-mini');
+  if (typeof _initSbMini === 'function') _initSbMini();
+}
+_goTo('dashboard', null);   // 실행 시 항상 종합 대시보드를 먼저 표시
+renderAlerts();
+updateTrashBadge();
+updateDlvBadge();
+updateAsBadge();
+updateTodoBadge();
+updateAdminUI();
+
+// 앱 초기화 완료 (데이터는 Firebase 동기화 + JSON/XLS 내보내기로 관리)
+initEmailjs();

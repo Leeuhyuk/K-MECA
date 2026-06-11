@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-빌드 스크립트 — src/ 의 기능별 소스를 합쳐 단일 자가완결 MESPro.html 을 생성한다.
+빌드 스크립트 — src/ 의 기능별 소스를 합쳐 단일 자가완결 index.html 을 생성한다.
 
 워크플로:
   1) src/ 의 CSS / HTML / JS 파일을 편집
   2) python build.py  실행
-  3) 생성된 MESPro.html 을 브라우저로 열어 사용 (코드가 전부 인라인된 단일 파일)
+  3) 생성된 index.html 을 브라우저로 열어 사용 (코드가 전부 인라인된 단일 파일)
 
 특징:
   - src/index.template.html 의 <!--#include 경로--> 마커를 해당 파일 내용으로 치환.
@@ -17,7 +17,7 @@ import re
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "src")
-OUT = os.path.join(ROOT, "MESPro.html")
+OUT = os.path.join(ROOT, "index.html")
 TEMPLATE = os.path.join(SRC, "index.template.html")
 
 INCLUDE_RE = re.compile(r"<!--#include (.+?)-->")
@@ -47,7 +47,7 @@ def build():
 
     with open(OUT, "w", encoding="utf-8", newline="") as f:
         f.write(result)
-    print("빌드 완료 → MESPro.html (%d bytes)" % len(result.encode("utf-8")))
+    print("빌드 완료 → index.html (%d bytes)" % len(result.encode("utf-8")))
 
 
 if __name__ == "__main__":

@@ -19,6 +19,107 @@ const sortState = {
   po:       { key: null, asc: true },
 };
 
+/* ════════ 공통 날짜 보기 전환 (전체 · 연도 · 월 · 일) ════════ */
+const dateViewState = (() => {
+  try { return JSON.parse(localStorage.getItem('mes_dateViewState') || '{}'); }
+  catch(e) { return {}; }
+})();
+const dateViewRenderers = {};
+function _dateViewSave() {
+  try { localStorage.setItem('mes_dateViewState', JSON.stringify(dateViewState)); } catch(e) {}
+}
+function _dateViewDefault(mode) {
+  const t = today();
+  if (mode === 'year') return t.slice(0,4);
+  if (mode === 'month') return t.slice(0,7);
+  if (mode === 'day') return t;
+  return '';
+}
+function _dateViewLabel(mode, value) {
+  if (mode === 'all') return '전체 기간';
+  value = value || _dateViewDefault(mode);
+  const p = value.split('-');
+  if (mode === 'year') return p[0] + '년';
+  if (mode === 'month') return p[0] + '년 ' + Number(p[1]) + '월';
+  return p[0] + '년 ' + Number(p[1]) + '월 ' + Number(p[2]) + '일';
+}
+function ensureDateView(key, containerId, dates, renderer) {
+  const container = inp(containerId); if (!container || !container.parentNode) return;
+  dateViewRenderers[key] = renderer;
+  const state = dateViewState[key] || (dateViewState[key] = { mode:'all', value:'' });
+  let bar = inp('date-view-' + key);
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'date-view-' + key;
+    bar.style.cssText = 'display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:0 0 8px;padding:4px 8px;background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rm);';
+    container.parentNode.insertBefore(bar, container);
+  }
+  const disabled = state.mode === 'all';
+  bar.innerHTML = `
+    <span style="font-size:11px;font-weight:700;color:var(--tx-s);">날짜 보기</span>
+    <select onchange="dateViewModeChange('${key}',this.value)" style="height:28px;min-width:96px;font-size:11px;">
+      <option value="all"${state.mode==='all'?' selected':''}>전체</option>
+      <option value="year"${state.mode==='year'?' selected':''}>연</option>
+      <option value="month"${state.mode==='month'?' selected':''}>월</option>
+      <option value="day"${state.mode==='day'?' selected':''}>일</option>
+    </select>
+    <button class="btn btn-sm" style="height:28px;padding:0 9px;" onclick="dateViewMove('${key}',-1)" title="이전" ${disabled?'disabled':''}><i class="ti ti-chevron-left"></i></button>
+    <span style="font-weight:800;min-width:${state.mode==='day'?'135':'115'}px;text-align:center;font-size:13px;">${_dateViewLabel(state.mode,state.value)}</span>
+    <button class="btn btn-sm" style="height:28px;padding:0 9px;" onclick="dateViewMove('${key}',1)" title="다음" ${disabled?'disabled':''}><i class="ti ti-chevron-right"></i></button>
+    <button class="btn btn-sm" style="height:28px;padding:0 10px;" onclick="dateViewToday('${key}')" title="오늘" ${disabled?'disabled':''}>오늘</button>
+    <button class="btn btn-sm" style="height:28px;padding:0 9px;" onclick="dateViewReset('${key}')" title="전체 보기"><i class="ti ti-x"></i></button>`;
+}
+function dateViewModeChange(key, mode) {
+  dateViewState[key] = { mode, value:_dateViewDefault(mode) };
+  _dateViewSave();
+  if (dateViewRenderers[key]) dateViewRenderers[key]();
+}
+function dateViewValueChange(key, value) {
+  const state = dateViewState[key] || { mode:'all', value:'' };
+  state.value = value; dateViewState[key] = state;
+  _dateViewSave();
+  if (dateViewRenderers[key]) dateViewRenderers[key]();
+}
+function dateViewReset(key) {
+  dateViewState[key] = { mode:'all', value:'' };
+  _dateViewSave();
+  if (dateViewRenderers[key]) dateViewRenderers[key]();
+}
+function dateViewMove(key, amount) {
+  const state = dateViewState[key]; if (!state || state.mode === 'all') return;
+  let value = state.value || _dateViewDefault(state.mode);
+  if (state.mode === 'year') {
+    value = String((parseInt(value,10) || new Date().getFullYear()) + amount);
+  } else if (state.mode === 'month') {
+    const parts = value.split('-');
+    const d = new Date(Number(parts[0]), (Number(parts[1])||1)-1 + amount, 1);
+    value = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+  } else if (state.mode === 'day') {
+    const parts = value.split('-');
+    const d = new Date(Number(parts[0]), (Number(parts[1])||1)-1, Number(parts[2])||1);
+    d.setDate(d.getDate() + amount);
+    value = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  state.value = value;
+  _dateViewSave();
+  if (dateViewRenderers[key]) dateViewRenderers[key]();
+}
+function dateViewToday(key) {
+  const state = dateViewState[key]; if (!state || state.mode === 'all') return;
+  state.value = _dateViewDefault(state.mode);
+  _dateViewSave();
+  if (dateViewRenderers[key]) dateViewRenderers[key]();
+}
+function dateViewMatch(key, dateValue) {
+  const state = dateViewState[key] || { mode:'all', value:'' };
+  if (state.mode === 'all' || !state.value) return true;
+  const d = String(dateValue||'');
+  if (state.mode === 'year') return d.slice(0,4) === state.value;
+  if (state.mode === 'month') return d.slice(0,7) === state.value;
+  if (state.mode === 'day') return d.slice(0,10) === state.value;
+  return true;
+}
+
 function toggleSort(table, key) {
   const state = sortState[table];
   if (!state) return;
@@ -70,7 +171,7 @@ function onGlobalSearch(q) {
     return;
   }
   
-  clearBtn.style.display = 'block';
+  clearBtn.style.display = 'flex';
   resultsDiv.style.display = 'block';
   
   let html = '';
@@ -87,8 +188,8 @@ function onGlobalSearch(q) {
     matchingClients.forEach(c => {
       matchCount++;
       html += `<div class="search-result-item" onclick="navToGlobalSearchResult('client', '${c.id}')" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--br); transition: background 0.15s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background='transparent'">
-        <div style="font-weight:700; font-size:12px;">${c.name}</div>
-        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">담당: ${c.manager || '미지정'} · ${c.tel || '연락처 없음'}</div>
+        <div style="font-weight:700; font-size:12px;">${esc(c.name)}</div>
+        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">담당: ${esc(c.manager) || '미지정'} · ${esc(c.tel) || '연락처 없음'}</div>
       </div>`;
     });
   }
@@ -105,8 +206,8 @@ function onGlobalSearch(q) {
       matchCount++;
       const cname = getClientName(p.clientId);
       html += `<div class="search-result-item" onclick="navToGlobalSearchResult('product', '${p.id}', '${p.clientId}')" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--br); transition: background 0.15s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background='transparent'">
-        <div style="font-weight:700; font-size:12px;">${p.name} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${p.id}</span></div>
-        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">고객사: ${cname} · 규격: ${p.spec || '없음'} · 단계: ${p.processStage}</div>
+        <div style="font-weight:700; font-size:12px;">${esc(p.name)} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${esc(p.id)}</span></div>
+        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">고객사: ${esc(cname)} · 규격: ${esc(p.spec) || '없음'} · 단계: ${esc(p.processStage)}</div>
       </div>`;
     });
   }
@@ -123,8 +224,8 @@ function onGlobalSearch(q) {
       matchCount++;
       const pname = getProductName(m.productId);
       html += `<div class="search-result-item" onclick="navToGlobalSearchResult('material', '${m.id}')" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--br); transition: background 0.15s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background='transparent'">
-        <div style="font-weight:700; font-size:12px;">${m.name} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${m.id}</span></div>
-        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">공급처: ${m.supplier || '미정'} · 제품: ${pname} · 상태: ${m.status}</div>
+        <div style="font-weight:700; font-size:12px;">${esc(m.name)} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${esc(m.id)}</span></div>
+        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">공급처: ${esc(m.supplier) || '미정'} · 제품: ${esc(pname)} · 상태: ${esc(m.status)}</div>
       </div>`;
     });
   }
@@ -141,8 +242,8 @@ function onGlobalSearch(q) {
       matchCount++;
       const pname = getProductName(o.productId);
       html += `<div class="search-result-item" onclick="navToGlobalSearchResult('order', '${o.id}')" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--br); transition: background 0.15s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background='transparent'">
-        <div style="font-weight:700; font-size:12px;">${pname} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${o.id}</span></div>
-        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">라인: ${o.line} · 담당: ${o.manager || '미지정'} · 실적: ${o.done}/${o.qty} · 상태: ${o.status}</div>
+        <div style="font-weight:700; font-size:12px;">${esc(pname)} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${esc(o.id)}</span></div>
+        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">라인: ${esc(o.line)} · 담당: ${esc(o.manager) || '미지정'} · 실적: ${esc(o.done)}/${esc(o.qty)} · 상태: ${esc(o.status)}</div>
       </div>`;
     });
   }
@@ -158,8 +259,8 @@ function onGlobalSearch(q) {
     matchingInv.forEach(i => {
       matchCount++;
       html += `<div class="search-result-item" onclick="navToGlobalSearchResult('inventory', '${i.id}')" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--br); transition: background 0.15s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background='transparent'">
-        <div style="font-weight:700; font-size:12px;">${i.name} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${i.id}</span></div>
-        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">분류: ${i.type} · 위치: ${i.location || '미설정'} · 재고량: ${i.qty} ${i.unit}</div>
+        <div style="font-weight:700; font-size:12px;">${esc(i.name)} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${esc(i.id)}</span></div>
+        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">분류: ${esc(i.type)} · 위치: ${esc(i.location) || '미설정'} · 재고량: ${esc(i.qty)} ${esc(i.unit)}</div>
       </div>`;
     });
   }
@@ -180,15 +281,15 @@ function onGlobalSearch(q) {
     matchingDefects.forEach(d => {
       matchCount++;
       html += `<div class="search-result-item" onclick="navToGlobalSearchResult('quality', 'defect', '${d.id}')" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--br); transition: background 0.15s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background='transparent'">
-        <div style="font-weight:700; font-size:12px;"><span class="bd bd-err" style="font-size:9px; padding:1px 4px; margin-right:4px; border-radius:3px;">불량</span>${d.type} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${d.id}</span></div>
-        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">공정: ${d.stage} · 원인: ${d.cause || '미작성'} · 상태: ${d.status}</div>
+        <div style="font-weight:700; font-size:12px;"><span class="bd bd-err" style="font-size:9px; padding:1px 4px; margin-right:4px; border-radius:3px;">불량</span>${esc(d.type)} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${esc(d.id)}</span></div>
+        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">공정: ${esc(d.stage)} · 원인: ${esc(d.cause) || '미작성'} · 상태: ${esc(d.status)}</div>
       </div>`;
     });
     matchingClaims.forEach(c => {
       matchCount++;
       html += `<div class="search-result-item" onclick="navToGlobalSearchResult('quality', 'claim', '${c.id}')" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--br); transition: background 0.15s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background='transparent'">
-        <div style="font-weight:700; font-size:12px;"><span class="bd bd-warn" style="font-size:9px; padding:1px 4px; margin-right:4px; border-radius:3px;">클레임</span>${c.content.slice(0, 30)}...</div>
-        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">고객사: ${getClientName(c.clientId)} · 상태: ${c.status}</div>
+        <div style="font-weight:700; font-size:12px;"><span class="bd bd-warn" style="font-size:9px; padding:1px 4px; margin-right:4px; border-radius:3px;">클레임</span>${esc(c.content.slice(0, 30))}...</div>
+        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">고객사: ${esc(getClientName(c.clientId))} · 상태: ${esc(c.status)}</div>
       </div>`;
     });
   }
@@ -207,8 +308,8 @@ function onGlobalSearch(q) {
     matchingWorkers.forEach(w => {
       matchCount++;
       html += `<div class="search-result-item" onclick="navToGlobalSearchResult('worker', '${w.id}')" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--br); transition: background 0.15s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background='transparent'">
-        <div style="font-weight:700; font-size:12px;">${w.name} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${w.id}</span></div>
-        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">${w.dept || '부서 미지정'}${w.position ? ' · '+w.position : ''} · ${w.empType || '정규직'} · ${w.status || ''}</div>
+        <div style="font-weight:700; font-size:12px;">${esc(w.name)} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${esc(w.id)}</span></div>
+        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">${esc(w.dept) || '부서 미지정'}${w.position ? ' · '+esc(w.position) : ''} · ${esc(w.empType) || '정규직'} · ${esc(w.status) || ''}</div>
       </div>`;
     });
   }
@@ -239,7 +340,21 @@ function clearGlobalSearch() {
     input.value = '';
     resultsDiv.style.display = 'none';
     clearBtn.style.display = 'none';
+    input.focus();
   }
+}
+
+function toggleGlobalSearchBox() {
+  const wrapper = document.querySelector('.global-search-wrapper');
+  const input = document.getElementById('global-search-input');
+  if (!wrapper || !input) return;
+  if (window.matchMedia('(max-width: 680px)').matches && !wrapper.classList.contains('search-open')) {
+    wrapper.classList.add('search-open');
+    setTimeout(() => input.focus(), 0);
+    return;
+  }
+  input.focus();
+  onGlobalSearch(input.value);
 }
 
 function navToGlobalSearchResult(category, id, parentId) {
@@ -359,6 +474,7 @@ document.addEventListener('click', function(e) {
   if (wrapper && !wrapper.contains(e.target)) {
     const results = document.getElementById('global-search-results');
     if (results) results.style.display = 'none';
+    if (window.matchMedia('(max-width: 680px)').matches) wrapper.classList.remove('search-open');
   }
 });
 

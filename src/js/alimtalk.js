@@ -115,10 +115,8 @@ function renderAlimtalkSettings() {
 
   if (cfg.enabled) {
     html +=
-      '<div class="form-row"><label class="form-lbl">SOLAPI API Key</label>' +
-      '<input class="form-inp" id="at-apiKey" value="' + (cfg.apiKey || '') + '" placeholder="NCSXXXXX..."></div>' +
-      '<div class="form-row"><label class="form-lbl">SOLAPI API Secret</label>' +
-      '<input class="form-inp" id="at-apiSecret" type="password" value="' + (cfg.apiSecret || '') + '" placeholder="API Secret"></div>' +
+      '<div style="padding:10px 12px;border:1px solid var(--br);border-radius:var(--rm);background:var(--bg-s);font-size:12px;color:var(--tx-s);">' +
+      'SOLAPI API Key와 Secret은 <button class="btn btn-sm" style="margin-left:8px;" onclick="openApiSettings(\'solapi\')"><i class="ti ti-key"></i>API 관리에서 변경</button></div>' +
       '<div class="form-row"><label class="form-lbl">카카오 채널 ID (pfId)</label>' +
       '<input class="form-inp" id="at-pfId" value="' + (cfg.pfId || '') + '" placeholder="_xKBBxjxb"></div>' +
       '<div class="form-row"><label class="form-lbl">발신번호</label>' +
@@ -159,12 +157,8 @@ function alimtalkEventToggle(key, on) {
 }
 
 function saveAlimtalkSettings() {
-  var k  = document.getElementById('at-apiKey');
-  var s  = document.getElementById('at-apiSecret');
   var p  = document.getElementById('at-pfId');
   var ph = document.getElementById('at-senderPhone');
-  if (k)  alimtalkSettings.apiKey      = k.value.trim();
-  if (s)  alimtalkSettings.apiSecret   = s.value.trim();
   if (p)  alimtalkSettings.pfId        = p.value.trim();
   if (ph) alimtalkSettings.senderPhone = ph.value.trim();
   saveStorage('alimtalkSettings', alimtalkSettings);

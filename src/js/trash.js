@@ -16,7 +16,10 @@ function pushToTrash(type, name, originalId, data, cascadeData = null) {
 
 function updateTrashBadge() {
   const el = inp('trashBadge');
-  if (el) el.textContent = trash.length;
+  if (el) {
+    el.textContent = trash.length;
+    el.style.display = trash.length ? '' : 'none';
+  }
 }
 
 function restoreTrash(id) {
@@ -209,11 +212,11 @@ function renderTrash() {
           }
           return `
             <tr>
-              <td>${i.id}</td>
-              <td><span class="bd bd-neu">${typeLabels[i.type] || i.type}</span></td>
-              <td style="font-family: monospace; font-weight:700;">${i.originalId}</td>
-              <td style="font-weight:700; color:var(--tx-s);">${i.name}</td>
-              <td>${i.deletedAt}</td>
+              <td>${esc(i.id)}</td>
+              <td><span class="bd bd-neu">${esc(typeLabels[i.type] || i.type)}</span></td>
+              <td style="font-family: monospace; font-weight:700;">${esc(i.originalId)}</td>
+              <td style="font-weight:700; color:var(--tx-s);">${esc(i.name)}</td>
+              <td>${esc(i.deletedAt)}</td>
               <td><span style="font-size:11px; font-weight:600; color:var(--tx-i);">${sizeLabel}</span></td>
               <td>
                 <button class="restore-btn" onclick="restoreTrash('${i.id}')"><i class="ti ti-rotate-clockwise"></i>복구</button>

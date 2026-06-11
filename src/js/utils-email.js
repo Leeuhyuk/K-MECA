@@ -24,6 +24,7 @@ function openCompanySettings() {
 function saveCompanySettings() {
   saveStorage('companyInfo', { name:v('ci-name'), address:v('ci-addr'), tel:v('ci-tel'), fax:v('ci-fax'), bizNo:v('ci-bizno'), ceo:v('ci-ceo'), dept:v('ci-dept'), bizType:v('ci-biztype'), bizItem:v('ci-bizitem'), email:v('ci-email') });
   closeModal('company-modal');
+  if (typeof renderSystemCompany === 'function' && currentPage === 'system') renderSystemCompany();
   showToast('회사 정보가 저장되었습니다.');
 }
 
@@ -31,10 +32,10 @@ function getEmailjsConfig() {
   return loadStorage('emailjsConfig', { serviceId:'', templateId:'', publicKey:'' });
 }
 function openEmailjsSettings() {
-  const cfg = getEmailjsConfig();
-  inp('ejs-service').value  = cfg.serviceId;
-  inp('ejs-template').value = cfg.templateId;
-  inp('ejs-pubkey').value   = cfg.publicKey;
+  if (typeof openApiSettings === 'function') {
+    openApiSettings('emailjs');
+    return;
+  }
   inp('emailjs-modal').classList.add('open');
 }
 function saveEmailjsSettings() {

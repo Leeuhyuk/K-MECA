@@ -8,6 +8,7 @@ function updateAsBadge(){
 }
 function renderAS(){
   const body = inp('as-body'); if(!body) return;
+  const kpi = inp('as-kpi');
   updateAsBadge();
   const fil = (inp('as-filter')?.value)||'';
   const q = ((inp('as-search')?.value)||'').toLowerCase();
@@ -36,27 +37,26 @@ function renderAS(){
   const _asth = (k, l, s) => `<th onclick="toggleSort('as','${k}')" style="cursor:pointer;user-select:none;${s||''}">${l} ${sortIcon('as',k)}</th>`;
   const rows = list.length ? list.map(a=>`
     <tr>
-      <td style="font-weight:700;">${a.id}</td>
-      <td>${a.recvDate||'—'}</td>
-      <td style="font-weight:700;">${getClientName(a.clientId)}</td>
-      <td>${a.productName||'—'}</td>
-      <td style="max-width:220px;">${a.symptom||'—'}</td>
-      <td style="text-align:center;"><span class="bd ${a.warranty==='유상'?'bd-warn':'bd-ok'}">${a.warranty||'보증'}</span></td>
+      <td style="font-weight:700;">${esc(a.id)}</td>
+      <td>${esc(a.recvDate)||'—'}</td>
+      <td style="font-weight:700;">${esc(getClientName(a.clientId))}</td>
+      <td>${esc(a.productName)||'—'}</td>
+      <td style="max-width:220px;">${esc(a.symptom)||'—'}</td>
+      <td style="text-align:center;"><span class="bd ${a.warranty==='유상'?'bd-warn':'bd-ok'}">${esc(a.warranty)||'보증'}</span></td>
       <td style="text-align:center;">${statusBadge(a.status||'접수')}</td>
-      <td>${asWorkerName(a.owner)}</td>
+      <td>${esc(asWorkerName(a.owner))}</td>
       <td style="text-align:right;">${a.warranty==='유상'?fmtW(a.cost||0):'—'}</td>
       <td style="text-align:center;white-space:nowrap;">
         <button class="btn btn-sm" onclick="openAsEdit('${a.id}')" title="수정"><i class="ti ti-edit"></i></button>
         <button class="btn btn-sm btn-danger" onclick="deleteAS('${a.id}')" title="삭제"><i class="ti ti-trash"></i></button>
       </td>
     </tr>`).join('') : `<tr><td colspan="10">${empty('등록된 A/S 건이 없습니다.')}</td></tr>`;
-  body.innerHTML = `
-    <div class="metrics">
+  if (kpi) kpi.innerHTML = `
       <div class="mc"><div class="mc-lbl"><i class="ti ti-tool"></i>전체 A/S</div><div class="mc-val">${total}건</div></div>
       <div class="mc clickable${fil==='open'?' kpi-active':''}" onclick="kpiFilter('as-filter','open','renderAS')"><div class="mc-lbl"><i class="ti ti-loader" style="color:var(--tx-w);"></i>미완료(접수·처리중)</div><div class="mc-val" style="color:var(--tx-w);">${open}건</div></div>
       <div class="mc clickable${fil==='완료'?' kpi-active':''}" onclick="kpiFilter('as-filter','완료','renderAS')"><div class="mc-lbl"><i class="ti ti-checks" style="color:var(--tx-ok);"></i>처리 완료</div><div class="mc-val" style="color:var(--tx-ok);">${done}건</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-coin" style="color:var(--tx-i);"></i>유상 수리 합계</div><div class="mc-val" style="color:var(--tx-i);">${fmtW(paidCost)}</div></div>
-    </div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-coin" style="color:var(--tx-i);"></i>유상 수리 합계</div><div class="mc-val" style="color:var(--tx-i);">${fmtW(paidCost)}</div></div>`;
+  body.innerHTML = `
     <div class="card">
       <div class="card-hd"><span class="card-ttl"><i class="ti ti-tool"></i>A/S 접수 대장</span><span style="font-size:11px;color:var(--tx-t);">${list.length}건 표시</span></div>
       <div style="overflow-x:auto;"><table>
@@ -69,8 +69,8 @@ function renderAS(){
       </table></div>
     </div>`;
 }
-function _asClientOptions(sel){ return clients.map(c=>`<option value="${c.id}"${c.id===sel?' selected':''}>${c.name}</option>`).join(''); }
-function _asWorkerOptions(sel){ return '<option value="">미배정</option>'+workers.map(w=>`<option value="${w.id}"${w.id===sel?' selected':''}>${w.name}${w.dept?' · '+w.dept:''}</option>`).join(''); }
+function _asClientOptions(sel){ return clients.map(c=>`<option value="${esc(c.id)}"${c.id===sel?' selected':''}>${esc(c.name)}</option>`).join(''); }
+function _asWorkerOptions(sel){ return '<option value="">미배정</option>'+workers.map(w=>`<option value="${esc(w.id)}"${w.id===sel?' selected':''}>${esc(w.name)}${w.dept?' · '+esc(w.dept):''}</option>`).join(''); }
 function openAsAdd(){
   editAsId = null;
   inp('as-modal-ttl').innerHTML = '<i class="ti ti-tool" style="color:var(--tx-i);"></i>A/S 접수 등록';

@@ -154,8 +154,8 @@ function renderAlerts() {
     <div class="al al-${a.type}">
       <i class="ti ${im[a.type]||'ti-info-circle'}"></i>
       <div style="flex:1;">
-        <div class="al-t">${a.title}</div>
-        <div class="al-s">${a.sub}${a.createdAt ? ` · ${a.createdAt}` : ''}</div>
+        <div class="al-t">${esc(a.title)}</div>
+        <div class="al-s">${esc(a.sub)}${a.createdAt ? ` · ${esc(a.createdAt)}` : ''}</div>
       </div>
       <button class="del-btn" onclick="delAlert(${realIdx})"><i class="ti ti-x" style="font-size:12px;"></i>확인</button>
     </div>`;

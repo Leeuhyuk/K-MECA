@@ -155,7 +155,7 @@ python build.py
 
 # 로컬 서버 실행 (포트 3000)
 python -m http.server 3000
-# → http://localhost:3000/MESPro.html
+# → http://localhost:3000/index.html
 ```
 
-> **주의:** `MESPro.html`은 빌드 결과물입니다. 직접 편집하지 말고 항상 `src/` 파일을 수정한 후 `build.py`를 실행하세요.
+> **주의:** `index.html`은 빌드 결과물입니다. 직접 편집하지 말고 항상 `src/` 파일을 수정한 후 `build.py`를 실행하세요.

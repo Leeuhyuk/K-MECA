@@ -4,6 +4,14 @@ const GC_Light = 'rgba(0,0,0,.05)';
 const TC_Dark = '#868e96';
 const TC_Light = '#495057';
 
+/* HTML 이스케이프 — 사용자 입력을 innerHTML에 넣기 전 반드시 통과시킬 것 (XSS 방어) */
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => (
+    { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+  ));
+}
+
 function isDark() { return document.documentElement.classList.contains('dark'); }
 function getGridColor() { return isDark() ? GC_Dark : GC_Light; }
 function getTextColor() { return isDark() ? TC_Dark : TC_Light; }
@@ -41,7 +49,7 @@ function showToast(message, type = 'success') {
   if (type === 'error') icon = 'ti-circle-x';
   else if (type === 'info') icon = 'ti-info-circle';
 
-  toast.innerHTML = `<i class="ti ${icon}"></i><span>${message}</span>`;
+  toast.innerHTML = `<i class="ti ${icon}"></i><span>${esc(message)}</span>`;
   container.appendChild(toast);
 
   const timer = setTimeout(() => {
@@ -76,7 +84,13 @@ function inp(id) { return document.getElementById(id); }
 
 function nextCode(prefix, list, field='id') {
   const nums = list.map(x => parseInt((x[field] || '').split('-').pop()) || 0);
-  return `${prefix}-${String((nums.length ? Math.max(...nums) : 0) + 1).padStart(3, '0')}`;
+  let n = (nums.length ? Math.max(...nums) : 0) + 1;
+  let code = `${prefix}-${String(n).padStart(3, '0')}`;
+  // 동시 등록 등으로 같은 번호가 이미 존재하면 빈 번호까지 증가 (중복 ID 방지)
+  while (list.some(x => x[field] === code)) {
+    n++; code = `${prefix}-${String(n).padStart(3, '0')}`;
+  }
+  return code;
 }
 /* KPI 카드 클릭 → 페이지의 상태 필터 select 를 해당 값으로 토글(같은 값 재클릭 시 전체 복구) 후 재렌더.
    renderFn 에 인자가 필요한 경우(renderSalesDoc('statement') 등) ...args 로 전달. */
@@ -110,7 +124,7 @@ function statusBadge(s) {
     '조치중': 'bd-warn', '지연': 'bd-err', '납기지연': 'bd-err', '결근': 'bd-err', '불합격': 'bd-err',
     '조건부합격': 'bd-warn', '정비지원': 'bd-warn', '휴가': 'bd-neu', '보류': 'bd-neu'
   };
-  return `<span class="bd ${m[s] || 'bd-neu'}">${s}</span>`;
+  return `<span class="bd ${m[s] || 'bd-neu'}">${esc(s)}</span>`;
 }
 
 function pctBar(done, qty, w=60) {

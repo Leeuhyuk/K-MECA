@@ -32,9 +32,9 @@ body { font-family: var(--f); background: var(--bg-t); color: var(--tx); height:
 @keyframes toastIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
 
 /* 사이드바 */
-.sidebar { width: 210px; min-width: 210px; background: var(--bg-p); border-right: 1px solid var(--br); display: flex; flex-direction: column; align-self: stretch; min-height: 0; overflow-y: auto; flex-shrink: 0; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.18) transparent; }
+.sidebar { width: 210px; min-width: 210px; background: var(--bg-p); border-right: 1px solid var(--br); display: flex; flex-direction: column; align-self: stretch; min-height: 0; overflow-y: auto; flex-shrink: 0; scrollbar-width: thin; scrollbar-color: var(--br-s) transparent; }
 .sidebar::-webkit-scrollbar { width: 5px; }
-.sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--br-s); border-radius: 3px; }
 .sidebar::-webkit-scrollbar-track { background: transparent; }
 .logo { padding: 18px 20px; border-bottom: 1px solid var(--br); }
 .logo-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--tx-i); }
@@ -51,8 +51,34 @@ body { font-family: var(--f); background: var(--bg-t); color: var(--tx); height:
 /* 메인 영역 */
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
 .topbar { background: var(--bg-p); border-bottom: 1px solid var(--br); padding: 10px 24px; display: flex; align-items: center; justify-content: space-between; min-height: 52px; flex-shrink: 0; }
-.tb-title { font-size: 16px; font-weight: 600; }
+.tb-title { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tb-right { display: flex; align-items: center; gap: 12px; }
+.global-search-wrapper {
+  position: relative; width: 340px; height: 36px; margin: 0 auto 0 20px;
+  flex: 0 1 340px; min-width: 150px;
+}
+#global-search-input {
+  width: 100%; height: 36px; padding: 6px 78px 6px 18px;
+  border-radius: 20px; font-size: 12px;
+  background: rgba(255,255,255,0.06); border: 1px solid var(--br);
+  transition: border-color .2s, box-shadow .2s;
+}
+#global-search-clear {
+  position: absolute; right: 46px; top: 50%; transform: translateY(-50%);
+  width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%;
+  align-items: center; justify-content: center;
+  background: transparent; color: var(--tx-t); cursor: pointer; display: none; z-index: 3;
+}
+#global-search-clear i { font-size: 17px; }
+#global-search-clear:hover { background: var(--bg-s); color: var(--tx); }
+.global-search-btn {
+  position: absolute; top: 0; right: 0; width: 42px; height: 36px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--br); border-radius: 0 20px 20px 0;
+  background: var(--bg-s); color: var(--tx); cursor: pointer; z-index: 2;
+}
+.global-search-btn i { font-size: 20px; }
+.global-search-btn:hover { background: var(--bg-i); color: var(--tx-i); }
 .pill { font-size: 11px; padding: 4px 10px; border-radius: 20px; border: 1px solid; display: inline-flex; align-items: center; gap: 5px; font-weight: 500; }
 .pill-ok { background: var(--bg-ok); color: var(--tx-ok); border-color: var(--br-ok); }
 .pill-warn { background: var(--bg-w); color: var(--tx-w); border-color: var(--br-w); }
@@ -90,7 +116,7 @@ body { font-family: var(--f); background: var(--bg-t); color: var(--tx); height:
 /* 테이블 스타일 */
 table { width: 100%; border-collapse: collapse; font-size: 12px; }
 th { text-align: left; padding: 9px 12px; color: var(--tx-s); border-bottom: 1px solid var(--br); font-weight: 600; white-space: nowrap; background: var(--bg-s); }
-td { padding: 9px 12px; border-bottom: 1px solid var(--br); vertical-align: middle; color: var(--tx); }
+td { padding: 9px 12px; border-bottom: 1px solid var(--br); vertical-align: middle; color: var(--tx); word-break: keep-all; }
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: var(--bg-s); }
 /* ── 데이터 표 가독성: ① 줄무늬 ② 헤더 고정 ③ 첫 열 고정 (불투명 배경으로 고정셀 비침 방지) ── */
@@ -116,7 +142,7 @@ body.sb-collapsed .sidebar { display: none; }
 body.sb-mini .sidebar {
   width: 48px; min-width: 48px;
   position: fixed;
-  top: 0; left: 0; height: 100vh;
+  top: 0; bottom: 0; left: 0;   /* height:100vh는 body zoom 환경에서 짧아짐 → top/bottom 0으로 뷰포트 양끝 고정 */
   z-index: 1500;
   overflow: hidden;
 }
@@ -234,6 +260,10 @@ textarea { height: auto; resize: vertical; }
 .btn-danger { background: var(--bg-d); color: var(--tx-d); border-color: var(--br-d); }
 .btn-danger:hover { background: #f03e3e; color: #fff; }
 .btn-sm { padding: 4px 10px; font-size: 11px; height: 26px; border-radius: 6px; }
+.btn-icon { padding: 6px; width: 32px; justify-content: center; gap: 0; }
+.btn-icon i { font-size: 16px; }
+.btn-sm.btn-icon { padding: 4px; width: 26px; }
+.btn-sm.btn-icon i { font-size: 14px; }
 
 .del-btn, .edit-btn, .restore-btn { padding: 3px 8px; font-size: 11px; height: 24px; border-radius: 4px; cursor: pointer; background: transparent; font-family: var(--f); display: inline-flex; align-items: center; gap: 4px; transition: all .15s; border: 1px solid; }
 .del-btn { border-color: var(--br-d); color: var(--tx-d); }

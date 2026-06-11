@@ -11,6 +11,11 @@ function isMobileView() {
 function mobileTab(tab) {
   if (tab === 'more') { toggleMobileSidebar(); return; }
   if (tab === 'home') { showMobileHome(); return; }
+  if (tab === 'alerts') {
+    go('system');
+    if (currentPage === 'system') switchSystemTab('alerts');
+    return;
+  }
   // 나머지는 기존 페이지로 이동 (_goTo가 mhome 해제 + 탭 동기화 수행)
   go(tab);
 }
@@ -28,7 +33,8 @@ function showMobileHome() {
 function syncMobileTab() {
   const active = document.body.classList.contains('mhome')
     ? 'home'
-    : (['clients', 'materials', 'alerts'].includes(currentPage) ? currentPage : null);
+    : (currentPage === 'system' && systemTab === 'alerts' ? 'alerts'
+      : (['clients', 'materials'].includes(currentPage) ? currentPage : null));
   document.querySelectorAll('#mobile-tabbar .mtab').forEach(t => {
     t.classList.toggle('active', t.dataset.tab === active);
   });
@@ -114,8 +120,8 @@ function renderMobileHome() {
       ${deadlines.length ? deadlines.map(p => `
         <div class="mh-row" onclick="mobileGoProcess()">
           <div class="mh-r-main">
-            <div class="mh-r-t">${p.name}</div>
-            <div class="mh-r-s">${getClientName(p.clientId)} · ${p.processStage}</div>
+            <div class="mh-r-t">${esc(p.name)}</div>
+            <div class="mh-r-s">${esc(getClientName(p.clientId))} · ${esc(p.processStage)}</div>
           </div>
           ${dayBadge(p.deliveryDate)}
           <i class="ti ti-chevron-right"></i>
@@ -128,8 +134,8 @@ function renderMobileHome() {
         <div class="mh-row" onclick="mobileGo('alerts')">
           <i class="ti ${alertIco[a.type] || 'ti-info-circle'} mh-r-ico" style="color:${alertCol[a.type] || 'var(--tx-i)'};"></i>
           <div class="mh-r-main">
-            <div class="mh-r-t">${a.title || ''}</div>
-            <div class="mh-r-s">${a.sub || ''}</div>
+            <div class="mh-r-t">${esc(a.title) || ''}</div>
+            <div class="mh-r-s">${esc(a.sub) || ''}</div>
           </div>
           <i class="ti ti-chevron-right"></i>
         </div>`).join('') : `<div class="mh-empty">새로운 알림이 없습니다.</div>`}
@@ -156,7 +162,15 @@ function mhSearchKeyDown(e) {
 }
 
 /* 홈 → 페이지 이동 헬퍼 (홈 해제 후 이동) */
-function mobileGo(id) { document.body.classList.remove('mhome'); go(id); }
+function mobileGo(id) {
+  document.body.classList.remove('mhome');
+  if (id === 'alerts') {
+    go('system');
+    if (currentPage === 'system') switchSystemTab('alerts');
+    return;
+  }
+  go(id);
+}
 function mobileGoInv() { document.body.classList.remove('mhome'); goInventory('finished'); syncMobileTab(); }
 function mobileGoProcess() {
   document.body.classList.remove('mhome');

@@ -13,15 +13,16 @@
         <option>작성중</option><option>발송완료</option><option>확인완료</option><option>입고완료</option>
       </select>
       <input type="text" id="po-q" placeholder="품목명·공급처 검색..." style="min-width:180px;" oninput="renderPo()">
-      <button class="btn btn-primary" onclick="openPoAdd()"><i class="ti ti-plus"></i>구매발주서 등록</button>
-      <button class="btn" onclick="openPoPrint(null)"><i class="ti ti-printer"></i>전체 PDF 출력</button>
-      <button class="btn" onclick="exportPoXLS()"><i class="ti ti-file-spreadsheet"></i>전체 엑셀 CSV 내보내기</button>
-      <button class="btn" style="margin-left:auto;" onclick="openEmailjsSettings()"><i class="ti ti-mail-cog"></i>이메일 연동설정</button>
+      <button class="btn btn-primary btn-icon" onclick="openPoAdd()" title="구매발주서 등록"><i class="ti ti-plus"></i></button>
+      <button class="btn btn-icon" onclick="importPoListXLS()" title="엑셀 가져오기"><i class="ti ti-file-import"></i></button>
+      <button class="btn btn-icon" onclick="exportPoXLS()" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
+      <button class="btn btn-icon" onclick="openPoPrint(null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
     </div>
 
     <!-- 선택 일괄 동작 바 -->
     <div id="po-bulkbar" style="display:none;align-items:center;gap:8px;margin:0 0 12px;padding:9px 14px;background:var(--bg-i);border:1px solid var(--br-i);border-radius:8px;flex-wrap:wrap;">
       <span style="font-weight:700;font-size:12.5px;color:var(--tx-i);"><i class="ti ti-checkbox"></i> <span id="po-sel-count">0</span>건 선택됨</span>
+      <button class="btn btn-sm" id="po-clone-btn" onclick="poBulkClone()"><i class="ti ti-copy"></i>선택 복제</button>
       <button class="btn btn-sm" onclick="poBulkPrint()"><i class="ti ti-printer"></i>선택 PDF 출력</button>
       <button class="btn btn-sm" onclick="poBulkExport()"><i class="ti ti-file-spreadsheet"></i>선택 엑셀</button>
       <button class="btn btn-sm" onclick="poBulkEmail()"><i class="ti ti-mail"></i>선택 이메일</button>
@@ -46,10 +47,9 @@
       <select id="st-fc" onchange="renderSalesDoc('statement')" style="min-width:140px;"><option value="">전체 고객사</option></select>
       <select id="st-fs" onchange="renderSalesDoc('statement')"><option value="">전체 상태</option><option>작성</option><option>발송완료</option><option>수령확인</option></select>
       <input type="text" id="st-q" placeholder="품목명·고객사 검색..." style="min-width:180px;" oninput="renderSalesDoc('statement')">
-      <button class="btn btn-primary" onclick="openSalesDocAdd('statement')"><i class="ti ti-plus"></i>거래명세표 등록</button>
-      <button class="btn" onclick="openSalesDocPrint('statement',null)"><i class="ti ti-printer"></i>전체 PDF 출력</button>
-      <button class="btn" onclick="exportSalesDocCSV('statement')"><i class="ti ti-file-spreadsheet"></i>전체 엑셀 CSV 내보내기</button>
-      <button class="btn" style="margin-left:auto;" onclick="openEmailjsSettings()"><i class="ti ti-mail-cog"></i>이메일 연동설정</button>
+      <button class="btn btn-primary btn-icon" onclick="openSalesDocAdd('statement')" title="거래명세표 등록"><i class="ti ti-plus"></i></button>
+      <button class="btn btn-icon" onclick="exportSalesDocCSV('statement')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
+      <button class="btn btn-icon" onclick="openSalesDocPrint('statement',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
     </div>
     <div class="card"><div id="st-table" style="overflow-x:auto;"></div></div>
   </div>
@@ -66,10 +66,9 @@
       <select id="tx-fc" onchange="renderSalesDoc('tax')" style="min-width:140px;"><option value="">전체 고객사</option></select>
       <select id="tx-fs" onchange="renderSalesDoc('tax')"><option value="">전체 상태</option><option>작성</option><option>발행완료</option><option>전송완료</option></select>
       <input type="text" id="tx-q" placeholder="품목명·고객사 검색..." style="min-width:180px;" oninput="renderSalesDoc('tax')">
-      <button class="btn btn-primary" onclick="openSalesDocAdd('tax')"><i class="ti ti-plus"></i>세금계산서 등록</button>
-      <button class="btn" onclick="openSalesDocPrint('tax',null)"><i class="ti ti-printer"></i>전체 PDF 출력</button>
-      <button class="btn" onclick="exportSalesDocCSV('tax')"><i class="ti ti-file-spreadsheet"></i>전체 엑셀 CSV 내보내기</button>
-      <button class="btn" style="margin-left:auto;" onclick="openEmailjsSettings()"><i class="ti ti-mail-cog"></i>이메일 연동설정</button>
+      <button class="btn btn-primary btn-icon" onclick="openSalesDocAdd('tax')" title="세금계산서 등록"><i class="ti ti-plus"></i></button>
+      <button class="btn btn-icon" onclick="exportSalesDocCSV('tax')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
+      <button class="btn btn-icon" onclick="openSalesDocPrint('tax',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
     </div>
     <div class="card"><div id="tx-table" style="overflow-x:auto;"></div></div>
   </div>
@@ -92,10 +91,9 @@
       <select id="qt-fc" onchange="renderSODoc('quote')" style="min-width:140px;"><option value="">전체 고객사</option></select>
       <select id="qt-fs" onchange="renderSODoc('quote')"><option value="">전체 상태</option><option>작성</option><option>발송</option><option>협의중</option><option>보류</option><option>수주전환</option></select>
       <input type="text" id="qt-q" placeholder="품목명·고객사 검색..." style="min-width:180px;" oninput="renderSODoc('quote')">
-      <button class="btn btn-primary" onclick="openSODocAdd('quote')"><i class="ti ti-plus"></i>견적서 등록</button>
-      <button class="btn" onclick="openSODocPrint('quote',null)"><i class="ti ti-printer"></i>전체 PDF 출력</button>
-      <button class="btn" onclick="exportSODocCSV('quote')"><i class="ti ti-file-spreadsheet"></i>전체 엑셀 CSV 내보내기</button>
-      <button class="btn" style="margin-left:auto;" onclick="openEmailjsSettings()"><i class="ti ti-mail-cog"></i>이메일 연동설정</button>
+      <button class="btn btn-primary btn-icon" onclick="openSODocAdd('quote')" title="견적서 등록"><i class="ti ti-plus"></i></button>
+      <button class="btn btn-icon" onclick="exportSODocCSV('quote')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
+      <button class="btn btn-icon" onclick="openSODocPrint('quote',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
     </div>
     <div class="card"><div id="qt-table" style="overflow-x:auto;"></div></div>
     </div><!-- /sd-tab-quote -->
@@ -111,9 +109,8 @@
       <select id="so-fc" onchange="renderSODoc('order')" style="min-width:140px;"><option value="">전체 고객사</option></select>
       <select id="so-fs" onchange="renderSODoc('order')"><option value="">전체 상태</option><option>수주확정</option><option>진행중</option><option>완료</option></select>
       <input type="text" id="so-q" placeholder="품목명·고객사 검색..." style="min-width:180px;" oninput="renderSODoc('order')">
-      <button class="btn" onclick="openSODocPrint('order',null)"><i class="ti ti-printer"></i>전체 PDF 출력</button>
-      <button class="btn" onclick="exportSODocCSV('order')"><i class="ti ti-file-spreadsheet"></i>전체 엑셀 CSV 내보내기</button>
-      <button class="btn" style="margin-left:auto;" onclick="openEmailjsSettings()"><i class="ti ti-mail-cog"></i>이메일 연동설정</button>
+      <button class="btn btn-icon" onclick="exportSODocCSV('order')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
+      <button class="btn btn-icon" onclick="openSODocPrint('order',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
     </div>
     <div class="card"><div id="so-table" style="overflow-x:auto;"></div></div>
     </div><!-- /sd-tab-order -->
@@ -193,7 +190,7 @@
         <button class="btn btn-primary" id="email-submit-btn" onclick="doEmailJS()" disabled><i class="ti ti-send"></i>직접 발송 (EmailJS)</button>
       </div>
       <div style="font-size:10px; color:var(--tx-t); text-align:right;">
-        직접 발송은 <span style="color:var(--tx-i); cursor:pointer;" onclick="openEmailjsSettings()">EmailJS 설정</span> 필요 · 무료 200건/월
+        직접 발송 설정: 시스템 관리 → API 관리 → EmailJS
       </div>
     </div>
   </div>

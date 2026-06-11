@@ -43,8 +43,8 @@
 <!-- 공용 삭제/일반 알림 확인 모달 -->
 <div class="overlay" id="confirmDlg">
   <div class="dlg">
-    <div class="dlg-title" id="dlgTitleContainer" style="color:var(--tx-d);"><i class="ti ti-alert-triangle"></i><span id="dlgTitle">휴지통 전체 비우기</span></div>
-    <div class="dlg-msg" id="dlgMsg">휴지통 내부 <strong>총 21건</strong>의 모든 백업 데이터를 영구 파기하시겠습니까?<br><span style="color:var(--tx-d); font-weight:700;">비워진 메모리 데이터는 복구 조작을 진행할 수 없습니다.</span></div>
+    <div class="dlg-title" id="dlgTitleContainer" style="color:var(--tx-d);"><i class="ti ti-alert-triangle"></i><span id="dlgTitle"></span></div>
+    <div class="dlg-msg" id="dlgMsg"></div>
     <div class="dlg-actions">
       <button class="btn" onclick="closeDlg()">취소</button>
       <button class="btn btn-danger" id="dlgOkBtn"><i class="ti ti-trash"></i>실행</button>
@@ -157,6 +157,7 @@
   </div>
   <div class="nav-g">
     <div class="nav-lbl">문서 관리</div>
+    <div class="ni" onclick="go('notes',this)"><i class="ti ti-notes"></i>메모·할 일<span class="nbadge" id="todoBadge" style="display:none;background:#e8590c;">0</span></div>
     <div class="ni" onclick="go('rfq',this)"><i class="ti ti-file-description"></i>견적요청서<span class="nbadge" id="rfqBadge" style="display:none;background:#868e96;">0</span></div>
     <div class="ni" onclick="go('po',this)"><i class="ti ti-file-invoice"></i>구매발주서<span class="nbadge" id="poBadge" style="display:none;background:#868e96;">0</span></div>
   </div>
@@ -169,14 +170,10 @@
     <div class="ni" onclick="go('bom',this)"><i class="ti ti-sitemap"></i>BOM · 자재명세</div>
     <div class="ni" onclick="go('finance',this)"><i class="ti ti-coin"></i>재무 관리</div>
     <div class="ni" onclick="go('workers',this)"><i class="ti ti-id-badge-2"></i>인사 관리</div>
-    <div class="ni" onclick="openCompanySettings()"><i class="ti ti-building"></i>회사정보 설정</div>
   </div>
   <div class="nav-g">
     <div class="nav-lbl">시스템 관리</div>
-    <div class="ni" onclick="go('alimtalk',this)"><i class="ti ti-brand-kakao"></i>알림톡 설정</div>
-    <div class="ni" onclick="go('permissions',this)"><i class="ti ti-user-shield"></i>권한 관리</div>
-    <div class="ni" onclick="go('alerts',this)"><i class="ti ti-bell"></i>알림<span class="nbadge" id="alertBadge">17</span></div>
-    <div class="ni" onclick="go('trash',this)"><i class="ti ti-trash"></i>휴지통<span class="nbadge" id="trashBadge" style="background:#868e96;">0</span></div>
+    <div class="ni" onclick="go('system',this)"><i class="ti ti-settings"></i>시스템 관리<span class="nbadge" id="alertBadge">0</span><span class="nbadge" id="trashBadge" style="display:none;background:#868e96;">0</span></div>
   </div>
 </div>
 
@@ -194,13 +191,13 @@
     </div>
 
     <!-- 통합 글로벌 검색창 -->
-    <div class="global-search-wrapper" style="position: relative; width: 340px; margin: 0 auto 0 20px;">
-      <i class="ti ti-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--tx-t); font-size: 14px; pointer-events: none; z-index: 2;"></i>
-      <input type="text" id="global-search-input" placeholder="통합 검색 (제품, 고객사, 자재, 생산지시, 재고, 직원...)" style="width: 100%; padding: 6px 36px 6px 34px; height: 34px; border-radius: 20px; font-size: 12px; background: rgba(255,255,255,0.06); border: 1px solid var(--br); transition: all 0.2s;" oninput="onGlobalSearch(this.value)" onfocus="onGlobalSearchFocus()" onkeydown="onGlobalSearchKeyDown(event)">
-      <i class="ti ti-x" id="global-search-clear" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--tx-t); font-size: 14px; cursor: pointer; display: none; z-index: 2;" onclick="clearGlobalSearch()"></i>
+    <div class="global-search-wrapper">
+      <input type="text" id="global-search-input" placeholder="통합 검색 (제품, 고객사, 자재, 생산지시, 재고, 직원...)" oninput="onGlobalSearch(this.value)" onfocus="onGlobalSearchFocus()" onkeydown="onGlobalSearchKeyDown(event)">
+      <button type="button" id="global-search-clear" onclick="clearGlobalSearch()" title="검색어 지우기" aria-label="검색어 지우기"><i class="ti ti-x"></i></button>
+      <button type="button" class="global-search-btn" onclick="toggleGlobalSearchBox()" title="검색"><i class="ti ti-search"></i></button>
       
       <!-- 실시간 검색 결과 드롭다운 -->
-      <div id="global-search-results" style="position: absolute; top: 40px; left: 0; width: 440px; background: var(--bg-p); border: 1px solid var(--br-s); border-radius: var(--rl); box-shadow: var(--shadow); z-index: 9999; max-height: 480px; overflow-y: auto; display: none; backdrop-filter: blur(20px); border-color: rgba(255,255,255,0.12);">
+      <div id="global-search-results" style="position: absolute; top: 40px; left: 0; width: min(440px, calc(100vw - 24px)); background: var(--bg-p); border: 1px solid var(--br-s); border-radius: var(--rl); box-shadow: var(--shadow); z-index: 9999; max-height: 480px; overflow-y: auto; display: none; backdrop-filter: blur(20px);">
       </div>
     </div>
 
@@ -215,6 +212,6 @@
       <!-- 데이터 백업/복구는 「권한 관리」 페이지로 이동 (관리자 전용) -->
 
       <button class="theme-btn" onclick="toggleTheme()" title="화면 테마 전환"><i class="ti ti-sun" id="themeIcon"></i></button>
-      <span style="font-size:12px; font-weight: 600; color:var(--tx-s);" id="clock">2026-05-30 10:15:19</span>
+      <span style="font-size:12px; font-weight: 600; color:var(--tx-s);" id="clock"></span>
     </div>
   </div>

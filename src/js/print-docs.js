@@ -48,6 +48,7 @@ function _docPrintStyle() {
 
 /* ╦╦╦╦╦╦╦╦ 견적요청서 (RFQ) ╦╦╦╦╦╦╦╦ */
 function renderRfq() {
+  ensureDateView('rfq', 'rfq-table', rfqList.map(r=>r.date), renderRfq);
   const total   = rfqList.length;
   const pending = rfqList.filter(r => r.status === '요청중').length;
   const replied = rfqList.filter(r => r.status === '회신완료').length;
@@ -70,6 +71,7 @@ function renderRfq() {
 
   const fc = v('rfq-fc'), fs = v('rfq-fs'), q = v('rfq-q').toLowerCase();
   const rows = rfqList.filter(r => {
+    if (!dateViewMatch('rfq', r.date)) return false;
     if (fc && r.clientId !== fc) return false;
     if (fs && r.status !== fs)   return false;
     if (q && !r.itemName.toLowerCase().includes(q) && !r.supplier.toLowerCase().includes(q)) return false;
@@ -212,6 +214,27 @@ function openRfqEdit(id) {
   modal.classList.add('open');
 }
 
+function cloneRfq(id) {
+  if (!checkAdminAction()) return;
+  const r = rfqList.find(x => x.id === id); if (!r) return;
+  const modal = inp('rfq-modal');
+  delete modal.dataset.editId;
+  inp('rfq-modal-ttl').innerHTML = '<i class="ti ti-copy" style="color:var(--tx-i);"></i>견적요청서 복제 등록';
+  inp('rq-id').value = nextDocCode('Q', rfqList);
+  inp('rq-date').value = today();
+  inp('rq-status').value = '요청전';
+  _syncRfqClientDropdown(r.clientId);
+  inp('rq-client').value = r.clientId; onRfqClientChange();
+  inp('rq-product').value = r.productId||'';
+  inp('rq-supplier').value = r.supplier||''; inp('rq-semail').value = r.supplierEmail||'';
+  inp('rq-item').value = r.itemName||''; inp('rq-spec').value = r.spec||'';
+  inp('rq-qty').value = r.qty||1; inp('rq-unit').value = r.unit||'EA';
+  if (inp('rq-target')) inp('rq-target').value = r.targetPrice||'';
+  inp('rq-note').value = r.note||'';
+  inp('rfq-save-btn').onclick = saveRfqForm;
+  modal.classList.add('open');
+}
+
 function changeRfqStatus(id, val) {
   const r = rfqList.find(x => x.id === id);
   if (!r) return;
@@ -333,6 +356,7 @@ function exportRfqXLS(id = null) {
 
 /* ╦╦╦╦╦╦╦╦ 구매발주서 (PO) ╦╦╦╦╦╦╦╦ */
 function renderPo() {
+  ensureDateView('po', 'po-table', poList.map(p=>p.date), renderPo);
   const total  = poList.length;
   const sent   = poList.filter(p => p.status === '발송완료').length;
   const done   = poList.filter(p => p.status === '입고완료').length;
@@ -358,6 +382,7 @@ function renderPo() {
 
   const fc = v('po-fc'), fs = v('po-fs'), q = v('po-q').toLowerCase();
   const rows = poList.filter(p => {
+    if (!dateViewMatch('po', p.date)) return false;
     if (fc && p.clientId !== fc) return false;
     if (fs && p.status !== fs)   return false;
     if (q && !p.itemName.toLowerCase().includes(q) && !p.supplier.toLowerCase().includes(q)) return false;
@@ -378,7 +403,11 @@ function renderPo() {
   }
 
   const cont = inp('po-table');
-  if (!rows.length) { cont.innerHTML = '<div class="empty"><i class="ti ti-inbox"></i>해당 조건의 구매발주서가 없습니다.</div>'; return; }
+  if (!rows.length) {
+    cont.innerHTML = '<div class="empty"><i class="ti ti-inbox"></i>해당 조건의 구매발주서가 없습니다.</div>';
+    poUpdateBulkBar();
+    return;
+  }
   const _poth = (k, l) => `<th onclick="toggleSort('po','${k}')" style="cursor:pointer;user-select:none;">${l} ${sortIcon('po',k)}</th>`;
   cont.innerHTML = `<table style="min-width:1130px;">
     <thead><tr>
@@ -423,11 +452,13 @@ function poToggleAll(checked){
 function poUpdateBulkBar(){
   const ids=poCheckedIds(), bar=inp('po-bulkbar');
   if(bar){ bar.style.display = ids.length ? 'flex' : 'none'; const cnt=inp('po-sel-count'); if(cnt) cnt.textContent=ids.length; }
+  const clone=inp('po-clone-btn'); if(clone) clone.style.display=ids.length===1?'':'none';
   const all=inp('po-check-all');
   if(all){ const total=document.querySelectorAll('#po-table .po-check').length;
     all.checked = total>0 && ids.length===total; all.indeterminate = ids.length>0 && ids.length<total; }
 }
 function poBulkPrint(){ const ids=poCheckedIds(); if(!ids.length) return; openPoPrint(ids, true); }   // 선택 건은 건별 개별 출력
+function poBulkClone(){ const ids=poCheckedIds(); if(ids.length===1) clonePo(ids[0]); }
 function poBulkExport(){ const ids=poCheckedIds(); if(!ids.length) return; exportPoXLS(ids); }
 function poBulkEmail(){ const ids=poCheckedIds(); if(ids.length!==1){ showToast('이메일은 한 건만 선택해 발송하세요.','info'); return; } openEmailModal(poList.find(x=>x.id===ids[0]),'po'); }
 function poBulkDelete(){
@@ -524,6 +555,27 @@ function openPoEdit(id) {
   if(inp('po-price')) inp('po-price').value = p.unitPrice||'';
   inp('po-pay').value = p.payMethod||'현금'; inp('po-dlv').value = p.dlvMethod||'직납';
   inp('po-note').value = p.note||'';
+  modal.classList.add('open');
+}
+
+function clonePo(id) {
+  if (!checkAdminAction()) return;
+  const p = poList.find(x => x.id === id); if (!p) return;
+  const modal = inp('po-modal');
+  delete modal.dataset.editId;
+  inp('po-modal-ttl').innerHTML = '<i class="ti ti-copy" style="color:var(--tx-i);"></i>구매발주서 복제 등록';
+  inp('po-id').value = nextDocCode('P', poList);
+  inp('po-date').value = today(); inp('po-status').value = '작성중';
+  _syncPoClientDropdown(p.clientId);
+  inp('po-client-sel').value = p.clientId; onPoClientChange();
+  inp('po-product-sel').value = p.productId||'';
+  inp('po-supplier').value = p.supplier||''; inp('po-semail').value = p.supplierEmail||'';
+  inp('po-item').value = p.itemName||''; inp('po-spec').value = p.spec||'';
+  inp('po-qty').value = p.qty||1; inp('po-unit').value = p.unit||'EA';
+  if (inp('po-price')) inp('po-price').value = p.unitPrice||'';
+  inp('po-pay').value = p.payMethod||'현금'; inp('po-dlv').value = p.dlvMethod||'직납';
+  inp('po-note').value = p.note||'';
+  inp('po-save-btn').onclick = savePoForm;
   modal.classList.add('open');
 }
 
@@ -651,6 +703,666 @@ function exportPoXLS(id = null) {
   showToast(id ? `엑셀 구매발주서(${id})가 다운로드되었습니다.` : '엑셀 파일이 저장되었습니다.');
 }
 
+/* ════════ 엑셀 가져오기 (견적요청서 / 구매발주서) ════════
+   내보내기(exportRfqXLS/exportPoXLS) 형식의 파일을 그대로 다시 읽어들임.
+   헤더명으로 열을 매칭하므로 열 순서가 달라도 동작. 고객사/연결제품은 이름으로 id 역매핑. */
+function _pickXlsxFile(onPick) {
+  const fi = document.createElement('input');
+  fi.type = 'file'; fi.accept = '.xlsx,.xls,.csv'; fi.style.display = 'none';
+  fi.onchange = () => { if (fi.files && fi.files[0]) onPick(fi.files[0]); fi.remove(); };
+  document.body.appendChild(fi); fi.click();
+}
+
+function _readXlsxRows(file, cb) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type:'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      cb(XLSX.utils.sheet_to_json(ws, { header:1, defval:'' }));
+    } catch(err) { showToast('엑셀 읽기 실패: ' + err.message, 'error'); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function _numFrom(val) { return Number(String(val).replace(/[,₩\s원]/g, '')) || 0; }
+
+function _importDocsXLS(cfg) {
+  if (!checkAdminAction()) return;
+  _pickXlsxFile(file => _readXlsxRows(file, aoa => {
+    // 헤더 행 탐색: 식별 헤더 + '품목명' 이 함께 있는 행
+    let hrow = -1, hdr = null;
+    for (let i = 0; i < aoa.length; i++) {
+      const row = aoa[i].map(c => String(c).trim());
+      if (row.includes(cfg.idHeader) && row.includes('품목명')) { hrow = i; hdr = row; break; }
+    }
+    if (hrow < 0) { showToast(`헤더 행(${cfg.idHeader}/품목명)을 찾을 수 없습니다.`, 'error'); return; }
+    const col = name => hdr.indexOf(name);
+    const get = (row, name) => { const i = col(name); return i < 0 ? '' : String(row[i] ?? '').trim(); };
+    const list = cfg.getList();
+    let added = 0, skipped = 0;
+    for (let r = hrow + 1; r < aoa.length; r++) {
+      const row = aoa[r];
+      if (!row || !row.length) continue;
+      const itemName = get(row, '품목명'), supplier = get(row, '공급처');
+      if (!itemName && !supplier) continue;                  // 빈 행 무시
+      if (!itemName || !supplier) { skipped++; continue; }    // 필수값 누락 행
+      const impId = get(row, cfg.idHeader);
+      const id = (impId && !list.some(x => x.id === impId)) ? impId : nextDocCode(cfg.prefix, list);
+      const clientName = get(row, '고객사'), productName = get(row, '연결제품');
+      const obj = {
+        id,
+        date: get(row, cfg.dateHeader) || today(),
+        clientId: clients.find(c => c.name === clientName)?.id || '',
+        productId: products.find(p => p.name === productName)?.id || '',
+        supplier, supplierEmail: get(row, '공급처이메일'),
+        itemName, spec: get(row, '규격/사양'),
+        qty: Number(get(row, '수량')) || 1, unit: get(row, '단위') || 'EA',
+        status: get(row, '상태') || cfg.defaultStatus, note: get(row, '비고')
+      };
+      cfg.extra(obj, row, get);
+      list.unshift(obj);
+      added++;
+    }
+    if (added) { saveStorage(cfg.key, list); cfg.render(); }
+    showToast(`${cfg.title} ${added}건 가져오기 완료${skipped ? ` (${skipped}건 건너뜀)` : ''}`, added ? 'success' : 'error');
+  }));
+}
+
+function importRfqXLS() {
+  _importDocsXLS({
+    key:'rfqList', prefix:'Q', title:'견적요청서', idHeader:'문서번호', dateHeader:'요청일',
+    defaultStatus:'요청전', getList:() => rfqList, render: renderRfq,
+    extra:(obj, row, get) => { obj.targetPrice = _numFrom(get(row, '희망단가')); }
+  });
+}
+
+function importPoListXLS() {
+  _importDocsXLS({
+    key:'poList', prefix:'P', title:'구매발주서', idHeader:'발주번호', dateHeader:'발행일',
+    defaultStatus:'작성중', getList:() => poList, render: renderPo,
+    extra:(obj, row, get) => {
+      obj.unitPrice  = _numFrom(get(row, '단가'));
+      obj.payMethod  = get(row, '결제조건') || '현금';
+      obj.dlvMethod  = get(row, '납품방법') || '직납';
+    }
+  });
+}
+
+/* ════════ 엑셀 편집형 인쇄 양식 (견적요청서 / 구매발주서) ════════ */
+const DOC_XLS_TEMPLATE_INFO = {
+  rfq: { title:'견적요청서', file:'견적요청서_인쇄양식.xlsx' },
+  po:  { title:'구매발주서', file:'구매발주서_인쇄양식.xlsx' },
+  quote: { title:'견적서', file:'견적서_인쇄양식.xlsx' },
+  statement: { title:'거래명세표', file:'거래명세표_인쇄양식.xlsx' },
+  tax: { title:'세금계산서', file:'세금계산서_인쇄양식.xlsx' }
+};
+
+function _docTemplateStore() {
+  return loadStorage('docXlsxTemplates', {});
+}
+
+function _arrayToBase64(array) {
+  const bytes = new Uint8Array(array);
+  let out = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    out += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(out);
+}
+
+function _base64ToArray(value) {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+function _requireExcelJS() {
+  if (typeof ExcelJS === 'undefined') {
+    showToast('엑셀 인쇄 모듈을 불러오지 못했습니다. 인터넷 연결 후 다시 시도해 주세요.', 'error');
+    return false;
+  }
+  return true;
+}
+
+function _excelBorder(color='FFCCCCCC', style='thin') {
+  const edge = { style, color:{ argb:color } };
+  return { top:edge, left:edge, bottom:edge, right:edge };
+}
+
+function _mergeValue(ws, range, value) {
+  const parts = range.split(':');
+  if (parts.length > 1 && parts[0] !== parts[1]) ws.mergeCells(range);
+  ws.getCell(parts[0]).value = value;
+  return ws.getCell(parts[0]);
+}
+
+function _styleRange(ws, range, style) {
+  ws.getCell(range.split(':')[0]);
+  ws.getCell(range.split(':')[1] || range);
+  ws.getRows(1, ws.rowCount);
+  const bounds = range.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/);
+  if (!bounds) { Object.assign(ws.getCell(range), style); return; }
+  const c1 = ws.getColumn(bounds[1]).number, r1 = Number(bounds[2]);
+  const c2 = ws.getColumn(bounds[3]).number, r2 = Number(bounds[4]);
+  for (let r = r1; r <= r2; r++) {
+    for (let c = c1; c <= c2; c++) Object.assign(ws.getCell(r, c), style);
+  }
+}
+
+function _defaultDocTemplateBook(type) {
+  if (type === 'tax') return _defaultTaxTemplateBook();
+  const isPo = type === 'po';
+  const isRfq = type === 'rfq';
+  const isQuote = type === 'quote';
+  const isStatement = type === 'statement';
+  const titleMap = { rfq:'견 적 요 청 서', po:'구 매 발 주 서', quote:'견 적 서', statement:'거 래 명 세 표' };
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'MES Pro';
+  wb.created = new Date();
+  const ws = wb.addWorksheet('인쇄양식', {
+    pageSetup: {
+      paperSize:9, orientation:'portrait', fitToPage:true, fitToWidth:1, fitToHeight:1,
+      margins:{ left:0.25, right:0.25, top:0.3, bottom:0.3, header:0.15, footer:0.15 },
+      printArea:'A1:L42', horizontalCentered:true, verticalCentered:false
+    },
+    views:[{ showGridLines:false }]
+  });
+  ws.properties.defaultRowHeight = 16;
+  [4,10,10,10,7,7,9,9,10,10,10,12].forEach((width, i) => { ws.getColumn(i + 1).width = width; });
+
+  const navy = 'FF1A3A6E', lightBlue = 'FFEEF2FB', lightGray = 'FFF3F5F8';
+  const gray = 'FF666666', border = _excelBorder();
+  const font = { name:'맑은 고딕', size:9, color:{argb:'FF222222'} };
+  _styleRange(ws, 'A1:L42', { font, alignment:{ vertical:'middle' } });
+
+  const approvals = isPo
+    ? [['E1:F1','담 당'],['G1:H1','팀 장'],['I1:J1','이 사'],['K1:L1','대 표']]
+    : [['G1:H1','담 당'],['I1:J1','팀 장'],['K1:L1','대 표']];
+  approvals.forEach(([head, label]) => {
+    const start = head.split(':')[0], end = head.split(':')[1];
+    const startCol = start.match(/[A-Z]+/)[0], endCol = end.match(/[A-Z]+/)[0];
+    _mergeValue(ws, head, label);
+    _mergeValue(ws, `${startCol}2:${endCol}3`, '');
+    _styleRange(ws, `${startCol}1:${endCol}3`, {
+      border, alignment:{ horizontal:'center', vertical:'middle' }
+    });
+    ws.getCell(start).fill = { type:'pattern', pattern:'solid', fgColor:{argb:lightGray} };
+    ws.getCell(start).font = { name:'맑은 고딕', size:8, bold:true, color:{argb:gray} };
+  });
+  ws.getRow(1).height = 17; ws.getRow(2).height = 19; ws.getRow(3).height = 19;
+
+  _mergeValue(ws, 'A5:F5', '{{회사명}}');
+  _mergeValue(ws, 'A6:F6', '{{회사연락처}}');
+  _mergeValue(ws, 'A7:F7', '{{회사사업자정보}}');
+  _mergeValue(ws, 'G5:L6', titleMap[type] || DOC_XLS_TEMPLATE_INFO[type].title);
+  _mergeValue(ws, 'G7:L7', (isPo ? '발주번호  ' : '문서번호  ') + '{{문서번호}}');
+  ws.getCell('A5').font = { name:'맑은 고딕', size:15, bold:true, color:{argb:navy} };
+  ws.getCell('A6').font = ws.getCell('A7').font = { name:'맑은 고딕', size:8, color:{argb:'FF777777'} };
+  ws.getCell('G5').font = { name:'맑은 고딕', size:21, bold:true, color:{argb:navy} };
+  ws.getCell('G5').alignment = { horizontal:'right', vertical:'middle' };
+  ws.getCell('G7').font = { name:'맑은 고딕', size:9, bold:true, color:{argb:'FF555555'} };
+  ws.getCell('G7').alignment = { horizontal:'right', vertical:'middle' };
+  _styleRange(ws, 'A7:L7', { border:{ bottom:{style:'medium',color:{argb:navy}} } });
+  ws.getRow(5).height = 24; ws.getRow(6).height = 18; ws.getRow(7).height = 18;
+
+  const infoRows = isPo ? [
+    ['A9:B9','공급처(수신)','C9:L9','{{공급처}} 귀중'],
+    ['A10:B10','발행일자','C10:L10','{{발행일}}'],
+    ['A11:B11','결제조건','C11:F11','{{결제조건}}','G11:H11','납품방법','I11:L11','{{납품방법}}'],
+    ['A12:B12','납품지 주소','C12:L12','{{납품주소}}']
+  ] : isRfq ? [
+    ['A9:B9','수 신','C9:L9','{{공급처}} 귀중'],
+    ['A10:B10','발 신','C10:F10','{{회사명}} {{부서}}','G10:H10','발행일자','I10:L10','{{발행일}}'],
+    ['A11:B11','관련 프로젝트','C11:L11','{{고객사}} — {{연결제품}}'],
+    ['A12:B12','담당 연락처','C12:L12','{{부서}} {{회사전화}}']
+  ] : [
+    ['A9:B9','공급자','C9:F9','{{회사명}} ({{사업자번호}})','G9:H9','발행일자','I9:L9','{{발행일}}'],
+    ['A10:B10','공급받는자','C10:F10','{{고객사}} 귀중','G10:H10','관련 제품','I10:L10','{{연결제품}}'],
+    ['A11:B11','고객 이메일','C11:L11','{{고객이메일}}'],
+    ['A12:B12',isQuote?'견적 유효기간':'문서 상태','C12:L12',isQuote?'발행일로부터 30일':'{{상태}}']
+  ];
+  infoRows.forEach(parts => {
+    for (let i = 0; i < parts.length; i += 2) {
+      const range = parts[i], value = parts[i + 1];
+      const cell = _mergeValue(ws, range, value);
+      const isLabel = i % 4 === 0;
+      _styleRange(ws, range, {
+        border,
+        fill:isLabel ? {type:'pattern',pattern:'solid',fgColor:{argb:lightGray}} : undefined,
+        font:{ name:'맑은 고딕', size:isLabel ? 9 : 10, bold:isLabel || (range === 'C9:L9'), color:{argb:isLabel?'FF333333':navy} },
+        alignment:{ horizontal:isLabel?'left':'left', vertical:'middle', wrapText:true }
+      });
+      if (!isLabel && range !== 'C9:L9') cell.font = { name:'맑은 고딕', size:9, color:{argb:'FF222222'} };
+    }
+  });
+  [9,10,11,12].forEach(r => { ws.getRow(r).height = 21; });
+
+  _mergeValue(ws, 'A14:L14', isPo ? '■ 발주 품목' : isRfq ? '■ 견적 요청 품목' : isQuote ? '■ 견적 품목' : '■ 거래 품목');
+  _styleRange(ws, 'A14:L14', {
+    fill:{type:'pattern',pattern:'solid',fgColor:{argb:lightBlue}},
+    border:{left:{style:'medium',color:{argb:navy}}},
+    font:{name:'맑은 고딕',size:9,bold:true,color:{argb:navy}},
+    alignment:{vertical:'middle'}
+  });
+  ws.getRow(14).height = 19;
+
+  const headers = ['No.','품 목 명','규 격 / 사 양','수량','단위',isRfq?'희망 단가':'단 가 (원)',isRfq?'희망 금액':'공급가액','비 고'];
+  const headerRanges = ['A15:A15','B15:D15','E15:G15','H15:H15','I15:I15','J15:J15','K15:K15','L15:L15'];
+  headerRanges.forEach((range, i) => {
+    _mergeValue(ws, range, headers[i]);
+    _styleRange(ws, range, {
+      fill:{type:'pattern',pattern:'solid',fgColor:{argb:navy}},
+      border:_excelBorder('FFFFFFFF'),
+      font:{name:'맑은 고딕',size:8,bold:true,color:{argb:'FFFFFFFF'}},
+      alignment:{horizontal:'center',vertical:'middle',wrapText:true}
+    });
+  });
+  ws.getRow(15).height = 23;
+
+  for (let i = 1; i <= 12; i++) {
+    const row = 15 + i;
+    const cells = [
+      ['A'+row, `{{번호${i}}}`], [`B${row}:D${row}`, `{{품목명${i}}}`],
+      [`E${row}:G${row}`, `{{규격${i}}}`], ['H'+row, `{{수량${i}}}`],
+      ['I'+row, `{{단위${i}}}`], ['J'+row, `{{단가${i}}}`],
+      ['K'+row, `{{금액${i}}}`], ['L'+row, `{{품목비고${i}}}`]
+    ];
+    cells.forEach(([range, value], idx) => {
+      const cell = _mergeValue(ws, range, value);
+      _styleRange(ws, range, {
+        border, font:{name:'맑은 고딕',size:8.5,bold:idx===1,color:{argb:'FF222222'}},
+        alignment:{horizontal:[0,2,3,4].includes(idx)?'center':([5,6].includes(idx)?'right':'left'),vertical:'middle',wrapText:true}
+      });
+      if ([5,6].includes(idx)) cell.numFmt = '#,##0;[Red]-#,##0';
+    });
+    if (i % 2 === 0) _styleRange(ws, `A${row}:L${row}`, { fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFFAFBFC'}} });
+    ws.getRow(row).height = 19;
+  }
+
+  _mergeValue(ws, 'A28:J28', isPo ? '공급가액 합계' : '합 계');
+  ws.getCell('K28').value = '{{공급가액}}';
+  ws.getCell('L28').value = '';
+  _styleRange(ws, 'A28:L28', {
+    fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFF0F4FF'}},
+    border:{top:{style:'medium',color:{argb:navy}},left:border.left,right:border.right,bottom:border.bottom},
+    font:{name:'맑은 고딕',size:9,bold:true,color:{argb:navy}},
+    alignment:{horizontal:'right',vertical:'middle'}
+  });
+  ws.getCell('K28').numFmt = '#,##0;[Red]-#,##0'; ws.getRow(28).height = 21;
+
+  [['H30:I30',isRfq?'희망 공급가액':'공급가액','J30:L30','{{공급가액}}'],
+   ['H31:I31','부가세 (10%)','J31:L31','{{부가세}}'],
+   ['H32:I32',isPo?'발주 합계금액':isRfq?'희망 합계금액':'합계금액','J32:L32','{{합계금액}}']].forEach((parts, idx) => {
+    const label = _mergeValue(ws, parts[0], parts[1]);
+    const value = _mergeValue(ws, parts[2], parts[3]);
+    _styleRange(ws, `${parts[0].split(':')[0]}:${parts[2].split(':')[1]}`, {
+      border:_excelBorder(idx===2?navy:'FFDDE0E8',idx===2?'medium':'thin'),
+      fill:{type:'pattern',pattern:'solid',fgColor:{argb:idx===2?navy:lightGray}},
+      font:{name:'맑은 고딕',size:idx===2?11:9,bold:true,color:{argb:idx===2?'FFFFFFFF':'FF555555'}},
+      alignment:{horizontal:'right',vertical:'middle'}
+    });
+    value.numFmt = '#,##0" 원";[Red]-#,##0" 원"';
+    value.font = {name:'맑은 고딕',size:idx===2?12:9,bold:true,color:{argb:idx===2?'FFFFFFFF':navy}};
+    label.alignment = {horizontal:'left',vertical:'middle'};
+    ws.getRow(30 + idx).height = idx===2 ? 23 : 20;
+  });
+
+  _mergeValue(ws, 'A34:L34', isPo ? '◆ 특기사항 및 거래조건' : isRfq ? '◆ 특기사항 및 요청조건' : '◆ 비고');
+  _mergeValue(ws, 'A35:L35', isPo
+    ? '1. 상기 품목에 대하여 발주하오니 납기일에 맞추어 납품하여 주시기 바랍니다.'
+    : isRfq ? '1. 상기 품목에 대하여 견적을 요청드리오니 회신 기한 내 견적서를 제출해 주시기 바랍니다.'
+    : isQuote ? '위와 같이 견적서를 제출하오니 검토 후 발주 부탁드립니다.' : '위와 같이 거래 내역을 통보하오니 확인하여 주시기 바랍니다.');
+  _mergeValue(ws, 'A36:L36', isPo
+    ? '2. 납품 시 반드시 거래명세표를 동봉하여 주시기 바랍니다.'
+    : isRfq ? '2. 견적가격은 납품지 기준 공급가(VAT 별도)로 기재 바랍니다.' : '{{비고}}');
+  _mergeValue(ws, 'A37:L37', isPo
+    ? '3. 세금계산서는 납품 완료 후 익일 발행 바랍니다.'
+    : isRfq ? '3. 납품 가능 수량 및 납기일을 반드시 명시하여 주시기 바랍니다.' : '');
+  _styleRange(ws, 'A34:L37', {
+    border, fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFFAFBFC'}},
+    font:{name:'맑은 고딕',size:8,color:{argb:'FF444444'}},
+    alignment:{vertical:'middle',wrapText:true}
+  });
+  ws.getCell('A34').font = {name:'맑은 고딕',size:8.5,bold:true,color:{argb:navy}};
+  [34,35,36,37].forEach(r => { ws.getRow(r).height = 18; });
+
+  _mergeValue(ws, 'A39:G42', isPo
+    ? '위와 같이 발주하며, 본 발주서가 계약 효력을 갖습니다.\n{{발행일}}\n{{회사명}}'
+    : isRfq ? '본 견적요청서는 구매 의사의 표명이 아니며,\n견적 내용은 최종 발주 시 변경될 수 있습니다.'
+    : '{{발행일}}\n{{회사명}}');
+  ws.getCell('A39').alignment = {horizontal:'left',vertical:'bottom',wrapText:true};
+  ws.getCell('A39').font = {name:'맑은 고딕',size:8,color:{argb:'FF777777'}};
+  [['H39:I39','작 성','H40:I42'],['J39:K39','검 토','J40:K42'],['L39:L39',isPo?'대표이사':'승 인','L40:L42']].forEach(parts => {
+    _mergeValue(ws, parts[0], parts[1]);
+    _mergeValue(ws, parts[2], '(인)');
+    const area = `${parts[0].split(':')[0]}:${parts[2].split(':')[1]}`;
+    _styleRange(ws, area, {border,alignment:{horizontal:'center',vertical:'middle'}});
+    ws.getCell(parts[0].split(':')[0]).font = {name:'맑은 고딕',size:8,bold:true,color:{argb:'FF555555'}};
+    ws.getCell(parts[2].split(':')[0]).font = {name:'맑은 고딕',size:8,color:{argb:'FFBBBBBB'}};
+  });
+  [39,40,41,42].forEach(r => { ws.getRow(r).height = 18; });
+
+  const guide = wb.addWorksheet('사용방법', { views:[{showGridLines:false}] });
+  guide.columns = [{width:16},{width:105}];
+  [
+    ['엑셀 인쇄 양식 사용 방법',''],
+    ['1','인쇄양식 시트의 셀 위치, 문구, 색상, 열 너비, 행 높이를 Excel에서 수정합니다.'],
+    ['2','{{회사명}} 같은 표시값은 삭제하지 않고 원하는 셀로 이동할 수 있습니다.'],
+    ['3','기본 양식은 A4 한 페이지이며 품목은 12개까지 표시됩니다. 필요하면 {{품목명13}}부터 추가할 수 있습니다.'],
+    ['4','수정한 파일을 화면의 "수정한 엑셀 인쇄 양식 등록" 버튼으로 등록합니다.'],
+    ['공통 표시값','{{회사명}}, {{회사주소}}, {{회사전화}}, {{회사팩스}}, {{회사연락처}}, {{회사사업자정보}}, {{사업자번호}}, {{대표자}}, {{부서}}'],
+    ['문서 표시값','{{문서번호}}, {{발행일}}, {{공급처}}, {{공급처이메일}}, {{고객사}}, {{연결제품}}, {{결제조건}}, {{납품방법}}, {{납품주소}}, {{비고}}'],
+    ['금액 표시값','{{공급가액}}, {{부가세}}, {{합계금액}}'],
+    ['품목 표시값','{{번호1}}, {{품목명1}}, {{규격1}}, {{수량1}}, {{단위1}}, {{단가1}}, {{금액1}}, {{품목비고1}} ... 20']
+  ].forEach(row => guide.addRow(row));
+  _styleRange(guide, 'A1:B9', {font:{name:'맑은 고딕',size:10},alignment:{vertical:'middle',wrapText:true},border});
+  _mergeValue(guide, 'A1:B1', '엑셀 인쇄 양식 사용 방법');
+  guide.getCell('A1').font = {name:'맑은 고딕',size:16,bold:true,color:{argb:navy}};
+  guide.getCell('A1').fill = {type:'pattern',pattern:'solid',fgColor:{argb:lightBlue}};
+  return wb;
+}
+
+function _defaultTaxTemplateBook() {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('인쇄양식', {
+    pageSetup:{paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:1,printArea:'A1:L38',margins:{left:0.2,right:0.2,top:0.25,bottom:0.25,header:0.1,footer:0.1}},
+    views:[{showGridLines:false}]
+  });
+  [4,8,11,11,11,11,11,11,11,11,11,13].forEach((w,i)=>ws.getColumn(i+1).width=w);
+  const red='FFC0392B', blue='FF1C5AA8', gray='FFF3F3F3', border=_excelBorder('FFB9B9B9');
+  _mergeValue(ws,'A1:H2','전 자 세 금 계 산 서');
+  _mergeValue(ws,'I1:J2','승인번호');
+  _mergeValue(ws,'K1:L2','{{승인번호}}');
+  _styleRange(ws,'A1:L2',{border,alignment:{horizontal:'center',vertical:'middle'},font:{name:'맑은 고딕',size:10,bold:true}});
+  ws.getCell('A1').font={name:'맑은 고딕',size:18,bold:true,color:{argb:'FF222222'}};
+  ws.getCell('I1').fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFEAF1FB'}};
+  const party = (startRow, title, color, prefix) => {
+    _mergeValue(ws,`A${startRow}:A${startRow+4}`,title);
+    ws.getCell(`A${startRow}`).alignment={horizontal:'center',vertical:'middle',textRotation:90};
+    [['B','등록번호','C:F',`{{${prefix}사업자번호}}`,'G','종사업장','H:L',''],
+     ['B','상호(법인명)','C:F',`{{${prefix}회사명}}`,'G','성명','H:L',`{{${prefix}대표자}}`],
+     ['B','사업장','C:L',`{{${prefix}주소}}`],
+     ['B','업태','C:F',`{{${prefix}업태}}`,'G','종목','H:L',`{{${prefix}종목}}`],
+     ['B','이메일','C:L',`{{${prefix}이메일}}`]].forEach((parts,idx)=>{
+      for(let i=0;i<parts.length;i+=2){
+        const range=parts[i]+(startRow+idx)+(parts[i].includes(':')?'':'');
+        const actual=parts[i].includes(':') ? parts[i].replace(/(\D+):(\D+)/,`$1${startRow+idx}:$2${startRow+idx}`) : range;
+        _mergeValue(ws,actual,parts[i+1]);
+        _styleRange(ws,actual,{border,alignment:{vertical:'middle',wrapText:true},font:{name:'맑은 고딕',size:8,bold:i%4===0}});
+        if(i%4===0) ws.getCell(actual.split(':')[0]).fill={type:'pattern',pattern:'solid',fgColor:{argb:color}};
+      }
+    });
+    _styleRange(ws,`A${startRow}:L${startRow+4}`,{border});
+    ws.getCell(`A${startRow}`).fill={type:'pattern',pattern:'solid',fgColor:{argb:color}};
+    ws.getCell(`A${startRow}`).font={name:'맑은 고딕',size:9,bold:true,color:{argb:prefix==='공급자' ? red : blue}};
+  };
+  party(4,'공급자','FFFDECEC','공급자');
+  party(9,'공급받는자','FFEAF1FB','공급받는자');
+  const rows=[
+    [15,['작성일자','{{발행일}}','공급가액','{{공급가액}}','세액','{{부가세}}']],
+    [16,['비고','{{비고}}']]
+  ];
+  rows.forEach(([r,vals])=>{
+    const ranges=r===15?['A:B','C:D','E:F','G:H','I:J','K:L']:['A:B','C:L'];
+    ranges.forEach((cols,i)=>{const rg=cols.replace(':',r+':')+r;_mergeValue(ws,rg,vals[i]);_styleRange(ws,rg,{border,alignment:{vertical:'middle'},font:{name:'맑은 고딕',size:8,bold:i%2===0},fill:i%2===0?{type:'pattern',pattern:'solid',fgColor:{argb:gray}}:undefined});});
+  });
+  const heads=['월','일','품목','규격','수량','단가','공급가액','세액','비고'];
+  const ranges=['A','B','C:E','F:G','H','I','J','K','L'];
+  heads.forEach((h,i)=>{const rg=ranges[i].includes(':')?ranges[i].replace(':','17:')+'17':ranges[i]+'17';_mergeValue(ws,rg,h);_styleRange(ws,rg,{border,fill:{type:'pattern',pattern:'solid',fgColor:{argb:gray}},font:{name:'맑은 고딕',size:8,bold:true},alignment:{horizontal:'center'}});});
+  for(let i=1;i<=12;i++){
+    const r=17+i;
+    const vals=[`{{월${i}}}`,`{{일${i}}}`,`{{품목명${i}}}`,`{{규격${i}}}`,`{{수량${i}}}`,`{{단가${i}}}`,`{{금액${i}}}`,`{{세액${i}}}`,`{{품목비고${i}}}`];
+    ranges.forEach((col,j)=>{const rg=col.includes(':')?col.replace(':',r+':')+r:col+r;_mergeValue(ws,rg,vals[j]);_styleRange(ws,rg,{border,font:{name:'맑은 고딕',size:8},alignment:{horizontal:[0,1,3,4].includes(j)?'center':([5,6,7].includes(j)?'right':'left'),vertical:'middle'}});});
+  }
+  _mergeValue(ws,'A31:B32','합계금액'); _mergeValue(ws,'C31:D32','{{합계금액}}');
+  _mergeValue(ws,'E31:F32','현금'); _mergeValue(ws,'G31:H32','수표 / 어음');
+  _mergeValue(ws,'I31:J32','외상미수금'); _mergeValue(ws,'K31:L32','이 금액을 ( 청구 ) 함');
+  _styleRange(ws,'A31:L32',{border,font:{name:'맑은 고딕',size:9,bold:true},alignment:{horizontal:'center',vertical:'middle'}});
+  ws.getCell('C31').numFmt='#,##0" 원"';
+  _mergeValue(ws,'A33:F33','문서번호  {{문서번호}}');
+  _styleRange(ws,'A33:F33',{font:{name:'맑은 고딕',size:8,bold:true,color:{argb:'FF555555'}},alignment:{vertical:'middle'}});
+  _mergeValue(ws,'A34:L38','세금계산서 양식은 Excel에서 셀 위치·색상·문구를 수정한 뒤 시스템 관리에서 다시 등록할 수 있습니다.');
+  ws.getCell('A34').alignment={wrapText:true,vertical:'top'}; ws.getCell('A34').font={name:'맑은 고딕',size:8,color:{argb:'FF777777'}};
+  return wb;
+}
+
+function _downloadExcelBuffer(buffer, fileName) {
+  const blob = new Blob([buffer], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fileName;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+async function downloadDocXlsxTemplate(type) {
+  const info = DOC_XLS_TEMPLATE_INFO[type];
+  if (!info || !_requireExcelJS()) return;
+  try {
+    const buffer = await _defaultDocTemplateBook(type).xlsx.writeBuffer();
+    _downloadExcelBuffer(buffer, info.file);
+    showToast(`${info.title} PDF형 인쇄 양식을 다운로드했습니다.`);
+  } catch(err) {
+    showToast('엑셀 인쇄 양식 생성 실패: ' + err.message, 'error');
+  }
+}
+
+async function registerDocXlsxTemplate(type) {
+  const info = DOC_XLS_TEMPLATE_INFO[type];
+  if (!info || !_requireExcelJS()) return;
+  _pickXlsxFile(async file => {
+    if (file.size > 600 * 1024) {
+      showToast('인쇄 양식은 600KB 이하의 파일을 사용해 주세요.', 'error');
+      return;
+    }
+    try {
+      const data = await file.arrayBuffer();
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.load(data);
+      const ws = wb.worksheets[0];
+      let text = '';
+      ws.eachRow(row => row.eachCell(cell => { text += ' ' + String(cell.value ?? ''); }));
+      if (!text.includes('{{문서번호}}') || !text.includes('{{품목명1}}')) {
+        showToast('양식에 {{문서번호}}와 {{품목명1}} 표시값이 필요합니다.', 'error');
+        return;
+      }
+      const store = _docTemplateStore();
+      store[type] = { name:file.name, data:_arrayToBase64(data), savedAt:new Date().toISOString() };
+      saveStorage('docXlsxTemplates', store);
+      if (typeof renderDocTemplateManagement === 'function') renderDocTemplateManagement();
+      showToast(`${info.title} 인쇄 양식을 등록했습니다.`);
+    } catch(err) {
+      showToast('엑셀 인쇄 양식 등록 실패: ' + err.message, 'error');
+    }
+  });
+}
+
+function resetDocXlsxTemplate(type) {
+  const info = DOC_XLS_TEMPLATE_INFO[type];
+  if (!info) return;
+  const store = _docTemplateStore();
+  if (!store[type]) {
+    showToast(`${info.title}는 이미 기본 양식을 사용 중입니다.`, 'info');
+    return;
+  }
+  confirm_('기본 양식 복원',
+    `<strong>${info.title}</strong>의 등록된 사용자 양식을 삭제하고 기본 양식으로 되돌리시겠습니까?<br><span style="color:var(--tx-t);font-size:11px;">문서 데이터에는 영향을 주지 않습니다.</span>`,
+    () => {
+      const next = _docTemplateStore();
+      delete next[type];
+      saveStorage('docXlsxTemplates', next);
+      if (typeof renderDocTemplateManagement === 'function') renderDocTemplateManagement();
+      showToast(`${info.title}가 기본 양식으로 복원되었습니다.`);
+    },
+    'btn-primary',
+    'ti-restore'
+  );
+}
+
+function resetAllDocXlsxTemplates() {
+  const store = _docTemplateStore();
+  if (!Object.keys(store).length) {
+    showToast('모든 문서가 이미 기본 양식을 사용 중입니다.', 'info');
+    return;
+  }
+  confirm_('모든 양식 기본값 복원',
+    '등록된 모든 사용자 엑셀 양식을 삭제하고 내장 기본 양식으로 되돌리시겠습니까?<br><span style="color:var(--tx-t);font-size:11px;">실제 문서와 업무 데이터는 삭제되지 않습니다.</span>',
+    () => {
+      saveStorage('docXlsxTemplates', {});
+      if (typeof renderDocTemplateManagement === 'function') renderDocTemplateManagement();
+      showToast('모든 문서 양식이 기본값으로 복원되었습니다.');
+    },
+    'btn-danger',
+    'ti-restore'
+  );
+}
+
+async function _docTemplateArray(type) {
+  const saved = _docTemplateStore()[type];
+  if (saved && saved.data) return _base64ToArray(saved.data);
+  return await _defaultDocTemplateBook(type).xlsx.writeBuffer();
+}
+
+function _docTemplateGroups(type, id) {
+  const ids = Array.isArray(id) ? id : (id ? [id] : null);
+  if (type === 'rfq') {
+    const list = ids ? rfqList.filter(r => ids.includes(r.id)) : rfqList;
+    return list.map(r => ({ key:r.id, items:[r] }));
+  }
+  if (type === 'quote') {
+    const list = ids ? quoteList.filter(d => ids.includes(d.id)) : quoteList;
+    return list.map(d => ({key:d.id,items:[d]}));
+  }
+  if (type === 'statement' || type === 'tax') {
+    const list = salesList(type);
+    const targets = ids ? list.filter(d => ids.includes(d.id)) : list;
+    return targets.map(d => ({key:d.id,items:[d]}));
+  }
+  const list = ids ? poList.filter(p => ids.includes(p.id)) : poList;
+  const grouped = {};
+  list.forEach(p => {
+    const key = ids && ids.length === 1 ? p.id : (p.supplier || p.id);
+    (grouped[key] = grouped[key] || []).push(p);
+  });
+  return Object.entries(grouped).map(([key, items]) => ({ key, items }));
+}
+
+function _docTemplateValues(type, items) {
+  const ci = getCompanyInfo();
+  const first = items[0];
+  const amount = items.reduce((sum, item) => {
+    const price = type === 'rfq' ? item.targetPrice : item.unitPrice;
+    return sum + (Number(price) || 0) * (Number(item.qty) || 0);
+  }, 0);
+  const vat = Math.round(amount * 0.1);
+  const values = {
+    회사명:ci.name || '', 회사주소:ci.address || '', 회사전화:ci.tel || '',
+    회사팩스:ci.fax || '', 사업자번호:ci.bizNo || '', 대표자:ci.ceo || '',
+    회사연락처:[ci.address, ci.tel ? 'TEL. ' + ci.tel : '', ci.fax ? 'FAX. ' + ci.fax : ''].filter(Boolean).join(' | '),
+    회사사업자정보:[ci.bizNo ? '사업자등록번호: ' + ci.bizNo : '', ci.ceo ? '대표이사: ' + ci.ceo : ''].filter(Boolean).join(' | '),
+    부서:ci.dept || '', 문서종류:DOC_XLS_TEMPLATE_INFO[type].title,
+    문서번호:[...new Set(items.map(x => x.id))].join(', '),
+    발행일:first.date || '', 공급처:first.supplier || '',
+    공급처이메일:first.supplierEmail || '',
+    고객사:first.clientName || getClientName(first.clientId) || '',
+    고객이메일:first.clientEmail || '',
+    연결제품:first.productId ? getProductName(first.productId) : '',
+    결제조건:first.payMethod || '', 납품방법:first.dlvMethod || '', 상태:first.status || '',
+    납품주소:ci.address || '', 공급가액:amount, 부가세:vat,
+    합계금액:amount + vat, 비고:items.map(x => x.note || '').filter(Boolean).join(' / '),
+    승인번호:first.approvalNo || '',
+    공급자회사명:ci.name || '', 공급자사업자번호:ci.bizNo || '', 공급자대표자:ci.ceo || '',
+    공급자주소:ci.address || '', 공급자업태:ci.bizType || '', 공급자종목:ci.bizItem || '', 공급자이메일:ci.email || ''
+  };
+  const clientName = first.clientName || getClientName(first.clientId) || '';
+  const bp = partners.find(p => p.name === clientName) || {};
+  Object.assign(values, {
+    공급받는자회사명:clientName, 공급받는자사업자번호:bp.bizNo || '', 공급받는자대표자:bp.ceo || '',
+    공급받는자주소:bp.address || '', 공급받는자업태:bp.bizType || '', 공급받는자종목:bp.bizItem || '',
+    공급받는자이메일:first.clientEmail || bp.email || ''
+  });
+  for (let i = 1; i <= 20; i++) {
+    const item = items[i - 1];
+    const price = item ? Number(type === 'rfq' ? item.targetPrice : item.unitPrice) || 0 : '';
+    values['번호' + i] = item ? i : '';
+    values['품목명' + i] = item ? item.itemName || '' : '';
+    values['규격' + i] = item ? item.spec || '' : '';
+    values['수량' + i] = item ? Number(item.qty) || 0 : '';
+    values['단위' + i] = item ? item.unit || '' : '';
+    values['단가' + i] = item ? price : '';
+    values['금액' + i] = item ? price * (Number(item.qty) || 0) : '';
+    values['품목비고' + i] = item ? item.note || '' : '';
+    const dateParts = item && item.date ? item.date.split('-') : [];
+    values['월' + i] = item ? (dateParts[1] || '') : '';
+    values['일' + i] = item ? (dateParts[2] || '') : '';
+    values['세액' + i] = item ? Math.round(price * (Number(item.qty) || 0) * 0.1) : '';
+  }
+  return values;
+}
+
+function _fillDocTemplateSheet(ws, values) {
+  ws.eachRow(row => row.eachCell(cell => {
+    if (typeof cell.value !== 'string' || !cell.value.includes('{{')) return;
+    const exact = cell.value.match(/^\{\{([^{}]+)\}\}$/);
+    if (exact && Object.prototype.hasOwnProperty.call(values, exact[1])) {
+      cell.value = values[exact[1]];
+      return;
+    }
+    cell.value = cell.value.replace(/\{\{([^{}]+)\}\}/g, (all, key) =>
+      Object.prototype.hasOwnProperty.call(values, key) ? String(values[key]) : all
+    );
+  }));
+}
+
+function _safeSheetName(name, used) {
+  const base = String(name || '문서').replace(/[\\/?*[\]:]/g, '_').slice(0, 31) || '문서';
+  let out = base, n = 2;
+  while (used.has(out)) out = (base.slice(0, 27) + '_' + n++).slice(0, 31);
+  used.add(out);
+  return out;
+}
+
+async function exportDocTemplateXLS(type, id = null) {
+  const info = DOC_XLS_TEMPLATE_INFO[type];
+  if (!info || !_requireExcelJS()) return;
+  const groups = _docTemplateGroups(type, id);
+  if (!groups.length) { showToast('양식으로 출력할 문서가 없습니다.', 'error'); return; }
+  try {
+    const templateData = await _docTemplateArray(type);
+    const out = new ExcelJS.Workbook();
+    await out.xlsx.load(templateData);
+    const templateWs = out.worksheets[0];
+    const templateModel = JSON.parse(JSON.stringify(templateWs.model));
+    out.worksheets.slice(1).forEach(sheet => out.removeWorksheet(sheet.id));
+    const used = new Set();
+    groups.forEach((group, index) => {
+      let ws;
+      if (index === 0) {
+        ws = templateWs;
+      } else {
+        const sheetName = _safeSheetName(group.key, used);
+        ws = out.addWorksheet(sheetName);
+        const cloneModel = JSON.parse(JSON.stringify(templateModel));
+        cloneModel.id = ws.id;
+        cloneModel.name = sheetName;
+        ws.model = cloneModel;
+        _fillDocTemplateSheet(ws, _docTemplateValues(type, group.items));
+        return;
+      }
+      ws.name = _safeSheetName(group.key, used);
+      _fillDocTemplateSheet(ws, _docTemplateValues(type, group.items));
+    });
+    const suffix = groups.length === 1 ? groups[0].key : today();
+    const buffer = await out.xlsx.writeBuffer();
+    _downloadExcelBuffer(buffer, `${info.title}_${suffix}.xlsx`);
+    showToast(`${info.title} ${groups.length}건을 등록 양식으로 출력했습니다.`);
+  } catch(err) {
+    showToast('엑셀 양식 출력 실패: ' + err.message, 'error');
+  }
+}
+
 /* ════════ 거래명세표 / 세금계산서 (판매문서 공용 엔진) ════════ */
 const SALES = {
   statement: { key:'statementList', prefix:'TS', title:'거래명세표', idp:'st', page:'statement', statuses:['작성','발송완료','수령확인'], titleIcon:'ti-receipt' },
@@ -667,6 +1379,7 @@ function salesStatusColor(type, s) {
 
 function renderSalesDoc(type) {
   const cfg = SALES[type], idp = cfg.idp, list = salesList(type);
+  ensureDateView(type, idp+'-table', list.map(d=>d.date), ()=>renderSalesDoc(type));
   const amtOf = d => (d.unitPrice||0) * (d.qty||0);
   const total = list.length;
   const sent  = list.filter(d => d.status === cfg.statuses[1]).length;
@@ -686,6 +1399,7 @@ function renderSalesDoc(type) {
   }
   const fc = v(idp+'-fc'), fs = v(idp+'-fs'), q = (v(idp+'-q')||'').toLowerCase();
   const rows = list.filter(d => {
+    if (!dateViewMatch(type, d.date)) return false;
     if (fc && d.clientId !== fc) return false;
     if (fs && d.status !== fs)   return false;
     if (q && !(d.itemName||'').toLowerCase().includes(q) && !getClientName(d.clientId).toLowerCase().includes(q)) return false;
@@ -776,6 +1490,26 @@ function openSalesDocEdit(type, id) {
   sv('sd-price', d.unitPrice||'');
   sv('sd-note', d.note||'');
   sv('sd-status', d.status || cfg.statuses[0]);
+  modal.classList.add('open');
+}
+
+function cloneSalesDoc(type, id) {
+  if (!checkAdminAction()) return;
+  const cfg = SALES[type];
+  const d = salesList(type).find(x => x.id === id); if (!d) return;
+  const modal = inp('salesdoc-modal');
+  modal.dataset.type = type;
+  delete modal.dataset.editId;
+  inp('sd-modal-ttl').innerHTML = `<i class="ti ti-copy" style="color:var(--tx-i);"></i>${cfg.title} 복제 등록`;
+  inp('sd-save-btn').innerHTML = '<i class="ti ti-check"></i>등록';
+  inp('sd-status').innerHTML = cfg.statuses.map(s=>`<option>${s}</option>`).join('');
+  sv('sd-id', nextDocCode(cfg.prefix, salesList(type)));
+  sv('sd-date', today());
+  inp('sd-client').innerHTML = '<option value="">-- 선택 --</option>' + clients.map(c=>`<option value="${c.id}"${c.id===d.clientId?' selected':''}>${c.name}</option>`).join('');
+  fillProductSelect('sd-product', d.clientId, d.productId);
+  sv('sd-email', d.clientEmail||''); sv('sd-item', d.itemName||''); sv('sd-spec', d.spec||'');
+  sv('sd-qty', d.qty||1); sv('sd-unit', d.unit||'EA'); sv('sd-price', d.unitPrice||'');
+  sv('sd-note', d.note||''); sv('sd-status', cfg.statuses[0]);
   modal.classList.add('open');
 }
 
@@ -1101,6 +1835,7 @@ function updateOrderBadge() {
 
 function renderSODoc(type) {
   const cfg = SODOCS[type], idp = cfg.idp, list = soDocList(type);
+  ensureDateView(type, idp+'-table', list.map(d=>d.date), ()=>renderSODoc(type));
   const amtOf = d => (d.unitPrice||0)*(d.qty||0);
   const total = list.length;
   const sumAmt = list.reduce((s,d)=>s+Math.round(amtOf(d)*1.1),0);
@@ -1118,6 +1853,7 @@ function renderSODoc(type) {
   if (fcSel) { const cur = fcSel.value; fcSel.innerHTML = '<option value="">전체 고객사</option>' + clients.map(c=>`<option value="${c.id}"${c.id===cur?' selected':''}>${c.name}</option>`).join(''); }
   const fc = v(idp+'-fc'), fs = v(idp+'-fs'), q = (v(idp+'-q')||'').toLowerCase();
   const rows = list.filter(d => {
+    if (!dateViewMatch(type, d.date)) return false;
     if (fc && d.clientId !== fc) return false;
     if (fs && d.status !== fs) return false;
     if (q && !(d.itemName||'').toLowerCase().includes(q) && !soDocLabel(d).toLowerCase().includes(q)) return false;
@@ -1215,6 +1951,26 @@ function openSODocEdit(type, id) {
   sv('so2-due', d.deliveryDate||'');
   sv('so2-note', d.note||'');
   sv('so2-status', d.status || cfg.statuses[0]);
+  modal.classList.add('open');
+}
+
+function cloneSODoc(type, id) {
+  if (!checkAdminAction()) return;
+  const cfg = SODOCS[type];
+  const d = soDocList(type).find(x=>x.id===id); if (!d) return;
+  const modal = inp('sodoc-modal');
+  modal.dataset.type = type;
+  delete modal.dataset.editId;
+  inp('so2-modal-ttl').innerHTML = `<i class="ti ti-copy" style="color:var(--tx-i);"></i>${cfg.title} 복제 등록`;
+  inp('so2-save-btn').innerHTML = '<i class="ti ti-check"></i>등록';
+  inp('so2-status').innerHTML = cfg.statuses.map(s=>`<option>${s}</option>`).join('');
+  sv('so2-id', nextDocCode(cfg.prefix, soDocList(type)));
+  sv('so2-date', today());
+  inp('so2-client').innerHTML = '<option value="">-- 선택 (미등록 시 비움) --</option>' + clients.map(c=>`<option value="${c.id}"${c.id===d.clientId?' selected':''}>${c.name}</option>`).join('');
+  sv('so2-client-text', d.clientName||''); sv('so2-email', d.clientEmail||'');
+  sv('so2-item', d.itemName||''); sv('so2-spec', d.spec||'');
+  sv('so2-qty', d.qty||1); sv('so2-unit', d.unit||'대'); sv('so2-price', d.unitPrice||'');
+  sv('so2-due', d.deliveryDate||''); sv('so2-note', d.note||''); sv('so2-status', cfg.statuses[0]);
   modal.classList.add('open');
 }
 

@@ -3,26 +3,27 @@ function syncFilterDropdowns() {
   const fc = inp('mat-fc');
   if (fc) {
     const cur = fc.value;
-    fc.innerHTML = '<option value="">전체 의뢰 고객사</option>' + clients.map(c=>'<option value="'+c.id+'"'+(c.id===cur?' selected':'')+'>'+c.name+'</option>').join('');
+    fc.innerHTML = '<option value="">전체 의뢰 고객사</option>' + clients.map(c=>'<option value="'+esc(c.id)+'"'+(c.id===cur?' selected':'')+'>'+esc(c.name)+'</option>').join('');
   }
   const fp = inp('mat-fp');
   if (fp) {
     const cur = fp.value;
-    fp.innerHTML = '<option value="">전체 제품 목록</option>' + products.map(p=>'<option value="'+p.id+'"'+(p.id===cur?' selected':'')+'>'+p.name+'</option>').join('');
+    fp.innerHTML = '<option value="">전체 제품 목록</option>' + products.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===cur?' selected':'')+'>'+esc(p.name)+'</option>').join('');
   }
 }
 function onMatClientChange() {
   const cid = v('mat-fc');
   const fp = inp('mat-fp');
-  if (fp) fp.innerHTML = '<option value="">전체 제품 목록</option>' + products.filter(p=>!cid||p.clientId===cid).map(p=>'<option value="'+p.id+'">'+p.name+'</option>').join('');
+  if (fp) fp.innerHTML = '<option value="">전체 제품 목록</option>' + products.filter(p=>!cid||p.clientId===cid).map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('');
   renderMaterials();
 }
 function onAddMatClientChange() {
   const cid = v('ma-client');
   const sel = inp('ma-product');
-  if (sel) sel.innerHTML = '<option value="">-- 품목 선택 --</option>' + products.filter(p=>!cid||p.clientId===cid).map(p=>'<option value="'+p.id+'">'+p.name+'</option>').join('');
+  if (sel) sel.innerHTML = '<option value="">-- 품목 선택 --</option>' + products.filter(p=>!cid||p.clientId===cid).map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('');
 }
 function renderMaterials() {
+  ensureDateView('materials', 'mat-table', materials.map(m=>m.orderDate), renderMaterials);
   const before = materials.filter(m=>m.status==='발주전').length;
   const shipping = materials.filter(m=>m.status==='발주중'||m.status==='지연').length;
   const done = materials.filter(m=>m.status==='입고완료').length;
@@ -44,6 +45,7 @@ function renderMaterials() {
 
   const fc=v('mat-fc'), fp=v('mat-fp'), fs=v('mat-fs'), q=(v('mat-q')||'').toLowerCase();
   let rows = materials.filter(m => {
+    if (!dateViewMatch('materials', m.orderDate)) return false;
     const prod = getProductById(m.productId);
     if (fc && (!prod || prod.clientId !== fc)) return false;
     if (fp && m.productId !== fp) return false;
@@ -97,20 +99,20 @@ function renderMaterials() {
       const prod = getProductById(m.productId);
       const cname = prod ? getClientName(prod.clientId) : '—';
       return '<tr>' +
-        '<td>'+m.id+'</td>' +
-        '<td>'+cname+'</td>' +
-        '<td style="font-weight:600;font-size:11px;">'+getProductName(m.productId)+'</td>' +
-        '<td style="font-weight:700;">'+m.name+'</td>' +
-        '<td>'+(m.supplier||'—')+'</td>' +
+        '<td>'+esc(m.id)+'</td>' +
+        '<td>'+esc(cname)+'</td>' +
+        '<td style="font-weight:600;font-size:11px;">'+esc(getProductName(m.productId))+'</td>' +
+        '<td style="font-weight:700;">'+esc(m.name)+'</td>' +
+        '<td>'+(esc(m.supplier)||'—')+'</td>' +
         '<td style="font-weight:600;">'+fmtW(m.unitPrice)+'</td>' +
-        '<td>'+m.qty+' '+m.unit+'</td>' +
+        '<td>'+esc(m.qty)+' '+esc(m.unit)+'</td>' +
         '<td style="font-weight:700;color:var(--tx-i);">'+fmtW(getMatAmt(m))+'</td>' +
-        '<td>'+(m.orderDate||'—')+'</td>' +
-        '<td>'+(m.expectedDate||'—')+'</td>' +
-        '<td><select class="stat-sel" style="color:'+(sColor[m.status]||'')+'" onchange="changeMatStatus(\''+m.id+'\',this.value)">' +
+        '<td>'+(esc(m.orderDate)||'—')+'</td>' +
+        '<td>'+(esc(m.expectedDate)||'—')+'</td>' +
+        '<td><select class="stat-sel" style="color:'+(sColor[m.status]||'')+'" onchange="changeMatStatus(\''+esc(m.id)+'\',this.value)">' +
           ['발주전','발주중','입고완료','지연'].map(s=>'<option'+(s===m.status?' selected':'')+'>'+s+'</option>').join('') +
         '</select></td>' +
-        '<td style="font-size:11px;color:var(--tx-t);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+(m.note||'')+'">'+(m.note||'—')+'</td>' +
+        '<td style="font-size:11px;color:var(--tx-t);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+esc(m.note||'')+'">'+(esc(m.note)||'—')+'</td>' +
         '<td style="white-space:nowrap;"><button class="edit-btn" onclick="openMatEdit(\''+m.id+'\')"><i class="ti ti-edit"></i>수정</button>' +
         '<button class="del-btn" style="margin-left:4px;" onclick="deleteMat(\''+m.id+'\')"><i class="ti ti-trash"></i></button></td>' +
       '</tr>';
@@ -143,6 +145,23 @@ function openMatEdit(id) {
   sv('ma-price', m.unitPrice||0); sv('ma-qty', m.qty||0);
   sv('ma-unit', m.unit||'EA'); sv('ma-status', m.status);
   sv('ma-odate', m.orderDate||''); sv('ma-edate', m.expectedDate||''); sv('ma-note', m.note||'');
+  inp('mat-modal').classList.add('open');
+}
+function cloneMat(id) {
+  if (!checkAdminAction()) return;
+  const m = materials.find(x=>x.id===id); if (!m) return;
+  editMatId = null;
+  inp('mat-modal-ttl').innerHTML = '<i class="ti ti-copy" style="color:var(--tx-i);"></i>자재 발주 복제 등록';
+  sv('ma-id', nextCode('MT', materials));
+  const prod = getProductById(m.productId);
+  fillClientSelect('ma-client', false);
+  sv('ma-client', prod?prod.clientId:'');
+  onAddMatClientChange();
+  sv('ma-product', m.productId);
+  sv('ma-name', m.name); sv('ma-supplier', m.supplier||'');
+  sv('ma-price', m.unitPrice||0); sv('ma-qty', m.qty||0);
+  sv('ma-unit', m.unit||'EA'); sv('ma-status', '발주전');
+  sv('ma-odate', today()); sv('ma-edate', m.expectedDate||''); sv('ma-note', m.note||'');
   inp('mat-modal').classList.add('open');
 }
 function saveMaterialForm() {

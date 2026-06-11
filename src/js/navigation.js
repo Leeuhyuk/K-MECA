@@ -25,21 +25,21 @@ function closeDlg() { inp('confirmDlg').classList.remove('open'); _cfn = null; }
 
 function fillClientSelect(elId, includeAll=false) {
   const el = inp(elId); if (!el) return;
-  el.innerHTML = (includeAll ? '<option value="">전체 의뢰 고객사</option>' : '') + clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  el.innerHTML = (includeAll ? '<option value="">전체 의뢰 고객사</option>' : '') + clients.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
 }
 function fillProductSelect(elId, clientId, selected='') {
   const el = inp(elId); if (!el) return;
   const list = clientId ? products.filter(p => p.clientId === clientId) : products;
-  el.innerHTML = '<option value="">-- 품목 선택 --</option>' + list.map(p => `<option value="${p.id}"${p.id===selected?' selected':''}>${p.name}</option>`).join('');
+  el.innerHTML = '<option value="">-- 품목 선택 --</option>' + list.map(p => `<option value="${esc(p.id)}"${p.id===selected?' selected':''}>${esc(p.name)}</option>`).join('');
 }
 function fillStageSelect(elId) {
   const el = inp(elId); if (!el) return;
-  el.innerHTML = processStages.map(s => `<option>${s}</option>`).join('');
+  el.innerHTML = processStages.map(s => `<option>${esc(s)}</option>`).join('');
 }
 function fillWorkerSelect(elId, selected='') {
   const el = inp(elId); if (!el) return;
   el.innerHTML = '<option value="">— 작업원 선택 —</option>' +
-    workers.map(w => `<option value="${w.name}"${w.name===selected?' selected':''}>${w.name} (라인${w.line}·${w.role})</option>`).join('');
+    workers.map(w => `<option value="${esc(w.name)}"${w.name===selected?' selected':''}>${esc(w.name)} (라인${esc(w.line)}·${esc(w.role)})</option>`).join('');
 }
 
 /* 제품 등록 폼 - 공정단계 선택 시 자동 상태 미리보기 업데이트 */
@@ -189,14 +189,13 @@ function _goTo(id, el) {
   const PN = {
     dashboard: '종합 대시보드', clients: '수주 정보 관리', materials: '자재 수급/발주',
     orders: '생산 지시 등록', process: '실시간 공정 관리', quality: '품질 및 검사',
-    workers: '인사 관리', alerts: '시스템 알림 로그', inventory: '재고 관리',
-    trash: '휴지통 데이터 복구', deliveries: '납품 현황',
+    workers: '인사 관리', inventory: '재고 관리', deliveries: '납품 현황',
     rfq: '견적요청서 관리', po: '구매발주서 관리', partners: '거래처 관리',
-    finance: '재무 관리', claims: '고객 클레임 관리', as: '고객 A/S · 사후관리', bom: 'BOM · 자재명세', permissions: '권한 관리',
+    finance: '재무 관리', claims: '고객 클레임 관리', as: '고객 A/S · 사후관리', bom: 'BOM · 자재명세', system: '시스템 관리',
+    notes: '메모·할 일',
     statement: '거래명세표 관리', taxinvoice: '세금계산서 관리',
     salesdoc: '견적/수주 관리',
-    calendar: '납기 캘린더',
-    alimtalk: '알림톡 설정'
+    calendar: '납기 캘린더'
   };
   inp('ptitle').textContent = PN[id] || id;
   currentPage = id;
@@ -243,7 +242,7 @@ function _updateBackBtn() {
     const PN = {
       dashboard:'대시보드', clients:'수주관리', materials:'자재관리',
       orders:'생산지시', process:'공정관리', quality:'품질검사',
-      workers:'인사', alerts:'알림', inventory:'재고', trash:'휴지통', finance:'재무', claims:'클레임', statement:'거래명세표', taxinvoice:'세금계산서', salesdoc:'견적/수주'
+      workers:'인사', system:'시스템 관리', inventory:'재고', finance:'재무', claims:'클레임', notes:'메모·할 일', statement:'거래명세표', taxinvoice:'세금계산서', salesdoc:'견적/수주'
     };
     btn.title = `이전: ${PN[pageHistory[pageHistory.length-1]] || '이전 화면'}으로 돌아가기`;
   } else {
@@ -263,19 +262,17 @@ function refreshPage(id) {
   else if (id === 'taxinvoice') renderSalesDoc('tax');
   else if (id === 'salesdoc') switchSalesTab(salesTab);
   else if (id === 'workers') switchEmpTab(empTab);
-  else if (id === 'alerts') renderAlerts();
   else if (id === 'process') { go('dashboard'); setTimeout(()=>switchDashTab('process'),50); return; }
   else if (id === 'inventory') renderInventory();
   else if (id === 'deliveries') { renderDeliveries(); if (currentDlvTab === 'closed') renderClosedProjects(); }
-  else if (id === 'trash') renderTrash();
   else if (id === 'rfq') renderRfq();
   else if (id === 'po') renderPo();
   else if (id === 'partners') renderPartners();
   else if (id === 'finance') renderFinance();
   else if (id === 'as') renderAS();
   else if (id === 'bom') renderBom();
-  else if (id === 'permissions') renderPermissions();
+  else if (id === 'notes') renderNotes();
+  else if (id === 'system') renderSystem();
   else if (id === 'calendar') renderCalendar();
-  else if (id === 'alimtalk') { renderAlimtalkSettings(); }
   if (typeof watchBulk === 'function') watchBulk();   // 일괄 선택 체크박스 부착
 }

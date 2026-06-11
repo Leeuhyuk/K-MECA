@@ -92,16 +92,16 @@ function renderDashOverview() {
   const actions = [];
   materials.filter(m => m.status === '발주전').slice(0, 3).forEach(m => {
     const pr = getProductById(m.productId);
-    actions.push({ cls:'urgent', icon:'ti-alert-circle', txt:`[자재발주 요청] ${m.name}`, sub:`${pr?.name||''} 공정자재 · 미발주`, page:'materials' });
+    actions.push({ cls:'urgent', icon:'ti-alert-circle', txt:`[자재발주 요청] ${esc(m.name)}`, sub:`${esc(pr?.name)||''} 공정자재 · 미발주`, page:'materials' });
   });
   materials.filter(m => m.status==='발주중' && m.expectedDate && daysUntil(m.expectedDate)<=7).slice(0,2).forEach(m => {
-    actions.push({ cls:'warn', icon:'ti-truck-delivery', txt:`[입고임박] ${m.name}`, sub:`${m.supplier} · ${m.expectedDate} 예정`, page:'materials' });
+    actions.push({ cls:'warn', icon:'ti-truck-delivery', txt:`[입고임박] ${esc(m.name)}`, sub:`${esc(m.supplier)} · ${esc(m.expectedDate)} 예정`, page:'materials' });
   });
   defects.filter(d => d.status !== '완료').slice(0,2).forEach(d => {
-    actions.push({ cls:'urgent', icon:'ti-shield-alert', txt:`[미처리 불량] ${d.type}`, sub:`${getProductName(d.productId)} · ${d.stage}`, page:'quality' });
+    actions.push({ cls:'urgent', icon:'ti-shield-alert', txt:`[미처리 불량] ${esc(d.type)}`, sub:`${esc(getProductName(d.productId))} · ${esc(d.stage)}`, page:'quality' });
   });
   inventory.filter(i => i.qty <= i.minQty).slice(0,2).forEach(i => {
-    actions.push({ cls:'warn', icon:'ti-package-off', txt:`[안전재고 미달] ${i.name}`, sub:`현재고 ${i.qty}${i.unit} / 안전 ${i.minQty}${i.unit}`, page:'inventory' });
+    actions.push({ cls:'warn', icon:'ti-package-off', txt:`[안전재고 미달] ${esc(i.name)}`, sub:`현재고 ${esc(i.qty)}${esc(i.unit)} / 안전 ${esc(i.minQty)}${esc(i.unit)}`, page:'inventory' });
   });
   inp('dash-actions').innerHTML = actions.length ? actions.map(a => `
     <div class="action-item ${a.cls}" style="cursor:pointer;" onclick="go('${a.page}')">
@@ -126,11 +126,11 @@ function renderDashOverview() {
       <tbody>
         ${dl.slice(0,6).map(p => `
           <tr style="cursor:pointer;" onclick="go('process')" title="공정관리로 이동">
-            <td style="font-weight:600;">${getClientName(p.clientId)}</td>
-            <td style="font-weight:700; color:var(--tx-i);">${p.name}</td>
-            <td style="font-size:11px;">${p.deliveryDate}</td>
+            <td style="font-weight:600;">${esc(getClientName(p.clientId))}</td>
+            <td style="font-weight:700; color:var(--tx-i);">${esc(p.name)}</td>
+            <td style="font-size:11px;">${esc(p.deliveryDate)}</td>
             <td>${dayBadge(p.deliveryDate)}</td>
-            <td><span class="bd bd-info" style="font-size:10px;">${p.processStage}</span></td>
+            <td><span class="bd bd-info" style="font-size:10px;">${esc(p.processStage)}</span></td>
             <td>${statusBadge(p.status)}</td>
           </tr>`).join('')}
       </tbody>
@@ -151,7 +151,7 @@ function renderDashOverview() {
           <div style="width:1px;height:30px;background:var(--br);"></div>
           <div><div style="font-size:15px;font-weight:700;color:var(--tx-i);">${dlvMonth}건</div><div style="font-size:10px;color:var(--tx-t);">이번달</div></div>
           <div style="margin-left:auto;">
-            ${deliveries.slice(0,2).map(d=>`<div style="font-size:10px;margin-bottom:2px;"><b>${d.productName}</b> · ${getClientName(d.clientId)} · ${d.deliveredAt}</div>`).join('')}
+            ${deliveries.slice(0,2).map(d=>`<div style="font-size:10px;margin-bottom:2px;"><b>${esc(d.productName)}</b> · ${esc(getClientName(d.clientId))} · ${esc(d.deliveredAt)}</div>`).join('')}
           </div>
         </div>`;
   }
@@ -172,7 +172,7 @@ function renderDashProjects() {
       <tbody>
         ${activeClients.flatMap(c => {
           const prods = products.filter(p => p.clientId === c.id);
-          if (!prods.length) return [`<tr><td style="font-weight:700;">${c.name}</td><td style="font-size:11px;color:var(--tx-t);">${c.manager||'—'}</td><td colspan="8" style="color:var(--tx-t);font-size:11px;font-style:italic;">등록된 제품 없음</td></tr>`];
+          if (!prods.length) return [`<tr><td style="font-weight:700;">${esc(c.name)}</td><td style="font-size:11px;color:var(--tx-t);">${esc(c.manager)||'—'}</td><td colspan="8" style="color:var(--tx-t);font-size:11px;font-style:italic;">등록된 제품 없음</td></tr>`];
           return prods.map((p, i) => {
             const pMats  = materials.filter(m => m.productId === p.id);
             const matPre = pMats.filter(m => m.status==='발주전').length;
@@ -182,12 +182,12 @@ function renderDashProjects() {
             const sc = stageColors[p.processStage] || '#495057';
             return `
               <tr style="cursor:pointer;" onclick="navToProduct('${c.id}','${p.id}')">
-                ${i===0 ? `<td rowspan="${prods.length}" style="font-weight:700;border-right:2px solid var(--br-i);vertical-align:middle;">${c.name}</td>
-                            <td rowspan="${prods.length}" style="font-size:11px;color:var(--tx-s);border-right:1px solid var(--br);vertical-align:middle;">${c.manager||'—'}</td>` : ''}
-                <td style="font-weight:700;">${p.name} <span style="font-size:10px;color:var(--tx-t);font-weight:400;">${p.spec||''}</span></td>
-                <td style="font-size:11px;">${p.deliveryDate||'—'}</td>
+                ${i===0 ? `<td rowspan="${prods.length}" style="font-weight:700;border-right:2px solid var(--br-i);vertical-align:middle;">${esc(c.name)}</td>
+                            <td rowspan="${prods.length}" style="font-size:11px;color:var(--tx-s);border-right:1px solid var(--br);vertical-align:middle;">${esc(c.manager)||'—'}</td>` : ''}
+                <td style="font-weight:700;">${esc(p.name)} <span style="font-size:10px;color:var(--tx-t);font-weight:400;">${esc(p.spec)||''}</span></td>
+                <td style="font-size:11px;">${esc(p.deliveryDate)||'—'}</td>
                 <td>${p.deliveryDate ? dayBadge(p.deliveryDate) : '—'}</td>
-                <td><span class="bd" style="background:${sc}18;color:${sc};border-color:${sc}44;font-size:10px;">${p.processStage}</span></td>
+                <td><span class="bd" style="background:${sc}18;color:${sc};border-color:${sc}44;font-size:10px;">${esc(p.processStage)}</span></td>
                 <td style="font-size:11px;">
                   ${pMats.length===0 ? '<span style="color:var(--tx-t);">자재없음</span>' :
                     `<span style="color:${matPre>0?'var(--tx-d)':'var(--tx-t)'};font-weight:600;">대기 ${matPre}</span> /
@@ -221,8 +221,8 @@ function renderDashResources() {
         return `
           <div style="cursor:pointer;" onclick="navToMatForProduct('${p.id}')">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
-              <span style="font-size:11px;font-weight:700;">${p.name}</span>
-              <span style="font-size:10px;color:var(--tx-t);">${getClientName(p.clientId)}</span>
+              <span style="font-size:11px;font-weight:700;">${esc(p.name)}</span>
+              <span style="font-size:10px;color:var(--tx-t);">${esc(getClientName(p.clientId))}</span>
             </div>
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
               <div style="flex:1;height:6px;background:var(--bg-t);border-radius:3px;overflow:hidden;">
@@ -260,9 +260,9 @@ function renderDashResources() {
       ${defects.filter(d=>d.status!=='완료').slice(0,2).map(d=>`
         <div class="action-item warn" style="cursor:pointer;padding:7px 10px;" onclick="go('quality')">
           <i class="ti ti-alert-triangle" style="font-size:12px;"></i>
-          <div style="flex:1;"><div style="font-size:10px;font-weight:700;">${d.type}</div>
-          <div style="font-size:9px;color:var(--tx-t);">${getProductName(d.productId)} · ${d.stage}</div></div>
-          <span class="bd bd-warn" style="font-size:9px;">${d.status}</span>
+          <div style="flex:1;"><div style="font-size:10px;font-weight:700;">${esc(d.type)}</div>
+          <div style="font-size:9px;color:var(--tx-t);">${esc(getProductName(d.productId))} · ${esc(d.stage)}</div></div>
+          <span class="bd bd-warn" style="font-size:9px;">${esc(d.status)}</span>
         </div>`).join('')}
       ${openDefects===0&&openClaims.length===0?`<div class="action-item info"><i class="ti ti-circle-check"></i><div><div class="action-txt" style="font-size:11px;">품질 이슈 없음</div></div></div>`:''}
     </div>`;
@@ -285,7 +285,7 @@ function renderDashResources() {
         const pct = i.minQty > 0 ? Math.round(i.qty/i.minQty*100) : 0;
         return `<div style="cursor:pointer;padding:7px 10px;background:var(--bg-s);border:1px solid var(--br-d);border-radius:var(--rm);" onclick="go('inventory')">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
-            <span style="font-size:11px;font-weight:700;">${i.name}</span>
+            <span style="font-size:11px;font-weight:700;">${esc(i.name)}</span>
             <span class="bd bd-err" style="font-size:9px;">미달</span>
           </div>
           <div style="display:flex;align-items:center;gap:6px;">

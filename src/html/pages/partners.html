@@ -12,8 +12,8 @@
         <option>공급처</option><option>구매처</option><option>외주처</option><option>기타</option>
       </select>
       <input type="text" id="bp-q" placeholder="거래처명·담당자·이메일 검색..." style="min-width:200px;" oninput="renderPartners()">
-      <button class="btn btn-primary" onclick="openPartnerModal()"><i class="ti ti-plus"></i>거래처 등록</button>
-      <button class="btn" onclick="exportPartnersXLS()"><i class="ti ti-file-spreadsheet"></i>전체 엑셀 CSV 내보내기</button>
+      <button class="btn btn-primary btn-icon" onclick="openPartnerModal()" title="거래처 등록"><i class="ti ti-plus"></i></button>
+      <button class="btn btn-icon" onclick="exportPartnersXLS()" title="전체 엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
     </div>
     <div class="card">
       <div id="bp-table" style="overflow-x:auto;"><div class="empty"><i class="ti ti-inbox"></i>등록된 거래처가 없습니다.</div></div>

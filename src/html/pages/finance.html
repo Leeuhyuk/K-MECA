@@ -9,35 +9,211 @@
       <button class="btn" data-fintab="pnl" onclick="switchFinTab('pnl')"><i class="ti ti-report-money"></i>손익(P&L)</button>
       <button class="btn" data-fintab="ar" onclick="switchFinTab('ar')"><i class="ti ti-receipt"></i>미수금/미지급</button>
       <button class="btn" data-fintab="etc" onclick="switchFinTab('etc')"><i class="ti ti-list-details"></i>기타 수입/비용</button>
-      <button class="btn btn-primary" onclick="openFinanceAdd()" style="margin-left:auto;"><i class="ti ti-plus"></i>기타 항목 등록</button>
+      <button class="btn btn-primary btn-icon" onclick="openFinanceAdd()" style="margin-left:auto;" title="기타 항목 등록"><i class="ti ti-plus"></i></button>
     </div>
     <div id="finance-body"></div>
   </div>
 
   <!-- 고객 A/S · 사후관리 -->
   <div class="content" id="pg-as">
+    <div class="metrics" id="as-kpi"></div>
     <div class="toolbar">
       <select id="as-filter" onchange="renderAS()" style="height:32px;">
         <option value="">전체 상태</option><option value="open">미완료(접수·처리중)</option><option>접수</option><option>처리중</option><option>완료</option><option>보류</option>
       </select>
       <input id="as-search" oninput="renderAS()" placeholder="고객/제품/증상 검색" style="height:32px;min-width:180px;">
-      <button class="btn btn-primary" onclick="openAsAdd()" style="margin-left:auto;"><i class="ti ti-plus"></i>A/S 접수 등록</button>
+      <button class="btn btn-primary btn-icon" onclick="openAsAdd()" title="A/S 접수 등록"><i class="ti ti-plus"></i></button>
     </div>
     <div id="as-body"></div>
   </div>
 
-  <!-- 권한 관리 (RBAC) -->
-  <div class="content" id="pg-permissions">
-    <div id="perm-body"></div>
+  <!-- 시스템 관리 -->
+  <div class="content" id="pg-system">
+    <div class="toolbar" id="system-tabs" style="margin-bottom:16px;">
+      <button class="btn btn-primary" data-systab="permissions" onclick="switchSystemTab('permissions')"><i class="ti ti-user-shield"></i>권한 관리</button>
+      <button class="btn" data-systab="company" onclick="switchSystemTab('company')"><i class="ti ti-building"></i>회사 관리</button>
+      <button class="btn" data-systab="templates" onclick="switchSystemTab('templates')"><i class="ti ti-template"></i>양식 내보내기</button>
+      <button class="btn" data-systab="api" onclick="switchSystemTab('api')"><i class="ti ti-key"></i>API 관리</button>
+      <button class="btn" data-systab="alimtalk" onclick="switchSystemTab('alimtalk')"><i class="ti ti-brand-kakao"></i>알림톡 설정</button>
+      <button class="btn" data-systab="alerts" onclick="switchSystemTab('alerts')"><i class="ti ti-bell"></i>알림 관리</button>
+      <button class="btn" data-systab="trash" onclick="switchSystemTab('trash')"><i class="ti ti-trash"></i>휴지통</button>
+    </div>
+
+    <div class="system-panel" id="system-panel-permissions"><div id="perm-body"></div></div>
+
+    <div class="system-panel" id="system-panel-company" style="display:none;">
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-building"></i>회사 정보 관리</span>
+          <span style="font-size:11px;color:var(--tx-t);">문서·이메일·인쇄 양식에 공통 적용</span>
+        </div>
+        <div id="system-company-summary" style="padding:4px 2px;"></div>
+        <div style="margin-top:14px;">
+          <button class="btn btn-primary" onclick="openCompanySettings()"><i class="ti ti-edit"></i>회사 정보 수정</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="system-panel" id="system-panel-templates" style="display:none;">
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-file-description"></i>견적요청서 엑셀 인쇄 양식</span>
+          <span id="rfq-template-status" style="font-size:11px;color:var(--tx-t);"></span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 2px;">
+          <button class="btn btn-sm" onclick="downloadDocXlsxTemplate('rfq')"><i class="ti ti-download"></i>기본 양식 내보내기</button>
+          <button class="btn btn-sm" onclick="registerDocXlsxTemplate('rfq')"><i class="ti ti-upload"></i>수정 양식 등록</button>
+          <button class="btn btn-sm" onclick="resetDocXlsxTemplate('rfq')"><i class="ti ti-restore"></i>기본 양식 복원</button>
+          <button class="btn btn-sm btn-primary" onclick="exportDocTemplateXLS('rfq')"><i class="ti ti-file-type-xls"></i>등록 양식으로 전체 출력</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-file-invoice"></i>구매발주서 엑셀 인쇄 양식</span>
+          <span id="po-template-status" style="font-size:11px;color:var(--tx-t);"></span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 2px;">
+          <button class="btn btn-sm" onclick="downloadDocXlsxTemplate('po')"><i class="ti ti-download"></i>기본 양식 내보내기</button>
+          <button class="btn btn-sm" onclick="registerDocXlsxTemplate('po')"><i class="ti ti-upload"></i>수정 양식 등록</button>
+          <button class="btn btn-sm" onclick="resetDocXlsxTemplate('po')"><i class="ti ti-restore"></i>기본 양식 복원</button>
+          <button class="btn btn-sm btn-primary" onclick="exportDocTemplateXLS('po')"><i class="ti ti-file-type-xls"></i>등록 양식으로 전체 출력</button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px;">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-file-text"></i>견적서 엑셀 인쇄 양식</span>
+          <span id="quote-template-status" style="font-size:11px;color:var(--tx-t);"></span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 2px;">
+          <button class="btn btn-sm" onclick="downloadDocXlsxTemplate('quote')"><i class="ti ti-download"></i>기본 양식 내보내기</button>
+          <button class="btn btn-sm" onclick="registerDocXlsxTemplate('quote')"><i class="ti ti-upload"></i>수정 양식 가져오기</button>
+          <button class="btn btn-sm" onclick="resetDocXlsxTemplate('quote')"><i class="ti ti-restore"></i>기본 양식 복원</button>
+          <button class="btn btn-sm btn-primary" onclick="exportDocTemplateXLS('quote')"><i class="ti ti-file-type-xls"></i>등록 양식으로 전체 출력</button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px;">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-receipt"></i>거래명세표 엑셀 인쇄 양식</span>
+          <span id="statement-template-status" style="font-size:11px;color:var(--tx-t);"></span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 2px;">
+          <button class="btn btn-sm" onclick="downloadDocXlsxTemplate('statement')"><i class="ti ti-download"></i>기본 양식 내보내기</button>
+          <button class="btn btn-sm" onclick="registerDocXlsxTemplate('statement')"><i class="ti ti-upload"></i>수정 양식 가져오기</button>
+          <button class="btn btn-sm" onclick="resetDocXlsxTemplate('statement')"><i class="ti ti-restore"></i>기본 양식 복원</button>
+          <button class="btn btn-sm btn-primary" onclick="exportDocTemplateXLS('statement')"><i class="ti ti-file-type-xls"></i>등록 양식으로 전체 출력</button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px;">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-file-dollar"></i>세금계산서 엑셀 인쇄 양식</span>
+          <span id="tax-template-status" style="font-size:11px;color:var(--tx-t);"></span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 2px;">
+          <button class="btn btn-sm" onclick="downloadDocXlsxTemplate('tax')"><i class="ti ti-download"></i>기본 양식 내보내기</button>
+          <button class="btn btn-sm" onclick="registerDocXlsxTemplate('tax')"><i class="ti ti-upload"></i>수정 양식 가져오기</button>
+          <button class="btn btn-sm" onclick="resetDocXlsxTemplate('tax')"><i class="ti ti-restore"></i>기본 양식 복원</button>
+          <button class="btn btn-sm btn-primary" onclick="exportDocTemplateXLS('tax')"><i class="ti ti-file-type-xls"></i>등록 양식으로 전체 출력</button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px;background:var(--bg-s);">
+        <div style="font-size:12px;color:var(--tx-s);line-height:1.8;">
+          기본 양식을 내보내 Excel에서 수정한 뒤 다시 등록하면, 등록한 양식으로 문서가 출력됩니다.
+          기존 PDF 출력과 일반 데이터 엑셀 내보내기는 각 문서 화면에서 계속 사용할 수 있습니다.
+        </div>
+        <div style="margin-top:10px;">
+          <button class="btn btn-sm btn-danger" onclick="resetAllDocXlsxTemplates()"><i class="ti ti-restore"></i>모든 양식 기본값 복원</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="system-panel" id="system-panel-api" style="display:none;">
+      <div id="api-settings-body"></div>
+    </div>
+
+    <div class="system-panel" id="system-panel-alimtalk" style="display:none;">
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-brand-kakao" style="color:#f7e600;background:#3c1e1e;border-radius:5px;padding:2px 5px;"></i>카카오 알림톡 설정</span>
+        </div>
+        <div id="alimtalk-settings-body" style="padding:8px 4px;"></div>
+      </div>
+      <div class="card" style="margin-top:16px;">
+        <div class="card-hd"><span class="card-ttl"><i class="ti ti-info-circle"></i>템플릿 등록 안내</span></div>
+        <div style="padding:8px 4px;font-size:12px;color:var(--tx-s);line-height:2.2;">
+          <div><code>TPL_MAT_IN</code> — 자재 입고완료 안내</div>
+          <div><code>TPL_DLV_DUE</code> — 납기 임박 알림 (D-7)</div>
+          <div><code>TPL_AS_NEW</code> — A/S 접수 알림</div>
+          <div><code>TPL_PO_SENT</code> — 발주서 발송 안내</div>
+          <div><code>TPL_TEST</code> — 테스트용</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="system-panel" id="system-panel-alerts" style="display:none;">
+      <div class="toolbar" id="alerts-toolbar">
+        <button class="btn btn-primary" onclick="filterAlerts('all')">전체 알림</button>
+        <button class="btn" onclick="filterAlerts('err')">긴급 위험</button>
+        <button class="btn" onclick="filterAlerts('warn')">경고 확인</button>
+        <button class="btn btn-primary btn-icon" onclick="openAlertAdd()" style="margin-left:auto;" title="알림 직접 등록"><i class="ti ti-plus"></i></button>
+      </div>
+      <div class="card" style="margin-bottom:16px;padding:16px;background:var(--bg-s);">
+        <div style="font-size:13px;font-weight:700;color:var(--tx-s);margin-bottom:12px;"><i class="ti ti-settings" style="color:var(--tx-i);"></i> 자동 감지 알림 활성화 설정</div>
+        <div style="display:flex;flex-wrap:wrap;gap:16px;font-size:12px;color:var(--tx-s);">
+          <label><input type="checkbox" id="chk-mat_pending" onchange="toggleAlertSetting('mat_pending')"> 자재발주 미처리</label>
+          <label><input type="checkbox" id="chk-mat_delay" onchange="toggleAlertSetting('mat_delay')"> 입고 임박 자재</label>
+          <label><input type="checkbox" id="chk-prod_delivery" onchange="toggleAlertSetting('prod_delivery')"> 납기 위험 제품</label>
+          <label><input type="checkbox" id="chk-inv_low" onchange="toggleAlertSetting('inv_low')"> 안전재고 미달</label>
+          <label><input type="checkbox" id="chk-defect_open" onchange="toggleAlertSetting('defect_open')"> 미처리 불량</label>
+          <label><input type="checkbox" id="chk-wo_delayed" onchange="toggleAlertSetting('wo_delayed')"> 생산지시 지연</label>
+        </div>
+      </div>
+      <div id="alerts-list"></div>
+    </div>
+
+    <div class="system-panel" id="system-panel-trash" style="display:none;">
+      <div class="metrics">
+        <div class="mc"><div class="mc-lbl"><i class="ti ti-trash"></i>휴지통 보관 항목</div><div class="mc-val" id="trash-total">0건</div><div class="mc-sub">삭제된 데이터를 복구합니다.</div></div>
+        <div class="mc"><div class="mc-lbl"><i class="ti ti-alert-triangle" style="color:var(--tx-w);"></i>데이터 보존 기준</div><div class="mc-val">영구 보존</div><div class="mc-sub">저장소 용량 내에서 유지</div></div>
+      </div>
+      <div class="toolbar">
+        <select id="trash-filter-type" onchange="renderTrash()" style="min-width:140px;">
+          <option value="">전체 데이터 분류</option><option value="client">고객사</option><option value="product">완제품</option>
+          <option value="material">발주자재</option><option value="inventory">재고품목</option><option value="order">생산지시</option>
+          <option value="defect">불량기록</option><option value="claim">고객클레임</option><option value="check">검사기록</option><option value="worker">작업원</option>
+        </select>
+        <input type="text" id="trash-q" placeholder="항목명 또는 식별 코드 검색..." style="min-width:220px;" oninput="renderTrash()">
+        <button class="btn btn-danger" onclick="emptyTrash()"><i class="ti ti-trash-x"></i>휴지통 비우기</button>
+      </div>
+      <div class="card"><div id="trash-table" style="overflow-x:auto;"></div></div>
+    </div>
   </div>
 
   <!-- BOM · 자재명세 -->
   <div class="content" id="pg-bom">
-    <div class="toolbar">
-      <label style="font-size:12px;color:var(--tx-s);align-self:center;">제품 선택</label>
-      <select id="bom-product" onchange="onBomProductChange()" style="height:32px;min-width:240px;"></select>
-      <button class="btn" onclick="applyBomCost()" title="BOM 재료비를 제품 원가에 반영"><i class="ti ti-arrow-bar-to-down"></i>재료비 원가 반영</button>
-      <button class="btn btn-primary" onclick="openBomAdd()" style="margin-left:auto;"><i class="ti ti-plus"></i>자재 추가</button>
+    <div class="bom-layout">
+      <aside class="card bom-product-pane">
+        <div class="card-hd"><span class="card-ttl"><i class="ti ti-boxes"></i>제품 목록</span><span id="bom-product-count" class="bd bd-neu">0</span></div>
+        <div class="bom-product-filters">
+          <select id="bom-client-filter" onchange="renderBomProductOptions()"><option value="">전체 고객사</option></select>
+          <input id="bom-product-search" oninput="renderBomProductOptions()" placeholder="제품명 · 코드 · 고객사 검색...">
+        </div>
+        <select id="bom-product" onchange="onBomProductChange()" style="display:none;"></select>
+        <div id="bom-product-list" class="bom-product-list"></div>
+        <div id="bom-recent-products" class="bom-recent-products"></div>
+      </aside>
+      <section class="bom-detail-pane">
+        <div class="bom-detail-header">
+          <div>
+            <div style="font-size:10px;color:var(--tx-t);">선택 제품</div>
+            <div id="bom-selected-product" style="font-size:14px;font-weight:800;margin-top:2px;">제품을 선택하세요</div>
+          </div>
+          <div class="toolbar" style="margin:0;">
+            <button class="btn btn-icon" onclick="applyBomCost()" title="BOM 재료비를 제품 원가에 반영"><i class="ti ti-arrow-bar-to-down"></i></button>
+            <button class="btn btn-icon" onclick="openBomMaterialImport()" title="자재 수급/발주 내역에서 가져오기"><i class="ti ti-package-import"></i></button>
+            <button class="btn btn-primary btn-icon" onclick="openBomAdd()" title="자재 추가"><i class="ti ti-plus"></i></button>
+          </div>
+        </div>
+        <div id="bom-body"></div>
+      </section>
     </div>
-    <div id="bom-body"></div>
   </div>

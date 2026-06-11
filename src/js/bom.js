@@ -1,5 +1,8 @@
 /* ════════ BOM · 자재명세 ════════ */
 let editBomId = null;
+let bomMaterialImportRows = [];
+let bomViewTab = 'bom';
+let bomMaterialQuery = '';
 function bomFor(pid){ return bomList.filter(b=>b.productId===pid); }
 /* 라인 단위원가: 반제품(subProductId)이면 하위 BOM 재료비를 롤업, 아니면 단가 */
 function bomLineUnitCost(b, seen){ return b.subProductId ? bomMaterialCost(b.subProductId, seen) : (Number(b.unitPrice)||0); }
@@ -44,31 +47,116 @@ function invStockByName(name){
   const it = inventory.find(i=>(i.name||'').trim().toLowerCase()===(name||'').trim().toLowerCase());
   return it ? (Number(it.qty)||0) : null;
 }
-function _bomProductOptions(sel){
-  return products.map(p=>`<option value="${p.id}"${p.id===sel?' selected':''}>${p.name} (${p.id})</option>`).join('');
+function _bomRecentIds(){
+  try { return JSON.parse(localStorage.getItem('mes_bomRecentProducts') || '[]'); }
+  catch (e) { return []; }
 }
-function onBomProductChange(){ bomProductId = v('bom-product'); renderBom(); }
+function _rememberBomProduct(pid){
+  if (!pid) return;
+  const ids = [pid].concat(_bomRecentIds().filter(id=>id!==pid)).slice(0, 5);
+  localStorage.setItem('mes_bomRecentProducts', JSON.stringify(ids));
+}
+function _bomVisibleProducts(){
+  const clientId = v('bom-client-filter');
+  const q = v('bom-product-search').trim().toLowerCase();
+  return products.filter(p=>{
+    if (clientId && p.clientId !== clientId) return false;
+    return !q || [p.name,p.id,getClientName(p.clientId)].join(' ').toLowerCase().includes(q);
+  });
+}
+function renderBomProductOptions(){
+  const clientFilter = inp('bom-client-filter');
+  if (clientFilter) {
+    const current = clientFilter.value;
+    clientFilter.innerHTML = '<option value="">전체 고객사</option>' +
+      clients.filter(c=>!c.closed).map(c=>`<option value="${c.id}"${c.id===current?' selected':''}>${_bomImportEsc(c.name)}</option>`).join('');
+  }
+  const visible = _bomVisibleProducts();
+  const count = inp('bom-product-count');
+  if (count) count.textContent = visible.length;
+  const sel = inp('bom-product');
+  if (sel) {
+    sel.innerHTML = visible.length
+      ? visible.map(p=>`<option value="${p.id}"${p.id===bomProductId?' selected':''}>${_bomImportEsc(p.name)} (${_bomImportEsc(p.id)}) · ${_bomImportEsc(getClientName(p.clientId))}</option>`).join('')
+      : '<option value="">검색 결과 없음</option>';
+    if (!visible.some(p=>p.id===bomProductId)) sel.value = '';
+  }
+  const list = inp('bom-product-list');
+  if (list) {
+    list.innerHTML = visible.length ? visible.map(p=>{
+      const lineCount = bomFor(p.id).length;
+      return `<button class="bom-product-item${p.id===bomProductId?' active':''}" onclick="selectBomProduct('${p.id}')">
+        <span class="bom-product-item-main"><b>${_bomImportEsc(p.name)}</b><small>${_bomImportEsc(getClientName(p.clientId))} · ${_bomImportEsc(p.id)}</small></span>
+        <span class="bd ${lineCount?'bd-info':'bd-neu'}">${lineCount}종</span>
+      </button>`;
+    }).join('') : '<div class="empty" style="padding:18px 8px;">검색 결과가 없습니다.</div>';
+  }
+  renderBomRecentProducts();
+}
+function renderBomRecentProducts(){
+  const box = inp('bom-recent-products'); if (!box) return;
+  const recent = _bomRecentIds().map(id=>products.find(p=>p.id===id)).filter(Boolean);
+  box.innerHTML = recent.length
+    ? '<div class="bom-recent-title"><i class="ti ti-history"></i> 최근 제품</div>' +
+      recent.map(p=>`<button class="bom-recent-item${p.id===bomProductId?' active':''}" onclick="selectBomProduct('${p.id}')">${_bomImportEsc(p.name)}</button>`).join('')
+    : '<span style="font-size:11px;color:var(--tx-t);">제품을 선택하면 최근 사용 제품이 여기에 표시됩니다.</span>';
+}
+function selectBomProduct(pid){
+  const p = products.find(x=>x.id===pid); if (!p) return;
+  bomProductId = pid;
+  _rememberBomProduct(pid);
+  renderBom();
+}
+function onBomProductChange(){
+  const pid = v('bom-product');
+  if (!pid) return;
+  bomProductId = pid;
+  _rememberBomProduct(pid);
+  renderBom();
+}
+function switchBomView(tab){
+  bomViewTab = tab === 'mrp' ? 'mrp' : 'bom';
+  document.querySelectorAll('#bom-view-tabs [data-bomtab]').forEach(btn=>{
+    btn.classList.toggle('btn-primary', btn.dataset.bomtab===bomViewTab);
+  });
+  const bomPanel = inp('bom-panel-list'), mrpPanel = inp('bom-panel-mrp');
+  if (bomPanel) bomPanel.style.display = bomViewTab==='bom' ? '' : 'none';
+  if (mrpPanel) mrpPanel.style.display = bomViewTab==='mrp' ? '' : 'none';
+}
+function filterBomMaterials(field){
+  bomMaterialQuery = String(field ? field.value : v('bom-material-search')).trim().toLowerCase();
+  const caret = field && typeof field.selectionStart === 'number' ? field.selectionStart : bomMaterialQuery.length;
+  renderBom();
+  setTimeout(()=>{
+    const next = inp('bom-material-search');
+    if (next) { next.focus(); next.setSelectionRange(caret, caret); }
+  }, 0);
+}
 function renderBom(){
   const body = inp('bom-body'); if(!body) return;
   // 제품 셀렉트 채우기 + 기본 선택
   if (!bomProductId || !products.find(p=>p.id===bomProductId)) bomProductId = products[0]?.id || '';
-  const sel = inp('bom-product'); if (sel) sel.innerHTML = _bomProductOptions(bomProductId);
+  if (bomProductId) _rememberBomProduct(bomProductId);
+  renderBomProductOptions();
   const p = products.find(x=>x.id===bomProductId);
   if (!p) { body.innerHTML = empty('등록된 제품이 없습니다. 먼저 제품을 등록하세요.'); return; }
+  const selectedLabel = inp('bom-selected-product');
+  if (selectedLabel) selectedLabel.innerHTML = `${_bomImportEsc(p.name)} <span style="font-size:10px;color:var(--tx-t);font-weight:500;">${_bomImportEsc(p.id)} · ${_bomImportEsc(getClientName(p.clientId))}</span>`;
   const lines = bomFor(p.id);
+  const visibleLines = lines.filter(b=>!bomMaterialQuery || [b.name,b.spec,b.supplier,bomProductName(b.subProductId)].join(' ').toLowerCase().includes(bomMaterialQuery));
   const matCost = bomMaterialCost(p.id);
   const savedCost = Number(p.matCost)||0;
   const diff = matCost - savedCost;
-  const rows = lines.length ? lines.map(b=>{
+  const rows = visibleLines.length ? visibleLines.map(b=>{
     const isSub = !!b.subProductId;
     const unitCost = bomLineUnitCost(b);
     const amt = (Number(b.qtyPer)||0)*unitCost;
     return `
     <tr>
-      <td style="font-weight:700;">${b.name}${isSub?` <span class="bd bd-info" style="font-size:9px;">반제품</span>`:''}</td>
-      <td>${b.spec||'—'}</td>
-      <td>${isSub?`<span style="color:var(--tx-i);">↳ ${bomProductName(b.subProductId)}</span>`:(b.supplier||'<span style="color:var(--tx-t);">미지정</span>')}</td>
-      <td style="text-align:right;">${b.qtyPer}${b.unit||''}</td>
+      <td style="font-weight:700;">${esc(b.name)}${isSub?` <span class="bd bd-info" style="font-size:9px;">반제품</span>`:''}</td>
+      <td>${esc(b.spec)||'—'}</td>
+      <td>${isSub?`<span style="color:var(--tx-i);">↳ ${esc(bomProductName(b.subProductId))}</span>`:(esc(b.supplier)||'<span style="color:var(--tx-t);">미지정</span>')}</td>
+      <td style="text-align:right;">${esc(b.qtyPer)}${esc(b.unit)||''}</td>
       <td style="text-align:right;">${fmtW(unitCost)}${isSub?'<span style="font-size:9px;color:var(--tx-t);"> (롤업)</span>':''}</td>
       <td style="text-align:right;font-weight:700;">${fmtW(amt)}</td>
       <td style="text-align:center;white-space:nowrap;">
@@ -76,7 +164,7 @@ function renderBom(){
         <button class="btn btn-sm btn-danger" onclick="deleteBom('${b.id}')" title="삭제"><i class="ti ti-trash"></i></button>
       </td>
     </tr>`;
-  }).join('') : `<tr><td colspan="7">${empty('이 제품의 BOM이 비어 있습니다. [자재 추가]로 구성하세요.')}</td></tr>`;
+  }).join('') : `<tr><td colspan="7">${empty(lines.length?'검색 조건에 맞는 자재가 없습니다.':'이 제품의 BOM이 비어 있습니다. [자재 추가]로 구성하세요.')}</td></tr>`;
 
   const mrpQty = p.qty || 1;
   body.innerHTML = `
@@ -86,16 +174,22 @@ function renderBom(){
       <div class="mc"><div class="mc-lbl"><i class="ti ti-box"></i>제품 등록 재료비</div><div class="mc-val">${fmtW(savedCost)}</div><div class="mc-sub" style="color:${diff===0?'var(--tx-ok)':'var(--tx-w)'};">${diff===0?'원가 일치':'차이 '+fmtW(diff)+' · 반영 필요'}</div></div>
     </div>
 
-    <div class="card" style="margin-bottom:16px;">
-      <div class="card-hd"><span class="card-ttl"><i class="ti ti-sitemap"></i>${p.name} — 자재 구성 (1대 기준)</span>
-        <span style="font-size:11px;color:var(--tx-t);">재료비 합계 <b style="color:#e8590c;">${fmtW(matCost)}</b></span></div>
+    <div class="toolbar" id="bom-view-tabs" style="margin-bottom:10px;">
+      <button class="btn ${bomViewTab==='bom'?'btn-primary':''}" data-bomtab="bom" onclick="switchBomView('bom')"><i class="ti ti-list-details"></i>BOM 구성 <span class="bd bd-neu">${lines.length}</span></button>
+      <button class="btn ${bomViewTab==='mrp'?'btn-primary':''}" data-bomtab="mrp" onclick="switchBomView('mrp')"><i class="ti ti-package-import"></i>MRP · 발주</button>
+      <input id="bom-material-search" value="${_bomImportEsc(bomMaterialQuery)}" oninput="filterBomMaterials(this)" placeholder="자재명 · 규격 · 공급처 검색..." style="min-width:230px;margin-left:auto;">
+    </div>
+
+    <div class="card" id="bom-panel-list" style="margin-bottom:16px;display:${bomViewTab==='bom'?'':'none'};">
+      <div class="card-hd"><span class="card-ttl"><i class="ti ti-sitemap"></i>${esc(p.name)} — 자재 구성 (1대 기준)</span>
+        <span style="font-size:11px;color:var(--tx-t);">${visibleLines.length}/${lines.length}개 표시 · 재료비 합계 <b style="color:#e8590c;">${fmtW(matCost)}</b></span></div>
       <div style="overflow-x:auto;"><table>
         <thead><tr><th>자재명</th><th>규격</th><th>공급처</th><th style="text-align:right;">소요량/대</th><th style="text-align:right;">단가</th><th style="text-align:right;">금액</th><th style="text-align:center;">관리</th></tr></thead>
         <tbody>${rows}</tbody>
       </table></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="bom-panel-mrp" style="display:${bomViewTab==='mrp'?'':'none'};">
       <div class="card-hd"><span class="card-ttl"><i class="ti ti-package-import"></i>소요량 · 발주 필요량 (MRP)</span>
         <span style="font-size:12px;display:flex;align-items:center;gap:10px;">생산수량 <input id="bom-mrp-qty" type="number" min="1" value="${mrpQty}" oninput="renderBomMrp()" style="width:70px;height:26px;text-align:right;"> ${p.unit||'대'}
           <button class="btn btn-sm btn-primary" onclick="genPoFromMrp()" title="발주 필요 자재를 구매발주서로 생성"><i class="ti ti-file-invoice"></i>발주서 생성</button></span></div>
@@ -107,7 +201,9 @@ function renderBomMrp(){
   const wrap = inp('bom-mrp'); if(!wrap) return;
   const p = products.find(x=>x.id===bomProductId); if(!p) return;
   const qty = parseInt(v('bom-mrp-qty'))||0;
-  const leaves = Object.values(explodeBomLeaves(p.id, qty));   // 반제품까지 전개한 구매 원자재
+  const leaves = Object.values(explodeBomLeaves(p.id, qty)).filter(L=>
+    !bomMaterialQuery || [L.name,L.spec,L.supplier].join(' ').toLowerCase().includes(bomMaterialQuery)
+  );   // 반제품까지 전개한 구매 원자재
   const hasSub = bomFor(p.id).some(b=>b.subProductId);
   let totalOrder = 0;
   const rows = leaves.length ? leaves.map(L=>{
@@ -178,11 +274,103 @@ function applyBomCost(){
 /* 반제품 연결 옵션 — 현재 제품 자신은 제외(직접 순환 방지) */
 function _bomSubOptions(sel){
   return '<option value="">— 구매 자재 (단가 직접 입력) —</option>' +
-    products.filter(p=>p.id!==bomProductId).map(p=>`<option value="${p.id}"${p.id===sel?' selected':''}>${p.name} (${p.id})</option>`).join('');
+    products.filter(p=>p.id!==bomProductId).map(p=>`<option value="${esc(p.id)}"${p.id===sel?' selected':''}>${esc(p.name)} (${esc(p.id)})</option>`).join('');
 }
 function onBmaSubChange(){
   const isSub = !!v('bma-sub');
   ['bma-price','bma-supplier'].forEach(id=>{ const el=inp(id); if(el){ el.disabled=isSub; el.style.opacity=isSub?0.5:1; } });
+}
+function _bomImportKey(name, unit){
+  return (name||'').trim().toLowerCase() + '|' + (unit||'EA').trim().toLowerCase();
+}
+function _bomImportEsc(value){
+  return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function openBomMaterialImport(){
+  const p = products.find(x=>x.id===bomProductId);
+  if (!p){ showToast('제품을 먼저 선택하세요.','error'); return; }
+  const grouped = {};
+  materials.filter(m=>m.productId===p.id && (m.name||'').trim()).forEach(m=>{
+    const key = _bomImportKey(m.name, m.unit);
+    if (!grouped[key]) grouped[key] = { key, name:m.name.trim(), unit:m.unit||'EA', totalQty:0, count:0, sourceIds:[], latest:null };
+    const row = grouped[key];
+    row.totalQty += Number(m.qty)||0;
+    row.count++;
+    row.sourceIds.push(m.id);
+    const stamp = (m.orderDate||'') + '|' + (m.id||'');
+    const latestStamp = row.latest ? ((row.latest.orderDate||'') + '|' + (row.latest.id||'')) : '';
+    if (!row.latest || stamp >= latestStamp) row.latest = m;
+  });
+  bomMaterialImportRows = Object.values(grouped).map(row=>{
+    const existing = bomList.find(b=>b.productId===p.id && !b.subProductId && _bomImportKey(b.name,b.unit)===row.key);
+    const productQty = Number(p.qty)||1;
+    const latestOrderQty = Number(row.latest?.qty)||0;
+    const suggestedQty = latestOrderQty > 0 ? Math.round((latestOrderQty / productQty) * 10000) / 10000 : 0;
+    row.existingId = existing ? existing.id : '';
+    row.currentQtyPer = existing ? (Number(existing.qtyPer)||0) : null;
+    row.productQty = productQty;
+    row.latestOrderQty = latestOrderQty;
+    row.qtyPer = suggestedQty || row.currentQtyPer || '';
+    return row;
+  }).sort((a,b)=>a.name.localeCompare(b.name,'ko-KR'));
+
+  inp('bom-material-import-info').innerHTML =
+    `<b>${_bomImportEsc(p.name)}</b>에 연결된 발주 내역 ${materials.filter(m=>m.productId===p.id).length}건을 ` +
+    `${bomMaterialImportRows.length}개 자재로 묶었습니다. 소요량은 최근 발주 수량 ÷ 제품 수량 ${Number(p.qty)||1}${_bomImportEsc(p.unit||'대')}로 계산했습니다.`;
+  inp('bom-material-import-body').innerHTML = bomMaterialImportRows.length ? bomMaterialImportRows.map((row,i)=>{
+    const latest = row.latest || {};
+    return `<tr>
+      <td style="text-align:center;"><input class="bom-import-check" type="checkbox" data-index="${i}" checked></td>
+      <td><b>${_bomImportEsc(row.name)}</b><div style="font-size:10px;color:var(--tx-t);">${row.count}건 · ${_bomImportEsc(row.unit)}</div></td>
+      <td>${_bomImportEsc(latest.supplier||'미지정')}</td>
+      <td style="text-align:right;">${row.totalQty}${_bomImportEsc(row.unit)}</td>
+      <td style="text-align:right;">${fmtW(Number(latest.unitPrice)||0)}</td>
+      <td style="text-align:right;">
+        <input class="bom-import-qty" data-index="${i}" type="number" min="0.0001" step="0.0001" value="${row.qtyPer}" placeholder="필수 입력" style="width:110px;text-align:right;"> ${_bomImportEsc(row.unit)}
+        <div style="font-size:10px;color:var(--tx-t);margin-top:3px;">${row.latestOrderQty}${_bomImportEsc(row.unit)} ÷ ${row.productQty}${_bomImportEsc(p.unit||'대')}</div>
+      </td>
+      <td>${row.existingId?`<span class="bd bd-info">기존 항목 갱신</span><div style="font-size:10px;color:var(--tx-t);margin-top:3px;">현재 ${row.currentQtyPer}${_bomImportEsc(row.unit)}</div>`:'<span class="bd bd-ok">신규 추가</span>'}</td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="7">${empty('선택한 제품에 연결된 자재 수급/발주 내역이 없습니다.')}</td></tr>`;
+  const all = inp('bom-material-import-all');
+  if (all) all.checked = bomMaterialImportRows.length > 0;
+  inp('bom-material-import-modal').classList.add('open');
+}
+function toggleBomMaterialImportAll(checked){
+  document.querySelectorAll('.bom-import-check').forEach(el=>{ el.checked = checked; });
+}
+function applyBomMaterialImport(){
+  if (!checkAdminAction()) return;
+  const selected = Array.from(document.querySelectorAll('.bom-import-check:checked'));
+  if (!selected.length){ showToast('반영할 자재를 선택하세요.','error'); return; }
+  let added = 0, updated = 0, skipped = 0;
+  selected.forEach(check=>{
+    const i = Number(check.dataset.index);
+    const row = bomMaterialImportRows[i];
+    const qtyEl = document.querySelector(`.bom-import-qty[data-index="${i}"]`);
+    const qtyPer = qtyEl ? parseFloat(qtyEl.value) : 0;
+    if (!row || !(qtyPer > 0)){ skipped++; return; }
+    const latest = row.latest || {};
+    const rec = {
+      productId: bomProductId, name: row.name, spec: '', qtyPer, unit: row.unit||'EA',
+      unitPrice: Number(latest.unitPrice)||0, supplier: (latest.supplier||'').trim(), subProductId: '',
+      sourceMaterialIds: row.sourceIds.slice(), lastSyncedAt: new Date().toISOString()
+    };
+    const existing = row.existingId ? bomList.find(b=>b.id===row.existingId) : null;
+    if (existing){
+      rec.spec = existing.spec||'';
+      Object.assign(existing, rec);
+      updated++;
+    } else {
+      bomList.push(Object.assign({ id: nextCode('BM', bomList) }, rec));
+      added++;
+    }
+  });
+  if (!added && !updated){ showToast('소요량이 입력된 항목이 없습니다.','error'); return; }
+  saveStorage('bomList', bomList);
+  closeModal('bom-material-import-modal');
+  renderBom();
+  showToast(`자재 발주 내역을 BOM에 반영했습니다. 신규 ${added}건 · 갱신 ${updated}건${skipped?` · 제외 ${skipped}건`:''}`);
 }
 function openBomAdd(){
   if (!bomProductId){ showToast('제품을 먼저 선택하세요.','error'); return; }
@@ -197,6 +385,16 @@ function openBomEdit(id){
   editBomId = id;
   inp('bom-modal-ttl').innerHTML = '<i class="ti ti-edit" style="color:var(--tx-w);"></i>BOM 자재 수정';
   sv('bma-name',b.name); sv('bma-spec',b.spec||''); sv('bma-qty',b.qtyPer); sv('bma-unit',b.unit||'EA'); sv('bma-price',b.unitPrice||'0'); sv('bma-supplier',b.supplier||'');
+  inp('bma-sub').innerHTML = _bomSubOptions(b.subProductId||''); onBmaSubChange();
+  inp('bom-modal').classList.add('open');
+}
+function cloneBom(id){
+  if (!checkAdminAction()) return;
+  const b = bomList.find(x=>x.id===id); if(!b) return;
+  editBomId = null;
+  inp('bom-modal-ttl').innerHTML = '<i class="ti ti-copy" style="color:var(--tx-i);"></i>BOM 자재 복제 추가';
+  sv('bma-name',b.name); sv('bma-spec',b.spec||''); sv('bma-qty',b.qtyPer);
+  sv('bma-unit',b.unit||'EA'); sv('bma-price',b.unitPrice||'0'); sv('bma-supplier',b.supplier||'');
   inp('bma-sub').innerHTML = _bomSubOptions(b.subProductId||''); onBmaSubChange();
   inp('bom-modal').classList.add('open');
 }
@@ -291,9 +489,9 @@ function _finAR() {
     if (!paid) apUnpaid += amt;
     return `
       <tr style="${paid?'opacity:.55;':''}">
-        <td>${p.date||'—'}</td>
-        <td>${p.supplier||'—'}</td>
-        <td>${p.itemName||'—'}</td>
+        <td>${esc(p.date)||'—'}</td>
+        <td>${esc(p.supplier)||'—'}</td>
+        <td>${esc(p.itemName)||'—'}</td>
         <td style="font-weight:700;">${fmtW(amt)}</td>
         <td>${paid?'<span class="bd bd-ok">지급완료</span>':'<span class="bd bd-warn">미지급</span>'}</td>
         <td><button class="btn btn-sm" onclick="togglePayable('${p.id}')">${paid?'미지급 처리':'지급 처리'}</button></td>
@@ -342,12 +540,12 @@ function _finEtc() {
   const inc = finEntriesSum('수입'), exp = finEntriesSum('비용');
   const body = list.length ? list.map(e => `
     <tr>
-      <td>${e.date||'—'}</td>
+      <td>${esc(e.date)||'—'}</td>
       <td>${e.type==='수입'?'<span class="bd bd-ok">수입</span>':'<span class="bd bd-err">비용</span>'}</td>
-      <td>${e.category||'기타'}</td>
-      <td>${e.title||''}</td>
+      <td>${esc(e.category)||'기타'}</td>
+      <td>${esc(e.title)||''}</td>
       <td style="font-weight:700;color:${e.type==='수입'?'var(--tx-ok)':'var(--tx-err)'};">${fmtW(Number(e.amount)||0)}</td>
-      <td>${e.note||''}</td>
+      <td>${esc(e.note)||''}</td>
       <td><button class="del-btn" onclick="deleteFinanceEntry('${e.id}')"><i class="ti ti-trash"></i></button></td>
     </tr>`).join('') : `<tr><td colspan="7">${empty('등록된 기타 수입/비용 항목이 없습니다. 우측 상단 [기타 항목 등록] 버튼으로 추가하세요.')}</td></tr>`;
   return `
@@ -462,4 +660,3 @@ document.addEventListener('keydown', function(e) {
     openCurrentPageRegistration();
   }
 });
-

@@ -1,5 +1,6 @@
 /* ════════ [복구] 생산 지시 (renderOrders) ════════ */
 function renderOrders() {
+  ensureDateView('orders', 'orders-table', workOrders.map(o=>o.start), renderOrders);
   const totalQty = workOrders.reduce((s,o)=>s+(o.qty||0),0);
   const totalDone = workOrders.reduce((s,o)=>s+(o.done||0),0);
   const inProg = workOrders.filter(o=>o.status==='진행중').length;
@@ -21,6 +22,7 @@ function renderOrders() {
 
   const q=(v('orders-q')||'').toLowerCase(), fs=v('orders-fs')||'';
   let fil = workOrders.filter(o=>{
+    if (!dateViewMatch('orders', o.start)) return false;
     if (fs && o.status!==fs) return false;
     if (q && ![o.id, o.manager||'', getProductName(o.productId), getClientName(o.clientId)].join(' ').toLowerCase().includes(q)) return false;
     return true;
@@ -82,11 +84,11 @@ function renderOrders() {
           const hasNote = !!(o.note||'').trim();
           return `
             <tr style="${rowBg}">
-              <td style="font-family:monospace; font-size:11px; font-weight:700; color:var(--tx-i);">${o.id}</td>
-              <td style="font-weight:600;">${getClientName(o.clientId)}</td>
-              <td style="font-weight:700;">${getProductName(o.productId)}</td>
-              <td style="text-align:center;"><span class="bd" style="font-size:10px;">${o.line}</span></td>
-              <td style="text-align:center; font-weight:700;">${o.qty}</td>
+              <td style="font-family:monospace; font-size:11px; font-weight:700; color:var(--tx-i);">${esc(o.id)}</td>
+              <td style="font-weight:600;">${esc(getClientName(o.clientId))}</td>
+              <td style="font-weight:700;">${esc(getProductName(o.productId))}</td>
+              <td style="text-align:center;"><span class="bd" style="font-size:10px;">${esc(o.line)}</span></td>
+              <td style="text-align:center; font-weight:700;">${esc(o.qty)}</td>
               <td>
                 <input type="number" value="${o.done}" min="0" max="${o.qty}"
                   style="width:60px; height:26px; text-align:center; font-weight:700; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx);"
@@ -97,18 +99,18 @@ function renderOrders() {
                   style="width:50px; height:26px; text-align:center; font-weight:700; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:${o.defect>0?'#e03131':'var(--tx)'};"
                   onchange="qDefect('${o.id}',this.value)">
               </td>
-              <td style="font-size:11px;">${o.start||'—'}</td>
-              <td>${dayBadge(o.due)}<div style="font-size:10px; color:var(--tx-t); margin-top:1px;">${o.due||''}</div></td>
+              <td style="font-size:11px;">${esc(o.start)||'—'}</td>
+              <td>${dayBadge(o.due)}<div style="font-size:10px; color:var(--tx-t); margin-top:1px;">${esc(o.due)||''}</div></td>
               <td>${pctBar(o.done, o.qty, 72)}</td>
               <td>
                 <select class="stat-sel" style="font-weight:700; color:${statusColor}; border-color:${statusColor};" onchange="qStatus('${o.id}',this.value)">
                   ${['대기','진행중','완료','지연'].map(s=>`<option${s===o.status?' selected':''}>${s}</option>`).join('')}
                 </select>
               </td>
-              <td style="font-size:11px; font-weight:600;">${o.manager||'—'}</td>
+              <td style="font-size:11px; font-weight:600;">${esc(o.manager)||'—'}</td>
               <td style="text-align:center;">
                 ${hasNote
-                  ? `<button onclick="showOrderNote('${o.id}')" title="${(o.note||'').replace(/"/g,'&quot;').slice(0,60)}"
+                  ? `<button onclick="showOrderNote('${esc(o.id)}')" title="${esc((o.note||'').slice(0,60))}"
                       style="background:var(--bg-i); border:1px solid var(--br-i); border-radius:var(--rm); width:28px; height:28px; cursor:pointer; color:var(--tx-i); position:relative;">
                       <i class="ti ti-notes" style="font-size:14px;"></i>
                     </button>`
@@ -217,6 +219,22 @@ function openOrderEdit(id) {
   sv('oa-status', o.status);
   fillWorkerSelect('oa-mgr', o.manager);
   sv('oa-note', o.note || '');
+  inp('order-modal').classList.add('open');
+}
+
+function cloneOrder(id) {
+  if (!checkAdminAction()) return;
+  const o = workOrders.find(x => x.id === id); if (!o) return;
+  editOrderId = null;
+  inp('order-modal-ttl').innerHTML = `<i class="ti ti-copy" style="color:var(--tx-i);"></i>생산 지시서 복제 발행 — ${o.id}`;
+  const saveBtn = inp('order-save-btn');
+  if (saveBtn) saveBtn.innerHTML = '<i class="ti ti-check"></i>신규 발행';
+  sv('oa-id', nextCode('WO', workOrders));
+  fillClientSelect('oa-client', false); sv('oa-client', o.clientId);
+  fillProductSelect('oa-product', o.clientId, o.productId);
+  sv('oa-line', o.line); sv('oa-qty', o.qty); sv('oa-done', 0);
+  sv('oa-start', today()); sv('oa-due', o.due||''); sv('oa-status', '대기');
+  fillWorkerSelect('oa-mgr', o.manager); sv('oa-note', o.note||'');
   inp('order-modal').classList.add('open');
 }
 

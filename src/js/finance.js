@@ -125,10 +125,10 @@ function _finPurchase() {
   const total = finPurchaseTotal();
   const body = list.length ? list.map(p => `
     <tr>
-      <td>${p.date||'—'}</td>
-      <td>${p.supplier||'—'}</td>
-      <td>${p.itemName||'—'}</td>
-      <td>${p.qty}${p.unit||''}</td>
+      <td>${esc(p.date)||'—'}</td>
+      <td>${esc(p.supplier)||'—'}</td>
+      <td>${esc(p.itemName)||'—'}</td>
+      <td>${esc(p.qty)}${esc(p.unit)||''}</td>
       <td>${fmtW(p.unitPrice||0)}</td>
       <td style="font-weight:700;color:#e8590c;">${fmtW((p.unitPrice||0)*(p.qty||0))}</td>
       <td>${statusBadge(p.status||'작성중')}</td>
@@ -157,8 +157,8 @@ function _finCost() {
     tCost += unitCost*qty; tRev += price*qty; tMargin += margin*qty;
     return `
     <tr>
-      <td style="font-weight:700;">${p.id}</td>
-      <td style="font-weight:700;">${p.name}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${getClientName(p.clientId)}</span></td>
+      <td style="font-weight:700;">${esc(p.id)}</td>
+      <td style="font-weight:700;">${esc(p.name)}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${esc(getClientName(p.clientId))}</span></td>
       <td style="text-align:right;">${fmtW(p.matCost||0)}</td>
       <td style="text-align:right;">${fmtW(p.laborCost||0)}</td>
       <td style="text-align:right;">${fmtW(p.ovhCost||0)}</td>
@@ -233,9 +233,9 @@ function _finLabor() {
     const p = calcPayroll(w); tDed+=p.deduction; tNet+=p.net;
     return `
     <tr>
-      <td style="font-weight:700;">${w.id}</td>
-      <td style="font-weight:700;">${w.name}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${w.dept||'—'} · ${w.position||'—'}</span></td>
-      <td><span class="bd bd-neu">${w.empType||'정규직'}</span></td>
+      <td style="font-weight:700;">${esc(w.id)}</td>
+      <td style="font-weight:700;">${esc(w.name)}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${esc(w.dept)||'—'} · ${esc(w.position)||'—'}</span></td>
+      <td><span class="bd bd-neu">${esc(w.empType)||'정규직'}</span></td>
       <td style="text-align:right;font-weight:700;color:var(--tx-i);">${w.salary?fmtW(p.gross):'—'}</td>
       <td style="text-align:right;">${fmtW(p.pension)}</td>
       <td style="text-align:right;">${fmtW(p.health+p.ltc)}</td>

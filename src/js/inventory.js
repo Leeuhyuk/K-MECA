@@ -34,7 +34,7 @@ function renderInventory() {
     const types = [...new Set(catItems.map(i => i.type).filter(Boolean))];
     if (ft && !types.includes(ft)) ft = '';
     typeSel.innerHTML = '<option value="">전체 세부유형</option>' +
-      types.map(t => `<option value="${t}"${t===ft?' selected':''}>${t}</option>`).join('');
+      types.map(t => `<option value="${esc(t)}"${t===ft?' selected':''}>${esc(t)}</option>`).join('');
   }
   const st = v('inv-filter-status') || '';
   const q = (v('inv-q')||'').toLowerCase();
@@ -75,18 +75,18 @@ function renderInventory() {
     '</tr></thead><tbody>' + rows.map(i=>{
       const low = i.qty < (i.minQty||0);
       return '<tr>' +
-        '<td style="font-size:11px;color:var(--tx-t);">'+i.id+'</td>' +
-        '<td style="font-weight:700;">'+i.name+'</td>' +
-        '<td><span class="bd '+(tColor[i.type]||'bd-neu')+'">'+i.type+'</span></td>' +
+        '<td style="font-size:11px;color:var(--tx-t);">'+esc(i.id)+'</td>' +
+        '<td style="font-weight:700;">'+esc(i.name)+'</td>' +
+        '<td><span class="bd '+(tColor[i.type]||'bd-neu')+'">'+esc(i.type)+'</span></td>' +
         '<td style="font-weight:700;'+(low?'color:var(--tx-d);':'')+'">' +
-          '<button class="btn btn-sm" style="padding:0 7px;" onclick="adjustStock(\''+i.id+'\',-1)">−</button> ' +
-          i.qty+' '+i.unit+' ' +
-          '<button class="btn btn-sm" style="padding:0 7px;" onclick="adjustStock(\''+i.id+'\',1)">+</button>' +
+          '<button class="btn btn-sm" style="padding:0 7px;" onclick="adjustStock(\''+esc(i.id)+'\',-1)">−</button> ' +
+          esc(i.qty)+' '+esc(i.unit)+' ' +
+          '<button class="btn btn-sm" style="padding:0 7px;" onclick="adjustStock(\''+esc(i.id)+'\',1)">+</button>' +
           (low?' <i class="ti ti-alert-triangle" style="color:var(--tx-d);" title="안전재고 미달"></i>':'') +
         '</td>' +
         '<td>'+(i.minQty||0)+'</td>' +
-        '<td style="font-size:11px;">'+(i.location||'—')+'</td>' +
-        '<td style="font-size:11px;color:var(--tx-t);">'+(i.note||'—')+'</td>' +
+        '<td style="font-size:11px;">'+(esc(i.location)||'—')+'</td>' +
+        '<td style="font-size:11px;color:var(--tx-t);">'+(esc(i.note)||'—')+'</td>' +
         '<td style="white-space:nowrap;"><button class="edit-btn" onclick="openInvEdit(\''+i.id+'\')"><i class="ti ti-edit"></i>수정</button>' +
         '<button class="del-btn" style="margin-left:4px;" onclick="deleteInventory(\''+i.id+'\')"><i class="ti ti-trash"></i></button></td>' +
       '</tr>';
@@ -97,7 +97,7 @@ function renderInventory() {
     const curVal = invLedgerSel.value;
     invLedgerSel.innerHTML = '<option value="">전체 품목</option>' +
       inventory.map(function(i) {
-        return '<option value="' + i.id + '"' + (i.id === curVal ? ' selected' : '') + '>' + i.name + '</option>';
+        return '<option value="' + esc(i.id) + '"' + (i.id === curVal ? ' selected' : '') + '>' + esc(i.name) + '</option>';
       }).join('');
   }
   renderInventoryLedger();
@@ -181,12 +181,12 @@ function renderInventoryLedger() {
     rows.slice(0, 100).map(function(e) {
       const inv = inventory.find(function(x) { return x.id === e.invId; });
       return '<tr>' +
-        '<td style="font-size:11px;">' + e.date + '</td>' +
-        '<td style="font-weight:600;">' + (inv ? inv.name : e.invId) + '</td>' +
-        '<td style="color:' + (typeColor[e.type]||'var(--tx)') + ';font-weight:700;">' + e.type + '</td>' +
-        '<td style="font-weight:700;">' + (e.qty > 0 ? '+' : '') + e.qty + '</td>' +
-        '<td style="font-size:11px;color:var(--tx-t);">' + e.reason + '</td>' +
-        '<td style="font-size:11px;color:var(--tx-t);">' + (e.refId || '—') + '</td>' +
+        '<td style="font-size:11px;">' + esc(e.date) + '</td>' +
+        '<td style="font-weight:600;">' + esc(inv ? inv.name : e.invId) + '</td>' +
+        '<td style="color:' + (typeColor[e.type]||'var(--tx)') + ';font-weight:700;">' + esc(e.type) + '</td>' +
+        '<td style="font-weight:700;">' + (e.qty > 0 ? '+' : '') + esc(e.qty) + '</td>' +
+        '<td style="font-size:11px;color:var(--tx-t);">' + esc(e.reason) + '</td>' +
+        '<td style="font-size:11px;color:var(--tx-t);">' + (esc(e.refId) || '—') + '</td>' +
         '</tr>';
     }).join('') +
     '</tbody></table>';

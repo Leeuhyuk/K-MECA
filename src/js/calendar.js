@@ -1,23 +1,63 @@
 /* ════════ 납기 캘린더 ════════ */
 var calYear  = new Date().getFullYear();
 var calMonth = new Date().getMonth(); // 0-based
+var calDay   = new Date().getDate();
+var calView  = 'month';
 
 function calNav(delta) {
-  calMonth += delta;
-  if (calMonth > 11) { calMonth = 0; calYear++; }
-  if (calMonth < 0)  { calMonth = 11; calYear--; }
+  if (calView === 'year') {
+    calYear += delta;
+  } else if (calView === 'day') {
+    var d = new Date(calYear, calMonth, calDay);
+    d.setDate(d.getDate() + delta);
+    calYear = d.getFullYear(); calMonth = d.getMonth(); calDay = d.getDate();
+  } else {
+    calMonth += delta;
+    if (calMonth > 11) { calMonth = 0; calYear++; }
+    if (calMonth < 0)  { calMonth = 11; calYear--; }
+    calDay = Math.min(calDay, new Date(calYear, calMonth + 1, 0).getDate());
+  }
   renderCalendar();
 }
 
 function calGoToday() {
-  calYear  = new Date().getFullYear();
-  calMonth = new Date().getMonth();
+  var now = new Date();
+  calYear = now.getFullYear(); calMonth = now.getMonth(); calDay = now.getDate();
+  renderCalendar();
+}
+function calResetView() {
+  calView = 'month';
+  calGoToday();
+}
+
+function calChangeView(view) {
+  calView = view || 'month';
+  renderCalendar();
+}
+
+function calOpenMonth(month) {
+  calMonth = month;
+  calView = 'month';
+  var sel = document.getElementById('cal-view'); if (sel) sel.value = 'month';
+  renderCalendar();
+}
+
+function calOpenDay(dateStr) {
+  var p = dateStr.split('-');
+  calYear = Number(p[0]); calMonth = Number(p[1]) - 1; calDay = Number(p[2]);
+  calView = 'day';
+  var sel = document.getElementById('cal-view'); if (sel) sel.value = 'day';
   renderCalendar();
 }
 
 function renderCalendar() {
   var titleEl = document.getElementById('cal-title');
-  if (titleEl) titleEl.textContent = calYear + '년 ' + (calMonth + 1) + '월';
+  if (titleEl) {
+    titleEl.textContent = calView === 'year' ? calYear + '년'
+      : calView === 'day' ? calYear + '년 ' + (calMonth + 1) + '월 ' + calDay + '일'
+      : calYear + '년 ' + (calMonth + 1) + '월';
+  }
+  var viewSel = document.getElementById('cal-view'); if (viewSel) viewSel.value = calView;
 
   var events = {};
   function addEvent(date, label, color) {
@@ -42,6 +82,38 @@ function renderCalendar() {
   }).forEach(function(m) {
     addEvent(m.expectedDate, '🔩 ' + m.name + ' (' + m.id + ')', '#40c057');
   });
+
+  var grid = document.getElementById('cal-grid');
+  if (!grid) return;
+  if (calView === 'year') {
+    var monthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+    grid.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">' +
+      monthNames.map(function(name, month) {
+        var prefix = calYear + '-' + String(month + 1).padStart(2,'0');
+        var dates = Object.keys(events).filter(function(d){ return d.slice(0,7) === prefix; });
+        var count = dates.reduce(function(s,d){ return s + events[d].length; }, 0);
+        var productCount = (products||[]).filter(function(p){ return (p.deliveryDate||'').slice(0,7)===prefix && p.status!=='완료' && p.status!=='납품'; }).length;
+        var materialCount = (materials||[]).filter(function(m){ return (m.expectedDate||'').slice(0,7)===prefix && m.status!=='입고완료'; }).length;
+        return '<button onclick="calOpenMonth(' + month + ')" style="text-align:left;padding:16px;border:1px solid var(--br);border-radius:var(--rl);background:var(--bg-p);color:var(--tx);cursor:pointer;">' +
+          '<div style="font-size:15px;font-weight:800;margin-bottom:10px;">' + name + '</div>' +
+          '<div style="font-size:22px;font-weight:800;color:' + (count?'var(--tx-i)':'var(--tx-t)') + ';">' + count + '건</div>' +
+          '<div style="font-size:11px;color:var(--tx-t);margin-top:6px;">제품 납기 ' + productCount + ' · 자재 입고 ' + materialCount + '</div></button>';
+      }).join('') + '</div>';
+    return;
+  }
+
+  if (calView === 'day') {
+    var dayStr = calYear + '-' + String(calMonth + 1).padStart(2,'0') + '-' + String(calDay).padStart(2,'0');
+    var dayEvents = events[dayStr] || [];
+    grid.innerHTML = '<div class="card"><div class="card-hd"><span class="card-ttl"><i class="ti ti-calendar-event"></i>' + dayStr + ' 일정</span>' +
+      '<span style="font-size:11px;color:var(--tx-t);">' + dayEvents.length + '건</span></div>' +
+      (dayEvents.length ? dayEvents.map(function(e) {
+        return '<div style="display:flex;align-items:center;gap:10px;padding:11px 4px;border-bottom:1px solid var(--br);">' +
+          '<span style="width:9px;height:9px;border-radius:50%;background:' + e.color + ';flex:none;"></span>' +
+          '<span style="font-size:13px;font-weight:600;">' + e.label + '</span></div>';
+      }).join('') : '<div style="padding:30px;text-align:center;color:var(--tx-t);">등록된 일정이 없습니다.</div>') + '</div>';
+    return;
+  }
 
   var firstDay = new Date(calYear, calMonth, 1).getDay();
   var lastDate = new Date(calYear, calMonth + 1, 0).getDate();
@@ -77,7 +149,7 @@ function renderCalendar() {
       html += '<td style="height:90px;padding:4px;border:1px solid var(--br);vertical-align:top;' +
         'background:' + (isToday ? 'rgba(79,142,247,.08)' : 'var(--bg-p)') + ';' +
         'cursor:' + (dayEvents.length ? 'pointer' : 'default') + ';"' +
-        (dayEvents.length ? ' onclick="calShowDetail(\'' + dateStr + '\')"' : '') + '>';
+        ' onclick="calOpenDay(\'' + dateStr + '\')" title="일 보기로 전환">';
 
       if (isToday) {
         html += '<div style="font-size:12px;font-weight:700;margin-bottom:3px;">' +
@@ -105,8 +177,7 @@ function renderCalendar() {
   }
   html += '</tbody></table>';
 
-  var grid = document.getElementById('cal-grid');
-  if (grid) grid.innerHTML = html;
+  grid.innerHTML = html;
 }
 
 function calShowDetail(dateStr) {

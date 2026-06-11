@@ -63,13 +63,13 @@ function renderWorkers() {
       <tbody>
         ${filteredWorkers.map(w => `
           <tr>
-            <td style="font-weight:700;">${w.id}</td>
-            <td style="font-weight:700;">${w.name}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${w.email||''}</span></td>
-            <td>${w.dept || '—'}</td>
-            <td>${w.position || '—'}</td>
-            <td><span class="bd bd-neu">${w.empType || '정규직'}</span></td>
-            <td>${w.hireDate || '—'}</td>
-            <td>${w.phone || '—'}</td>
+            <td style="font-weight:700;">${esc(w.id)}</td>
+            <td style="font-weight:700;">${esc(w.name)}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${esc(w.email)||''}</span></td>
+            <td>${esc(w.dept) || '—'}</td>
+            <td>${esc(w.position) || '—'}</td>
+            <td><span class="bd bd-neu">${esc(w.empType) || '정규직'}</span></td>
+            <td>${esc(w.hireDate) || '—'}</td>
+            <td>${esc(w.phone) || '—'}</td>
             <td style="font-weight:700;color:var(--tx-i);">${w.salary ? fmtW(w.salary) : '—'}</td>
             <td>
               <select class="stat-sel" onchange="changeWorkerStatus('${w.id}', this.value)">

@@ -30,12 +30,12 @@ function renderClosedProjects() {
     return `
       <div style="border:1px solid var(--br); border-radius:var(--rl); margin-bottom:12px; overflow:hidden;">
         <div style="display:flex; align-items:center; gap:12px; padding:13px 16px; background:var(--bg-s); border-bottom:1px solid var(--br);">
-          <div class="c-avatar" style="background:#868e96; opacity:.7; width:34px; height:34px; font-size:13px;">${c.name.slice(0,2)}</div>
+          <div class="c-avatar" style="background:#868e96; opacity:.7; width:34px; height:34px; font-size:13px;">${esc(c.name.slice(0,2))}</div>
           <div style="flex:1; min-width:0;">
-            <div style="font-size:13px; font-weight:700; color:var(--tx-s);">${c.name}
-              <span class="bd" style="font-size:10px; background:#86868618; color:#868686; border-color:#86868644; margin-left:6px;">종료 ${c.closedAt||''}</span>
+            <div style="font-size:13px; font-weight:700; color:var(--tx-s);">${esc(c.name)}
+              <span class="bd" style="font-size:10px; background:#86868618; color:#868686; border-color:#86868644; margin-left:6px;">종료 ${esc(c.closedAt)||''}</span>
             </div>
-            <div style="font-size:11px; color:var(--tx-t); margin-top:2px;">담당: ${c.manager||'—'} · 제품 ${prods.length}종 · 납품 ${cDlvs.length}건</div>
+            <div style="font-size:11px; color:var(--tx-t); margin-top:2px;">담당: ${esc(c.manager)||'—'} · 제품 ${prods.length}종 · 납품 ${cDlvs.length}건</div>
           </div>
           <div style="text-align:right; margin-right:8px;">
             <div style="font-size:16px; font-weight:700; color:var(--tx-ok);">${fmtW(cAmt)}</div>
@@ -54,11 +54,11 @@ function renderClosedProjects() {
             <tbody>
               ${cDlvs.map(d => `
                 <tr>
-                  <td style="font-family:monospace; color:var(--tx-i); font-weight:700;">${d.id}</td>
-                  <td>${d.deliveredAt}</td>
-                  <td style="font-weight:600;">${d.productName}</td>
-                  <td style="color:var(--tx-t);">${d.spec||'—'}</td>
-                  <td>${d.qty} ${d.unit}</td>
+                  <td style="font-family:monospace; color:var(--tx-i); font-weight:700;">${esc(d.id)}</td>
+                  <td>${esc(d.deliveredAt)}</td>
+                  <td style="font-weight:600;">${esc(d.productName)}</td>
+                  <td style="color:var(--tx-t);">${esc(d.spec)||'—'}</td>
+                  <td>${esc(d.qty)} ${esc(d.unit)}</td>
                   <td>${fmtW(d.price)}</td>
                   <td style="font-weight:700; color:var(--tx-ok);">${fmtW(d.price*d.qty)}</td>
                 </tr>`).join('')}
@@ -74,15 +74,17 @@ function renderClosedProjects() {
 }
 
 function renderDeliveries() {
+  ensureDateView('deliveries', 'dlv-table', deliveries.map(d=>d.deliveredAt), renderDeliveries);
   const fc = inp('dlv-filter-client');
   if (fc) {
     const cur = fc.value;
     fc.innerHTML = '<option value="">전체 고객사</option>' +
-      clients.map(c=>`<option value="${c.id}"${c.id===cur?' selected':''}>${c.name}</option>`).join('');
+      clients.map(c=>`<option value="${esc(c.id)}"${c.id===cur?' selected':''}>${esc(c.name)}</option>`).join('');
   }
   const fcVal = v('dlv-filter-client');
   const q = (v('dlv-q')||'').toLowerCase();
   let fil = deliveries.filter(d=>
+    dateViewMatch('deliveries', d.deliveredAt) &&
     (!fcVal || d.clientId===fcVal) &&
     (!q || [d.productName,getClientName(d.clientId),d.id].join(' ').toLowerCase().includes(q))
   );
@@ -142,15 +144,15 @@ function renderDeliveries() {
       <tbody>
         ${fil.map(d=>`
           <tr>
-            <td style="font-family:monospace;font-weight:700;font-size:11px;color:var(--tx-i);">${d.id}</td>
-            <td style="font-size:11px;">${d.deliveredAt}</td>
-            <td style="font-weight:600;">${getClientName(d.clientId)}</td>
-            <td style="font-weight:700;">${d.productName}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${d.spec||''}</span></td>
-            <td style="font-size:11px;color:var(--tx-t);">${d.spec||'—'}</td>
-            <td style="font-weight:700;">${d.qty} <span style="font-weight:400;">${d.unit}</span></td>
+            <td style="font-family:monospace;font-weight:700;font-size:11px;color:var(--tx-i);">${esc(d.id)}</td>
+            <td style="font-size:11px;">${esc(d.deliveredAt)}</td>
+            <td style="font-weight:600;">${esc(getClientName(d.clientId))}</td>
+            <td style="font-weight:700;">${esc(d.productName)}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${esc(d.spec)||''}</span></td>
+            <td style="font-size:11px;color:var(--tx-t);">${esc(d.spec)||'—'}</td>
+            <td style="font-weight:700;">${esc(d.qty)} <span style="font-weight:400;">${esc(d.unit)}</span></td>
             <td class="amt-blue">${fmtW(d.price)}</td>
             <td style="font-weight:700;color:var(--tx-ok);">${fmtW(d.price*d.qty)}</td>
-            <td style="font-size:11px;color:var(--tx-t);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.note||'—'}</td>
+            <td style="font-size:11px;color:var(--tx-t);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(d.note)||'—'}</td>
             <td><button class="del-btn" onclick="deleteDelivery('${d.id}')"><i class="ti ti-trash"></i></button></td>
           </tr>`).join('')}
       </tbody>

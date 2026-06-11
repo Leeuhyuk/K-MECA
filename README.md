@@ -1,6 +1,6 @@
 # MES Pro — 소스 구조 안내
 
-`MESPro.html` 은 **빌드 결과물(단일 자가완결 파일)** 입니다. 직접 편집하지 말고
+`index.html` 은 **빌드 결과물(단일 자가완결 파일)** 입니다. 직접 편집하지 말고
 `src/` 의 기능별 소스를 고친 뒤 `build.py` 로 다시 합치세요.
 
 ## 빠른 시작
@@ -10,14 +10,14 @@
 python build.py
 ```
 
-생성된 `MESPro.html` 을 브라우저(Chrome/Edge)로 열면 됩니다.
+생성된 `index.html` 을 브라우저(Chrome/Edge)로 열면 됩니다.
 (모든 CSS/JS 가 인라인된 단일 파일이라 기존처럼 메일·복사로 그대로 배포 가능)
 
 ## 폴더 구조
 
 ```
-build.py                     # 빌드: src/ → MESPro.html
-MESPro.html                  # ★ 빌드 결과물 (직접 수정 금지)
+build.py                     # 빌드: src/ → index.html
+index.html                   # ★ 빌드 결과물 (직접 수정 금지)
 src/
   index.template.html        # 뼈대 HTML. <!--#include 경로--> 마커로 조각을 끼움
   styles/                    # CSS (기능별)
@@ -56,9 +56,9 @@ tools/
   특히 `data-storage.js`(맨 위)와 `shortcuts-theme-boot.js`(기동 초기화)의
   상대 위치를 함부로 바꾸지 마세요.
 
-- **데이터 보존**: 앱 사용 중 자동저장은 `MESPro.html` 안의
+- **데이터 보존**: 앱 사용 중 자동저장은 `index.html` 안의
   `<script id="embedded-data">` 만 갱신합니다. `build.py` 는 재빌드 시
-  기존 `MESPro.html` 의 이 데이터 블록을 읽어 그대로 다시 넣으므로,
+  기존 `index.html` 의 이 데이터 블록을 읽어 그대로 다시 넣으므로,
   **재빌드해도 저장된 데이터가 사라지지 않습니다.**
 
 - **검증됨**: 최초 분리 직후 `build.py` 결과물이 원본과 바이트 단위로 100% 동일함을

@@ -76,7 +76,7 @@
 /* 카드 내부 세부 돔 구조 */
 .kb-card-badge { display: inline-flex; align-items: center; font-size: 8.5px; font-weight: 800; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid; max-width: fit-content; }
 .kb-card-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-.kb-card-name { font-size: 13px; font-weight: 700; color: #ffffff !important; line-height: 1.35; }
+.kb-card-name { font-size: 13px; font-weight: 700; color: var(--tx); line-height: 1.35; }
 .kb-card-client-row { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--tx-t); font-weight: 500; }
 .kb-card-client-row i { font-size: 11px; }
 .kb-card-meta-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 8px; font-size: 10.5px; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 6px; }
@@ -189,6 +189,25 @@
 .action-txt { font-size: 12px; font-weight: 600; word-break: keep-all; }
 .action-sub { font-size: 11px; color: var(--tx-t); margin-top: 2px; word-break: keep-all; }
 
+/* BOM 좌측 제품 탐색 + 우측 상세 */
+.bom-layout { display:grid; grid-template-columns:280px minmax(0,1fr); gap:16px; align-items:start; }
+.bom-product-pane { position:sticky; top:0; margin:0; padding:14px; max-height:calc(100vh - 95px); display:flex; flex-direction:column; }
+.bom-product-filters { display:grid; gap:7px; margin-bottom:9px; }
+.bom-product-filters select,.bom-product-filters input { width:100%; height:34px; min-width:0; }
+.bom-product-list { display:flex; flex-direction:column; gap:5px; min-height:120px; overflow-y:auto; padding-right:3px; }
+.bom-product-item { width:100%; display:flex; align-items:center; gap:8px; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-s); color:var(--tx); padding:9px 10px; cursor:pointer; text-align:left; font-family:var(--f); }
+.bom-product-item:hover,.bom-product-item.active { border-color:var(--tx-i); background:var(--bg-i); }
+.bom-product-item-main { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.bom-product-item-main b,.bom-product-item-main small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bom-product-item-main b { font-size:11.5px; }
+.bom-product-item-main small { font-size:9.5px; color:var(--tx-t); }
+.bom-recent-products { border-top:1px solid var(--br); margin-top:10px; padding-top:9px; display:flex; flex-wrap:wrap; gap:5px; }
+.bom-recent-title { flex:1 0 100%; font-size:10px; color:var(--tx-t); }
+.bom-recent-item { max-width:100%; border:1px solid var(--br); border-radius:12px; padding:3px 8px; background:var(--bg-p); color:var(--tx-s); font-size:9.5px; cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bom-recent-item.active { color:var(--tx-i); border-color:var(--br-i); background:var(--bg-i); }
+.bom-detail-pane { min-width:0; }
+.bom-detail-header { position:sticky; top:0; z-index:80; display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:56px; padding:9px 12px; margin-bottom:12px; border:1px solid var(--br); border-radius:var(--rl); background:var(--bg-p); box-shadow:var(--shadow); }
+
 /* 품질 */
 .al { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-radius: var(--rl); margin-bottom: 10px; border: 1px solid; box-shadow: var(--shadow); }
 .al-err { background: var(--bg-d); border-color: var(--br-d); }
@@ -208,9 +227,9 @@
 .empty i { font-size: 32px; display: block; margin-bottom: 8px; opacity: .4; color: var(--tx-t); }
 
 .day-badge { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 12px; font-weight: 600; text-align: center; }
-.day-urgent { background: #ffe3e3; color: #e03131; }
-.day-warn { background: #fff4e6; color: #f76707; }
-.day-ok { background: #ebfbee; color: #37b24d; }
+.day-urgent { background: var(--bg-d); color: var(--tx-d); }
+.day-warn { background: var(--bg-w); color: var(--tx-w); }
+.day-ok { background: var(--bg-ok); color: var(--tx-ok); }
 
 @keyframes slideDown {
   from { opacity: 0; transform: translateY(-8px); }

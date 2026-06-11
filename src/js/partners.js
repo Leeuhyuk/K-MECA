@@ -81,14 +81,14 @@ function renderPartners() {
         : '<td>—</td><td>—</td>';
       return `
       <tr>
-        <td style="font-size:11px;color:var(--tx-t);">${p.id}</td>
-        <td style="font-weight:700;">${p.name}</td>
-        <td><span class="bd ${typeColor[p.type]||'bd-neu'}">${p.type}</span></td>
-        <td>${p.manager||'—'}</td>
-        <td>${p.tel||p.mobile||'—'}</td>
-        <td style="font-size:11px;">${p.email?`<a href="mailto:${p.email}" style="color:var(--tx-i);">${p.email}</a>`:'—'}</td>
-        <td style="font-size:11px;color:var(--tx-t);">${p.bizNo||'—'}</td>
-        <td style="font-size:11px;color:var(--tx-t);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${p.note||''}">${p.note||'—'}</td>
+        <td style="font-size:11px;color:var(--tx-t);">${esc(p.id)}</td>
+        <td style="font-weight:700;">${esc(p.name)}</td>
+        <td><span class="bd ${typeColor[p.type]||'bd-neu'}">${esc(p.type)}</span></td>
+        <td>${esc(p.manager)||'—'}</td>
+        <td>${esc(p.tel||p.mobile)||'—'}</td>
+        <td style="font-size:11px;">${p.email?`<a href="mailto:${esc(p.email)}" style="color:var(--tx-i);">${esc(p.email)}</a>`:'—'}</td>
+        <td style="font-size:11px;color:var(--tx-t);">${esc(p.bizNo)||'—'}</td>
+        <td style="font-size:11px;color:var(--tx-t);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(p.note||'')}">${esc(p.note)||'—'}</td>
         ${perfHtml}
         <td>
           <button class="edit-btn" onclick="openPartnerModal('${p.id}')"><i class="ti ti-edit"></i>수정</button>
@@ -195,10 +195,10 @@ function renderPickerList() {
   const typeColor = { '공급처':'bd-info', '구매처':'bd-ok', '외주처':'bd-warn', '기타':'bd-neu' };
   cont.innerHTML = list.map(p => `
     <div onclick="selectPartner('${p.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--br);transition:background .1s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background=''">
-      <span class="bd ${typeColor[p.type]||'bd-neu'}" style="flex-shrink:0;">${p.type}</span>
+      <span class="bd ${typeColor[p.type]||'bd-neu'}" style="flex-shrink:0;">${esc(p.type)}</span>
       <div style="flex:1;min-width:0;">
-        <div style="font-weight:700;font-size:13px;">${p.name}</div>
-        <div style="font-size:11px;color:var(--tx-t);">${p.manager?p.manager+' · ':''}${p.tel||p.mobile||''}${p.email?' · '+p.email:''}</div>
+        <div style="font-weight:700;font-size:13px;">${esc(p.name)}</div>
+        <div style="font-size:11px;color:var(--tx-t);">${p.manager?esc(p.manager)+' · ':''}${esc(p.tel||p.mobile)||''}${p.email?' · '+esc(p.email):''}</div>
       </div>
       <span style="font-size:11px;color:var(--tx-i);flex-shrink:0;">선택 →</span>
     </div>`).join('');
@@ -228,8 +228,8 @@ function renderClientPickerList(){
     <div onclick="selectClientPick('${c.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--br);transition:background .1s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background=''">
       <span class="bd bd-info" style="flex-shrink:0;">고객사</span>
       <div style="flex:1;min-width:0;">
-        <div style="font-weight:700;font-size:13px;">${c.name}</div>
-        <div style="font-size:11px;color:var(--tx-t);">${c.manager?c.manager+' · ':''}${c.tel||''}${c.email?' · '+c.email:''}</div>
+        <div style="font-weight:700;font-size:13px;">${esc(c.name)}</div>
+        <div style="font-size:11px;color:var(--tx-t);">${c.manager?esc(c.manager)+' · ':''}${esc(c.tel)||''}${c.email?' · '+esc(c.email):''}</div>
       </div>
       <span style="font-size:11px;color:var(--tx-i);flex-shrink:0;">선택 →</span>
     </div>`).join('');

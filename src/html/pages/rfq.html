@@ -13,10 +13,10 @@
         <option>요청전</option><option>요청중</option><option>회신완료</option><option>채택</option><option>미채택</option>
       </select>
       <input type="text" id="rfq-q" placeholder="품목명·공급처 검색..." style="min-width:180px;" oninput="renderRfq()">
-      <button class="btn btn-primary" onclick="openRfqAdd()"><i class="ti ti-plus"></i>견적요청서 등록</button>
-      <button class="btn" onclick="openRfqPrint(null)"><i class="ti ti-printer"></i>전체 PDF 출력</button>
-      <button class="btn" onclick="exportRfqXLS()"><i class="ti ti-file-spreadsheet"></i>전체 엑셀 CSV 내보내기</button>
-      <button class="btn" style="margin-left:auto;" onclick="openEmailjsSettings()"><i class="ti ti-mail-cog"></i>이메일 연동설정</button>
+      <button class="btn btn-primary btn-icon" onclick="openRfqAdd()" title="견적요청서 등록"><i class="ti ti-plus"></i></button>
+      <button class="btn btn-icon" onclick="importRfqXLS()" title="엑셀 가져오기"><i class="ti ti-file-import"></i></button>
+      <button class="btn btn-icon" onclick="exportRfqXLS()" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
+      <button class="btn btn-icon" onclick="openRfqPrint(null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
     </div>
 
     <div class="card">

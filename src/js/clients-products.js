@@ -57,12 +57,12 @@ function renderClients() {
            ondrop="onClientDrop(event, '${c.id}')"
            ondragend="onClientDragEnd(event)">
         <div class="client-hd" onclick="toggleClient('${c.id}')" style="cursor:pointer;">
-          <div class="c-avatar" style="${isClosed ? 'background:#868e96; opacity:.6;' : ''}">${c.name.slice(0, 2)}</div>
+          <div class="c-avatar" style="${isClosed ? 'background:#868e96; opacity:.6;' : ''}">${esc(c.name.slice(0, 2))}</div>
           <div style="flex:1; min-width:0;">
-            <div style="font-size:14px; font-weight:700; ${isClosed ? 'color:var(--tx-t); text-decoration:line-through;' : ''}">${c.name}
-              ${isClosed ? `<span class="bd" style="font-size:10px; background:#86868618; color:#868686; border-color:#86868644; margin-left:6px; text-decoration:none;">종료 ${c.closedAt||''}</span>` : ''}
+            <div style="font-size:14px; font-weight:700; ${isClosed ? 'color:var(--tx-t); text-decoration:line-through;' : ''}">${esc(c.name)}
+              ${isClosed ? `<span class="bd" style="font-size:10px; background:#86868618; color:#868686; border-color:#86868644; margin-left:6px; text-decoration:none;">종료 ${esc(c.closedAt)||''}</span>` : ''}
             </div>
-            <div style="font-size:11.5px; color:var(--tx-t); font-weight:500;">담당: ${c.manager||'미지정'} · 연락처: ${c.tel||'미지정'} · 제품: ${prods.length}종</div>
+            <div style="font-size:11.5px; color:var(--tx-t); font-weight:500;">담당: ${esc(c.manager)||'미지정'} · 연락처: ${esc(c.tel)||'미지정'} · 제품: ${prods.length}종</div>
           </div>
           <div style="display:flex; gap:6px; align-items:center;" onclick="event.stopPropagation();">
             <button class="btn btn-sm" onclick="showClient360('${c.id}')" title="고객사 360도 종합 현황"><i class="ti ti-building-community"></i>360°</button>
@@ -88,14 +88,14 @@ function renderClients() {
           ${!isClosed ? `
           <!-- 업체 수정 패널 -->
           <div class="add-panel edit-mode" id="${editPanelId}">
-            <div class="panel-ttl clr-edit"><i class="ti ti-edit"></i>${c.name} 프로필 수정</div>
+            <div class="panel-ttl clr-edit"><i class="ti ti-edit"></i>${esc(c.name)} 프로필 수정</div>
             <div class="fg fg4">
-              <div class="ff"><label>업체명 *</label><input id="ce-name-${c.id}" value="${c.name}"></div>
-              <div class="ff"><label>실무자명</label><input id="ce-mgr-${c.id}" value="${c.manager}"></div>
-              <div class="ff"><label>전화번호</label><input id="ce-tel-${c.id}" value="${c.tel}"></div>
-              <div class="ff"><label>이메일</label><input id="ce-email-${c.id}" value="${c.email}"></div>
-              <div class="ff"><label>계약 수주일</label><input id="ce-date-${c.id}" type="date" value="${c.date}"></div>
-              <div class="ff" style="grid-column:span 3;"><label>특이사항</label><input id="ce-note-${c.id}" value="${c.note}"></div>
+              <div class="ff"><label>업체명 *</label><input id="ce-name-${c.id}" value="${esc(c.name)}"></div>
+              <div class="ff"><label>실무자명</label><input id="ce-mgr-${c.id}" value="${esc(c.manager)}"></div>
+              <div class="ff"><label>전화번호</label><input id="ce-tel-${c.id}" value="${esc(c.tel)}"></div>
+              <div class="ff"><label>이메일</label><input id="ce-email-${c.id}" value="${esc(c.email)}"></div>
+              <div class="ff"><label>계약 수주일</label><input id="ce-date-${c.id}" type="date" value="${esc(c.date)}"></div>
+              <div class="ff" style="grid-column:span 3;"><label>특이사항</label><input id="ce-note-${c.id}" value="${esc(c.note)}"></div>
             </div>
             <div class="form-actions">
               <button class="btn" onclick="closePanel('${editPanelId}')">취소</button>
@@ -131,19 +131,19 @@ function renderClients() {
                     : '';
                   return `
                     <tr${isClosed ? ' style="opacity:.75;"' : ''}>
-                      <td>${p.id}</td>
-                      <td style="font-weight:700;">${p.name}${marginBadge}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${p.spec||'규격 없음'}</span></td>
-                      <td>${dayBadge(p.deliveryDate)}<span style="font-size:10.5px;display:block;color:var(--tx-t);">${p.deliveryDate}</span></td>
-                      <td>${p.qty}${p.unit}</td>
+                      <td>${esc(p.id)}</td>
+                      <td style="font-weight:700;">${esc(p.name)}${marginBadge}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${esc(p.spec)||'규격 없음'}</span></td>
+                      <td>${dayBadge(p.deliveryDate)}<span style="font-size:10.5px;display:block;color:var(--tx-t);">${esc(p.deliveryDate)}</span></td>
+                      <td>${esc(p.qty)}${esc(p.unit)}</td>
                       <td class="amt-blue">${fmtW(p.price)}</td>
                       <td style="font-weight:700;color:var(--tx-i);">${fmtW(p.price*p.qty)}</td>
                       <td style="min-width:180px;">
                         ${isClosed ? `
-                          <span class="bd" style="background:${sc}18;color:${sc};border-color:${sc}44;font-size:11px;">${p.processStage}</span>
-                          <span style="font-size:10px;color:var(--tx-t);display:block;margin-top:2px;">→ ${stageToStatus(p.processStage)}</span>
+                          <span class="bd" style="background:${sc}18;color:${sc};border-color:${sc}44;font-size:11px;">${esc(p.processStage)}</span>
+                          <span style="font-size:10px;color:var(--tx-t);display:block;margin-top:2px;">→ ${esc(stageToStatus(p.processStage))}</span>
                         ` : `
                           <select class="stat-sel" style="border-color:${sc};color:${sc};" onchange="changeProdStage('${p.id}',this.value)">
-                            ${processStages.map(s=>`<option${s===p.processStage?' selected':''}>${s}</option>`).join('')}
+                            ${processStages.map(s=>`<option${s===p.processStage?' selected':''}>${esc(s)}</option>`).join('')}
                           </select>
                           <div style="margin-top:3px;display:flex;align-items:center;gap:4px;">
                             <i class="ti ti-arrow-right" style="font-size:10px;color:var(--tx-t);"></i>
@@ -328,6 +328,22 @@ function openProdEdit(clientId, productId) {
   onPraStageChange(); updateProdCostPreview();
   modal.classList.add('open');
 }
+function cloneProduct(clientId, productId) {
+  if (!checkAdminAction()) return;
+  const p = products.find(x => x.id === productId); if (!p) return;
+  editProductId = null;
+  const modal = inp('prod-modal');
+  modal.dataset.clientId = clientId;
+  inp('prod-modal-ttl').innerHTML = '<i class="ti ti-copy" style="color:var(--tx-i);"></i>제품 복제 등록 — ' + getClientName(clientId);
+  inp('pra-save-txt').textContent = '신규 등록';
+  inp('pra-stage').innerHTML = processStages.map(s=>'<option>'+s+'</option>').join('');
+  sv('pra-id', nextCode('PR', products)); sv('pra-name', p.name); sv('pra-spec', p.spec||'');
+  sv('pra-due', p.deliveryDate||''); sv('pra-qty', p.qty||1); sv('pra-unit', p.unit||'대');
+  sv('pra-price', p.price||0); sv('pra-stage', processStages[0]||p.processStage); sv('pra-note', p.note||'');
+  sv('pra-matcost', p.matCost||0); sv('pra-laborcost', p.laborCost||0); sv('pra-ovhcost', p.ovhCost||0);
+  onPraStageChange(); updateProdCostPreview();
+  modal.classList.add('open');
+}
 /* 제조원가 = 재료비+노무비+경비, 공헌이익 = 수주단가-제조원가 (단위 기준) */
 function prodUnitCost(p){ return (Number(p.matCost)||0)+(Number(p.laborCost)||0)+(Number(p.ovhCost)||0); }
 function updateProdCostPreview() {
@@ -451,9 +467,9 @@ function renderClient360(clientId) {
       var d = p.deliveryDate ? daysUntil(p.deliveryDate) : null;
       var sc = stageColor(p.processStage);
       return '<tr>' +
-        '<td style="font-weight:700;">' + p.name + '</td>' +
-        '<td><span class="bd" style="background:' + sc + '18;color:' + sc + ';border-color:' + sc + '44;">' + p.processStage + '</span></td>' +
-        '<td>' + (p.deliveryDate||'—') + '</td>' +
+        '<td style="font-weight:700;">' + esc(p.name) + '</td>' +
+        '<td><span class="bd" style="background:' + sc + '18;color:' + sc + ';border-color:' + sc + '44;">' + esc(p.processStage) + '</span></td>' +
+        '<td>' + (esc(p.deliveryDate)||'—') + '</td>' +
         '<td>' + (d !== null ? dayBadge(p.deliveryDate) : '—') + '</td>' +
         '<td>' + (pMats.length > 0 ? done + '/' + pMats.length + '건 입고' : '—') + '</td>' +
         '</tr>';
@@ -463,7 +479,7 @@ function renderClient360(clientId) {
       ? '<h4 style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--tx-s);">클레임 이력</h4>' +
         '<table><thead><tr><th>일자</th><th>내용</th><th>상태</th></tr></thead><tbody>' +
         clms.map(function(c) {
-          return '<tr><td>' + c.date + '</td><td style="font-size:11px;">' + (c.content||'').substring(0,60) + '</td><td>' + statusBadge(c.status) + '</td></tr>';
+          return '<tr><td>' + esc(c.date) + '</td><td style="font-size:11px;">' + esc((c.content||'').substring(0,60)) + '</td><td>' + statusBadge(c.status) + '</td></tr>';
         }).join('') + '</tbody></table>'
       : '');
 }

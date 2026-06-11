@@ -3,15 +3,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MES Pro — 제조실행 생산관리 시스템</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css" integrity="sha384-UsOvy6Miuagj2Q/9aXCTRHaUDZjxTxMGk9ZsU2m0MDw8eIOyV129Qd9NszbyyFQM" crossorigin="anonymous">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js" integrity="sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4.4.1/dist/email.min.js" integrity="sha384-SALc35EccAf6RzGw4iNsyj7kTPr33K7RoGzYu+7heZhT8s0GZouafRiCg1qy44AS" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha384-Yv5O+t3uE3hunW8uyrbpPW3iw6/5/Y7HitWJBLgqfMoA36NogMmy+8wWZMpn3HWc" crossorigin="anonymous"></script>
 <!-- Firebase (클라우드 공유 동기화) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js" integrity="sha384-mLD+wdwynYnAhgHAkdPP5hroWJXJTNy5C2OhPKM55zuiV2vjzFD1LtBohaHq2Ex8" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js" integrity="sha384-NiuRnBs5Z0OgJ12kYJLSeWxANeJN369zH3+Zn0TGVPaCH/TKmbPFqfOmmLtrj+wg" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js" integrity="sha384-/SBCyt0JELVRyyrOp+QG5CdnpVoAry+uw9hdherLgyZxxePtHjOvQmJU5CHymUhT" crossorigin="anonymous"></script>
 <style>
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   .animate-spin { display: inline-block; animation: spin 1s linear infinite; }
@@ -36,14 +37,12 @@
 <!--#include html/pages/quality.html-->
 <!--#include html/pages/claims.html-->
 <!--#include html/pages/workers.html-->
+<!--#include html/pages/notes.html-->
 <!--#include html/pages/finance.html-->
-<!--#include html/pages/alerts.html-->
-<!--#include html/pages/trash.html-->
 <!--#include html/pages/partners.html-->
 <!--#include html/pages/rfq.html-->
 <!--#include html/pages/po.html-->
 <!--#include html/pages/pg-calendar.html-->
-<!--#include html/pages/pg-alimtalk.html-->
 <script>
 <!--#include js/data-storage.js-->
 <!--#include js/state-search.js-->
@@ -73,6 +72,8 @@
 <!--#include js/finance.js-->
 <!--#include js/as.js-->
 <!--#include js/alimtalk.js-->
+<!--#include js/api-settings.js-->
+<!--#include js/notes.js-->
 <!--#include js/table-reorder.js-->
 <!--#include js/mobile.js-->
 </script>
@@ -381,6 +382,33 @@
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('bom-modal')">취소</button>
       <button class="btn btn-primary" onclick="saveBomModal()"><i class="ti ti-check"></i>저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 자재 수급/발주 → BOM 가져오기 모달 ══ -->
+<div class="overlay" id="bom-material-import-modal">
+  <div class="dlg" style="max-width:900px;width:96%;">
+    <div class="dlg-title"><i class="ti ti-package-import" style="color:var(--tx-i);"></i>자재 수급/발주 내역에서 BOM 가져오기</div>
+    <div id="bom-material-import-info" style="font-size:12px;color:var(--tx-s);margin-bottom:12px;"></div>
+    <div style="overflow-x:auto;max-height:55vh;" class="thin-scroll">
+      <table style="min-width:760px;">
+        <thead>
+          <tr>
+            <th style="width:40px;text-align:center;"><input id="bom-material-import-all" type="checkbox" onchange="toggleBomMaterialImportAll(this.checked)"></th>
+            <th>자재명</th><th>최근 공급처</th><th style="text-align:right;">발주 합계</th>
+            <th style="text-align:right;">최근 단가</th><th style="width:145px;text-align:right;">소요량 / 제품 1개</th><th>처리</th>
+          </tr>
+        </thead>
+        <tbody id="bom-material-import-body"></tbody>
+      </table>
+    </div>
+    <div style="font-size:11px;color:var(--tx-t);margin-top:10px;">
+      소요량은 최근 발주 수량을 제품 수량으로 나눈 값입니다. 실제 투입량과 다르면 입력값을 수정한 뒤 반영하세요.
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('bom-material-import-modal')">취소</button>
+      <button class="btn btn-primary" onclick="applyBomMaterialImport()"><i class="ti ti-check"></i>선택 항목 반영</button>
     </div>
   </div>
 </div>

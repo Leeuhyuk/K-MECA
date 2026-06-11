@@ -58,7 +58,7 @@ function calendarGrid(ym, cellFn) {
           <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">${cells}</div>`;
 }
 function workerSelectOptions(sel) {
-  return workers.map(w => `<option value="${w.id}"${w.id===sel?' selected':''}>${w.name}${w.dept?' · '+w.dept:''}${w.position?' '+w.position:''}</option>`).join('');
+  return workers.map(w => `<option value="${esc(w.id)}"${w.id===sel?' selected':''}>${esc(w.name)}${w.dept?' · '+esc(w.dept):''}${w.position?' '+esc(w.position):''}</option>`).join('');
 }
 
 function switchEmpTab(tab) {
@@ -112,13 +112,13 @@ function _attList() {
 
   const rows = recs.length ? recs.map(r => `
     <tr>
-      <td style="font-weight:700;">${getWorkerName(r.workerId)}</td>
-      <td>${(workers.find(w=>w.id===r.workerId)||{}).dept || '—'}</td>
-      <td>${r.checkIn || '—'}</td>
-      <td>${r.checkOut || '—'}</td>
+      <td style="font-weight:700;">${esc(getWorkerName(r.workerId))}</td>
+      <td>${esc((workers.find(w=>w.id===r.workerId)||{}).dept) || '—'}</td>
+      <td>${esc(r.checkIn) || '—'}</td>
+      <td>${esc(r.checkOut) || '—'}</td>
       <td>${calcWorkHours(r.checkIn, r.checkOut) || '—'}</td>
       <td>${statusBadge(r.status)}</td>
-      <td>${r.note || ''}</td>
+      <td>${esc(r.note) || ''}</td>
       <td style="white-space:nowrap;">
         <button class="btn btn-sm" onclick="openAttendanceEdit('${r.id}')" title="편집"><i class="ti ti-edit"></i></button>
         <button class="del-btn" onclick="deleteAttendance('${r.id}')" title="삭제"><i class="ti ti-trash"></i></button>
@@ -324,8 +324,8 @@ function _annualStatusCard() {
     const barColor = remain <= 0 ? '#c92a2a' : remain <= 3 ? '#f76707' : '#2b8a3e';
     return `
       <tr>
-        <td style="font-weight:700;">${w.name}</td>
-        <td>${w.dept || '—'}</td>
+        <td style="font-weight:700;">${esc(w.name)}</td>
+        <td>${esc(w.dept) || '—'}</td>
         <td>${grant}일</td>
         <td>${used}일</td>
         <td style="font-weight:700;color:${remain<=0?'var(--tx-err)':remain<=3?'var(--tx-w)':'var(--tx-ok)'};">${remain}일</td>
@@ -391,12 +391,12 @@ function renderLeaves() {
   const list = [...leaves].sort((a,b) => (b.startDate||'').localeCompare(a.startDate||''));
   const rows = list.length ? list.map(l => `
     <tr>
-      <td style="font-weight:700;">${getWorkerName(l.workerId)}</td>
-      <td><span class="bd bd-neu">${l.type}</span></td>
-      <td>${l.startDate || '—'}</td>
-      <td>${l.endDate || l.startDate || '—'}</td>
+      <td style="font-weight:700;">${esc(getWorkerName(l.workerId))}</td>
+      <td><span class="bd bd-neu">${esc(l.type)}</span></td>
+      <td>${esc(l.startDate) || '—'}</td>
+      <td>${esc(l.endDate || l.startDate) || '—'}</td>
       <td style="font-weight:700;">${l.days || 0}일</td>
-      <td>${l.reason || ''}</td>
+      <td>${esc(l.reason) || ''}</td>
       <td>${leaveStatusBadge(l.status)}</td>
       <td style="white-space:nowrap;">
         ${l.status !== '승인' ? `<button class="btn btn-sm" style="border-color:var(--br-ok);color:var(--tx-ok);" onclick="setLeaveStatus('${l.id}','승인')" title="승인"><i class="ti ti-check"></i></button>` : ''}

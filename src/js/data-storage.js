@@ -38,12 +38,22 @@ const defaultInventory = [];
 /* ════════ 저장소 ════════ */
 function loadStorage(key, defaultVal) {
   const raw = localStorage.getItem('mes_' + key);
-  return raw ? JSON.parse(raw) : defaultVal;
+  if (raw == null) return defaultVal;
+  try { return JSON.parse(raw); }
+  catch(e) {
+    // 손상된 키 하나 때문에 앱 전체가 멈추지 않도록 기본값으로 대체
+    console.warn('저장 데이터 손상 — 기본값으로 대체:', key, e);
+    return defaultVal;
+  }
 }
 
 function saveStorage(key, data) {
-  localStorage.setItem('mes_' + key, JSON.stringify(data));
-  _triggerAutoSave();
+  try { localStorage.setItem('mes_' + key, JSON.stringify(data)); }
+  catch(e) {
+    if (typeof showToast === 'function') showToast('저장 공간이 가득 찼습니다. 첨부파일·휴지통을 정리해주세요.', 'error');
+    console.error('localStorage 저장 실패:', key, e);
+    return;
+  }
   if (typeof cloudQueueSave === 'function') cloudQueueSave(key);   // 클라우드 동기화(활성 시)
 }
 
@@ -64,7 +74,8 @@ function initFromEmbedded() {
       statementList:'statementList', taxList:'taxList',
       quoteList:'quoteList', orderList:'orderList',
       inventoryLedger:  'inventoryLedger',
-      alimtalkSettings: 'alimtalkSettings'
+      alimtalkSettings: 'alimtalkSettings',
+      memoList: 'memoList', todoList: 'todoList'
     };
     // 내장 데이터 타임스탬프가 localStorage보다 최신이면 덮어쓰기
     const embeddedTime = data._savedAt || '';
@@ -82,19 +93,6 @@ function initFromEmbedded() {
 
 // 앱 시작 전 내장 데이터 우선 로드
 initFromEmbedded();
-
-// 잘못 등록된 데이터 자동 정리
-(function cleanupBadData() {
-  const raw = localStorage.getItem('mes_clients');
-  if (!raw) return;
-  try {
-    const arr = JSON.parse(raw);
-    const cleaned = arr.filter(c => c.name !== '234234234' && c.name && c.name.trim());
-    if (cleaned.length !== arr.length) {
-      localStorage.setItem('mes_clients', JSON.stringify(cleaned));
-    }
-  } catch(e) {}
-})();
 
 /* 전체 변수 재로드 */
 function reloadAllData() {
@@ -141,6 +139,9 @@ function reloadAllData() {
   if (!financeData.paidPayable) financeData.paidPayable = {};
   attendance   = loadStorage('attendance',   []);
   leaves       = loadStorage('leaves',       []);
+  memoList     = loadStorage('memoList',      []);
+  todoList     = loadStorage('todoList',      []);
+  memoAttachmentData = loadStorage('memoAttachmentData', {});
 
   // 자동 마이그레이션: 구형 예시 데이터만 존재하거나 비어있을 시 5개 추가 데이터 자동 삽입
   // (제거됨) 데모 시드 자동삽입 — 데이터는 Firebase가 담당
@@ -150,152 +151,18 @@ function reloadAllData() {
   products.forEach(p => { if (p.processStage==='출하완료') { p.processStage='완료'; p.status='완료'; } });
 }
 
-/* ════════ 자동 저장 시스템 (IndexedDB 파일 핸들 유지) ════════ */
-let _fileHandle    = null;
-let _autoSaveTimer = null;
-
-function _storeHandle(h) {
-  return new Promise(res => {
-    const r = indexedDB.open('MESPro_fh', 1);
-    r.onupgradeneeded = e => e.target.result.createObjectStore('fh');
-    r.onsuccess = e => {
-      const db = e.target.result;
-      const tx = db.transaction('fh', 'readwrite');
-      tx.objectStore('fh').put(h, 'handle');
-      tx.oncomplete = () => { db.close(); res(); };
-    };
-    r.onerror = () => res();
-  });
-}
-
-function _loadHandle() {
-  return new Promise(res => {
-    const r = indexedDB.open('MESPro_fh', 1);
-    r.onupgradeneeded = e => e.target.result.createObjectStore('fh');
-    r.onsuccess = e => {
-      const db = e.target.result;
-      const tx = db.transaction('fh', 'readonly');
-      const g  = tx.objectStore('fh').get('handle');
-      g.onsuccess = () => { db.close(); res(g.result || null); };
-      g.onerror   = () => { db.close(); res(null); };
-    };
-    r.onerror = () => res(null);
-  });
-}
-
-function _showSaveBanner(type) {
-  document.getElementById('save-banner')?.remove();
-  if (type === 'hidden') return;
-  const banner = document.createElement('div');
-  banner.id = 'save-banner';
-  banner.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:var(--bg-i);border:1px solid var(--br-i);border-radius:var(--rl);padding:12px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,.18);font-size:12px;color:var(--tx-i);';
-  if (type === 'ask') {
-    banner.innerHTML = `<i class="ti ti-device-floppy" style="font-size:20px;"></i>
-      <div><div style="font-weight:700;margin-bottom:2px;">자동 저장 설정 (최초 1회)</div>
-      <div style="font-size:11px;color:var(--tx-s);">이 파일을 선택하면 변경 시 자동 저장됩니다</div></div>
-      <button onclick="connectFile()" style="background:var(--tx-i);color:#fff;border:none;border-radius:var(--rm);padding:5px 14px;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap;">파일 연결</button>
-      <button onclick="document.getElementById('save-banner').remove()" style="background:none;border:none;cursor:pointer;color:var(--tx-t);font-size:20px;line-height:1;">×</button>`;
-  } else if (type === 'renew') {
-    banner.innerHTML = `<i class="ti ti-refresh" style="font-size:20px;"></i>
-      <span>저장 권한을 갱신해 주세요</span>
-      <button onclick="_renewPermission()" style="background:var(--tx-i);color:#fff;border:none;border-radius:var(--rm);padding:5px 14px;cursor:pointer;font-size:12px;font-weight:700;">권한 허용</button>
-      <button onclick="document.getElementById('save-banner').remove()" style="background:none;border:none;cursor:pointer;color:var(--tx-t);font-size:20px;line-height:1;">×</button>`;
-  } else if (type === 'ok') {
-    banner.style.background = 'var(--bg-ok)';
-    banner.style.borderColor = 'var(--br-ok)';
-    banner.style.color = 'var(--tx-ok)';
-    banner.innerHTML = '<i class="ti ti-circle-check" style="font-size:20px;"></i><span><b>자동 저장 활성화!</b> 변경 시 파일에 자동 저장됩니다</span>';
-    setTimeout(() => banner.remove(), 3500);
-  }
-  document.body.appendChild(banner);
-}
-
-function _buildHTML() {
-  const now = new Date().toISOString();
-  localStorage.setItem('mes__savedAt', now);
-  // 데이터는 더 이상 HTML에 굽지 않는다. 실데이터는 Firebase + mes-data.json이 담당.
-  // 배포물(HTML)에 데이터가 들어가지 않도록 embedded-data는 항상 빈 객체.
-  const payload = '{}';
-  let html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-  const O = '<script id="embedded-data" type="application/json">';
-  const C = '<' + '/script>';
-  html = html.includes('id="embedded-data"')
-    ? html.replace(/<script id="embedded-data"[^>]*>[\s\S]*?<\/script>/, O + payload + C)
-    : html.replace('</head>', O + payload + C + '\n</head>');
-  return html;
-}
-
-async function _writeFile() {
-  if (!_fileHandle) return;
-  try {
-    const perm = await _fileHandle.queryPermission({ mode: 'readwrite' });
-    if (perm === 'prompt') { _showSaveBanner('renew'); return; }
-    if (perm !== 'granted') return;
-    const w = await _fileHandle.createWritable();
-    await w.write(_buildHTML());
-    await w.close();
-  } catch(e) { console.warn('자동 저장 실패:', e); }
-}
-
-function _triggerAutoSave() {
-  if (!_fileHandle) return;
-  clearTimeout(_autoSaveTimer);
-  _autoSaveTimer = setTimeout(_writeFile, 1500);
-}
-
-async function _renewPermission() {
-  if (!_fileHandle) return;
-  try {
-    const p = await _fileHandle.requestPermission({ mode: 'readwrite' });
-    if (p === 'granted') { document.getElementById('save-banner')?.remove(); await _writeFile(); }
-  } catch(e) {}
-}
-
-async function connectFile() {
-  if (!('showOpenFilePicker' in window)) {
-    showToast('Chrome 또는 Edge 브라우저에서만 지원됩니다.', 'error'); return;
-  }
-  try {
-    [_fileHandle] = await window.showOpenFilePicker({
-      types: [{ description: 'MES Pro HTML', accept: { 'text/html': ['.html'] } }]
-    });
-    await _storeHandle(_fileHandle);
-    await _writeFile();
-    _showSaveBanner('ok');
-  } catch(e) {
-    if (e.name !== 'AbortError') showToast('파일 연결 실패: ' + e.message, 'error');
-  }
-}
-
-async function initAutoSave() {
-  if (cloudConfigured()) return;   // 클라우드 모드: 데이터가 Firestore에 저장되므로 파일 자동저장 불필요
-  if (!('showOpenFilePicker' in window)) return;
-  const handle = await _loadHandle();
-  if (!handle) { setTimeout(() => _showSaveBanner('ask'), 1500); return; }
-  try {
-    const perm = await handle.queryPermission({ mode: 'readwrite' });
-    if (perm === 'granted') { _fileHandle = handle; return; }
-    if (perm === 'prompt')  { _fileHandle = handle; setTimeout(() => _showSaveBanner('renew'), 1000); }
-  } catch(e) { setTimeout(() => _showSaveBanner('ask'), 1500); }
-}
-
-function saveAsFile() {
-  if (_fileHandle) { _writeFile(); return; }
-  const blob = new Blob([_buildHTML()], { type: 'text/html;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'MESPro.html';
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  showToast('파일이 다운로드되었습니다.', 'success');
-}
+/* ════════ (제거됨) HTML 파일 자동 저장 ════════
+   살아있는 DOM(outerHTML)을 직렬화해 파일에 쓰던 방식은 런타임 주입물(체크박스 열,
+   권한 CSS, 배지 등)이 파일에 박제되는 문제가 있어 제거됨.
+   데이터 보존은 Firebase 동기화 + JSON/XLS 내보내기(exportDataJSON/exportAllXLS)가 담당. */
 
 /* ════════ 전체 데이터 JSON 파일 내보내기/가져오기 (프로그램 ↔ 데이터 분리) ════════ */
 const DATA_KEYS = [
   'clients','products','materials','workOrders','workers','defects','claims',
   'checkRecords','alerts','inventory','deliveries','stages','trash','rfqList',
   'poList','partners','financeData','attendance','leaves','statementList',
-  'taxList','quoteList','orderList','inventoryLedger','alimtalkSettings'
+  'taxList','quoteList','orderList','inventoryLedger','alimtalkSettings','memoList','todoList','memoAttachmentData',
+  'docXlsxTemplates'
 ];
 
 function exportDataJSON() {
@@ -518,6 +385,9 @@ let asList = loadStorage('asList', defaultAS);
 const defaultBom = [];
 let bomList = loadStorage('bomList', defaultBom);
 let bomProductId = '';   // BOM 화면에서 선택된 제품
+let memoList = loadStorage('memoList', []);
+let todoList = loadStorage('todoList', []);
+let memoAttachmentData = loadStorage('memoAttachmentData', {});
 let financeData = loadStorage('financeData', { entries: [], paidReceivable: {}, paidPayable: {} });
 // 구조 보정 (구버전 호환)
 if (!financeData.entries) financeData.entries = [];

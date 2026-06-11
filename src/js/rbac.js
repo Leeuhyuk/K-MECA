@@ -9,12 +9,12 @@ const PAGE_LIST = [
   {id:'partners',label:'거래처 관리'},{id:'rfq',label:'견적요청서'},{id:'po',label:'구매발주서'},
   {id:'salesdoc',label:'견적/수주'},{id:'statement',label:'거래명세표'},{id:'taxinvoice',label:'세금계산서'},
   {id:'finance',label:'재무 관리'},{id:'workers',label:'인사 관리'},
-  {id:'as',label:'고객 A/S'},{id:'alimtalk',label:'알림톡 설정'},{id:'alerts',label:'알림'},{id:'trash',label:'휴지통'}
+  {id:'as',label:'고객 A/S'},{id:'notes',label:'메모·할 일'},{id:'system',label:'시스템 관리'}
 ];
 /* 역할별 기본 접근 페이지(관리자가 화면에서 편집 가능). admin은 항상 전체. */
 const DEFAULT_ROLE_PAGES = {
-  manager: ['dashboard','clients','materials','deliveries','calendar','orders','bom','quality','claims','inventory','partners','rfq','po','salesdoc','as'],
-  staff:   ['dashboard','orders','quality','inventory','deliveries','calendar']
+  manager: ['dashboard','clients','materials','deliveries','calendar','orders','bom','quality','claims','inventory','partners','rfq','po','salesdoc','as','notes'],
+  staff:   ['dashboard','orders','quality','inventory','deliveries','calendar','notes']
 };
 const ROLE_LABEL = { admin:'관리자', manager:'중간관리자', staff:'평사원' };
 
@@ -25,7 +25,7 @@ function roleAllowedSet(role){
   return new Set((cfg && cfg[role]) || DEFAULT_ROLE_PAGES[role] || []);
 }
 function pageAllowed(id){
-  if (id==='permissions') return currentRole==='admin';  // 권한관리는 관리자 전용
+  if (id==='system') return currentRole==='admin';  // 시스템 관리는 관리자 전용
   if (!allowedPages) return true;                        // null = 전체(admin/로컬)
   return allowedPages.has(id);
 }
@@ -205,7 +205,12 @@ async function cloudFlush(){
     keys.forEach(k=>{ const raw=localStorage.getItem('mes_'+k); const value=raw?JSON.parse(raw):null;
       batch.set(_fbDb.collection('mes_state').doc(k), { value, updatedAt:Date.now(), by:(_cloudUser&&_cloudUser.email)||'' }); });
     await batch.commit(); _cloudChip('online');
-  } catch(e){ console.warn('클라우드 저장 실패', e); _cloudChip('error'); }
+  } catch(e){
+    console.warn('클라우드 저장 실패', e); _cloudChip('error');
+    keys.forEach(k=>_cloudQueue.add(k));                       // 실패 키 재큐잉 후 재시도
+    clearTimeout(_cloudTimer); _cloudTimer=setTimeout(cloudFlush, 5000);
+    showToast('클라우드 저장에 실패했습니다. 잠시 후 자동 재시도합니다.', 'error');
+  }
 }
 
 /* 클라우드에서 수동으로 최신 데이터 다시 불러오기 */

@@ -159,16 +159,16 @@ function renderKanban() {
         </div>
         
         <div class="kb-card-title-row">
-          <div class="kb-card-name">Job #${p.id}: ${p.name}</div>
-          <button onclick="event.stopPropagation(); navToProduct('${p.clientId}','${p.id}')" title="수주관리에서 편집"
+          <div class="kb-card-name">Job #${esc(p.id)}: ${esc(p.name)}</div>
+          <button onclick="event.stopPropagation(); navToProduct('${esc(p.clientId)}','${esc(p.id)}')" title="수주관리에서 편집"
             style="background:none;border:none;color:var(--tx-t);cursor:pointer;padding:0;font-size:11px;flex-shrink:0;line-height:1;">
             <i class="ti ti-external-link"></i>
           </button>
         </div>
-        
+
         <div class="kb-card-client-row">
           <i class="ti ti-building"></i>
-          <span>${getClientName(p.clientId)}</span>
+          <span>${esc(getClientName(p.clientId))}</span>
         </div>
         
         <div class="kb-card-meta-grid">
@@ -204,11 +204,11 @@ function renderKanban() {
         </div>` : ''}
         
         <div class="kb-card-footer">
-          <span>Worker: <strong>${workerName}</strong></span>
+          <span>Worker: <strong>${esc(workerName)}</strong></span>
           <span style="font-size: 8.5px; opacity: 0.75;"><i class="ti ti-clock"></i> ${timestampStr}</span>
         </div>
         
-        ${p.processMemo ? `<div style="font-size:9.5px; color:var(--tx-t); border-top:1px dashed rgba(255,255,255,0.06); padding-top:6px; margin-top:2px; line-height:1.4;">${p.processMemo}</div>` : ''}
+        ${p.processMemo ? `<div style="font-size:9.5px; color:var(--tx-t); border-top:1px dashed rgba(255,255,255,0.06); padding-top:6px; margin-top:2px; line-height:1.4;">${esc(p.processMemo)}</div>` : ''}
       </div>`;
   };
 
@@ -224,7 +224,7 @@ function renderKanban() {
     return `
       <div class="kb-col${procStageFilter===stage?' kb-filtered':''}">
         <div class="kb-col-hd" style="--stage-neon:${stripColor};">
-          <span style="font-weight:700; color:var(--tx);">${stage}</span>
+          <span style="font-weight:700; color:var(--tx);">${esc(stage)}</span>
           <span style="background:${stripColor}; color:#fff; border-radius:10px; padding:2px 8px; font-size:10px; font-weight:800; box-shadow:0 0 6px ${stripColor}88;">${stageProds.length}</span>
         </div>
         <div class="kb-cards-container">
@@ -246,14 +246,14 @@ function renderKanban() {
               미분류
             </div>
             <div class="kb-card-title-row">
-              <div class="kb-card-name">Job #${p.id}: ${p.name}</div>
-              <button onclick="event.stopPropagation(); navToProduct('${p.clientId}','${p.id}')" title="수주관리에서 편집"
+              <div class="kb-card-name">Job #${esc(p.id)}: ${esc(p.name)}</div>
+              <button onclick="event.stopPropagation(); navToProduct('${esc(p.clientId)}','${esc(p.id)}')" title="수주관리에서 편집"
                 style="background:none;border:none;color:var(--tx-t);cursor:pointer;padding:0;font-size:11px;">
                 <i class="ti ti-external-link"></i>
               </button>
             </div>
-            <div class="kb-card-client-row"><i class="ti ti-building"></i><span>${getClientName(p.clientId)}</span></div>
-            <div style="font-size:10px; color:var(--tx-t); margin-top:4px;">단계 미지정: ${p.processStage||'없음'}</div>
+            <div class="kb-card-client-row"><i class="ti ti-building"></i><span>${esc(getClientName(p.clientId))}</span></div>
+            <div style="font-size:10px; color:var(--tx-t); margin-top:4px;">단계 미지정: ${esc(p.processStage)||'없음'}</div>
           </div>`).join('')}
       </div>
     </div>` : '';
@@ -271,7 +271,7 @@ function openKanbanEditModal(productId) {
   inp('km-prod-name').value = `${p.name}  ·  ${getClientName(p.clientId)}`;
 
   const stageSel = inp('km-stage');
-  stageSel.innerHTML = processStages.map(s => `<option value="${s}"${s===p.processStage?' selected':''}>${s}</option>`).join('');
+  stageSel.innerHTML = processStages.map(s => `<option value="${esc(s)}"${s===p.processStage?' selected':''}>${esc(s)}</option>`).join('');
   onKmStageChange();
   inp('km-memo').value = p.processMemo || '';
 

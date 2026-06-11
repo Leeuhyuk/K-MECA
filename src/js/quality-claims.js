@@ -1,5 +1,8 @@
 /* ════════ 6. 품질 및 검사 관리 ════════ */
 function renderQuality() {
+  ensureDateView('defects', 'defect-table', defects.map(d=>d.date), renderQuality);
+  ensureDateView('qualityClaims', 'claim-table', claims.map(c=>c.date), renderQuality);
+  ensureDateView('checks', 'check-table', checkRecords.map(r=>r.date), renderQuality);
   const totDefect = defects.reduce((s, d) => s + d.qty, 0);
   const openDefect = defects.filter(d => d.status !== '완료').length;
   const claimOpen = claims.filter(c => c.status !== '완료').length;
@@ -18,6 +21,7 @@ function renderQuality() {
   const _dfq = (v('df-q')||'').toLowerCase();
   const _dffs = v('df-fs');
   let filteredDefects = defects.filter(d => {
+    if (!dateViewMatch('defects', d.date)) return false;
     const cname = getClientName(getProductById(d.productId)?.clientId);
     if (_dfq && ![d.id, getProductName(d.productId), cname, d.type, d.stage, d.cause||''].join(' ').toLowerCase().includes(_dfq)) return false;
     if (_dffs && d.status !== _dffs) return false;
@@ -61,12 +65,12 @@ function renderQuality() {
       <tbody>
         ${filteredDefects.map(d => `
           <tr>
-            <td>${d.id}</td>
-            <td>${d.date}</td>
-            <td style="font-weight:600;">${getProductName(d.productId)}</td>
-            <td>${d.stage}</td>
-            <td style="font-weight:700; color:var(--tx-d);">${d.type}</td>
-            <td style="font-weight:700;">${d.qty}</td>
+            <td>${esc(d.id)}</td>
+            <td>${esc(d.date)}</td>
+            <td style="font-weight:600;">${esc(getProductName(d.productId))}</td>
+            <td>${esc(d.stage)}</td>
+            <td style="font-weight:700; color:var(--tx-d);">${esc(d.type)}</td>
+            <td style="font-weight:700;">${esc(d.qty)}</td>
             <td>
               <select class="stat-sel" onchange="changeDefectStatus('${d.id}', this.value)">
                 <option${d.status==='조치중'?' selected':''}>조치중</option>
@@ -74,7 +78,7 @@ function renderQuality() {
                 <option${d.status==='보류'?' selected':''}>보류</option>
               </select>
             </td>
-            <td><span style="font-size:11px; color:var(--tx-t);">${d.note || '—'}</span></td>
+            <td><span style="font-size:11px; color:var(--tx-t);">${esc(d.note) || '—'}</span></td>
             <td>
               <button class="edit-btn" onclick="openDefectEdit('${d.id}')"><i class="ti ti-edit"></i></button>
               <button class="del-btn" onclick="deleteDefect('${d.id}')"><i class="ti ti-trash"></i></button>
@@ -86,6 +90,7 @@ function renderQuality() {
   const _clq = (v('cl-q')||'').toLowerCase();
   const _clfs = v('cl-fs');
   let filteredClaims = claims.filter(c => {
+    if (!dateViewMatch('qualityClaims', c.date)) return false;
     if (_clq && ![c.id, getClientName(c.clientId), getProductName(c.productId), c.content||''].join(' ').toLowerCase().includes(_clq)) return false;
     if (_clfs && c.status !== _clfs) return false;
     return true;
@@ -129,10 +134,10 @@ function renderQuality() {
       <tbody>
         ${filteredClaims.map(c => `
           <tr>
-            <td style="vertical-align:top;">${c.date}</td>
-            <td style="font-weight:600; vertical-align:top;">${getClientName(c.clientId)}</td>
+            <td style="vertical-align:top;">${esc(c.date)}</td>
+            <td style="font-weight:600; vertical-align:top;">${esc(getClientName(c.clientId))}</td>
             <td style="white-space:normal; min-width:160px; max-width:280px; vertical-align:top;">
-              <div style="font-weight:700;">${getProductName(c.productId)}</div>
+              <div style="font-weight:700;">${esc(getProductName(c.productId))}</div>
               <div style="font-size:11px; color:var(--tx-d); margin-top:4px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; line-height:1.4; cursor:pointer; white-space:normal; word-break:break-all;" onclick="openClaimDetail('${c.id}')" title="클릭하여 상세 조회">${_escHtml(c.content)}</div>
             </td>
             <td style="white-space:normal; word-break:break-all; max-width:110px; vertical-align:top;">${_escHtml(c.spec||'—')}</td>
@@ -155,6 +160,7 @@ function renderQuality() {
   const _ckq = (v('ck-q')||'').toLowerCase();
   const _ckfs = v('ck-fs');
   let filteredChecks = checkRecords.filter(r => {
+    if (!dateViewMatch('checks', r.date)) return false;
     if (_ckq && ![getProductName(r.productId), getClientName(r.clientId), r.inspector||''].join(' ').toLowerCase().includes(_ckq)) return false;
     if (_ckfs && r.result !== _ckfs) return false;
     return true;
@@ -200,10 +206,10 @@ function renderQuality() {
       <tbody>
         ${filteredChecks.map(r => `
           <tr>
-            <td>${r.date}</td>
-            <td style="font-weight:600;">${getClientName(r.clientId)}</td>
-            <td>${getProductName(r.productId)}</td>
-            <td>${r.inspector}</td>
+            <td>${esc(r.date)}</td>
+            <td style="font-weight:600;">${esc(getClientName(r.clientId))}</td>
+            <td>${esc(getProductName(r.productId))}</td>
+            <td>${esc(r.inspector)}</td>
             <td>${statusBadge(r.visual)}</td>
             <td>${statusBadge(r.dim)}</td>
             <td>${statusBadge(r.func)}</td>
@@ -224,6 +230,7 @@ function renderQuality() {
 function _escHtml(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function renderClaims() {
+  ensureDateView('claims', 'claims-table-full', claims.map(c=>c.date), renderClaims);
   const kpi = inp('claims-kpi');
   if (kpi) {
     const ing  = claims.filter(c => c.status === '처리중').length;
@@ -248,6 +255,7 @@ function renderClaims() {
   const q = (v('claims-q')||'').toLowerCase();
   const fs = v('claims-fs');
   let list = claims.filter(c => {
+    if (!dateViewMatch('claims', c.date)) return false;
     if (q && ![c.id, c.kind||'', claimClientLabel(c), claimProductLabel(c), c.content||'', c.response||''].join(' ').toLowerCase().includes(q)) return false;
     if (fs && c.status !== fs) return false;
     return true;
@@ -283,10 +291,10 @@ function renderClaims() {
       <tbody>
         ${list.map(c => `
           <tr>
-            <td>${c.date||'—'}</td>
-            <td><span class="bd ${c.kind==='AS'?'bd-info':c.kind==='기타'?'bd-neu':'bd-warn'}">${c.kind||'클레임'}</span></td>
-            <td style="font-weight:600;">${claimClientLabel(c)}${c.clientName && !c.clientId?'<br><span style="font-size:9px;color:var(--tx-t);">미등록</span>':''}</td>
-            <td>${claimProductLabel(c)}</td>
+            <td>${esc(c.date)||'—'}</td>
+            <td><span class="bd ${c.kind==='AS'?'bd-info':c.kind==='기타'?'bd-neu':'bd-warn'}">${esc(c.kind)||'클레임'}</span></td>
+            <td style="font-weight:600;">${esc(claimClientLabel(c))}${c.clientName && !c.clientId?'<br><span style="font-size:9px;color:var(--tx-t);">미등록</span>':''}</td>
+            <td>${esc(claimProductLabel(c))}</td>
             <td>${_escHtml(c.spec||'—')}</td>
             <td style="max-width:340px; color:var(--tx-d); cursor:pointer;" onclick="openClaimDetail('${c.id}')" title="클릭하여 전체 보기">${trunc(c.content, 60)}</td>
             <td style="max-width:240px; font-size:11px; cursor:pointer;" onclick="openClaimDetail('${c.id}')" title="클릭하여 전체 보기">${trunc(c.response, 40)}</td>
@@ -433,7 +441,7 @@ function changeDefectStatus(id, status) {
 /* 클레임 고객사 select 옵션 (미등록 허용 위해 공란 포함) */
 function _fillClaimClientSelect(selId) {
   inp('cl-client').innerHTML = '<option value="">-- 선택 (미등록 시 비움) --</option>' +
-    clients.map(c => `<option value="${c.id}"${c.id===selId?' selected':''}>${c.name}</option>`).join('');
+    clients.map(c => `<option value="${esc(c.id)}"${c.id===selId?' selected':''}>${esc(c.name)}</option>`).join('');
 }
 
 function openClaimAdd() {
