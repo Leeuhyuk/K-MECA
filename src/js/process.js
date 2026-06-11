@@ -205,7 +205,7 @@ function renderKanban() {
         
         <div class="kb-card-footer">
           <span>Worker: <strong>${esc(workerName)}</strong></span>
-          <span style="font-size: 8.5px; opacity: 0.75;"><i class="ti ti-clock"></i> ${timestampStr}</span>
+          <span style="font-size: 10px; opacity: 0.75;"><i class="ti ti-clock"></i> ${esc(timestampStr)}</span>
         </div>
         
         ${p.processMemo ? `<div style="font-size:9.5px; color:var(--tx-t); border-top:1px dashed rgba(255,255,255,0.06); padding-top:6px; margin-top:2px; line-height:1.4;">${esc(p.processMemo)}</div>` : ''}

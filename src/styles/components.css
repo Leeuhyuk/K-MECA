@@ -30,14 +30,14 @@
 /* 커스텀 설정 모달 */
 .custom-modal { max-width: 500px !important; }
 
-.sum-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
-.sum-box { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: 12px 16px; display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow); min-width: 0; }
+.sum-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.sum-box { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: 10px 14px; display: flex; align-items: center; gap: 10px; box-shadow: var(--shadow); min-width: 0; }
 .sum-box.clickable { cursor: pointer; transition: border-color .15s, transform .15s; }
 .sum-box.clickable:hover { border-color: var(--tx-i); transform: translateY(-2px); }
 .sum-box.kpi-active { border-color: var(--tx-i); box-shadow: 0 0 0 2px var(--br-i) inset, var(--shadow); }
-.si { font-size: 24px; color: var(--tx-s); }
-.sn { font-size: 18px; font-weight: 700; }
-.sl { font-size: 11px; color: var(--tx-t); font-weight: 500; }
+.si { font-size: 20px; color: var(--tx-s); }
+.sn { font-size: 17px; font-weight: 700; }
+.sl { font-size: 10.5px; color: var(--tx-t); font-weight: 500; }
 
 /* 수주처 카드 & 드래그엔드롭 스타일 */
 .client-card { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); overflow: hidden; margin-bottom: 12px; box-shadow: var(--shadow); transition: transform 0.15s, border-color 0.15s; min-width: 0; }
@@ -74,20 +74,20 @@
 .kb-card.neon-emerald { --neon-glow: #059669; --neon-glow-op: rgba(5, 150, 105, 0.35); }
 
 /* 카드 내부 세부 돔 구조 */
-.kb-card-badge { display: inline-flex; align-items: center; font-size: 8.5px; font-weight: 800; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid; max-width: fit-content; }
+.kb-card-badge { display: inline-flex; align-items: center; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid; max-width: fit-content; }
 .kb-card-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .kb-card-name { font-size: 13px; font-weight: 700; color: var(--tx); line-height: 1.35; }
 .kb-card-client-row { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--tx-t); font-weight: 500; }
 .kb-card-client-row i { font-size: 11px; }
 .kb-card-meta-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 8px; font-size: 10.5px; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 6px; }
 .kb-card-meta-item { display: flex; flex-direction: column; gap: 2px; }
-.kb-card-meta-lbl { font-size: 8.5px; text-transform: uppercase; color: var(--tx-t); font-weight: 600; letter-spacing: 0.03em; }
+.kb-card-meta-lbl { font-size: 10px; text-transform: uppercase; color: var(--tx-t); font-weight: 600; letter-spacing: 0.03em; }
 .kb-card-meta-val { font-weight: 700; color: var(--tx-s); }
 .kb-card-prog-wrap { display: flex; flex-direction: column; gap: 3px; }
-.kb-card-prog-lbl-row { display: flex; justify-content: space-between; font-size: 9px; color: var(--tx-t); font-weight: 600; }
+.kb-card-prog-lbl-row { display: flex; justify-content: space-between; font-size: 10px; color: var(--tx-t); font-weight: 600; }
 .kb-card-prog-bar { height: 5px; background: rgba(255, 255, 255, 0.06); border-radius: 4px; overflow: hidden; }
 .kb-card-prog-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
-.kb-card-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 6px; font-size: 9.5px; color: var(--tx-t); font-weight: 500; }
+.kb-card-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 6px; font-size: 10px; color: var(--tx-t); font-weight: 500; }
 .kb-empty { font-size:10px; color:var(--tx-t); text-align:center; padding:14px 6px; border:1px dashed var(--br); border-radius:var(--rm); }.open { display: block; }
 
 /* 공정 파이프라인 */
