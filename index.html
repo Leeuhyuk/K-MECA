@@ -3,16 +3,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MES Pro — 제조실행 생산관리 시스템</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css" integrity="sha384-UsOvy6Miuagj2Q/9aXCTRHaUDZjxTxMGk9ZsU2m0MDw8eIOyV129Qd9NszbyyFQM" crossorigin="anonymous">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js" integrity="sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4.4.1/dist/email.min.js" integrity="sha384-SALc35EccAf6RzGw4iNsyj7kTPr33K7RoGzYu+7heZhT8s0GZouafRiCg1qy44AS" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha384-Yv5O+t3uE3hunW8uyrbpPW3iw6/5/Y7HitWJBLgqfMoA36NogMmy+8wWZMpn3HWc" crossorigin="anonymous"></script>
 <!-- Firebase (클라우드 공유 동기화) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js" integrity="sha384-mLD+wdwynYnAhgHAkdPP5hroWJXJTNy5C2OhPKM55zuiV2vjzFD1LtBohaHq2Ex8" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js" integrity="sha384-NiuRnBs5Z0OgJ12kYJLSeWxANeJN369zH3+Zn0TGVPaCH/TKmbPFqfOmmLtrj+wg" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js" integrity="sha384-/SBCyt0JELVRyyrOp+QG5CdnpVoAry+uw9hdherLgyZxxePtHjOvQmJU5CHymUhT" crossorigin="anonymous"></script>
 <style>
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   .animate-spin { display: inline-block; animation: spin 1s linear infinite; }
@@ -21,7 +21,7 @@
 <script id="embedded-data" type="application/json">{}</script>
 <style>
 :root {
-  --bg-p: #ffffff; --bg-s: #f8f9fa; --bg-t: #f1f3f5;
+  --bg-p: #eef0f3; --bg-s: #e4e7ec; --bg-t: #d9dde4;
   --bg-i: #e6f1fb; --bg-ok: #eaf3de; --bg-w: #faeeda; --bg-d: #fcebeb;
   --tx: #212529; --tx-s: #495057; --tx-t: #868e96;
   --tx-i: #185FA5; --tx-ok: #3B6D11; --tx-w: #854F0B; --tx-d: #791F1F;
@@ -54,9 +54,9 @@ body { font-family: var(--f); background: var(--bg-t); color: var(--tx); height:
 @keyframes toastIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
 
 /* 사이드바 */
-.sidebar { width: 210px; min-width: 210px; background: var(--bg-p); border-right: 1px solid var(--br); display: flex; flex-direction: column; align-self: stretch; min-height: 0; overflow-y: auto; flex-shrink: 0; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.18) transparent; }
+.sidebar { width: 210px; min-width: 210px; background: var(--bg-p); border-right: 1px solid var(--br); display: flex; flex-direction: column; align-self: stretch; min-height: 0; overflow-y: auto; flex-shrink: 0; scrollbar-width: thin; scrollbar-color: var(--br-s) transparent; }
 .sidebar::-webkit-scrollbar { width: 5px; }
-.sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--br-s); border-radius: 3px; }
 .sidebar::-webkit-scrollbar-track { background: transparent; }
 .logo { padding: 18px 20px; border-bottom: 1px solid var(--br); }
 .logo-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--tx-i); }
@@ -73,7 +73,7 @@ body { font-family: var(--f); background: var(--bg-t); color: var(--tx); height:
 /* 메인 영역 */
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
 .topbar { background: var(--bg-p); border-bottom: 1px solid var(--br); padding: 10px 24px; display: flex; align-items: center; justify-content: space-between; min-height: 52px; flex-shrink: 0; }
-.tb-title { font-size: 16px; font-weight: 600; }
+.tb-title { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tb-right { display: flex; align-items: center; gap: 12px; }
 .global-search-wrapper {
   position: relative; width: 340px; height: 36px; margin: 0 auto 0 20px;
@@ -115,15 +115,15 @@ body { font-family: var(--f); background: var(--bg-t); color: var(--tx); height:
 /* 컨텐츠 및 레이아웃 */
 .content { flex: 1; overflow-y: auto; padding: 20px 24px; display: none; }
 .content.active { display: block; }
-.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
-.mc { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: 15px 18px; cursor: default; box-shadow: var(--shadow); transition: transform 0.15s, border-color 0.15s; min-width: 0; }
+.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.mc { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: 11px 14px; cursor: default; box-shadow: var(--shadow); transition: transform 0.15s, border-color 0.15s; min-width: 0; }
 .mc.clickable { cursor: pointer; }
 .mc.clickable:hover { border-color: var(--tx-i); transform: translateY(-2px); }
 .mc.clickable.kpi-active { border-color: var(--tx-i); box-shadow: 0 0 0 2px var(--br-i) inset, var(--shadow); }
 .mc.clickable.kpi-active .mc-lbl::after { content: '필터됨'; margin-left: auto; font-size: 9px; font-weight: 700; color: var(--tx-i); background: var(--bg-i); border: 1px solid var(--br-i); border-radius: 8px; padding: 0 6px; }
-.mc-lbl { font-size: 11px; color: var(--tx-s); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-weight: 500; }
-.mc-val { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
-.mc-sub { font-size: 11px; color: var(--tx-t); margin-top: 4px; font-weight: 500; }
+.mc-lbl { font-size: 11px; color: var(--tx-s); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; font-weight: 500; }
+.mc-val { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+.mc-sub { font-size: 10.5px; color: var(--tx-t); margin-top: 2px; font-weight: 500; }
 .up { color: var(--tx-ok) !important; }
 .dn { color: var(--tx-d) !important; }
 
@@ -138,7 +138,7 @@ body { font-family: var(--f); background: var(--bg-t); color: var(--tx); height:
 /* 테이블 스타일 */
 table { width: 100%; border-collapse: collapse; font-size: 12px; }
 th { text-align: left; padding: 9px 12px; color: var(--tx-s); border-bottom: 1px solid var(--br); font-weight: 600; white-space: nowrap; background: var(--bg-s); }
-td { padding: 9px 12px; border-bottom: 1px solid var(--br); vertical-align: middle; color: var(--tx); }
+td { padding: 9px 12px; border-bottom: 1px solid var(--br); vertical-align: middle; color: var(--tx); word-break: keep-all; }
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: var(--bg-s); }
 /* ── 데이터 표 가독성: ① 줄무늬 ② 헤더 고정 ③ 첫 열 고정 (불투명 배경으로 고정셀 비침 방지) ── */
@@ -149,6 +149,9 @@ tr:hover td { background: var(--bg-s); }
 .content div:has(> table) { max-height: calc(100vh - 170px); overflow-y: auto; }
 .content th:first-child, .content td:first-child { position: sticky; left: 0; z-index: 2; }
 .content thead th:first-child { z-index: 4; }
+/* ④ 관리(편집·삭제) 열 우측 고정 — 넓은 표를 가로 스크롤해도 항상 보이게 (첫 열 고정과 대칭) */
+.content th:last-child, .content td:last-child { position: sticky; right: 0; z-index: 2; box-shadow: -6px 0 8px -6px rgba(0,0,0,.18); }
+.content thead th:last-child { z-index: 4; }
 /* ── 가는 스크롤바(전역) ── */
 * { scrollbar-width: thin; scrollbar-color: rgba(140,140,140,0.4) transparent; }
 *::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -344,14 +347,14 @@ textarea { height: auto; resize: vertical; }
 /* 커스텀 설정 모달 */
 .custom-modal { max-width: 500px !important; }
 
-.sum-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
-.sum-box { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: 12px 16px; display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow); min-width: 0; }
+.sum-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.sum-box { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: 10px 14px; display: flex; align-items: center; gap: 10px; box-shadow: var(--shadow); min-width: 0; }
 .sum-box.clickable { cursor: pointer; transition: border-color .15s, transform .15s; }
 .sum-box.clickable:hover { border-color: var(--tx-i); transform: translateY(-2px); }
 .sum-box.kpi-active { border-color: var(--tx-i); box-shadow: 0 0 0 2px var(--br-i) inset, var(--shadow); }
-.si { font-size: 24px; color: var(--tx-s); }
-.sn { font-size: 18px; font-weight: 700; }
-.sl { font-size: 11px; color: var(--tx-t); font-weight: 500; }
+.si { font-size: 20px; color: var(--tx-s); }
+.sn { font-size: 17px; font-weight: 700; }
+.sl { font-size: 10.5px; color: var(--tx-t); font-weight: 500; }
 
 /* 수주처 카드 & 드래그엔드롭 스타일 */
 .client-card { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); overflow: hidden; margin-bottom: 12px; box-shadow: var(--shadow); transition: transform 0.15s, border-color 0.15s; min-width: 0; }
@@ -388,20 +391,20 @@ textarea { height: auto; resize: vertical; }
 .kb-card.neon-emerald { --neon-glow: #059669; --neon-glow-op: rgba(5, 150, 105, 0.35); }
 
 /* 카드 내부 세부 돔 구조 */
-.kb-card-badge { display: inline-flex; align-items: center; font-size: 8.5px; font-weight: 800; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid; max-width: fit-content; }
+.kb-card-badge { display: inline-flex; align-items: center; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid; max-width: fit-content; }
 .kb-card-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-.kb-card-name { font-size: 13px; font-weight: 700; color: #ffffff !important; line-height: 1.35; }
+.kb-card-name { font-size: 13px; font-weight: 700; color: var(--tx); line-height: 1.35; }
 .kb-card-client-row { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--tx-t); font-weight: 500; }
 .kb-card-client-row i { font-size: 11px; }
 .kb-card-meta-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 8px; font-size: 10.5px; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 6px; }
 .kb-card-meta-item { display: flex; flex-direction: column; gap: 2px; }
-.kb-card-meta-lbl { font-size: 8.5px; text-transform: uppercase; color: var(--tx-t); font-weight: 600; letter-spacing: 0.03em; }
+.kb-card-meta-lbl { font-size: 10px; text-transform: uppercase; color: var(--tx-t); font-weight: 600; letter-spacing: 0.03em; }
 .kb-card-meta-val { font-weight: 700; color: var(--tx-s); }
 .kb-card-prog-wrap { display: flex; flex-direction: column; gap: 3px; }
-.kb-card-prog-lbl-row { display: flex; justify-content: space-between; font-size: 9px; color: var(--tx-t); font-weight: 600; }
+.kb-card-prog-lbl-row { display: flex; justify-content: space-between; font-size: 10px; color: var(--tx-t); font-weight: 600; }
 .kb-card-prog-bar { height: 5px; background: rgba(255, 255, 255, 0.06); border-radius: 4px; overflow: hidden; }
 .kb-card-prog-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
-.kb-card-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 6px; font-size: 9.5px; color: var(--tx-t); font-weight: 500; }
+.kb-card-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 6px; font-size: 10px; color: var(--tx-t); font-weight: 500; }
 .kb-empty { font-size:10px; color:var(--tx-t); text-align:center; padding:14px 6px; border:1px dashed var(--br); border-radius:var(--rm); }.open { display: block; }
 
 /* 공정 파이프라인 */
@@ -503,6 +506,25 @@ textarea { height: auto; resize: vertical; }
 .action-txt { font-size: 12px; font-weight: 600; word-break: keep-all; }
 .action-sub { font-size: 11px; color: var(--tx-t); margin-top: 2px; word-break: keep-all; }
 
+/* BOM 좌측 제품 탐색 + 우측 상세 */
+.bom-layout { display:grid; grid-template-columns:280px minmax(0,1fr); gap:16px; align-items:start; }
+.bom-product-pane { position:sticky; top:0; margin:0; padding:14px; max-height:calc(100vh - 95px); display:flex; flex-direction:column; }
+.bom-product-filters { display:grid; gap:7px; margin-bottom:9px; }
+.bom-product-filters select,.bom-product-filters input { width:100%; height:34px; min-width:0; }
+.bom-product-list { display:flex; flex-direction:column; gap:5px; min-height:120px; overflow-y:auto; padding-right:3px; }
+.bom-product-item { width:100%; display:flex; align-items:center; gap:8px; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-s); color:var(--tx); padding:9px 10px; cursor:pointer; text-align:left; font-family:var(--f); }
+.bom-product-item:hover,.bom-product-item.active { border-color:var(--tx-i); background:var(--bg-i); }
+.bom-product-item-main { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.bom-product-item-main b,.bom-product-item-main small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bom-product-item-main b { font-size:11.5px; }
+.bom-product-item-main small { font-size:9.5px; color:var(--tx-t); }
+.bom-recent-products { border-top:1px solid var(--br); margin-top:10px; padding-top:9px; display:flex; flex-wrap:wrap; gap:5px; }
+.bom-recent-title { flex:1 0 100%; font-size:10px; color:var(--tx-t); }
+.bom-recent-item { max-width:100%; border:1px solid var(--br); border-radius:12px; padding:3px 8px; background:var(--bg-p); color:var(--tx-s); font-size:9.5px; cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bom-recent-item.active { color:var(--tx-i); border-color:var(--br-i); background:var(--bg-i); }
+.bom-detail-pane { min-width:0; }
+.bom-detail-header { position:sticky; top:0; z-index:80; display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:56px; padding:9px 12px; margin-bottom:12px; border:1px solid var(--br); border-radius:var(--rl); background:var(--bg-p); box-shadow:var(--shadow); }
+
 /* 품질 */
 .al { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-radius: var(--rl); margin-bottom: 10px; border: 1px solid; box-shadow: var(--shadow); }
 .al-err { background: var(--bg-d); border-color: var(--br-d); }
@@ -522,9 +544,9 @@ textarea { height: auto; resize: vertical; }
 .empty i { font-size: 32px; display: block; margin-bottom: 8px; opacity: .4; color: var(--tx-t); }
 
 .day-badge { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 12px; font-weight: 600; text-align: center; }
-.day-urgent { background: #ffe3e3; color: #e03131; }
-.day-warn { background: #fff4e6; color: #f76707; }
-.day-ok { background: #ebfbee; color: #37b24d; }
+.day-urgent { background: var(--bg-d); color: var(--tx-d); }
+.day-warn { background: var(--bg-w); color: var(--tx-w); }
+.day-ok { background: var(--bg-ok); color: var(--tx-ok); }
 
 @keyframes slideDown {
   from { opacity: 0; transform: translateY(-8px); }
@@ -697,6 +719,21 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
   }
   /* 페이지 내부 탭 바(직원·재무·견적/수주 등) 가로 스크롤 허용 */
   .toolbar { flex-wrap: wrap; gap: 6px; }
+  /* 모바일 목록 툴바의 신규 등록 버튼은 필터·검색 바로 다음 위치에 표시 */
+  .toolbar > .btn:has(> .ti-plus) {
+    order: initial;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    border-radius: var(--rm);
+    padding: 0;
+    flex: 0 0 32px;
+  }
+  .toolbar > .btn:has(> .ti-plus) > .ti-plus {
+    font-size: 16px;
+  }
   /* 모달이 화면을 넘지 않도록 */
   .dlg { max-width: 94vw !important; max-height: 90vh; overflow-y: auto; }
   .xls-btn {
@@ -818,6 +855,20 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
   #pg-clients .client-hd { flex-wrap: wrap; row-gap: 8px; }
   #pg-clients .client-hd > div:nth-child(2) { min-width: 150px !important; }   /* 이름이 0폭으로 줄어 세로로 깨지는 것 방지 */
   #pg-clients .client-hd > div[onclick^="event.stopPropagation"] { flex-wrap: wrap; justify-content: flex-end; }
+
+  /* BOM 제품·자재 탐색 영역 */
+  .bom-layout { grid-template-columns:1fr; }
+  .bom-product-pane { position:static; max-height:none; }
+  .bom-product-list { max-height:240px; }
+  .bom-detail-header { top:0; }
+  #bom-view-tabs { align-items: stretch; }
+  #bom-view-tabs #bom-material-search {
+    order: 10;
+    flex: 1 0 100%;
+    width: 100%;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+  }
 }
 
 @media print {
@@ -968,8 +1019,8 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
 <!-- 공용 삭제/일반 알림 확인 모달 -->
 <div class="overlay" id="confirmDlg">
   <div class="dlg">
-    <div class="dlg-title" id="dlgTitleContainer" style="color:var(--tx-d);"><i class="ti ti-alert-triangle"></i><span id="dlgTitle">휴지통 전체 비우기</span></div>
-    <div class="dlg-msg" id="dlgMsg">휴지통 내부 <strong>총 21건</strong>의 모든 백업 데이터를 영구 파기하시겠습니까?<br><span style="color:var(--tx-d); font-weight:700;">비워진 메모리 데이터는 복구 조작을 진행할 수 없습니다.</span></div>
+    <div class="dlg-title" id="dlgTitleContainer" style="color:var(--tx-d);"><i class="ti ti-alert-triangle"></i><span id="dlgTitle"></span></div>
+    <div class="dlg-msg" id="dlgMsg"></div>
     <div class="dlg-actions">
       <button class="btn" onclick="closeDlg()">취소</button>
       <button class="btn btn-danger" id="dlgOkBtn"><i class="ti ti-trash"></i>실행</button>
@@ -1098,7 +1149,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
   </div>
   <div class="nav-g">
     <div class="nav-lbl">시스템 관리</div>
-    <div class="ni" onclick="go('system',this)"><i class="ti ti-settings"></i>시스템 관리<span class="nbadge" id="alertBadge">17</span><span class="nbadge" id="trashBadge" style="display:none;background:#868e96;">0</span></div>
+    <div class="ni" onclick="go('system',this)"><i class="ti ti-settings"></i>시스템 관리<span class="nbadge" id="alertBadge">0</span><span class="nbadge" id="trashBadge" style="display:none;background:#868e96;">0</span></div>
   </div>
 </div>
 
@@ -1122,7 +1173,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button type="button" class="global-search-btn" onclick="toggleGlobalSearchBox()" title="검색"><i class="ti ti-search"></i></button>
       
       <!-- 실시간 검색 결과 드롭다운 -->
-      <div id="global-search-results" style="position: absolute; top: 40px; left: 0; width: 440px; background: var(--bg-p); border: 1px solid var(--br-s); border-radius: var(--rl); box-shadow: var(--shadow); z-index: 9999; max-height: 480px; overflow-y: auto; display: none; backdrop-filter: blur(20px); border-color: rgba(255,255,255,0.12);">
+      <div id="global-search-results" style="position: absolute; top: 40px; left: 0; width: min(440px, calc(100vw - 24px)); background: var(--bg-p); border: 1px solid var(--br-s); border-radius: var(--rl); box-shadow: var(--shadow); z-index: 9999; max-height: 480px; overflow-y: auto; display: none; backdrop-filter: blur(20px);">
       </div>
     </div>
 
@@ -1137,7 +1188,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <!-- 데이터 백업/복구는 「권한 관리」 페이지로 이동 (관리자 전용) -->
 
       <button class="theme-btn" onclick="toggleTheme()" title="화면 테마 전환"><i class="ti ti-sun" id="themeIcon"></i></button>
-      <span style="font-size:12px; font-weight: 600; color:var(--tx-s);" id="clock">2026-05-30 10:15:19</span>
+      <span style="font-size:12px; font-weight: 600; color:var(--tx-s);" id="clock"></span>
     </div>
   </div>
 
@@ -1404,7 +1455,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     <div class="toolbar">
       <button class="btn" id="btn-show-closed" onclick="toggleClosedView()" style="border-color: var(--br);"><i class="ti ti-archive"></i>종료 프로젝트 (0)</button>
       <input type="text" id="clients-q" placeholder="업체명 또는 담당자 검색..." style="min-width:200px;" oninput="renderClients()">
-      <button class="btn btn-primary btn-icon" onclick="openClientAdd()" style="margin-left:auto;" title="신규 수주처 등록"><i class="ti ti-plus"></i></button>
+      <button class="btn btn-primary btn-icon" onclick="openClientAdd()" title="신규 수주처 등록"><i class="ti ti-plus"></i></button>
     </div>
     <!-- 고객사 추가 패널 -->
     <div id="client-list">
@@ -1437,7 +1488,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
         <select id="mat-fp" onchange="renderMaterials()" style="min-width:170px;"><option value="">전체 제품 목록</option></select>
         <select id="mat-fs" onchange="renderMaterials()"><option value="">전체 입고 상태</option><option>발주전</option><option>발주중</option><option>입고완료</option><option>지연</option></select>
         <input type="text" id="mat-q" placeholder="자재명 또는 발주처 검색..." style="min-width:180px;" oninput="renderMaterials()">
-        <button class="btn btn-primary btn-icon pc-only" onclick="openMatAdd()" title="신규 자재 발주 요청"><i class="ti ti-plus"></i></button>
+        <button class="btn btn-primary btn-icon" onclick="openMatAdd()" title="신규 자재 발주 요청"><i class="ti ti-plus"></i></button>
         <label class="btn btn-icon pc-only" style="cursor:pointer; margin:0;" title="발주서 XLS 가져오기 (자재 수급에 자동 추가)">
           <i class="ti ti-file-import"></i>
           <input type="file" id="xls-po-input" accept=".xls,.xlsx" style="display:none;" onchange="importPoXLS(this)">
@@ -2098,14 +2149,32 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
 
   <!-- BOM · 자재명세 -->
   <div class="content" id="pg-bom">
-    <div class="toolbar">
-      <label style="font-size:12px;color:var(--tx-s);align-self:center;">제품 선택</label>
-      <select id="bom-product" onchange="onBomProductChange()" style="height:32px;min-width:240px;"></select>
-      <button class="btn btn-icon" onclick="applyBomCost()" title="BOM 재료비를 제품 원가에 반영"><i class="ti ti-arrow-bar-to-down"></i></button>
-      <button class="btn btn-icon" onclick="openBomMaterialImport()" title="자재 수급/발주 내역에서 가져오기"><i class="ti ti-package-import"></i></button>
-      <button class="btn btn-primary btn-icon" onclick="openBomAdd()" style="margin-left:auto;" title="자재 추가"><i class="ti ti-plus"></i></button>
+    <div class="bom-layout">
+      <aside class="card bom-product-pane">
+        <div class="card-hd"><span class="card-ttl"><i class="ti ti-boxes"></i>제품 목록</span><span id="bom-product-count" class="bd bd-neu">0</span></div>
+        <div class="bom-product-filters">
+          <select id="bom-client-filter" onchange="renderBomProductOptions()"><option value="">전체 고객사</option></select>
+          <input id="bom-product-search" oninput="renderBomProductOptions()" placeholder="제품명 · 코드 · 고객사 검색...">
+        </div>
+        <select id="bom-product" onchange="onBomProductChange()" style="display:none;"></select>
+        <div id="bom-product-list" class="bom-product-list"></div>
+        <div id="bom-recent-products" class="bom-recent-products"></div>
+      </aside>
+      <section class="bom-detail-pane">
+        <div class="bom-detail-header">
+          <div>
+            <div style="font-size:10px;color:var(--tx-t);">선택 제품</div>
+            <div id="bom-selected-product" style="font-size:14px;font-weight:800;margin-top:2px;">제품을 선택하세요</div>
+          </div>
+          <div class="toolbar" style="margin:0;">
+            <button class="btn btn-icon" onclick="applyBomCost()" title="BOM 재료비를 제품 원가에 반영"><i class="ti ti-arrow-bar-to-down"></i></button>
+            <button class="btn btn-icon" onclick="openBomMaterialImport()" title="자재 수급/발주 내역에서 가져오기"><i class="ti ti-package-import"></i></button>
+            <button class="btn btn-primary btn-icon" onclick="openBomAdd()" title="자재 추가"><i class="ti ti-plus"></i></button>
+          </div>
+        </div>
+        <div id="bom-body"></div>
+      </section>
     </div>
-    <div id="bom-body"></div>
   </div>
 
   <!-- ══════ 거래처 관리 ══════ -->
@@ -2426,12 +2495,22 @@ const defaultInventory = [];
 /* ════════ 저장소 ════════ */
 function loadStorage(key, defaultVal) {
   const raw = localStorage.getItem('mes_' + key);
-  return raw ? JSON.parse(raw) : defaultVal;
+  if (raw == null) return defaultVal;
+  try { return JSON.parse(raw); }
+  catch(e) {
+    // 손상된 키 하나 때문에 앱 전체가 멈추지 않도록 기본값으로 대체
+    console.warn('저장 데이터 손상 — 기본값으로 대체:', key, e);
+    return defaultVal;
+  }
 }
 
 function saveStorage(key, data) {
-  localStorage.setItem('mes_' + key, JSON.stringify(data));
-  _triggerAutoSave();
+  try { localStorage.setItem('mes_' + key, JSON.stringify(data)); }
+  catch(e) {
+    if (typeof showToast === 'function') showToast('저장 공간이 가득 찼습니다. 첨부파일·휴지통을 정리해주세요.', 'error');
+    console.error('localStorage 저장 실패:', key, e);
+    return;
+  }
   if (typeof cloudQueueSave === 'function') cloudQueueSave(key);   // 클라우드 동기화(활성 시)
 }
 
@@ -2471,19 +2550,6 @@ function initFromEmbedded() {
 
 // 앱 시작 전 내장 데이터 우선 로드
 initFromEmbedded();
-
-// 잘못 등록된 데이터 자동 정리
-(function cleanupBadData() {
-  const raw = localStorage.getItem('mes_clients');
-  if (!raw) return;
-  try {
-    const arr = JSON.parse(raw);
-    const cleaned = arr.filter(c => c.name !== '234234234' && c.name && c.name.trim());
-    if (cleaned.length !== arr.length) {
-      localStorage.setItem('mes_clients', JSON.stringify(cleaned));
-    }
-  } catch(e) {}
-})();
 
 /* 전체 변수 재로드 */
 function reloadAllData() {
@@ -2542,145 +2608,10 @@ function reloadAllData() {
   products.forEach(p => { if (p.processStage==='출하완료') { p.processStage='완료'; p.status='완료'; } });
 }
 
-/* ════════ 자동 저장 시스템 (IndexedDB 파일 핸들 유지) ════════ */
-let _fileHandle    = null;
-let _autoSaveTimer = null;
-
-function _storeHandle(h) {
-  return new Promise(res => {
-    const r = indexedDB.open('MESPro_fh', 1);
-    r.onupgradeneeded = e => e.target.result.createObjectStore('fh');
-    r.onsuccess = e => {
-      const db = e.target.result;
-      const tx = db.transaction('fh', 'readwrite');
-      tx.objectStore('fh').put(h, 'handle');
-      tx.oncomplete = () => { db.close(); res(); };
-    };
-    r.onerror = () => res();
-  });
-}
-
-function _loadHandle() {
-  return new Promise(res => {
-    const r = indexedDB.open('MESPro_fh', 1);
-    r.onupgradeneeded = e => e.target.result.createObjectStore('fh');
-    r.onsuccess = e => {
-      const db = e.target.result;
-      const tx = db.transaction('fh', 'readonly');
-      const g  = tx.objectStore('fh').get('handle');
-      g.onsuccess = () => { db.close(); res(g.result || null); };
-      g.onerror   = () => { db.close(); res(null); };
-    };
-    r.onerror = () => res(null);
-  });
-}
-
-function _showSaveBanner(type) {
-  document.getElementById('save-banner')?.remove();
-  if (type === 'hidden') return;
-  const banner = document.createElement('div');
-  banner.id = 'save-banner';
-  banner.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:var(--bg-i);border:1px solid var(--br-i);border-radius:var(--rl);padding:12px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,.18);font-size:12px;color:var(--tx-i);';
-  if (type === 'ask') {
-    banner.innerHTML = `<i class="ti ti-device-floppy" style="font-size:20px;"></i>
-      <div><div style="font-weight:700;margin-bottom:2px;">자동 저장 설정 (최초 1회)</div>
-      <div style="font-size:11px;color:var(--tx-s);">이 파일을 선택하면 변경 시 자동 저장됩니다</div></div>
-      <button onclick="connectFile()" style="background:var(--tx-i);color:#fff;border:none;border-radius:var(--rm);padding:5px 14px;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap;">파일 연결</button>
-      <button onclick="document.getElementById('save-banner').remove()" style="background:none;border:none;cursor:pointer;color:var(--tx-t);font-size:20px;line-height:1;">×</button>`;
-  } else if (type === 'renew') {
-    banner.innerHTML = `<i class="ti ti-refresh" style="font-size:20px;"></i>
-      <span>저장 권한을 갱신해 주세요</span>
-      <button onclick="_renewPermission()" style="background:var(--tx-i);color:#fff;border:none;border-radius:var(--rm);padding:5px 14px;cursor:pointer;font-size:12px;font-weight:700;">권한 허용</button>
-      <button onclick="document.getElementById('save-banner').remove()" style="background:none;border:none;cursor:pointer;color:var(--tx-t);font-size:20px;line-height:1;">×</button>`;
-  } else if (type === 'ok') {
-    banner.style.background = 'var(--bg-ok)';
-    banner.style.borderColor = 'var(--br-ok)';
-    banner.style.color = 'var(--tx-ok)';
-    banner.innerHTML = '<i class="ti ti-circle-check" style="font-size:20px;"></i><span><b>자동 저장 활성화!</b> 변경 시 파일에 자동 저장됩니다</span>';
-    setTimeout(() => banner.remove(), 3500);
-  }
-  document.body.appendChild(banner);
-}
-
-function _buildHTML() {
-  const now = new Date().toISOString();
-  localStorage.setItem('mes__savedAt', now);
-  // 데이터는 더 이상 HTML에 굽지 않는다. 실데이터는 Firebase + mes-data.json이 담당.
-  // 배포물(HTML)에 데이터가 들어가지 않도록 embedded-data는 항상 빈 객체.
-  const payload = '{}';
-  let html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-  const O = '<script id="embedded-data" type="application/json">';
-  const C = '<' + '/script>';
-  html = html.includes('id="embedded-data"')
-    ? html.replace(/<script id="embedded-data"[^>]*>[\s\S]*?<\/script>/, O + payload + C)
-    : html.replace('</head>', O + payload + C + '\n</head>');
-  return html;
-}
-
-async function _writeFile() {
-  if (!_fileHandle) return;
-  try {
-    const perm = await _fileHandle.queryPermission({ mode: 'readwrite' });
-    if (perm === 'prompt') { _showSaveBanner('renew'); return; }
-    if (perm !== 'granted') return;
-    const w = await _fileHandle.createWritable();
-    await w.write(_buildHTML());
-    await w.close();
-  } catch(e) { console.warn('자동 저장 실패:', e); }
-}
-
-function _triggerAutoSave() {
-  if (!_fileHandle) return;
-  clearTimeout(_autoSaveTimer);
-  _autoSaveTimer = setTimeout(_writeFile, 1500);
-}
-
-async function _renewPermission() {
-  if (!_fileHandle) return;
-  try {
-    const p = await _fileHandle.requestPermission({ mode: 'readwrite' });
-    if (p === 'granted') { document.getElementById('save-banner')?.remove(); await _writeFile(); }
-  } catch(e) {}
-}
-
-async function connectFile() {
-  if (!('showOpenFilePicker' in window)) {
-    showToast('Chrome 또는 Edge 브라우저에서만 지원됩니다.', 'error'); return;
-  }
-  try {
-    [_fileHandle] = await window.showOpenFilePicker({
-      types: [{ description: 'MES Pro HTML', accept: { 'text/html': ['.html'] } }]
-    });
-    await _storeHandle(_fileHandle);
-    await _writeFile();
-    _showSaveBanner('ok');
-  } catch(e) {
-    if (e.name !== 'AbortError') showToast('파일 연결 실패: ' + e.message, 'error');
-  }
-}
-
-async function initAutoSave() {
-  if (cloudConfigured()) return;   // 클라우드 모드: 데이터가 Firestore에 저장되므로 파일 자동저장 불필요
-  if (!('showOpenFilePicker' in window)) return;
-  const handle = await _loadHandle();
-  if (!handle) { setTimeout(() => _showSaveBanner('ask'), 1500); return; }
-  try {
-    const perm = await handle.queryPermission({ mode: 'readwrite' });
-    if (perm === 'granted') { _fileHandle = handle; return; }
-    if (perm === 'prompt')  { _fileHandle = handle; setTimeout(() => _showSaveBanner('renew'), 1000); }
-  } catch(e) { setTimeout(() => _showSaveBanner('ask'), 1500); }
-}
-
-function saveAsFile() {
-  if (_fileHandle) { _writeFile(); return; }
-  const blob = new Blob([_buildHTML()], { type: 'text/html;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'index.html';
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  showToast('파일이 다운로드되었습니다.', 'success');
-}
+/* ════════ (제거됨) HTML 파일 자동 저장 ════════
+   살아있는 DOM(outerHTML)을 직렬화해 파일에 쓰던 방식은 런타임 주입물(체크박스 열,
+   권한 CSS, 배지 등)이 파일에 박제되는 문제가 있어 제거됨.
+   데이터 보존은 Firebase 동기화 + JSON/XLS 내보내기(exportDataJSON/exportAllXLS)가 담당. */
 
 /* ════════ 전체 데이터 JSON 파일 내보내기/가져오기 (프로그램 ↔ 데이터 분리) ════════ */
 const DATA_KEYS = [
@@ -3168,8 +3099,8 @@ function onGlobalSearch(q) {
     matchingClients.forEach(c => {
       matchCount++;
       html += `<div class="search-result-item" onclick="navToGlobalSearchResult('client', '${c.id}')" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--br); transition: background 0.15s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background='transparent'">
-        <div style="font-weight:700; font-size:12px;">${c.name}</div>
-        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">담당: ${c.manager || '미지정'} · ${c.tel || '연락처 없음'}</div>
+        <div style="font-weight:700; font-size:12px;">${esc(c.name)}</div>
+        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">담당: ${esc(c.manager) || '미지정'} · ${esc(c.tel) || '연락처 없음'}</div>
       </div>`;
     });
   }
@@ -3186,8 +3117,8 @@ function onGlobalSearch(q) {
       matchCount++;
       const cname = getClientName(p.clientId);
       html += `<div class="search-result-item" onclick="navToGlobalSearchResult('product', '${p.id}', '${p.clientId}')" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--br); transition: background 0.15s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background='transparent'">
-        <div style="font-weight:700; font-size:12px;">${p.name} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${p.id}</span></div>
-        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">고객사: ${cname} · 규격: ${p.spec || '없음'} · 단계: ${p.processStage}</div>
+        <div style="font-weight:700; font-size:12px;">${esc(p.name)} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${esc(p.id)}</span></div>
+        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">고객사: ${esc(cname)} · 규격: ${esc(p.spec) || '없음'} · 단계: ${esc(p.processStage)}</div>
       </div>`;
     });
   }
@@ -3204,8 +3135,8 @@ function onGlobalSearch(q) {
       matchCount++;
       const pname = getProductName(m.productId);
       html += `<div class="search-result-item" onclick="navToGlobalSearchResult('material', '${m.id}')" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--br); transition: background 0.15s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background='transparent'">
-        <div style="font-weight:700; font-size:12px;">${m.name} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${m.id}</span></div>
-        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">공급처: ${m.supplier || '미정'} · 제품: ${pname} · 상태: ${m.status}</div>
+        <div style="font-weight:700; font-size:12px;">${esc(m.name)} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${esc(m.id)}</span></div>
+        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">공급처: ${esc(m.supplier) || '미정'} · 제품: ${esc(pname)} · 상태: ${esc(m.status)}</div>
       </div>`;
     });
   }
@@ -3222,8 +3153,8 @@ function onGlobalSearch(q) {
       matchCount++;
       const pname = getProductName(o.productId);
       html += `<div class="search-result-item" onclick="navToGlobalSearchResult('order', '${o.id}')" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--br); transition: background 0.15s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background='transparent'">
-        <div style="font-weight:700; font-size:12px;">${pname} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${o.id}</span></div>
-        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">라인: ${o.line} · 담당: ${o.manager || '미지정'} · 실적: ${o.done}/${o.qty} · 상태: ${o.status}</div>
+        <div style="font-weight:700; font-size:12px;">${esc(pname)} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${esc(o.id)}</span></div>
+        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">라인: ${esc(o.line)} · 담당: ${esc(o.manager) || '미지정'} · 실적: ${esc(o.done)}/${esc(o.qty)} · 상태: ${esc(o.status)}</div>
       </div>`;
     });
   }
@@ -3239,8 +3170,8 @@ function onGlobalSearch(q) {
     matchingInv.forEach(i => {
       matchCount++;
       html += `<div class="search-result-item" onclick="navToGlobalSearchResult('inventory', '${i.id}')" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--br); transition: background 0.15s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background='transparent'">
-        <div style="font-weight:700; font-size:12px;">${i.name} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${i.id}</span></div>
-        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">분류: ${i.type} · 위치: ${i.location || '미설정'} · 재고량: ${i.qty} ${i.unit}</div>
+        <div style="font-weight:700; font-size:12px;">${esc(i.name)} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${esc(i.id)}</span></div>
+        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">분류: ${esc(i.type)} · 위치: ${esc(i.location) || '미설정'} · 재고량: ${esc(i.qty)} ${esc(i.unit)}</div>
       </div>`;
     });
   }
@@ -3261,15 +3192,15 @@ function onGlobalSearch(q) {
     matchingDefects.forEach(d => {
       matchCount++;
       html += `<div class="search-result-item" onclick="navToGlobalSearchResult('quality', 'defect', '${d.id}')" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--br); transition: background 0.15s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background='transparent'">
-        <div style="font-weight:700; font-size:12px;"><span class="bd bd-err" style="font-size:9px; padding:1px 4px; margin-right:4px; border-radius:3px;">불량</span>${d.type} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${d.id}</span></div>
-        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">공정: ${d.stage} · 원인: ${d.cause || '미작성'} · 상태: ${d.status}</div>
+        <div style="font-weight:700; font-size:12px;"><span class="bd bd-err" style="font-size:9px; padding:1px 4px; margin-right:4px; border-radius:3px;">불량</span>${esc(d.type)} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${esc(d.id)}</span></div>
+        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">공정: ${esc(d.stage)} · 원인: ${esc(d.cause) || '미작성'} · 상태: ${esc(d.status)}</div>
       </div>`;
     });
     matchingClaims.forEach(c => {
       matchCount++;
       html += `<div class="search-result-item" onclick="navToGlobalSearchResult('quality', 'claim', '${c.id}')" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--br); transition: background 0.15s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background='transparent'">
-        <div style="font-weight:700; font-size:12px;"><span class="bd bd-warn" style="font-size:9px; padding:1px 4px; margin-right:4px; border-radius:3px;">클레임</span>${c.content.slice(0, 30)}...</div>
-        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">고객사: ${getClientName(c.clientId)} · 상태: ${c.status}</div>
+        <div style="font-weight:700; font-size:12px;"><span class="bd bd-warn" style="font-size:9px; padding:1px 4px; margin-right:4px; border-radius:3px;">클레임</span>${esc(c.content.slice(0, 30))}...</div>
+        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">고객사: ${esc(getClientName(c.clientId))} · 상태: ${esc(c.status)}</div>
       </div>`;
     });
   }
@@ -3288,8 +3219,8 @@ function onGlobalSearch(q) {
     matchingWorkers.forEach(w => {
       matchCount++;
       html += `<div class="search-result-item" onclick="navToGlobalSearchResult('worker', '${w.id}')" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--br); transition: background 0.15s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background='transparent'">
-        <div style="font-weight:700; font-size:12px;">${w.name} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${w.id}</span></div>
-        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">${w.dept || '부서 미지정'}${w.position ? ' · '+w.position : ''} · ${w.empType || '정규직'} · ${w.status || ''}</div>
+        <div style="font-weight:700; font-size:12px;">${esc(w.name)} <span style="font-size:9.5px; color:var(--tx-t); font-weight:normal;">${esc(w.id)}</span></div>
+        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">${esc(w.dept) || '부서 미지정'}${w.position ? ' · '+esc(w.position) : ''} · ${esc(w.empType) || '정규직'} · ${esc(w.status) || ''}</div>
       </div>`;
     });
   }
@@ -3495,6 +3426,14 @@ const GC_Light = 'rgba(0,0,0,.05)';
 const TC_Dark = '#868e96';
 const TC_Light = '#495057';
 
+/* HTML 이스케이프 — 사용자 입력을 innerHTML에 넣기 전 반드시 통과시킬 것 (XSS 방어) */
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => (
+    { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+  ));
+}
+
 function isDark() { return document.documentElement.classList.contains('dark'); }
 function getGridColor() { return isDark() ? GC_Dark : GC_Light; }
 function getTextColor() { return isDark() ? TC_Dark : TC_Light; }
@@ -3532,7 +3471,7 @@ function showToast(message, type = 'success') {
   if (type === 'error') icon = 'ti-circle-x';
   else if (type === 'info') icon = 'ti-info-circle';
 
-  toast.innerHTML = `<i class="ti ${icon}"></i><span>${message}</span>`;
+  toast.innerHTML = `<i class="ti ${icon}"></i><span>${esc(message)}</span>`;
   container.appendChild(toast);
 
   const timer = setTimeout(() => {
@@ -3567,7 +3506,13 @@ function inp(id) { return document.getElementById(id); }
 
 function nextCode(prefix, list, field='id') {
   const nums = list.map(x => parseInt((x[field] || '').split('-').pop()) || 0);
-  return `${prefix}-${String((nums.length ? Math.max(...nums) : 0) + 1).padStart(3, '0')}`;
+  let n = (nums.length ? Math.max(...nums) : 0) + 1;
+  let code = `${prefix}-${String(n).padStart(3, '0')}`;
+  // 동시 등록 등으로 같은 번호가 이미 존재하면 빈 번호까지 증가 (중복 ID 방지)
+  while (list.some(x => x[field] === code)) {
+    n++; code = `${prefix}-${String(n).padStart(3, '0')}`;
+  }
+  return code;
 }
 /* KPI 카드 클릭 → 페이지의 상태 필터 select 를 해당 값으로 토글(같은 값 재클릭 시 전체 복구) 후 재렌더.
    renderFn 에 인자가 필요한 경우(renderSalesDoc('statement') 등) ...args 로 전달. */
@@ -3601,7 +3546,7 @@ function statusBadge(s) {
     '조치중': 'bd-warn', '지연': 'bd-err', '납기지연': 'bd-err', '결근': 'bd-err', '불합격': 'bd-err',
     '조건부합격': 'bd-warn', '정비지원': 'bd-warn', '휴가': 'bd-neu', '보류': 'bd-neu'
   };
-  return `<span class="bd ${m[s] || 'bd-neu'}">${s}</span>`;
+  return `<span class="bd ${m[s] || 'bd-neu'}">${esc(s)}</span>`;
 }
 
 function pctBar(done, qty, w=60) {
@@ -3761,21 +3706,21 @@ function closeDlg() { inp('confirmDlg').classList.remove('open'); _cfn = null; }
 
 function fillClientSelect(elId, includeAll=false) {
   const el = inp(elId); if (!el) return;
-  el.innerHTML = (includeAll ? '<option value="">전체 의뢰 고객사</option>' : '') + clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  el.innerHTML = (includeAll ? '<option value="">전체 의뢰 고객사</option>' : '') + clients.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
 }
 function fillProductSelect(elId, clientId, selected='') {
   const el = inp(elId); if (!el) return;
   const list = clientId ? products.filter(p => p.clientId === clientId) : products;
-  el.innerHTML = '<option value="">-- 품목 선택 --</option>' + list.map(p => `<option value="${p.id}"${p.id===selected?' selected':''}>${p.name}</option>`).join('');
+  el.innerHTML = '<option value="">-- 품목 선택 --</option>' + list.map(p => `<option value="${esc(p.id)}"${p.id===selected?' selected':''}>${esc(p.name)}</option>`).join('');
 }
 function fillStageSelect(elId) {
   const el = inp(elId); if (!el) return;
-  el.innerHTML = processStages.map(s => `<option>${s}</option>`).join('');
+  el.innerHTML = processStages.map(s => `<option>${esc(s)}</option>`).join('');
 }
 function fillWorkerSelect(elId, selected='') {
   const el = inp(elId); if (!el) return;
   el.innerHTML = '<option value="">— 작업원 선택 —</option>' +
-    workers.map(w => `<option value="${w.name}"${w.name===selected?' selected':''}>${w.name} (라인${w.line}·${w.role})</option>`).join('');
+    workers.map(w => `<option value="${esc(w.name)}"${w.name===selected?' selected':''}>${esc(w.name)} (라인${esc(w.line)}·${esc(w.role)})</option>`).join('');
 }
 
 /* 제품 등록 폼 - 공정단계 선택 시 자동 상태 미리보기 업데이트 */
@@ -4107,16 +4052,16 @@ function renderDashOverview() {
   const actions = [];
   materials.filter(m => m.status === '발주전').slice(0, 3).forEach(m => {
     const pr = getProductById(m.productId);
-    actions.push({ cls:'urgent', icon:'ti-alert-circle', txt:`[자재발주 요청] ${m.name}`, sub:`${pr?.name||''} 공정자재 · 미발주`, page:'materials' });
+    actions.push({ cls:'urgent', icon:'ti-alert-circle', txt:`[자재발주 요청] ${esc(m.name)}`, sub:`${esc(pr?.name)||''} 공정자재 · 미발주`, page:'materials' });
   });
   materials.filter(m => m.status==='발주중' && m.expectedDate && daysUntil(m.expectedDate)<=7).slice(0,2).forEach(m => {
-    actions.push({ cls:'warn', icon:'ti-truck-delivery', txt:`[입고임박] ${m.name}`, sub:`${m.supplier} · ${m.expectedDate} 예정`, page:'materials' });
+    actions.push({ cls:'warn', icon:'ti-truck-delivery', txt:`[입고임박] ${esc(m.name)}`, sub:`${esc(m.supplier)} · ${esc(m.expectedDate)} 예정`, page:'materials' });
   });
   defects.filter(d => d.status !== '완료').slice(0,2).forEach(d => {
-    actions.push({ cls:'urgent', icon:'ti-shield-alert', txt:`[미처리 불량] ${d.type}`, sub:`${getProductName(d.productId)} · ${d.stage}`, page:'quality' });
+    actions.push({ cls:'urgent', icon:'ti-shield-alert', txt:`[미처리 불량] ${esc(d.type)}`, sub:`${esc(getProductName(d.productId))} · ${esc(d.stage)}`, page:'quality' });
   });
   inventory.filter(i => i.qty <= i.minQty).slice(0,2).forEach(i => {
-    actions.push({ cls:'warn', icon:'ti-package-off', txt:`[안전재고 미달] ${i.name}`, sub:`현재고 ${i.qty}${i.unit} / 안전 ${i.minQty}${i.unit}`, page:'inventory' });
+    actions.push({ cls:'warn', icon:'ti-package-off', txt:`[안전재고 미달] ${esc(i.name)}`, sub:`현재고 ${esc(i.qty)}${esc(i.unit)} / 안전 ${esc(i.minQty)}${esc(i.unit)}`, page:'inventory' });
   });
   inp('dash-actions').innerHTML = actions.length ? actions.map(a => `
     <div class="action-item ${a.cls}" style="cursor:pointer;" onclick="go('${a.page}')">
@@ -4141,11 +4086,11 @@ function renderDashOverview() {
       <tbody>
         ${dl.slice(0,6).map(p => `
           <tr style="cursor:pointer;" onclick="go('process')" title="공정관리로 이동">
-            <td style="font-weight:600;">${getClientName(p.clientId)}</td>
-            <td style="font-weight:700; color:var(--tx-i);">${p.name}</td>
-            <td style="font-size:11px;">${p.deliveryDate}</td>
+            <td style="font-weight:600;">${esc(getClientName(p.clientId))}</td>
+            <td style="font-weight:700; color:var(--tx-i);">${esc(p.name)}</td>
+            <td style="font-size:11px;">${esc(p.deliveryDate)}</td>
             <td>${dayBadge(p.deliveryDate)}</td>
-            <td><span class="bd bd-info" style="font-size:10px;">${p.processStage}</span></td>
+            <td><span class="bd bd-info" style="font-size:10px;">${esc(p.processStage)}</span></td>
             <td>${statusBadge(p.status)}</td>
           </tr>`).join('')}
       </tbody>
@@ -4166,7 +4111,7 @@ function renderDashOverview() {
           <div style="width:1px;height:30px;background:var(--br);"></div>
           <div><div style="font-size:15px;font-weight:700;color:var(--tx-i);">${dlvMonth}건</div><div style="font-size:10px;color:var(--tx-t);">이번달</div></div>
           <div style="margin-left:auto;">
-            ${deliveries.slice(0,2).map(d=>`<div style="font-size:10px;margin-bottom:2px;"><b>${d.productName}</b> · ${getClientName(d.clientId)} · ${d.deliveredAt}</div>`).join('')}
+            ${deliveries.slice(0,2).map(d=>`<div style="font-size:10px;margin-bottom:2px;"><b>${esc(d.productName)}</b> · ${esc(getClientName(d.clientId))} · ${esc(d.deliveredAt)}</div>`).join('')}
           </div>
         </div>`;
   }
@@ -4187,7 +4132,7 @@ function renderDashProjects() {
       <tbody>
         ${activeClients.flatMap(c => {
           const prods = products.filter(p => p.clientId === c.id);
-          if (!prods.length) return [`<tr><td style="font-weight:700;">${c.name}</td><td style="font-size:11px;color:var(--tx-t);">${c.manager||'—'}</td><td colspan="8" style="color:var(--tx-t);font-size:11px;font-style:italic;">등록된 제품 없음</td></tr>`];
+          if (!prods.length) return [`<tr><td style="font-weight:700;">${esc(c.name)}</td><td style="font-size:11px;color:var(--tx-t);">${esc(c.manager)||'—'}</td><td colspan="8" style="color:var(--tx-t);font-size:11px;font-style:italic;">등록된 제품 없음</td></tr>`];
           return prods.map((p, i) => {
             const pMats  = materials.filter(m => m.productId === p.id);
             const matPre = pMats.filter(m => m.status==='발주전').length;
@@ -4197,12 +4142,12 @@ function renderDashProjects() {
             const sc = stageColors[p.processStage] || '#495057';
             return `
               <tr style="cursor:pointer;" onclick="navToProduct('${c.id}','${p.id}')">
-                ${i===0 ? `<td rowspan="${prods.length}" style="font-weight:700;border-right:2px solid var(--br-i);vertical-align:middle;">${c.name}</td>
-                            <td rowspan="${prods.length}" style="font-size:11px;color:var(--tx-s);border-right:1px solid var(--br);vertical-align:middle;">${c.manager||'—'}</td>` : ''}
-                <td style="font-weight:700;">${p.name} <span style="font-size:10px;color:var(--tx-t);font-weight:400;">${p.spec||''}</span></td>
-                <td style="font-size:11px;">${p.deliveryDate||'—'}</td>
+                ${i===0 ? `<td rowspan="${prods.length}" style="font-weight:700;border-right:2px solid var(--br-i);vertical-align:middle;">${esc(c.name)}</td>
+                            <td rowspan="${prods.length}" style="font-size:11px;color:var(--tx-s);border-right:1px solid var(--br);vertical-align:middle;">${esc(c.manager)||'—'}</td>` : ''}
+                <td style="font-weight:700;">${esc(p.name)} <span style="font-size:10px;color:var(--tx-t);font-weight:400;">${esc(p.spec)||''}</span></td>
+                <td style="font-size:11px;">${esc(p.deliveryDate)||'—'}</td>
                 <td>${p.deliveryDate ? dayBadge(p.deliveryDate) : '—'}</td>
-                <td><span class="bd" style="background:${sc}18;color:${sc};border-color:${sc}44;font-size:10px;">${p.processStage}</span></td>
+                <td><span class="bd" style="background:${sc}18;color:${sc};border-color:${sc}44;font-size:10px;">${esc(p.processStage)}</span></td>
                 <td style="font-size:11px;">
                   ${pMats.length===0 ? '<span style="color:var(--tx-t);">자재없음</span>' :
                     `<span style="color:${matPre>0?'var(--tx-d)':'var(--tx-t)'};font-weight:600;">대기 ${matPre}</span> /
@@ -4236,8 +4181,8 @@ function renderDashResources() {
         return `
           <div style="cursor:pointer;" onclick="navToMatForProduct('${p.id}')">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
-              <span style="font-size:11px;font-weight:700;">${p.name}</span>
-              <span style="font-size:10px;color:var(--tx-t);">${getClientName(p.clientId)}</span>
+              <span style="font-size:11px;font-weight:700;">${esc(p.name)}</span>
+              <span style="font-size:10px;color:var(--tx-t);">${esc(getClientName(p.clientId))}</span>
             </div>
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
               <div style="flex:1;height:6px;background:var(--bg-t);border-radius:3px;overflow:hidden;">
@@ -4275,9 +4220,9 @@ function renderDashResources() {
       ${defects.filter(d=>d.status!=='완료').slice(0,2).map(d=>`
         <div class="action-item warn" style="cursor:pointer;padding:7px 10px;" onclick="go('quality')">
           <i class="ti ti-alert-triangle" style="font-size:12px;"></i>
-          <div style="flex:1;"><div style="font-size:10px;font-weight:700;">${d.type}</div>
-          <div style="font-size:9px;color:var(--tx-t);">${getProductName(d.productId)} · ${d.stage}</div></div>
-          <span class="bd bd-warn" style="font-size:9px;">${d.status}</span>
+          <div style="flex:1;"><div style="font-size:10px;font-weight:700;">${esc(d.type)}</div>
+          <div style="font-size:9px;color:var(--tx-t);">${esc(getProductName(d.productId))} · ${esc(d.stage)}</div></div>
+          <span class="bd bd-warn" style="font-size:9px;">${esc(d.status)}</span>
         </div>`).join('')}
       ${openDefects===0&&openClaims.length===0?`<div class="action-item info"><i class="ti ti-circle-check"></i><div><div class="action-txt" style="font-size:11px;">품질 이슈 없음</div></div></div>`:''}
     </div>`;
@@ -4300,7 +4245,7 @@ function renderDashResources() {
         const pct = i.minQty > 0 ? Math.round(i.qty/i.minQty*100) : 0;
         return `<div style="cursor:pointer;padding:7px 10px;background:var(--bg-s);border:1px solid var(--br-d);border-radius:var(--rm);" onclick="go('inventory')">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
-            <span style="font-size:11px;font-weight:700;">${i.name}</span>
+            <span style="font-size:11px;font-weight:700;">${esc(i.name)}</span>
             <span class="bd bd-err" style="font-size:9px;">미달</span>
           </div>
           <div style="display:flex;align-items:center;gap:6px;">
@@ -4348,12 +4293,12 @@ function renderClosedProjects() {
     return `
       <div style="border:1px solid var(--br); border-radius:var(--rl); margin-bottom:12px; overflow:hidden;">
         <div style="display:flex; align-items:center; gap:12px; padding:13px 16px; background:var(--bg-s); border-bottom:1px solid var(--br);">
-          <div class="c-avatar" style="background:#868e96; opacity:.7; width:34px; height:34px; font-size:13px;">${c.name.slice(0,2)}</div>
+          <div class="c-avatar" style="background:#868e96; opacity:.7; width:34px; height:34px; font-size:13px;">${esc(c.name.slice(0,2))}</div>
           <div style="flex:1; min-width:0;">
-            <div style="font-size:13px; font-weight:700; color:var(--tx-s);">${c.name}
-              <span class="bd" style="font-size:10px; background:#86868618; color:#868686; border-color:#86868644; margin-left:6px;">종료 ${c.closedAt||''}</span>
+            <div style="font-size:13px; font-weight:700; color:var(--tx-s);">${esc(c.name)}
+              <span class="bd" style="font-size:10px; background:#86868618; color:#868686; border-color:#86868644; margin-left:6px;">종료 ${esc(c.closedAt)||''}</span>
             </div>
-            <div style="font-size:11px; color:var(--tx-t); margin-top:2px;">담당: ${c.manager||'—'} · 제품 ${prods.length}종 · 납품 ${cDlvs.length}건</div>
+            <div style="font-size:11px; color:var(--tx-t); margin-top:2px;">담당: ${esc(c.manager)||'—'} · 제품 ${prods.length}종 · 납품 ${cDlvs.length}건</div>
           </div>
           <div style="text-align:right; margin-right:8px;">
             <div style="font-size:16px; font-weight:700; color:var(--tx-ok);">${fmtW(cAmt)}</div>
@@ -4372,11 +4317,11 @@ function renderClosedProjects() {
             <tbody>
               ${cDlvs.map(d => `
                 <tr>
-                  <td style="font-family:monospace; color:var(--tx-i); font-weight:700;">${d.id}</td>
-                  <td>${d.deliveredAt}</td>
-                  <td style="font-weight:600;">${d.productName}</td>
-                  <td style="color:var(--tx-t);">${d.spec||'—'}</td>
-                  <td>${d.qty} ${d.unit}</td>
+                  <td style="font-family:monospace; color:var(--tx-i); font-weight:700;">${esc(d.id)}</td>
+                  <td>${esc(d.deliveredAt)}</td>
+                  <td style="font-weight:600;">${esc(d.productName)}</td>
+                  <td style="color:var(--tx-t);">${esc(d.spec)||'—'}</td>
+                  <td>${esc(d.qty)} ${esc(d.unit)}</td>
                   <td>${fmtW(d.price)}</td>
                   <td style="font-weight:700; color:var(--tx-ok);">${fmtW(d.price*d.qty)}</td>
                 </tr>`).join('')}
@@ -4397,7 +4342,7 @@ function renderDeliveries() {
   if (fc) {
     const cur = fc.value;
     fc.innerHTML = '<option value="">전체 고객사</option>' +
-      clients.map(c=>`<option value="${c.id}"${c.id===cur?' selected':''}>${c.name}</option>`).join('');
+      clients.map(c=>`<option value="${esc(c.id)}"${c.id===cur?' selected':''}>${esc(c.name)}</option>`).join('');
   }
   const fcVal = v('dlv-filter-client');
   const q = (v('dlv-q')||'').toLowerCase();
@@ -4462,15 +4407,15 @@ function renderDeliveries() {
       <tbody>
         ${fil.map(d=>`
           <tr>
-            <td style="font-family:monospace;font-weight:700;font-size:11px;color:var(--tx-i);">${d.id}</td>
-            <td style="font-size:11px;">${d.deliveredAt}</td>
-            <td style="font-weight:600;">${getClientName(d.clientId)}</td>
-            <td style="font-weight:700;">${d.productName}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${d.spec||''}</span></td>
-            <td style="font-size:11px;color:var(--tx-t);">${d.spec||'—'}</td>
-            <td style="font-weight:700;">${d.qty} <span style="font-weight:400;">${d.unit}</span></td>
+            <td style="font-family:monospace;font-weight:700;font-size:11px;color:var(--tx-i);">${esc(d.id)}</td>
+            <td style="font-size:11px;">${esc(d.deliveredAt)}</td>
+            <td style="font-weight:600;">${esc(getClientName(d.clientId))}</td>
+            <td style="font-weight:700;">${esc(d.productName)}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${esc(d.spec)||''}</span></td>
+            <td style="font-size:11px;color:var(--tx-t);">${esc(d.spec)||'—'}</td>
+            <td style="font-weight:700;">${esc(d.qty)} <span style="font-weight:400;">${esc(d.unit)}</span></td>
             <td class="amt-blue">${fmtW(d.price)}</td>
             <td style="font-weight:700;color:var(--tx-ok);">${fmtW(d.price*d.qty)}</td>
-            <td style="font-size:11px;color:var(--tx-t);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.note||'—'}</td>
+            <td style="font-size:11px;color:var(--tx-t);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(d.note)||'—'}</td>
             <td><button class="del-btn" onclick="deleteDelivery('${d.id}')"><i class="ti ti-trash"></i></button></td>
           </tr>`).join('')}
       </tbody>
@@ -4754,6 +4699,8 @@ function calShowDetail(dateStr) {
 /* ════════ BOM · 자재명세 ════════ */
 let editBomId = null;
 let bomMaterialImportRows = [];
+let bomViewTab = 'bom';
+let bomMaterialQuery = '';
 function bomFor(pid){ return bomList.filter(b=>b.productId===pid); }
 /* 라인 단위원가: 반제품(subProductId)이면 하위 BOM 재료비를 롤업, 아니면 단가 */
 function bomLineUnitCost(b, seen){ return b.subProductId ? bomMaterialCost(b.subProductId, seen) : (Number(b.unitPrice)||0); }
@@ -4798,31 +4745,116 @@ function invStockByName(name){
   const it = inventory.find(i=>(i.name||'').trim().toLowerCase()===(name||'').trim().toLowerCase());
   return it ? (Number(it.qty)||0) : null;
 }
-function _bomProductOptions(sel){
-  return products.map(p=>`<option value="${p.id}"${p.id===sel?' selected':''}>${p.name} (${p.id})</option>`).join('');
+function _bomRecentIds(){
+  try { return JSON.parse(localStorage.getItem('mes_bomRecentProducts') || '[]'); }
+  catch (e) { return []; }
 }
-function onBomProductChange(){ bomProductId = v('bom-product'); renderBom(); }
+function _rememberBomProduct(pid){
+  if (!pid) return;
+  const ids = [pid].concat(_bomRecentIds().filter(id=>id!==pid)).slice(0, 5);
+  localStorage.setItem('mes_bomRecentProducts', JSON.stringify(ids));
+}
+function _bomVisibleProducts(){
+  const clientId = v('bom-client-filter');
+  const q = v('bom-product-search').trim().toLowerCase();
+  return products.filter(p=>{
+    if (clientId && p.clientId !== clientId) return false;
+    return !q || [p.name,p.id,getClientName(p.clientId)].join(' ').toLowerCase().includes(q);
+  });
+}
+function renderBomProductOptions(){
+  const clientFilter = inp('bom-client-filter');
+  if (clientFilter) {
+    const current = clientFilter.value;
+    clientFilter.innerHTML = '<option value="">전체 고객사</option>' +
+      clients.filter(c=>!c.closed).map(c=>`<option value="${c.id}"${c.id===current?' selected':''}>${_bomImportEsc(c.name)}</option>`).join('');
+  }
+  const visible = _bomVisibleProducts();
+  const count = inp('bom-product-count');
+  if (count) count.textContent = visible.length;
+  const sel = inp('bom-product');
+  if (sel) {
+    sel.innerHTML = visible.length
+      ? visible.map(p=>`<option value="${p.id}"${p.id===bomProductId?' selected':''}>${_bomImportEsc(p.name)} (${_bomImportEsc(p.id)}) · ${_bomImportEsc(getClientName(p.clientId))}</option>`).join('')
+      : '<option value="">검색 결과 없음</option>';
+    if (!visible.some(p=>p.id===bomProductId)) sel.value = '';
+  }
+  const list = inp('bom-product-list');
+  if (list) {
+    list.innerHTML = visible.length ? visible.map(p=>{
+      const lineCount = bomFor(p.id).length;
+      return `<button class="bom-product-item${p.id===bomProductId?' active':''}" onclick="selectBomProduct('${p.id}')">
+        <span class="bom-product-item-main"><b>${_bomImportEsc(p.name)}</b><small>${_bomImportEsc(getClientName(p.clientId))} · ${_bomImportEsc(p.id)}</small></span>
+        <span class="bd ${lineCount?'bd-info':'bd-neu'}">${lineCount}종</span>
+      </button>`;
+    }).join('') : '<div class="empty" style="padding:18px 8px;">검색 결과가 없습니다.</div>';
+  }
+  renderBomRecentProducts();
+}
+function renderBomRecentProducts(){
+  const box = inp('bom-recent-products'); if (!box) return;
+  const recent = _bomRecentIds().map(id=>products.find(p=>p.id===id)).filter(Boolean);
+  box.innerHTML = recent.length
+    ? '<div class="bom-recent-title"><i class="ti ti-history"></i> 최근 제품</div>' +
+      recent.map(p=>`<button class="bom-recent-item${p.id===bomProductId?' active':''}" onclick="selectBomProduct('${p.id}')">${_bomImportEsc(p.name)}</button>`).join('')
+    : '<span style="font-size:11px;color:var(--tx-t);">제품을 선택하면 최근 사용 제품이 여기에 표시됩니다.</span>';
+}
+function selectBomProduct(pid){
+  const p = products.find(x=>x.id===pid); if (!p) return;
+  bomProductId = pid;
+  _rememberBomProduct(pid);
+  renderBom();
+}
+function onBomProductChange(){
+  const pid = v('bom-product');
+  if (!pid) return;
+  bomProductId = pid;
+  _rememberBomProduct(pid);
+  renderBom();
+}
+function switchBomView(tab){
+  bomViewTab = tab === 'mrp' ? 'mrp' : 'bom';
+  document.querySelectorAll('#bom-view-tabs [data-bomtab]').forEach(btn=>{
+    btn.classList.toggle('btn-primary', btn.dataset.bomtab===bomViewTab);
+  });
+  const bomPanel = inp('bom-panel-list'), mrpPanel = inp('bom-panel-mrp');
+  if (bomPanel) bomPanel.style.display = bomViewTab==='bom' ? '' : 'none';
+  if (mrpPanel) mrpPanel.style.display = bomViewTab==='mrp' ? '' : 'none';
+}
+function filterBomMaterials(field){
+  bomMaterialQuery = String(field ? field.value : v('bom-material-search')).trim().toLowerCase();
+  const caret = field && typeof field.selectionStart === 'number' ? field.selectionStart : bomMaterialQuery.length;
+  renderBom();
+  setTimeout(()=>{
+    const next = inp('bom-material-search');
+    if (next) { next.focus(); next.setSelectionRange(caret, caret); }
+  }, 0);
+}
 function renderBom(){
   const body = inp('bom-body'); if(!body) return;
   // 제품 셀렉트 채우기 + 기본 선택
   if (!bomProductId || !products.find(p=>p.id===bomProductId)) bomProductId = products[0]?.id || '';
-  const sel = inp('bom-product'); if (sel) sel.innerHTML = _bomProductOptions(bomProductId);
+  if (bomProductId) _rememberBomProduct(bomProductId);
+  renderBomProductOptions();
   const p = products.find(x=>x.id===bomProductId);
   if (!p) { body.innerHTML = empty('등록된 제품이 없습니다. 먼저 제품을 등록하세요.'); return; }
+  const selectedLabel = inp('bom-selected-product');
+  if (selectedLabel) selectedLabel.innerHTML = `${_bomImportEsc(p.name)} <span style="font-size:10px;color:var(--tx-t);font-weight:500;">${_bomImportEsc(p.id)} · ${_bomImportEsc(getClientName(p.clientId))}</span>`;
   const lines = bomFor(p.id);
+  const visibleLines = lines.filter(b=>!bomMaterialQuery || [b.name,b.spec,b.supplier,bomProductName(b.subProductId)].join(' ').toLowerCase().includes(bomMaterialQuery));
   const matCost = bomMaterialCost(p.id);
   const savedCost = Number(p.matCost)||0;
   const diff = matCost - savedCost;
-  const rows = lines.length ? lines.map(b=>{
+  const rows = visibleLines.length ? visibleLines.map(b=>{
     const isSub = !!b.subProductId;
     const unitCost = bomLineUnitCost(b);
     const amt = (Number(b.qtyPer)||0)*unitCost;
     return `
     <tr>
-      <td style="font-weight:700;">${b.name}${isSub?` <span class="bd bd-info" style="font-size:9px;">반제품</span>`:''}</td>
-      <td>${b.spec||'—'}</td>
-      <td>${isSub?`<span style="color:var(--tx-i);">↳ ${bomProductName(b.subProductId)}</span>`:(b.supplier||'<span style="color:var(--tx-t);">미지정</span>')}</td>
-      <td style="text-align:right;">${b.qtyPer}${b.unit||''}</td>
+      <td style="font-weight:700;">${esc(b.name)}${isSub?` <span class="bd bd-info" style="font-size:9px;">반제품</span>`:''}</td>
+      <td>${esc(b.spec)||'—'}</td>
+      <td>${isSub?`<span style="color:var(--tx-i);">↳ ${esc(bomProductName(b.subProductId))}</span>`:(esc(b.supplier)||'<span style="color:var(--tx-t);">미지정</span>')}</td>
+      <td style="text-align:right;">${esc(b.qtyPer)}${esc(b.unit)||''}</td>
       <td style="text-align:right;">${fmtW(unitCost)}${isSub?'<span style="font-size:9px;color:var(--tx-t);"> (롤업)</span>':''}</td>
       <td style="text-align:right;font-weight:700;">${fmtW(amt)}</td>
       <td style="text-align:center;white-space:nowrap;">
@@ -4830,7 +4862,7 @@ function renderBom(){
         <button class="btn btn-sm btn-danger" onclick="deleteBom('${b.id}')" title="삭제"><i class="ti ti-trash"></i></button>
       </td>
     </tr>`;
-  }).join('') : `<tr><td colspan="7">${empty('이 제품의 BOM이 비어 있습니다. [자재 추가]로 구성하세요.')}</td></tr>`;
+  }).join('') : `<tr><td colspan="7">${empty(lines.length?'검색 조건에 맞는 자재가 없습니다.':'이 제품의 BOM이 비어 있습니다. [자재 추가]로 구성하세요.')}</td></tr>`;
 
   const mrpQty = p.qty || 1;
   body.innerHTML = `
@@ -4840,16 +4872,22 @@ function renderBom(){
       <div class="mc"><div class="mc-lbl"><i class="ti ti-box"></i>제품 등록 재료비</div><div class="mc-val">${fmtW(savedCost)}</div><div class="mc-sub" style="color:${diff===0?'var(--tx-ok)':'var(--tx-w)'};">${diff===0?'원가 일치':'차이 '+fmtW(diff)+' · 반영 필요'}</div></div>
     </div>
 
-    <div class="card" style="margin-bottom:16px;">
-      <div class="card-hd"><span class="card-ttl"><i class="ti ti-sitemap"></i>${p.name} — 자재 구성 (1대 기준)</span>
-        <span style="font-size:11px;color:var(--tx-t);">재료비 합계 <b style="color:#e8590c;">${fmtW(matCost)}</b></span></div>
+    <div class="toolbar" id="bom-view-tabs" style="margin-bottom:10px;">
+      <button class="btn ${bomViewTab==='bom'?'btn-primary':''}" data-bomtab="bom" onclick="switchBomView('bom')"><i class="ti ti-list-details"></i>BOM 구성 <span class="bd bd-neu">${lines.length}</span></button>
+      <button class="btn ${bomViewTab==='mrp'?'btn-primary':''}" data-bomtab="mrp" onclick="switchBomView('mrp')"><i class="ti ti-package-import"></i>MRP · 발주</button>
+      <input id="bom-material-search" value="${_bomImportEsc(bomMaterialQuery)}" oninput="filterBomMaterials(this)" placeholder="자재명 · 규격 · 공급처 검색..." style="min-width:230px;margin-left:auto;">
+    </div>
+
+    <div class="card" id="bom-panel-list" style="margin-bottom:16px;display:${bomViewTab==='bom'?'':'none'};">
+      <div class="card-hd"><span class="card-ttl"><i class="ti ti-sitemap"></i>${esc(p.name)} — 자재 구성 (1대 기준)</span>
+        <span style="font-size:11px;color:var(--tx-t);">${visibleLines.length}/${lines.length}개 표시 · 재료비 합계 <b style="color:#e8590c;">${fmtW(matCost)}</b></span></div>
       <div style="overflow-x:auto;"><table>
         <thead><tr><th>자재명</th><th>규격</th><th>공급처</th><th style="text-align:right;">소요량/대</th><th style="text-align:right;">단가</th><th style="text-align:right;">금액</th><th style="text-align:center;">관리</th></tr></thead>
         <tbody>${rows}</tbody>
       </table></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="bom-panel-mrp" style="display:${bomViewTab==='mrp'?'':'none'};">
       <div class="card-hd"><span class="card-ttl"><i class="ti ti-package-import"></i>소요량 · 발주 필요량 (MRP)</span>
         <span style="font-size:12px;display:flex;align-items:center;gap:10px;">생산수량 <input id="bom-mrp-qty" type="number" min="1" value="${mrpQty}" oninput="renderBomMrp()" style="width:70px;height:26px;text-align:right;"> ${p.unit||'대'}
           <button class="btn btn-sm btn-primary" onclick="genPoFromMrp()" title="발주 필요 자재를 구매발주서로 생성"><i class="ti ti-file-invoice"></i>발주서 생성</button></span></div>
@@ -4861,7 +4899,9 @@ function renderBomMrp(){
   const wrap = inp('bom-mrp'); if(!wrap) return;
   const p = products.find(x=>x.id===bomProductId); if(!p) return;
   const qty = parseInt(v('bom-mrp-qty'))||0;
-  const leaves = Object.values(explodeBomLeaves(p.id, qty));   // 반제품까지 전개한 구매 원자재
+  const leaves = Object.values(explodeBomLeaves(p.id, qty)).filter(L=>
+    !bomMaterialQuery || [L.name,L.spec,L.supplier].join(' ').toLowerCase().includes(bomMaterialQuery)
+  );   // 반제품까지 전개한 구매 원자재
   const hasSub = bomFor(p.id).some(b=>b.subProductId);
   let totalOrder = 0;
   const rows = leaves.length ? leaves.map(L=>{
@@ -4932,7 +4972,7 @@ function applyBomCost(){
 /* 반제품 연결 옵션 — 현재 제품 자신은 제외(직접 순환 방지) */
 function _bomSubOptions(sel){
   return '<option value="">— 구매 자재 (단가 직접 입력) —</option>' +
-    products.filter(p=>p.id!==bomProductId).map(p=>`<option value="${p.id}"${p.id===sel?' selected':''}>${p.name} (${p.id})</option>`).join('');
+    products.filter(p=>p.id!==bomProductId).map(p=>`<option value="${esc(p.id)}"${p.id===sel?' selected':''}>${esc(p.name)} (${esc(p.id)})</option>`).join('');
 }
 function onBmaSubChange(){
   const isSub = !!v('bma-sub');
@@ -5147,9 +5187,9 @@ function _finAR() {
     if (!paid) apUnpaid += amt;
     return `
       <tr style="${paid?'opacity:.55;':''}">
-        <td>${p.date||'—'}</td>
-        <td>${p.supplier||'—'}</td>
-        <td>${p.itemName||'—'}</td>
+        <td>${esc(p.date)||'—'}</td>
+        <td>${esc(p.supplier)||'—'}</td>
+        <td>${esc(p.itemName)||'—'}</td>
         <td style="font-weight:700;">${fmtW(amt)}</td>
         <td>${paid?'<span class="bd bd-ok">지급완료</span>':'<span class="bd bd-warn">미지급</span>'}</td>
         <td><button class="btn btn-sm" onclick="togglePayable('${p.id}')">${paid?'미지급 처리':'지급 처리'}</button></td>
@@ -5198,12 +5238,12 @@ function _finEtc() {
   const inc = finEntriesSum('수입'), exp = finEntriesSum('비용');
   const body = list.length ? list.map(e => `
     <tr>
-      <td>${e.date||'—'}</td>
+      <td>${esc(e.date)||'—'}</td>
       <td>${e.type==='수입'?'<span class="bd bd-ok">수입</span>':'<span class="bd bd-err">비용</span>'}</td>
-      <td>${e.category||'기타'}</td>
-      <td>${e.title||''}</td>
+      <td>${esc(e.category)||'기타'}</td>
+      <td>${esc(e.title)||''}</td>
       <td style="font-weight:700;color:${e.type==='수입'?'var(--tx-ok)':'var(--tx-err)'};">${fmtW(Number(e.amount)||0)}</td>
-      <td>${e.note||''}</td>
+      <td>${esc(e.note)||''}</td>
       <td><button class="del-btn" onclick="deleteFinanceEntry('${e.id}')"><i class="ti ti-trash"></i></button></td>
     </tr>`).join('') : `<tr><td colspan="7">${empty('등록된 기타 수입/비용 항목이 없습니다. 우측 상단 [기타 항목 등록] 버튼으로 추가하세요.')}</td></tr>`;
   return `
@@ -5378,12 +5418,12 @@ function renderClients() {
            ondrop="onClientDrop(event, '${c.id}')"
            ondragend="onClientDragEnd(event)">
         <div class="client-hd" onclick="toggleClient('${c.id}')" style="cursor:pointer;">
-          <div class="c-avatar" style="${isClosed ? 'background:#868e96; opacity:.6;' : ''}">${c.name.slice(0, 2)}</div>
+          <div class="c-avatar" style="${isClosed ? 'background:#868e96; opacity:.6;' : ''}">${esc(c.name.slice(0, 2))}</div>
           <div style="flex:1; min-width:0;">
-            <div style="font-size:14px; font-weight:700; ${isClosed ? 'color:var(--tx-t); text-decoration:line-through;' : ''}">${c.name}
-              ${isClosed ? `<span class="bd" style="font-size:10px; background:#86868618; color:#868686; border-color:#86868644; margin-left:6px; text-decoration:none;">종료 ${c.closedAt||''}</span>` : ''}
+            <div style="font-size:14px; font-weight:700; ${isClosed ? 'color:var(--tx-t); text-decoration:line-through;' : ''}">${esc(c.name)}
+              ${isClosed ? `<span class="bd" style="font-size:10px; background:#86868618; color:#868686; border-color:#86868644; margin-left:6px; text-decoration:none;">종료 ${esc(c.closedAt)||''}</span>` : ''}
             </div>
-            <div style="font-size:11.5px; color:var(--tx-t); font-weight:500;">담당: ${c.manager||'미지정'} · 연락처: ${c.tel||'미지정'} · 제품: ${prods.length}종</div>
+            <div style="font-size:11.5px; color:var(--tx-t); font-weight:500;">담당: ${esc(c.manager)||'미지정'} · 연락처: ${esc(c.tel)||'미지정'} · 제품: ${prods.length}종</div>
           </div>
           <div style="display:flex; gap:6px; align-items:center;" onclick="event.stopPropagation();">
             <button class="btn btn-sm" onclick="showClient360('${c.id}')" title="고객사 360도 종합 현황"><i class="ti ti-building-community"></i>360°</button>
@@ -5409,14 +5449,14 @@ function renderClients() {
           ${!isClosed ? `
           <!-- 업체 수정 패널 -->
           <div class="add-panel edit-mode" id="${editPanelId}">
-            <div class="panel-ttl clr-edit"><i class="ti ti-edit"></i>${c.name} 프로필 수정</div>
+            <div class="panel-ttl clr-edit"><i class="ti ti-edit"></i>${esc(c.name)} 프로필 수정</div>
             <div class="fg fg4">
-              <div class="ff"><label>업체명 *</label><input id="ce-name-${c.id}" value="${c.name}"></div>
-              <div class="ff"><label>실무자명</label><input id="ce-mgr-${c.id}" value="${c.manager}"></div>
-              <div class="ff"><label>전화번호</label><input id="ce-tel-${c.id}" value="${c.tel}"></div>
-              <div class="ff"><label>이메일</label><input id="ce-email-${c.id}" value="${c.email}"></div>
-              <div class="ff"><label>계약 수주일</label><input id="ce-date-${c.id}" type="date" value="${c.date}"></div>
-              <div class="ff" style="grid-column:span 3;"><label>특이사항</label><input id="ce-note-${c.id}" value="${c.note}"></div>
+              <div class="ff"><label>업체명 *</label><input id="ce-name-${c.id}" value="${esc(c.name)}"></div>
+              <div class="ff"><label>실무자명</label><input id="ce-mgr-${c.id}" value="${esc(c.manager)}"></div>
+              <div class="ff"><label>전화번호</label><input id="ce-tel-${c.id}" value="${esc(c.tel)}"></div>
+              <div class="ff"><label>이메일</label><input id="ce-email-${c.id}" value="${esc(c.email)}"></div>
+              <div class="ff"><label>계약 수주일</label><input id="ce-date-${c.id}" type="date" value="${esc(c.date)}"></div>
+              <div class="ff" style="grid-column:span 3;"><label>특이사항</label><input id="ce-note-${c.id}" value="${esc(c.note)}"></div>
             </div>
             <div class="form-actions">
               <button class="btn" onclick="closePanel('${editPanelId}')">취소</button>
@@ -5452,19 +5492,19 @@ function renderClients() {
                     : '';
                   return `
                     <tr${isClosed ? ' style="opacity:.75;"' : ''}>
-                      <td>${p.id}</td>
-                      <td style="font-weight:700;">${p.name}${marginBadge}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${p.spec||'규격 없음'}</span></td>
-                      <td>${dayBadge(p.deliveryDate)}<span style="font-size:10.5px;display:block;color:var(--tx-t);">${p.deliveryDate}</span></td>
-                      <td>${p.qty}${p.unit}</td>
+                      <td>${esc(p.id)}</td>
+                      <td style="font-weight:700;">${esc(p.name)}${marginBadge}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${esc(p.spec)||'규격 없음'}</span></td>
+                      <td>${dayBadge(p.deliveryDate)}<span style="font-size:10.5px;display:block;color:var(--tx-t);">${esc(p.deliveryDate)}</span></td>
+                      <td>${esc(p.qty)}${esc(p.unit)}</td>
                       <td class="amt-blue">${fmtW(p.price)}</td>
                       <td style="font-weight:700;color:var(--tx-i);">${fmtW(p.price*p.qty)}</td>
                       <td style="min-width:180px;">
                         ${isClosed ? `
-                          <span class="bd" style="background:${sc}18;color:${sc};border-color:${sc}44;font-size:11px;">${p.processStage}</span>
-                          <span style="font-size:10px;color:var(--tx-t);display:block;margin-top:2px;">→ ${stageToStatus(p.processStage)}</span>
+                          <span class="bd" style="background:${sc}18;color:${sc};border-color:${sc}44;font-size:11px;">${esc(p.processStage)}</span>
+                          <span style="font-size:10px;color:var(--tx-t);display:block;margin-top:2px;">→ ${esc(stageToStatus(p.processStage))}</span>
                         ` : `
                           <select class="stat-sel" style="border-color:${sc};color:${sc};" onchange="changeProdStage('${p.id}',this.value)">
-                            ${processStages.map(s=>`<option${s===p.processStage?' selected':''}>${s}</option>`).join('')}
+                            ${processStages.map(s=>`<option${s===p.processStage?' selected':''}>${esc(s)}</option>`).join('')}
                           </select>
                           <div style="margin-top:3px;display:flex;align-items:center;gap:4px;">
                             <i class="ti ti-arrow-right" style="font-size:10px;color:var(--tx-t);"></i>
@@ -5788,9 +5828,9 @@ function renderClient360(clientId) {
       var d = p.deliveryDate ? daysUntil(p.deliveryDate) : null;
       var sc = stageColor(p.processStage);
       return '<tr>' +
-        '<td style="font-weight:700;">' + p.name + '</td>' +
-        '<td><span class="bd" style="background:' + sc + '18;color:' + sc + ';border-color:' + sc + '44;">' + p.processStage + '</span></td>' +
-        '<td>' + (p.deliveryDate||'—') + '</td>' +
+        '<td style="font-weight:700;">' + esc(p.name) + '</td>' +
+        '<td><span class="bd" style="background:' + sc + '18;color:' + sc + ';border-color:' + sc + '44;">' + esc(p.processStage) + '</span></td>' +
+        '<td>' + (esc(p.deliveryDate)||'—') + '</td>' +
         '<td>' + (d !== null ? dayBadge(p.deliveryDate) : '—') + '</td>' +
         '<td>' + (pMats.length > 0 ? done + '/' + pMats.length + '건 입고' : '—') + '</td>' +
         '</tr>';
@@ -5800,7 +5840,7 @@ function renderClient360(clientId) {
       ? '<h4 style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--tx-s);">클레임 이력</h4>' +
         '<table><thead><tr><th>일자</th><th>내용</th><th>상태</th></tr></thead><tbody>' +
         clms.map(function(c) {
-          return '<tr><td>' + c.date + '</td><td style="font-size:11px;">' + (c.content||'').substring(0,60) + '</td><td>' + statusBadge(c.status) + '</td></tr>';
+          return '<tr><td>' + esc(c.date) + '</td><td style="font-size:11px;">' + esc((c.content||'').substring(0,60)) + '</td><td>' + statusBadge(c.status) + '</td></tr>';
         }).join('') + '</tbody></table>'
       : '');
 }
@@ -5810,24 +5850,24 @@ function syncFilterDropdowns() {
   const fc = inp('mat-fc');
   if (fc) {
     const cur = fc.value;
-    fc.innerHTML = '<option value="">전체 의뢰 고객사</option>' + clients.map(c=>'<option value="'+c.id+'"'+(c.id===cur?' selected':'')+'>'+c.name+'</option>').join('');
+    fc.innerHTML = '<option value="">전체 의뢰 고객사</option>' + clients.map(c=>'<option value="'+esc(c.id)+'"'+(c.id===cur?' selected':'')+'>'+esc(c.name)+'</option>').join('');
   }
   const fp = inp('mat-fp');
   if (fp) {
     const cur = fp.value;
-    fp.innerHTML = '<option value="">전체 제품 목록</option>' + products.map(p=>'<option value="'+p.id+'"'+(p.id===cur?' selected':'')+'>'+p.name+'</option>').join('');
+    fp.innerHTML = '<option value="">전체 제품 목록</option>' + products.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===cur?' selected':'')+'>'+esc(p.name)+'</option>').join('');
   }
 }
 function onMatClientChange() {
   const cid = v('mat-fc');
   const fp = inp('mat-fp');
-  if (fp) fp.innerHTML = '<option value="">전체 제품 목록</option>' + products.filter(p=>!cid||p.clientId===cid).map(p=>'<option value="'+p.id+'">'+p.name+'</option>').join('');
+  if (fp) fp.innerHTML = '<option value="">전체 제품 목록</option>' + products.filter(p=>!cid||p.clientId===cid).map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('');
   renderMaterials();
 }
 function onAddMatClientChange() {
   const cid = v('ma-client');
   const sel = inp('ma-product');
-  if (sel) sel.innerHTML = '<option value="">-- 품목 선택 --</option>' + products.filter(p=>!cid||p.clientId===cid).map(p=>'<option value="'+p.id+'">'+p.name+'</option>').join('');
+  if (sel) sel.innerHTML = '<option value="">-- 품목 선택 --</option>' + products.filter(p=>!cid||p.clientId===cid).map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('');
 }
 function renderMaterials() {
   ensureDateView('materials', 'mat-table', materials.map(m=>m.orderDate), renderMaterials);
@@ -5906,20 +5946,20 @@ function renderMaterials() {
       const prod = getProductById(m.productId);
       const cname = prod ? getClientName(prod.clientId) : '—';
       return '<tr>' +
-        '<td>'+m.id+'</td>' +
-        '<td>'+cname+'</td>' +
-        '<td style="font-weight:600;font-size:11px;">'+getProductName(m.productId)+'</td>' +
-        '<td style="font-weight:700;">'+m.name+'</td>' +
-        '<td>'+(m.supplier||'—')+'</td>' +
+        '<td>'+esc(m.id)+'</td>' +
+        '<td>'+esc(cname)+'</td>' +
+        '<td style="font-weight:600;font-size:11px;">'+esc(getProductName(m.productId))+'</td>' +
+        '<td style="font-weight:700;">'+esc(m.name)+'</td>' +
+        '<td>'+(esc(m.supplier)||'—')+'</td>' +
         '<td style="font-weight:600;">'+fmtW(m.unitPrice)+'</td>' +
-        '<td>'+m.qty+' '+m.unit+'</td>' +
+        '<td>'+esc(m.qty)+' '+esc(m.unit)+'</td>' +
         '<td style="font-weight:700;color:var(--tx-i);">'+fmtW(getMatAmt(m))+'</td>' +
-        '<td>'+(m.orderDate||'—')+'</td>' +
-        '<td>'+(m.expectedDate||'—')+'</td>' +
-        '<td><select class="stat-sel" style="color:'+(sColor[m.status]||'')+'" onchange="changeMatStatus(\''+m.id+'\',this.value)">' +
+        '<td>'+(esc(m.orderDate)||'—')+'</td>' +
+        '<td>'+(esc(m.expectedDate)||'—')+'</td>' +
+        '<td><select class="stat-sel" style="color:'+(sColor[m.status]||'')+'" onchange="changeMatStatus(\''+esc(m.id)+'\',this.value)">' +
           ['발주전','발주중','입고완료','지연'].map(s=>'<option'+(s===m.status?' selected':'')+'>'+s+'</option>').join('') +
         '</select></td>' +
-        '<td style="font-size:11px;color:var(--tx-t);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+(m.note||'')+'">'+(m.note||'—')+'</td>' +
+        '<td style="font-size:11px;color:var(--tx-t);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+esc(m.note||'')+'">'+(esc(m.note)||'—')+'</td>' +
         '<td style="white-space:nowrap;"><button class="edit-btn" onclick="openMatEdit(\''+m.id+'\')"><i class="ti ti-edit"></i>수정</button>' +
         '<button class="del-btn" style="margin-left:4px;" onclick="deleteMat(\''+m.id+'\')"><i class="ti ti-trash"></i></button></td>' +
       '</tr>';
@@ -6376,7 +6416,7 @@ function renderInventory() {
     const types = [...new Set(catItems.map(i => i.type).filter(Boolean))];
     if (ft && !types.includes(ft)) ft = '';
     typeSel.innerHTML = '<option value="">전체 세부유형</option>' +
-      types.map(t => `<option value="${t}"${t===ft?' selected':''}>${t}</option>`).join('');
+      types.map(t => `<option value="${esc(t)}"${t===ft?' selected':''}>${esc(t)}</option>`).join('');
   }
   const st = v('inv-filter-status') || '';
   const q = (v('inv-q')||'').toLowerCase();
@@ -6417,18 +6457,18 @@ function renderInventory() {
     '</tr></thead><tbody>' + rows.map(i=>{
       const low = i.qty < (i.minQty||0);
       return '<tr>' +
-        '<td style="font-size:11px;color:var(--tx-t);">'+i.id+'</td>' +
-        '<td style="font-weight:700;">'+i.name+'</td>' +
-        '<td><span class="bd '+(tColor[i.type]||'bd-neu')+'">'+i.type+'</span></td>' +
+        '<td style="font-size:11px;color:var(--tx-t);">'+esc(i.id)+'</td>' +
+        '<td style="font-weight:700;">'+esc(i.name)+'</td>' +
+        '<td><span class="bd '+(tColor[i.type]||'bd-neu')+'">'+esc(i.type)+'</span></td>' +
         '<td style="font-weight:700;'+(low?'color:var(--tx-d);':'')+'">' +
-          '<button class="btn btn-sm" style="padding:0 7px;" onclick="adjustStock(\''+i.id+'\',-1)">−</button> ' +
-          i.qty+' '+i.unit+' ' +
-          '<button class="btn btn-sm" style="padding:0 7px;" onclick="adjustStock(\''+i.id+'\',1)">+</button>' +
+          '<button class="btn btn-sm" style="padding:0 7px;" onclick="adjustStock(\''+esc(i.id)+'\',-1)">−</button> ' +
+          esc(i.qty)+' '+esc(i.unit)+' ' +
+          '<button class="btn btn-sm" style="padding:0 7px;" onclick="adjustStock(\''+esc(i.id)+'\',1)">+</button>' +
           (low?' <i class="ti ti-alert-triangle" style="color:var(--tx-d);" title="안전재고 미달"></i>':'') +
         '</td>' +
         '<td>'+(i.minQty||0)+'</td>' +
-        '<td style="font-size:11px;">'+(i.location||'—')+'</td>' +
-        '<td style="font-size:11px;color:var(--tx-t);">'+(i.note||'—')+'</td>' +
+        '<td style="font-size:11px;">'+(esc(i.location)||'—')+'</td>' +
+        '<td style="font-size:11px;color:var(--tx-t);">'+(esc(i.note)||'—')+'</td>' +
         '<td style="white-space:nowrap;"><button class="edit-btn" onclick="openInvEdit(\''+i.id+'\')"><i class="ti ti-edit"></i>수정</button>' +
         '<button class="del-btn" style="margin-left:4px;" onclick="deleteInventory(\''+i.id+'\')"><i class="ti ti-trash"></i></button></td>' +
       '</tr>';
@@ -6439,7 +6479,7 @@ function renderInventory() {
     const curVal = invLedgerSel.value;
     invLedgerSel.innerHTML = '<option value="">전체 품목</option>' +
       inventory.map(function(i) {
-        return '<option value="' + i.id + '"' + (i.id === curVal ? ' selected' : '') + '>' + i.name + '</option>';
+        return '<option value="' + esc(i.id) + '"' + (i.id === curVal ? ' selected' : '') + '>' + esc(i.name) + '</option>';
       }).join('');
   }
   renderInventoryLedger();
@@ -6523,12 +6563,12 @@ function renderInventoryLedger() {
     rows.slice(0, 100).map(function(e) {
       const inv = inventory.find(function(x) { return x.id === e.invId; });
       return '<tr>' +
-        '<td style="font-size:11px;">' + e.date + '</td>' +
-        '<td style="font-weight:600;">' + (inv ? inv.name : e.invId) + '</td>' +
-        '<td style="color:' + (typeColor[e.type]||'var(--tx)') + ';font-weight:700;">' + e.type + '</td>' +
-        '<td style="font-weight:700;">' + (e.qty > 0 ? '+' : '') + e.qty + '</td>' +
-        '<td style="font-size:11px;color:var(--tx-t);">' + e.reason + '</td>' +
-        '<td style="font-size:11px;color:var(--tx-t);">' + (e.refId || '—') + '</td>' +
+        '<td style="font-size:11px;">' + esc(e.date) + '</td>' +
+        '<td style="font-weight:600;">' + esc(inv ? inv.name : e.invId) + '</td>' +
+        '<td style="color:' + (typeColor[e.type]||'var(--tx)') + ';font-weight:700;">' + esc(e.type) + '</td>' +
+        '<td style="font-weight:700;">' + (e.qty > 0 ? '+' : '') + esc(e.qty) + '</td>' +
+        '<td style="font-size:11px;color:var(--tx-t);">' + esc(e.reason) + '</td>' +
+        '<td style="font-size:11px;color:var(--tx-t);">' + (esc(e.refId) || '—') + '</td>' +
         '</tr>';
     }).join('') +
     '</tbody></table>';
@@ -6620,11 +6660,11 @@ function renderOrders() {
           const hasNote = !!(o.note||'').trim();
           return `
             <tr style="${rowBg}">
-              <td style="font-family:monospace; font-size:11px; font-weight:700; color:var(--tx-i);">${o.id}</td>
-              <td style="font-weight:600;">${getClientName(o.clientId)}</td>
-              <td style="font-weight:700;">${getProductName(o.productId)}</td>
-              <td style="text-align:center;"><span class="bd" style="font-size:10px;">${o.line}</span></td>
-              <td style="text-align:center; font-weight:700;">${o.qty}</td>
+              <td style="font-family:monospace; font-size:11px; font-weight:700; color:var(--tx-i);">${esc(o.id)}</td>
+              <td style="font-weight:600;">${esc(getClientName(o.clientId))}</td>
+              <td style="font-weight:700;">${esc(getProductName(o.productId))}</td>
+              <td style="text-align:center;"><span class="bd" style="font-size:10px;">${esc(o.line)}</span></td>
+              <td style="text-align:center; font-weight:700;">${esc(o.qty)}</td>
               <td>
                 <input type="number" value="${o.done}" min="0" max="${o.qty}"
                   style="width:60px; height:26px; text-align:center; font-weight:700; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx);"
@@ -6635,18 +6675,18 @@ function renderOrders() {
                   style="width:50px; height:26px; text-align:center; font-weight:700; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:${o.defect>0?'#e03131':'var(--tx)'};"
                   onchange="qDefect('${o.id}',this.value)">
               </td>
-              <td style="font-size:11px;">${o.start||'—'}</td>
-              <td>${dayBadge(o.due)}<div style="font-size:10px; color:var(--tx-t); margin-top:1px;">${o.due||''}</div></td>
+              <td style="font-size:11px;">${esc(o.start)||'—'}</td>
+              <td>${dayBadge(o.due)}<div style="font-size:10px; color:var(--tx-t); margin-top:1px;">${esc(o.due)||''}</div></td>
               <td>${pctBar(o.done, o.qty, 72)}</td>
               <td>
                 <select class="stat-sel" style="font-weight:700; color:${statusColor}; border-color:${statusColor};" onchange="qStatus('${o.id}',this.value)">
                   ${['대기','진행중','완료','지연'].map(s=>`<option${s===o.status?' selected':''}>${s}</option>`).join('')}
                 </select>
               </td>
-              <td style="font-size:11px; font-weight:600;">${o.manager||'—'}</td>
+              <td style="font-size:11px; font-weight:600;">${esc(o.manager)||'—'}</td>
               <td style="text-align:center;">
                 ${hasNote
-                  ? `<button onclick="showOrderNote('${o.id}')" title="${(o.note||'').replace(/"/g,'&quot;').slice(0,60)}"
+                  ? `<button onclick="showOrderNote('${esc(o.id)}')" title="${esc((o.note||'').slice(0,60))}"
                       style="background:var(--bg-i); border:1px solid var(--br-i); border-radius:var(--rm); width:28px; height:28px; cursor:pointer; color:var(--tx-i); position:relative;">
                       <i class="ti ti-notes" style="font-size:14px;"></i>
                     </button>`
@@ -7074,16 +7114,16 @@ function renderKanban() {
         </div>
         
         <div class="kb-card-title-row">
-          <div class="kb-card-name">Job #${p.id}: ${p.name}</div>
-          <button onclick="event.stopPropagation(); navToProduct('${p.clientId}','${p.id}')" title="수주관리에서 편집"
+          <div class="kb-card-name">Job #${esc(p.id)}: ${esc(p.name)}</div>
+          <button onclick="event.stopPropagation(); navToProduct('${esc(p.clientId)}','${esc(p.id)}')" title="수주관리에서 편집"
             style="background:none;border:none;color:var(--tx-t);cursor:pointer;padding:0;font-size:11px;flex-shrink:0;line-height:1;">
             <i class="ti ti-external-link"></i>
           </button>
         </div>
-        
+
         <div class="kb-card-client-row">
           <i class="ti ti-building"></i>
-          <span>${getClientName(p.clientId)}</span>
+          <span>${esc(getClientName(p.clientId))}</span>
         </div>
         
         <div class="kb-card-meta-grid">
@@ -7119,11 +7159,11 @@ function renderKanban() {
         </div>` : ''}
         
         <div class="kb-card-footer">
-          <span>Worker: <strong>${workerName}</strong></span>
-          <span style="font-size: 8.5px; opacity: 0.75;"><i class="ti ti-clock"></i> ${timestampStr}</span>
+          <span>Worker: <strong>${esc(workerName)}</strong></span>
+          <span style="font-size: 10px; opacity: 0.75;"><i class="ti ti-clock"></i> ${esc(timestampStr)}</span>
         </div>
         
-        ${p.processMemo ? `<div style="font-size:9.5px; color:var(--tx-t); border-top:1px dashed rgba(255,255,255,0.06); padding-top:6px; margin-top:2px; line-height:1.4;">${p.processMemo}</div>` : ''}
+        ${p.processMemo ? `<div style="font-size:9.5px; color:var(--tx-t); border-top:1px dashed rgba(255,255,255,0.06); padding-top:6px; margin-top:2px; line-height:1.4;">${esc(p.processMemo)}</div>` : ''}
       </div>`;
   };
 
@@ -7139,7 +7179,7 @@ function renderKanban() {
     return `
       <div class="kb-col${procStageFilter===stage?' kb-filtered':''}">
         <div class="kb-col-hd" style="--stage-neon:${stripColor};">
-          <span style="font-weight:700; color:var(--tx);">${stage}</span>
+          <span style="font-weight:700; color:var(--tx);">${esc(stage)}</span>
           <span style="background:${stripColor}; color:#fff; border-radius:10px; padding:2px 8px; font-size:10px; font-weight:800; box-shadow:0 0 6px ${stripColor}88;">${stageProds.length}</span>
         </div>
         <div class="kb-cards-container">
@@ -7161,14 +7201,14 @@ function renderKanban() {
               미분류
             </div>
             <div class="kb-card-title-row">
-              <div class="kb-card-name">Job #${p.id}: ${p.name}</div>
-              <button onclick="event.stopPropagation(); navToProduct('${p.clientId}','${p.id}')" title="수주관리에서 편집"
+              <div class="kb-card-name">Job #${esc(p.id)}: ${esc(p.name)}</div>
+              <button onclick="event.stopPropagation(); navToProduct('${esc(p.clientId)}','${esc(p.id)}')" title="수주관리에서 편집"
                 style="background:none;border:none;color:var(--tx-t);cursor:pointer;padding:0;font-size:11px;">
                 <i class="ti ti-external-link"></i>
               </button>
             </div>
-            <div class="kb-card-client-row"><i class="ti ti-building"></i><span>${getClientName(p.clientId)}</span></div>
-            <div style="font-size:10px; color:var(--tx-t); margin-top:4px;">단계 미지정: ${p.processStage||'없음'}</div>
+            <div class="kb-card-client-row"><i class="ti ti-building"></i><span>${esc(getClientName(p.clientId))}</span></div>
+            <div style="font-size:10px; color:var(--tx-t); margin-top:4px;">단계 미지정: ${esc(p.processStage)||'없음'}</div>
           </div>`).join('')}
       </div>
     </div>` : '';
@@ -7186,7 +7226,7 @@ function openKanbanEditModal(productId) {
   inp('km-prod-name').value = `${p.name}  ·  ${getClientName(p.clientId)}`;
 
   const stageSel = inp('km-stage');
-  stageSel.innerHTML = processStages.map(s => `<option value="${s}"${s===p.processStage?' selected':''}>${s}</option>`).join('');
+  stageSel.innerHTML = processStages.map(s => `<option value="${esc(s)}"${s===p.processStage?' selected':''}>${esc(s)}</option>`).join('');
   onKmStageChange();
   inp('km-memo').value = p.processMemo || '';
 
@@ -7460,12 +7500,12 @@ function renderQuality() {
       <tbody>
         ${filteredDefects.map(d => `
           <tr>
-            <td>${d.id}</td>
-            <td>${d.date}</td>
-            <td style="font-weight:600;">${getProductName(d.productId)}</td>
-            <td>${d.stage}</td>
-            <td style="font-weight:700; color:var(--tx-d);">${d.type}</td>
-            <td style="font-weight:700;">${d.qty}</td>
+            <td>${esc(d.id)}</td>
+            <td>${esc(d.date)}</td>
+            <td style="font-weight:600;">${esc(getProductName(d.productId))}</td>
+            <td>${esc(d.stage)}</td>
+            <td style="font-weight:700; color:var(--tx-d);">${esc(d.type)}</td>
+            <td style="font-weight:700;">${esc(d.qty)}</td>
             <td>
               <select class="stat-sel" onchange="changeDefectStatus('${d.id}', this.value)">
                 <option${d.status==='조치중'?' selected':''}>조치중</option>
@@ -7473,7 +7513,7 @@ function renderQuality() {
                 <option${d.status==='보류'?' selected':''}>보류</option>
               </select>
             </td>
-            <td><span style="font-size:11px; color:var(--tx-t);">${d.note || '—'}</span></td>
+            <td><span style="font-size:11px; color:var(--tx-t);">${esc(d.note) || '—'}</span></td>
             <td>
               <button class="edit-btn" onclick="openDefectEdit('${d.id}')"><i class="ti ti-edit"></i></button>
               <button class="del-btn" onclick="deleteDefect('${d.id}')"><i class="ti ti-trash"></i></button>
@@ -7529,10 +7569,10 @@ function renderQuality() {
       <tbody>
         ${filteredClaims.map(c => `
           <tr>
-            <td style="vertical-align:top;">${c.date}</td>
-            <td style="font-weight:600; vertical-align:top;">${getClientName(c.clientId)}</td>
+            <td style="vertical-align:top;">${esc(c.date)}</td>
+            <td style="font-weight:600; vertical-align:top;">${esc(getClientName(c.clientId))}</td>
             <td style="white-space:normal; min-width:160px; max-width:280px; vertical-align:top;">
-              <div style="font-weight:700;">${getProductName(c.productId)}</div>
+              <div style="font-weight:700;">${esc(getProductName(c.productId))}</div>
               <div style="font-size:11px; color:var(--tx-d); margin-top:4px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; line-height:1.4; cursor:pointer; white-space:normal; word-break:break-all;" onclick="openClaimDetail('${c.id}')" title="클릭하여 상세 조회">${_escHtml(c.content)}</div>
             </td>
             <td style="white-space:normal; word-break:break-all; max-width:110px; vertical-align:top;">${_escHtml(c.spec||'—')}</td>
@@ -7601,10 +7641,10 @@ function renderQuality() {
       <tbody>
         ${filteredChecks.map(r => `
           <tr>
-            <td>${r.date}</td>
-            <td style="font-weight:600;">${getClientName(r.clientId)}</td>
-            <td>${getProductName(r.productId)}</td>
-            <td>${r.inspector}</td>
+            <td>${esc(r.date)}</td>
+            <td style="font-weight:600;">${esc(getClientName(r.clientId))}</td>
+            <td>${esc(getProductName(r.productId))}</td>
+            <td>${esc(r.inspector)}</td>
             <td>${statusBadge(r.visual)}</td>
             <td>${statusBadge(r.dim)}</td>
             <td>${statusBadge(r.func)}</td>
@@ -7686,10 +7726,10 @@ function renderClaims() {
       <tbody>
         ${list.map(c => `
           <tr>
-            <td>${c.date||'—'}</td>
-            <td><span class="bd ${c.kind==='AS'?'bd-info':c.kind==='기타'?'bd-neu':'bd-warn'}">${c.kind||'클레임'}</span></td>
-            <td style="font-weight:600;">${claimClientLabel(c)}${c.clientName && !c.clientId?'<br><span style="font-size:9px;color:var(--tx-t);">미등록</span>':''}</td>
-            <td>${claimProductLabel(c)}</td>
+            <td>${esc(c.date)||'—'}</td>
+            <td><span class="bd ${c.kind==='AS'?'bd-info':c.kind==='기타'?'bd-neu':'bd-warn'}">${esc(c.kind)||'클레임'}</span></td>
+            <td style="font-weight:600;">${esc(claimClientLabel(c))}${c.clientName && !c.clientId?'<br><span style="font-size:9px;color:var(--tx-t);">미등록</span>':''}</td>
+            <td>${esc(claimProductLabel(c))}</td>
             <td>${_escHtml(c.spec||'—')}</td>
             <td style="max-width:340px; color:var(--tx-d); cursor:pointer;" onclick="openClaimDetail('${c.id}')" title="클릭하여 전체 보기">${trunc(c.content, 60)}</td>
             <td style="max-width:240px; font-size:11px; cursor:pointer;" onclick="openClaimDetail('${c.id}')" title="클릭하여 전체 보기">${trunc(c.response, 40)}</td>
@@ -7836,7 +7876,7 @@ function changeDefectStatus(id, status) {
 /* 클레임 고객사 select 옵션 (미등록 허용 위해 공란 포함) */
 function _fillClaimClientSelect(selId) {
   inp('cl-client').innerHTML = '<option value="">-- 선택 (미등록 시 비움) --</option>' +
-    clients.map(c => `<option value="${c.id}"${c.id===selId?' selected':''}>${c.name}</option>`).join('');
+    clients.map(c => `<option value="${esc(c.id)}"${c.id===selId?' selected':''}>${esc(c.name)}</option>`).join('');
 }
 
 function openClaimAdd() {
@@ -8164,13 +8204,13 @@ function renderWorkers() {
       <tbody>
         ${filteredWorkers.map(w => `
           <tr>
-            <td style="font-weight:700;">${w.id}</td>
-            <td style="font-weight:700;">${w.name}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${w.email||''}</span></td>
-            <td>${w.dept || '—'}</td>
-            <td>${w.position || '—'}</td>
-            <td><span class="bd bd-neu">${w.empType || '정규직'}</span></td>
-            <td>${w.hireDate || '—'}</td>
-            <td>${w.phone || '—'}</td>
+            <td style="font-weight:700;">${esc(w.id)}</td>
+            <td style="font-weight:700;">${esc(w.name)}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${esc(w.email)||''}</span></td>
+            <td>${esc(w.dept) || '—'}</td>
+            <td>${esc(w.position) || '—'}</td>
+            <td><span class="bd bd-neu">${esc(w.empType) || '정규직'}</span></td>
+            <td>${esc(w.hireDate) || '—'}</td>
+            <td>${esc(w.phone) || '—'}</td>
             <td style="font-weight:700;color:var(--tx-i);">${w.salary ? fmtW(w.salary) : '—'}</td>
             <td>
               <select class="stat-sel" onchange="changeWorkerStatus('${w.id}', this.value)">
@@ -8509,8 +8549,8 @@ function renderAlerts() {
     <div class="al al-${a.type}">
       <i class="ti ${im[a.type]||'ti-info-circle'}"></i>
       <div style="flex:1;">
-        <div class="al-t">${a.title}</div>
-        <div class="al-s">${a.sub}${a.createdAt ? ` · ${a.createdAt}` : ''}</div>
+        <div class="al-t">${esc(a.title)}</div>
+        <div class="al-s">${esc(a.sub)}${a.createdAt ? ` · ${esc(a.createdAt)}` : ''}</div>
       </div>
       <button class="del-btn" onclick="delAlert(${realIdx})"><i class="ti ti-x" style="font-size:12px;"></i>확인</button>
     </div>`;
@@ -8763,11 +8803,11 @@ function renderTrash() {
           }
           return `
             <tr>
-              <td>${i.id}</td>
-              <td><span class="bd bd-neu">${typeLabels[i.type] || i.type}</span></td>
-              <td style="font-family: monospace; font-weight:700;">${i.originalId}</td>
-              <td style="font-weight:700; color:var(--tx-s);">${i.name}</td>
-              <td>${i.deletedAt}</td>
+              <td>${esc(i.id)}</td>
+              <td><span class="bd bd-neu">${esc(typeLabels[i.type] || i.type)}</span></td>
+              <td style="font-family: monospace; font-weight:700;">${esc(i.originalId)}</td>
+              <td style="font-weight:700; color:var(--tx-s);">${esc(i.name)}</td>
+              <td>${esc(i.deletedAt)}</td>
               <td><span style="font-size:11px; font-weight:600; color:var(--tx-i);">${sizeLabel}</span></td>
               <td>
                 <button class="restore-btn" onclick="restoreTrash('${i.id}')"><i class="ti ti-rotate-clockwise"></i>복구</button>
@@ -8919,7 +8959,7 @@ const FIREBASE_CONFIG = Object.assign(
   loadStorage('firebaseConfig', {})
 );
 /* 클라우드로 공유할 데이터 키(테마/관리자비번 등 기기·보안 로컬값은 제외) */
-const CLOUD_KEYS = ['clients','products','materials','workOrders','workers','defects','claims','checkRecords','alerts','inventory','deliveries','stages','trash','rfqList','poList','partners','statementList','taxList','quoteList','orderList','financeData','attendance','leaves','asList','bomList','memoList','todoList','companyInfo','docXlsxTemplates'];
+const CLOUD_KEYS = ['clients','products','materials','workOrders','workers','defects','claims','checkRecords','alerts','inventory','inventoryLedger','deliveries','stages','trash','rfqList','poList','partners','statementList','taxList','quoteList','orderList','financeData','attendance','leaves','asList','bomList','memoList','todoList','companyInfo','docXlsxTemplates'];
 let _fbAuth=null, _fbDb=null, _cloudUser=null;   // _cloudActive는 앞쪽(전역 상태)에서 선언됨
 const _cloudQueue=new Set(); let _cloudTimer=null; let _cloudUnsub=null;
 
@@ -8939,8 +8979,7 @@ updateAsBadge();
 updateTodoBadge();
 updateAdminUI();
 
-// 앱 초기화 완료 (데이터는 로컬 저장 + 파일 저장으로 관리)
-initAutoSave();
+// 앱 초기화 완료 (데이터는 Firebase 동기화 + JSON/XLS 내보내기로 관리)
 initEmailjs();
 
 /* ════════ 권한(RBAC) 설정 ════════ */
@@ -9150,7 +9189,12 @@ async function cloudFlush(){
     keys.forEach(k=>{ const raw=localStorage.getItem('mes_'+k); const value=raw?JSON.parse(raw):null;
       batch.set(_fbDb.collection('mes_state').doc(k), { value, updatedAt:Date.now(), by:(_cloudUser&&_cloudUser.email)||'' }); });
     await batch.commit(); _cloudChip('online');
-  } catch(e){ console.warn('클라우드 저장 실패', e); _cloudChip('error'); }
+  } catch(e){
+    console.warn('클라우드 저장 실패', e); _cloudChip('error');
+    keys.forEach(k=>_cloudQueue.add(k));                       // 실패 키 재큐잉 후 재시도
+    clearTimeout(_cloudTimer); _cloudTimer=setTimeout(cloudFlush, 5000);
+    showToast('클라우드 저장에 실패했습니다. 잠시 후 자동 재시도합니다.', 'error');
+  }
 }
 
 /* 클라우드에서 수동으로 최신 데이터 다시 불러오기 */
@@ -9587,12 +9631,14 @@ function bulkRun(key, action){
   } else if(action==='delete'){
     if(!confirm(`선택한 ${ids.length}건을 삭제하시겠습니까?`)) return;
     const oc=window.confirm; window.confirm=()=>true;
-    const ocf=window.confirm_; window.confirm_=(t,m,fn)=>{ try{ fn&&fn(); }catch(e){} };   // 커스텀 확인창도 자동 승인
-    try{ ids.forEach(id=>{ try{ c.type ? window[c.del](c.type,id) : window[c.del](id); }catch(e){} }); }
+    const ocf=window.confirm_; window.confirm_=(t,m,fn)=>{ fn&&fn(); };   // 커스텀 확인창도 자동 승인
+    let failed=0;
+    try{ ids.forEach(id=>{ try{ c.type ? window[c.del](c.type,id) : window[c.del](id); }catch(e){ failed++; console.warn('일괄 삭제 실패:', key, id, e); } }); }
     finally { window.confirm=oc; window.confirm_=ocf; }
     bulkSel[key]=new Set();
     updateBulkBar(key);
-    showToast(`${ids.length}건이 삭제되었습니다.`);
+    if(failed) showToast(`${ids.length-failed}건 삭제 완료, ${failed}건 실패 (콘솔 확인)`, 'error');
+    else showToast(`${ids.length}건이 삭제되었습니다.`);
   } else if(action==='pdf' && c.pdf){
     if(c.type){ try{ window[c.pdf](c.type, ids); }catch(e){} }    // 선택 건 한 창에 개별 페이지
     else ids.forEach(id=>{ try{ window[c.pdf](id); }catch(e){} });
@@ -12229,14 +12275,14 @@ function renderPartners() {
         : '<td>—</td><td>—</td>';
       return `
       <tr>
-        <td style="font-size:11px;color:var(--tx-t);">${p.id}</td>
-        <td style="font-weight:700;">${p.name}</td>
-        <td><span class="bd ${typeColor[p.type]||'bd-neu'}">${p.type}</span></td>
-        <td>${p.manager||'—'}</td>
-        <td>${p.tel||p.mobile||'—'}</td>
-        <td style="font-size:11px;">${p.email?`<a href="mailto:${p.email}" style="color:var(--tx-i);">${p.email}</a>`:'—'}</td>
-        <td style="font-size:11px;color:var(--tx-t);">${p.bizNo||'—'}</td>
-        <td style="font-size:11px;color:var(--tx-t);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${p.note||''}">${p.note||'—'}</td>
+        <td style="font-size:11px;color:var(--tx-t);">${esc(p.id)}</td>
+        <td style="font-weight:700;">${esc(p.name)}</td>
+        <td><span class="bd ${typeColor[p.type]||'bd-neu'}">${esc(p.type)}</span></td>
+        <td>${esc(p.manager)||'—'}</td>
+        <td>${esc(p.tel||p.mobile)||'—'}</td>
+        <td style="font-size:11px;">${p.email?`<a href="mailto:${esc(p.email)}" style="color:var(--tx-i);">${esc(p.email)}</a>`:'—'}</td>
+        <td style="font-size:11px;color:var(--tx-t);">${esc(p.bizNo)||'—'}</td>
+        <td style="font-size:11px;color:var(--tx-t);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(p.note||'')}">${esc(p.note)||'—'}</td>
         ${perfHtml}
         <td>
           <button class="edit-btn" onclick="openPartnerModal('${p.id}')"><i class="ti ti-edit"></i>수정</button>
@@ -12343,10 +12389,10 @@ function renderPickerList() {
   const typeColor = { '공급처':'bd-info', '구매처':'bd-ok', '외주처':'bd-warn', '기타':'bd-neu' };
   cont.innerHTML = list.map(p => `
     <div onclick="selectPartner('${p.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--br);transition:background .1s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background=''">
-      <span class="bd ${typeColor[p.type]||'bd-neu'}" style="flex-shrink:0;">${p.type}</span>
+      <span class="bd ${typeColor[p.type]||'bd-neu'}" style="flex-shrink:0;">${esc(p.type)}</span>
       <div style="flex:1;min-width:0;">
-        <div style="font-weight:700;font-size:13px;">${p.name}</div>
-        <div style="font-size:11px;color:var(--tx-t);">${p.manager?p.manager+' · ':''}${p.tel||p.mobile||''}${p.email?' · '+p.email:''}</div>
+        <div style="font-weight:700;font-size:13px;">${esc(p.name)}</div>
+        <div style="font-size:11px;color:var(--tx-t);">${p.manager?esc(p.manager)+' · ':''}${esc(p.tel||p.mobile)||''}${p.email?' · '+esc(p.email):''}</div>
       </div>
       <span style="font-size:11px;color:var(--tx-i);flex-shrink:0;">선택 →</span>
     </div>`).join('');
@@ -12376,8 +12422,8 @@ function renderClientPickerList(){
     <div onclick="selectClientPick('${c.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--br);transition:background .1s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background=''">
       <span class="bd bd-info" style="flex-shrink:0;">고객사</span>
       <div style="flex:1;min-width:0;">
-        <div style="font-weight:700;font-size:13px;">${c.name}</div>
-        <div style="font-size:11px;color:var(--tx-t);">${c.manager?c.manager+' · ':''}${c.tel||''}${c.email?' · '+c.email:''}</div>
+        <div style="font-weight:700;font-size:13px;">${esc(c.name)}</div>
+        <div style="font-size:11px;color:var(--tx-t);">${c.manager?esc(c.manager)+' · ':''}${esc(c.tel)||''}${c.email?' · '+esc(c.email):''}</div>
       </div>
       <span style="font-size:11px;color:var(--tx-i);flex-shrink:0;">선택 →</span>
     </div>`).join('');
@@ -12465,7 +12511,7 @@ function calendarGrid(ym, cellFn) {
           <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">${cells}</div>`;
 }
 function workerSelectOptions(sel) {
-  return workers.map(w => `<option value="${w.id}"${w.id===sel?' selected':''}>${w.name}${w.dept?' · '+w.dept:''}${w.position?' '+w.position:''}</option>`).join('');
+  return workers.map(w => `<option value="${esc(w.id)}"${w.id===sel?' selected':''}>${esc(w.name)}${w.dept?' · '+esc(w.dept):''}${w.position?' '+esc(w.position):''}</option>`).join('');
 }
 
 function switchEmpTab(tab) {
@@ -12519,13 +12565,13 @@ function _attList() {
 
   const rows = recs.length ? recs.map(r => `
     <tr>
-      <td style="font-weight:700;">${getWorkerName(r.workerId)}</td>
-      <td>${(workers.find(w=>w.id===r.workerId)||{}).dept || '—'}</td>
-      <td>${r.checkIn || '—'}</td>
-      <td>${r.checkOut || '—'}</td>
+      <td style="font-weight:700;">${esc(getWorkerName(r.workerId))}</td>
+      <td>${esc((workers.find(w=>w.id===r.workerId)||{}).dept) || '—'}</td>
+      <td>${esc(r.checkIn) || '—'}</td>
+      <td>${esc(r.checkOut) || '—'}</td>
       <td>${calcWorkHours(r.checkIn, r.checkOut) || '—'}</td>
       <td>${statusBadge(r.status)}</td>
-      <td>${r.note || ''}</td>
+      <td>${esc(r.note) || ''}</td>
       <td style="white-space:nowrap;">
         <button class="btn btn-sm" onclick="openAttendanceEdit('${r.id}')" title="편집"><i class="ti ti-edit"></i></button>
         <button class="del-btn" onclick="deleteAttendance('${r.id}')" title="삭제"><i class="ti ti-trash"></i></button>
@@ -12731,8 +12777,8 @@ function _annualStatusCard() {
     const barColor = remain <= 0 ? '#c92a2a' : remain <= 3 ? '#f76707' : '#2b8a3e';
     return `
       <tr>
-        <td style="font-weight:700;">${w.name}</td>
-        <td>${w.dept || '—'}</td>
+        <td style="font-weight:700;">${esc(w.name)}</td>
+        <td>${esc(w.dept) || '—'}</td>
         <td>${grant}일</td>
         <td>${used}일</td>
         <td style="font-weight:700;color:${remain<=0?'var(--tx-err)':remain<=3?'var(--tx-w)':'var(--tx-ok)'};">${remain}일</td>
@@ -12798,12 +12844,12 @@ function renderLeaves() {
   const list = [...leaves].sort((a,b) => (b.startDate||'').localeCompare(a.startDate||''));
   const rows = list.length ? list.map(l => `
     <tr>
-      <td style="font-weight:700;">${getWorkerName(l.workerId)}</td>
-      <td><span class="bd bd-neu">${l.type}</span></td>
-      <td>${l.startDate || '—'}</td>
-      <td>${l.endDate || l.startDate || '—'}</td>
+      <td style="font-weight:700;">${esc(getWorkerName(l.workerId))}</td>
+      <td><span class="bd bd-neu">${esc(l.type)}</span></td>
+      <td>${esc(l.startDate) || '—'}</td>
+      <td>${esc(l.endDate || l.startDate) || '—'}</td>
       <td style="font-weight:700;">${l.days || 0}일</td>
-      <td>${l.reason || ''}</td>
+      <td>${esc(l.reason) || ''}</td>
       <td>${leaveStatusBadge(l.status)}</td>
       <td style="white-space:nowrap;">
         ${l.status !== '승인' ? `<button class="btn btn-sm" style="border-color:var(--br-ok);color:var(--tx-ok);" onclick="setLeaveStatus('${l.id}','승인')" title="승인"><i class="ti ti-check"></i></button>` : ''}
@@ -13041,10 +13087,10 @@ function _finPurchase() {
   const total = finPurchaseTotal();
   const body = list.length ? list.map(p => `
     <tr>
-      <td>${p.date||'—'}</td>
-      <td>${p.supplier||'—'}</td>
-      <td>${p.itemName||'—'}</td>
-      <td>${p.qty}${p.unit||''}</td>
+      <td>${esc(p.date)||'—'}</td>
+      <td>${esc(p.supplier)||'—'}</td>
+      <td>${esc(p.itemName)||'—'}</td>
+      <td>${esc(p.qty)}${esc(p.unit)||''}</td>
       <td>${fmtW(p.unitPrice||0)}</td>
       <td style="font-weight:700;color:#e8590c;">${fmtW((p.unitPrice||0)*(p.qty||0))}</td>
       <td>${statusBadge(p.status||'작성중')}</td>
@@ -13073,8 +13119,8 @@ function _finCost() {
     tCost += unitCost*qty; tRev += price*qty; tMargin += margin*qty;
     return `
     <tr>
-      <td style="font-weight:700;">${p.id}</td>
-      <td style="font-weight:700;">${p.name}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${getClientName(p.clientId)}</span></td>
+      <td style="font-weight:700;">${esc(p.id)}</td>
+      <td style="font-weight:700;">${esc(p.name)}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${esc(getClientName(p.clientId))}</span></td>
       <td style="text-align:right;">${fmtW(p.matCost||0)}</td>
       <td style="text-align:right;">${fmtW(p.laborCost||0)}</td>
       <td style="text-align:right;">${fmtW(p.ovhCost||0)}</td>
@@ -13149,9 +13195,9 @@ function _finLabor() {
     const p = calcPayroll(w); tDed+=p.deduction; tNet+=p.net;
     return `
     <tr>
-      <td style="font-weight:700;">${w.id}</td>
-      <td style="font-weight:700;">${w.name}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${w.dept||'—'} · ${w.position||'—'}</span></td>
-      <td><span class="bd bd-neu">${w.empType||'정규직'}</span></td>
+      <td style="font-weight:700;">${esc(w.id)}</td>
+      <td style="font-weight:700;">${esc(w.name)}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${esc(w.dept)||'—'} · ${esc(w.position)||'—'}</span></td>
+      <td><span class="bd bd-neu">${esc(w.empType)||'정규직'}</span></td>
       <td style="text-align:right;font-weight:700;color:var(--tx-i);">${w.salary?fmtW(p.gross):'—'}</td>
       <td style="text-align:right;">${fmtW(p.pension)}</td>
       <td style="text-align:right;">${fmtW(p.health+p.ltc)}</td>
@@ -13265,14 +13311,14 @@ function renderAS(){
   const _asth = (k, l, s) => `<th onclick="toggleSort('as','${k}')" style="cursor:pointer;user-select:none;${s||''}">${l} ${sortIcon('as',k)}</th>`;
   const rows = list.length ? list.map(a=>`
     <tr>
-      <td style="font-weight:700;">${a.id}</td>
-      <td>${a.recvDate||'—'}</td>
-      <td style="font-weight:700;">${getClientName(a.clientId)}</td>
-      <td>${a.productName||'—'}</td>
-      <td style="max-width:220px;">${a.symptom||'—'}</td>
-      <td style="text-align:center;"><span class="bd ${a.warranty==='유상'?'bd-warn':'bd-ok'}">${a.warranty||'보증'}</span></td>
+      <td style="font-weight:700;">${esc(a.id)}</td>
+      <td>${esc(a.recvDate)||'—'}</td>
+      <td style="font-weight:700;">${esc(getClientName(a.clientId))}</td>
+      <td>${esc(a.productName)||'—'}</td>
+      <td style="max-width:220px;">${esc(a.symptom)||'—'}</td>
+      <td style="text-align:center;"><span class="bd ${a.warranty==='유상'?'bd-warn':'bd-ok'}">${esc(a.warranty)||'보증'}</span></td>
       <td style="text-align:center;">${statusBadge(a.status||'접수')}</td>
-      <td>${asWorkerName(a.owner)}</td>
+      <td>${esc(asWorkerName(a.owner))}</td>
       <td style="text-align:right;">${a.warranty==='유상'?fmtW(a.cost||0):'—'}</td>
       <td style="text-align:center;white-space:nowrap;">
         <button class="btn btn-sm" onclick="openAsEdit('${a.id}')" title="수정"><i class="ti ti-edit"></i></button>
@@ -13297,8 +13343,8 @@ function renderAS(){
       </table></div>
     </div>`;
 }
-function _asClientOptions(sel){ return clients.map(c=>`<option value="${c.id}"${c.id===sel?' selected':''}>${c.name}</option>`).join(''); }
-function _asWorkerOptions(sel){ return '<option value="">미배정</option>'+workers.map(w=>`<option value="${w.id}"${w.id===sel?' selected':''}>${w.name}${w.dept?' · '+w.dept:''}</option>`).join(''); }
+function _asClientOptions(sel){ return clients.map(c=>`<option value="${esc(c.id)}"${c.id===sel?' selected':''}>${esc(c.name)}</option>`).join(''); }
+function _asWorkerOptions(sel){ return '<option value="">미배정</option>'+workers.map(w=>`<option value="${esc(w.id)}"${w.id===sel?' selected':''}>${esc(w.name)}${w.dept?' · '+esc(w.dept):''}</option>`).join(''); }
 function openAsAdd(){
   editAsId = null;
   inp('as-modal-ttl').innerHTML = '<i class="ti ti-tool" style="color:var(--tx-i);"></i>A/S 접수 등록';
@@ -13760,8 +13806,16 @@ async function callGeminiForMemo(prompt) {
 async function summarizeMemoWithGemini(text) {
   var source = String(text || '').trim();
   if (!source) throw new Error('요약할 메모가 없습니다.');
+  var now = new Date();
+  var currentDate = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0')
+  ].join('-');
   return callGeminiForMemo(
-    '다음 업무 메모를 한국어로 정리하세요. 반드시 JSON 객체만 반환하세요. ' +
+    '다음 업무 메모를 한국어로 정리하세요. 현재 한국 날짜는 ' + currentDate + '입니다. ' +
+    '반드시 JSON 객체만 반환하세요. 메모에 연도 없이 월과 일만 있으면 현재 날짜를 기준으로 가장 가까운 미래 날짜로 해석하고, ' +
+    'dueDate는 반드시 YYYY-MM-DD 형식으로 작성하세요. 날짜를 알 수 없으면 빈 문자열을 사용하세요. ' +
     '형식: {"summary":"3문장 이내 요약","keyPoints":["핵심 내용"],' +
     '"actionItems":[{"text":"할 일","owner":"","dueDate":""}],' +
     '"risks":["위험 또는 확인사항"],"suggestedTags":["태그"]}\n\n메모:\n' + source.substring(0, 20000)
@@ -14157,9 +14211,44 @@ function normalizeAiActionItems(items) {
     return {
       text:String(item.text || item.task || item.title || '').trim(),
       owner:String(item.owner || item.assignee || '').trim(),
-      dueDate:String(item.dueDate || item.due || '').trim()
+      dueDate:normalizeAiDueDate(item.dueDate || item.due || '')
     };
   }).filter(function(item) { return !!item.text; });
+}
+
+function normalizeAiDueDate(value) {
+  var text = String(value || '').trim();
+  if (!text) return '';
+
+  var match = text.match(/(\d{4})\s*[-/.년]\s*(\d{1,2})\s*[-/.월]\s*(\d{1,2})/);
+  var hasYear = !!match;
+  if (!match) {
+    match = text.match(/(\d{1,2})\s*[-/.월]\s*(\d{1,2})/);
+  }
+  if (!match) return '';
+
+  var now = new Date();
+  var year = hasYear ? Number(match[1]) : now.getFullYear();
+  var month = Number(match[hasYear ? 2 : 1]);
+  var day = Number(match[hasYear ? 3 : 2]);
+  var candidate = new Date(year, month - 1, day);
+  if (candidate.getFullYear() !== year || candidate.getMonth() !== month - 1 || candidate.getDate() !== day) return '';
+
+  var todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (candidate < todayLocal) {
+    year = now.getFullYear();
+    candidate = new Date(year, month - 1, day);
+    if (candidate < todayLocal) {
+      year++;
+      candidate = new Date(year, month - 1, day);
+    }
+  }
+
+  return [
+    candidate.getFullYear(),
+    String(candidate.getMonth() + 1).padStart(2, '0'),
+    String(candidate.getDate()).padStart(2, '0')
+  ].join('-');
 }
 
 async function runMemoAiSummary(ev) {
@@ -14851,8 +14940,8 @@ function renderMobileHome() {
       ${deadlines.length ? deadlines.map(p => `
         <div class="mh-row" onclick="mobileGoProcess()">
           <div class="mh-r-main">
-            <div class="mh-r-t">${p.name}</div>
-            <div class="mh-r-s">${getClientName(p.clientId)} · ${p.processStage}</div>
+            <div class="mh-r-t">${esc(p.name)}</div>
+            <div class="mh-r-s">${esc(getClientName(p.clientId))} · ${esc(p.processStage)}</div>
           </div>
           ${dayBadge(p.deliveryDate)}
           <i class="ti ti-chevron-right"></i>
@@ -14865,8 +14954,8 @@ function renderMobileHome() {
         <div class="mh-row" onclick="mobileGo('alerts')">
           <i class="ti ${alertIco[a.type] || 'ti-info-circle'} mh-r-ico" style="color:${alertCol[a.type] || 'var(--tx-i)'};"></i>
           <div class="mh-r-main">
-            <div class="mh-r-t">${a.title || ''}</div>
-            <div class="mh-r-s">${a.sub || ''}</div>
+            <div class="mh-r-t">${esc(a.title) || ''}</div>
+            <div class="mh-r-s">${esc(a.sub) || ''}</div>
           </div>
           <i class="ti ti-chevron-right"></i>
         </div>`).join('') : `<div class="mh-empty">새로운 알림이 없습니다.</div>`}
