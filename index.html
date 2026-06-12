@@ -54,10 +54,12 @@ body { font-family: var(--f); background: var(--bg-t); color: var(--tx); height:
 @keyframes toastIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
 
 /* 사이드바 */
-.sidebar { width: 210px; min-width: 210px; background: var(--bg-p); border-right: 1px solid var(--br); display: flex; flex-direction: column; align-self: stretch; min-height: 0; overflow-y: auto; flex-shrink: 0; scrollbar-width: thin; scrollbar-color: var(--br-s) transparent; }
+.sidebar { width: 210px; min-width: 210px; background: var(--bg-p); border-right: 1px solid var(--br); display: flex; flex-direction: column; align-self: stretch; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; flex-shrink: 0; scrollbar-width: thin; scrollbar-color: transparent transparent; }
 .sidebar::-webkit-scrollbar { width: 5px; }
-.sidebar::-webkit-scrollbar-thumb { background: var(--br-s); border-radius: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
 .sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar.is-scrolling { scrollbar-color: var(--br-s) transparent; }
+.sidebar.is-scrolling::-webkit-scrollbar-thumb { background: var(--br-s); }
 .logo { padding: 18px 14px 18px 20px; border-bottom: 1px solid var(--br); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 #sb-toggle-btn { flex-shrink: 0; font-size: 18px; padding: 4px 6px; }
 .logo-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--tx-i); }
@@ -72,10 +74,107 @@ body { font-family: var(--f); background: var(--bg-t); color: var(--tx); height:
 .nbadge { margin-left: auto; font-size: 10px; background: #e03131; color: #fff; border-radius: 10px; padding: 1px 6px; font-weight: 600; }
 
 /* 메인 영역 */
-.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
-.topbar { background: var(--bg-p); border-bottom: 1px solid var(--br); padding: 10px 24px; display: flex; align-items: center; justify-content: space-between; min-height: 52px; flex-shrink: 0; }
+.main { flex: 1; display: flex; flex-direction: column; overflow: visible; min-width: 0; min-height: 0; }
+.topbar { position: relative; z-index: 9000; overflow: visible; background: var(--bg-p); border-bottom: 1px solid var(--br); padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; min-height: 52px; flex-shrink: 0; }
+.topbar-left { min-width: 0; display: flex; align-items: center; gap: 8px; }
 .tb-title { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tb-right { display: flex; align-items: center; gap: 12px; }
+.topnav-home {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--br);
+  border-radius: var(--rm);
+  background: transparent;
+  color: var(--tx-s);
+  cursor: pointer;
+}
+.topnav-home:hover,
+.topnav-home.active { background: var(--bg-i); border-color: var(--br-i); color: var(--tx-i); }
+.topnav-home i { font-size: 18px; }
+.topnav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+.topnav-group { position: relative; }
+.topnav-category {
+  height: 32px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  border-radius: var(--rm);
+  background: transparent;
+  color: var(--tx-s);
+  font-family: var(--f);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.topnav-category > i { font-size: 11px; transition: transform .15s; }
+.topnav-group:hover .topnav-category,
+.topnav-group:focus-within .topnav-category,
+.topnav-group.open .topnav-category,
+.topnav-group.active .topnav-category { background: var(--bg-s); color: var(--tx-i); }
+.topnav-group:hover .topnav-category > i,
+.topnav-group:focus-within .topnav-category > i,
+.topnav-group.open .topnav-category > i { transform: rotate(180deg); }
+.topnav-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 9400;
+  min-width: 190px;
+  padding: 6px;
+  border: 1px solid var(--br-s);
+  border-radius: var(--rl);
+  background: var(--bg-p);
+  box-shadow: 0 10px 28px rgba(0,0,0,.24);
+}
+.topnav-group::after {
+  content: '';
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 6px;
+}
+.topnav-group:hover::after,
+.topnav-group:focus-within::after,
+.topnav-group.open::after { display: block; }
+.topnav-group:hover .topnav-menu,
+.topnav-group:focus-within .topnav-menu,
+.topnav-group.open .topnav-menu { display: grid; gap: 2px; }
+.topnav-menu-wide { grid-template-columns: repeat(2, minmax(155px,1fr)); min-width: 330px; }
+.topnav-menu-right { right: 0; left: auto; }
+.topnav-menu button {
+  min-height: 34px;
+  padding: 7px 9px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tx);
+  font-family: var(--f);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.topnav-menu button:hover,
+.topnav-menu button.active { background: var(--bg-i); color: var(--tx-i); }
+.topnav-menu button i { width: 17px; flex: 0 0 17px; color: var(--tx-s); font-size: 17px; }
+.topnav-menu button:hover i,
+.topnav-menu button.active i { color: var(--tx-i); }
 .topbar-alert-btn {
   position: relative;
   width: 32px;
@@ -261,6 +360,23 @@ body { font-family: var(--f); background: var(--bg-t); color: var(--tx); height:
 
 .card { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: 18px 20px; box-shadow: var(--shadow); margin-bottom: 16px; min-width: 0; }
 .card-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+.hr-view-toolbar {
+  min-height: 34px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+.hr-view-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.hr-view-toggle .btn {
+  height: 32px;
+  min-height: 32px;
+  margin: 0;
+}
 .card-ttl { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
 .card-ttl i { font-size: 16px; color: var(--tx-i); }
 
@@ -300,7 +416,8 @@ body.sb-mini .sidebar {
   position: fixed;
   top: 0; bottom: 0; left: 0;   /* height:100vh는 body zoom 환경에서 짧아짐 → top/bottom 0으로 뷰포트 양끝 고정 */
   z-index: 1500;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 /* 미니 레일이 fixed라 문서 흐름에서 빠지므로, 본문에 72px 여백을 고정해 자리 확보 */
 body.sb-mini .main { margin-left: 72px; }
@@ -324,7 +441,7 @@ body.sb-mini .sidebar .ni {
   position: relative;
 }
 body.sb-mini .sidebar .ni i {
-  font-size: 18px;
+  font-size: 21px;
   flex-shrink: 0;
 }
 body.sb-mini .sidebar .ni .nbadge {
@@ -377,6 +494,177 @@ body.sb-mini.sb-expanded .sidebar .ni::after { display: none; }
   display: none;
 }
 body.sb-mini.sb-expanded .sb-overlay { display: block; }
+
+/* 햄버거 메가 메뉴 레이아웃 */
+.sidebar,
+.sb-overlay { display: none !important; }
+.main,
+body.sb-mini .main { margin-left: 0 !important; }
+.topbar {
+  display: grid;
+  grid-template-columns: minmax(230px, auto) minmax(260px, 620px) auto;
+  gap: 14px;
+  padding: 8px 16px;
+}
+.topbar-left { position: relative; }
+#menu-toggle-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0 !important;
+  display: inline-flex !important;
+  justify-content: center;
+  border: 1px solid var(--br);
+  border-radius: 50%;
+  background: var(--bg-s);
+  font-size: 21px !important;
+}
+#menu-toggle-btn:hover,
+#menu-toggle-btn.active { background: var(--bg-i); border-color: var(--br-i); color: var(--tx-i); }
+.topbar-search { min-width: 0; display: flex; align-items: center; justify-content: center; }
+.topbar-search .global-search-wrapper {
+  width: 100%;
+  height: 36px;
+  margin: 0;
+}
+.topbar-search #global-search-input { background: var(--bg-s); }
+.topnav.mega-menu {
+  display: none;
+  position: fixed;
+  top: 56px;
+  left: 14px;
+  right: auto;
+  z-index: 10000;
+  width: min(520px, calc(100vw - 28px));
+  max-height: 66vh;
+  margin: 0;
+  padding: 12px 12px 14px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 8px;
+  white-space: normal;
+  border: 1px solid var(--br-s);
+  border-radius: 14px;
+  background: var(--bg-p);
+  box-shadow: 0 18px 50px rgba(0,0,0,.32);
+}
+.topnav.mega-menu::before {
+  content: '';
+  position: fixed;
+  top: 48px;
+  left: 31px;
+  width: 16px;
+  height: 16px;
+  border-left: 1px solid var(--br-s);
+  border-top: 1px solid var(--br-s);
+  background: var(--bg-p);
+  transform: rotate(45deg);
+}
+.topnav.mega-menu.mega-open { display: grid; }
+.mega-menu-head {
+  grid-column: 1 / -1;
+  min-height: 42px;
+  padding: 0 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--br);
+}
+.mega-menu-head strong { display: flex; align-items: center; gap: 7px; font-size: 15px; }
+.mega-menu-head strong i { color: var(--tx-i); font-size: 19px; }
+.mega-menu-head span { display: block; margin-top: 2px; color: var(--tx-t); font-size: 10px; }
+.mega-menu-close {
+  width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--br); border-radius: var(--rm); background: transparent; color: var(--tx-s); cursor: pointer;
+}
+.mega-menu-close:hover { background: var(--bg-s); color: var(--tx); }
+.topnav.mega-menu .topnav-group {
+  min-width: 0;
+  border: 1px solid var(--br);
+  border-radius: 10px;
+  padding: 7px;
+  background: transparent;
+}
+.topnav.mega-menu .topnav-group:last-child { padding-bottom: 7px; }
+.topnav.mega-menu .topnav-category {
+  width: 100%;
+  height: 24px;
+  padding: 0 2px 5px;
+  justify-content: flex-start;
+  border-bottom: 0;
+  border-radius: 0;
+  color: var(--tx-s);
+  font-size: 11px;
+  font-weight: 750;
+  cursor: default;
+}
+.topnav.mega-menu .topnav-category > i { display: none; }
+.topnav.mega-menu .topnav-menu,
+.topnav.mega-menu .topnav-group:hover .topnav-menu,
+.topnav.mega-menu .topnav-group:focus-within .topnav-menu,
+.topnav.mega-menu .topnav-group.open .topnav-menu {
+  display: grid;
+  position: static;
+  min-width: 0;
+  margin-top: 2px;
+  padding: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 1px;
+  row-gap: 3px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.topnav.mega-menu .topnav-menu-wide { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.topnav.mega-menu .topnav-menu button {
+  min-width: 0;
+  min-height: 70px;
+  padding: 5px 1px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  font-size: 10px;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+}
+.topnav.mega-menu .topnav-menu button i {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--br-s);
+  border-radius: 14px;
+  background: var(--bg-p);
+  color: var(--tx-i);
+  font-size: 23px;
+  box-shadow: 0 2px 5px rgba(0,0,0,.06);
+}
+.topnav.mega-menu .topnav-menu button:hover,
+.topnav.mega-menu .topnav-menu button.active { background: var(--bg-i); }
+.topnav.mega-menu .topnav-menu button:hover i,
+.topnav.mega-menu .topnav-menu button.active i {
+  border-color: var(--br-i);
+  background: var(--bg-i);
+  color: var(--tx-i);
+}
+.topnav.mega-menu .topnav-group::after { display: none !important; }
+.mega-menu-backdrop-active .sidebar-backdrop {
+  display: block;
+  opacity: 1;
+  visibility: visible;
+  z-index: 8998;
+}
+body.mega-menu-open .topbar { z-index: 10001; }
+body.mega-menu-open .topnav.mega-menu {
+  pointer-events: auto;
+  isolation: isolate;
+}
+body.mega-menu-open { overflow: hidden; }
 
 /* 뱃지 및 프로그레스 */
 .bd { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 4px; border: 1px solid; white-space: nowrap; font-weight: 600; }
@@ -789,6 +1077,14 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
 @media screen and (min-width: 681px) and (max-width: 1100px) { body { zoom: .85; height: calc(100vh / .85); } }
 @media screen and (min-width: 681px) and (max-width: 900px)  { body { zoom: .80; height: calc(100vh / .80); } }
 
+@media screen and (min-width: 901px) and (max-width: 1180px) {
+  .topnav-category { padding: 0 7px; font-size: 11px; }
+  .topbar .tb-title { display: none; }
+}
+@media screen and (max-width: 900px) {
+  .topnav { display: none !important; }
+}
+
 @media(max-width: 1024px) {
   .metrics, .row2, .row3, .sum-row, .fg4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .fg3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -798,6 +1094,17 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
 @media(min-width: 681px) {
   .content:not(#pg-dashboard) .metrics {
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+  }
+  #emp-tab-att .attendance-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  #emp-tab-att .attendance-metrics .mc {
+    padding: 9px 11px;
+  }
+}
+@media(min-width: 1100px) {
+  #emp-tab-att .attendance-metrics {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
   }
 }
 /* ── 데스크톱 표 목록 페이지(.list-page): 마지막 표 카드를 창 바닥까지 채워
@@ -1014,6 +1321,8 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
 
   /* 2) 상단 탑바 가로 넘침으로 인한 우측 잘림 방지 */
   .topbar { padding: 8px 10px !important; gap: 6px; }
+  .topnav { display: none !important; }
+  .topnav-home { width: 32px; height: 32px; flex-basis: 32px; }
   .tb-right { gap: 6px !important; flex-shrink: 0; }
 
   /* 3) 수주(고객사) 카드 헤더 세로 글자 깨짐 해결: 이름 최소폭 확보 + 버튼 줄바꿈 */
@@ -1040,6 +1349,52 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
   @page { size: A4; margin: 20mm; }
   .sidebar, .main > .topbar { display: none !important; }
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}
+
+/* 햄버거 메가 메뉴 반응형 */
+@media screen and (max-width: 900px) {
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 8px 10px !important;
+  }
+  .topbar-left { min-width: 0; }
+  .topbar-search { grid-column: 1 / -1; grid-row: 2; }
+  .topbar-search .global-search-wrapper { width: 100% !important; margin: 0 !important; }
+  .topnav.mega-menu {
+    display: none !important;
+    top: 56px;
+    left: 8px;
+    right: auto;
+    bottom: auto;
+    width: min(520px, calc(100vw - 16px));
+    max-height: 66vh;
+    padding: 10px 10px 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .topnav.mega-menu.mega-open { display: grid !important; }
+  .topnav.mega-menu .topnav-menu,
+  .topnav.mega-menu .topnav-menu-wide { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media screen and (max-width: 560px) {
+  .topnav-home { display: none; }
+  .tb-title { font-size: 13px !important; }
+  .topnav.mega-menu {
+    top: 54px;
+    left: 6px;
+    right: auto;
+    bottom: auto;
+    width: calc(100vw - 12px);
+    max-height: 66vh;
+    grid-template-columns: 1fr;
+    border-radius: 12px;
+  }
+  .topnav.mega-menu::before { left: 22px; }
+  .topnav.mega-menu .topnav-menu,
+  .topnav.mega-menu .topnav-menu-wide { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .topnav.mega-menu .topnav-menu button { min-height: 72px; font-size: 9.5px; }
+  .topnav.mega-menu .topnav-menu button i { width: 38px; height: 38px; flex-basis: 38px; font-size: 21px; }
+  .mega-menu-head { position: sticky; top: -12px; z-index: 2; padding: 10px 0; background: var(--bg-p); }
 }
 
 /* ════════ 모바일 전용 홈 화면 & 하단 탭바 ════════ */
@@ -1237,12 +1592,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     <button class="theme-btn" id="sb-toggle-btn" onclick="toggleSidebar()" title="사이드바 접기/펴기"><i class="ti ti-layout-sidebar"></i></button>
   </div>
 
-  <!-- 통합 글로벌 검색창 (로고 하단) -->
-  <div class="global-search-wrapper">
-    <input type="text" id="global-search-input" placeholder="통합 검색 (제품, 고객사, 자재, 생산지시, 재고, 직원...)" oninput="onGlobalSearch(this.value)" onfocus="onGlobalSearchFocus()" onkeydown="onGlobalSearchKeyDown(event)">
-    <button type="button" id="global-search-clear" onclick="clearGlobalSearch()" title="검색어 지우기" aria-label="검색어 지우기"><i class="ti ti-x"></i></button>
-    <button type="button" class="global-search-btn" onclick="toggleGlobalSearchBox()" title="검색"><i class="ti ti-search"></i></button>
-  </div>
   <div class="nav-g">
     <div class="nav-lbl">메인 대시보드</div>
     <div class="ni active" onclick="go('dashboard',this)"><i class="ti ti-layout-dashboard"></i>종합 대시보드</div>
@@ -1285,6 +1634,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     <div class="ni" onclick="go('system',this)"><i class="ti ti-settings"></i>시스템 관리<span class="nbadge" id="alertBadge">0</span><span class="nbadge" id="trashBadge" style="display:none;background:#868e96;">0</span></div>
   </div>
 </div>
+<div id="sb-overlay" class="sb-overlay" onclick="closeSbOverlay()"></div>
 
 <!-- 실시간 검색 결과 드롭다운 — 사이드바가 숨겨져도(모바일 홈 등) 보이도록 body 레벨에 배치.
      데스크톱은 JS(positionGlobalSearchResults)가 입력창 기준 fixed 배치, 모바일은 responsive.css 규칙 적용 -->
@@ -1294,16 +1644,84 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
 <!-- 우측 메인 컨텐츠 영역 -->
 <div class="main">
   <div class="topbar">
-    <div style="display:flex; align-items:center; gap:10px;">
-      <!-- 데스크톱: 사이드바 숨김 상태에서만 노출되는 표시 버튼 -->
-      <button class="theme-btn" id="sb-show-btn" onclick="toggleSidebar()" title="사이드바 표시" style="display: none; font-size: 18px; padding: 4px 8px; align-items: center; justify-content: center;">
-        <i class="ti ti-layout-sidebar"></i>
-      </button>
-      <!-- 모바일 전용: 사이드바 드로어 열기 (데스크톱 토글은 사이드바 로고 우측) -->
-      <button class="theme-btn" id="menu-toggle-btn" onclick="toggleSidebar()" title="메뉴 열기" style="display: none; font-size: 18px; padding: 4px 8px; align-items: center; justify-content: center;">
+    <div class="topbar-left">
+      <button class="theme-btn" id="menu-toggle-btn" onclick="toggleMegaMenu()" title="전체 메뉴" aria-label="전체 메뉴" aria-haspopup="true" aria-expanded="false">
         <i class="ti ti-menu-2"></i>
       </button>
+      <button class="topnav-home" type="button" onclick="openTopNavItem('dashboard')" title="메인 화면" aria-label="메인 화면">
+        <i class="ti ti-home"></i>
+      </button>
       <div class="tb-title" id="ptitle">종합 대시보드</div>
+      <nav class="topnav mega-menu" id="topnav" aria-label="전체 업무 메뉴">
+        <div class="mega-menu-head">
+          <div>
+            <strong><i class="ti ti-apps"></i> 전체 메뉴</strong>
+            <span>업무 항목을 선택하면 해당 화면으로 이동합니다.</span>
+          </div>
+          <button type="button" class="mega-menu-close" onclick="closeMegaMenu()" aria-label="메뉴 닫기"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="topnav-group" data-top-group="main">
+          <button class="topnav-category" type="button" onclick="toggleTopNavGroup(this.parentElement,event)">메인 <i class="ti ti-chevron-down"></i></button>
+          <div class="topnav-menu">
+            <button type="button" data-top-page="dashboard" onclick="openTopNavItem('dashboard')"><i class="ti ti-layout-dashboard"></i>종합 대시보드</button>
+            <button type="button" data-top-page="clients" onclick="openTopNavItem('clients')"><i class="ti ti-building-community"></i>수주 정보 관리</button>
+            <button type="button" data-top-page="materials" onclick="openTopNavItem('materials')"><i class="ti ti-truck-loading"></i>자재 수급/발주</button>
+            <button type="button" data-top-page="deliveries" onclick="openTopNavItem('deliveries')"><i class="ti ti-truck-delivery"></i>납품 현황</button>
+            <button type="button" data-top-page="calendar" onclick="openTopNavItem('calendar')"><i class="ti ti-calendar-event"></i>납기 캘린더</button>
+          </div>
+        </div>
+        <div class="topnav-group" data-top-group="process">
+          <button class="topnav-category" type="button" onclick="toggleTopNavGroup(this.parentElement,event)">공정 관리 <i class="ti ti-chevron-down"></i></button>
+          <div class="topnav-menu">
+            <button type="button" data-top-page="orders" onclick="openTopNavItem('orders')"><i class="ti ti-clipboard-list"></i>생산 지시 등록</button>
+            <button type="button" data-top-page="quality" onclick="openTopNavItem('quality')"><i class="ti ti-shield-check"></i>품질 및 검사</button>
+            <button type="button" data-top-page="claims" onclick="openTopNavItem('claims')"><i class="ti ti-message-report"></i>고객 클레임</button>
+            <button type="button" data-top-page="as" onclick="openTopNavItem('as')"><i class="ti ti-tool"></i>고객 A/S</button>
+          </div>
+        </div>
+        <div class="topnav-group" data-top-group="inventory">
+          <button class="topnav-category" type="button" onclick="toggleTopNavGroup(this.parentElement,event)">재고 관리 <i class="ti ti-chevron-down"></i></button>
+          <div class="topnav-menu">
+            <button type="button" data-top-page="inventory" data-inventory-key="finished" onclick="openTopNavItem('inventory','finished')"><i class="ti ti-building-factory"></i>완제품 재고</button>
+            <button type="button" data-top-page="inventory" data-inventory-key="parts" onclick="openTopNavItem('inventory','parts')"><i class="ti ti-tools"></i>생산부품 재고</button>
+            <button type="button" data-top-page="inventory" data-inventory-key="office" onclick="openTopNavItem('inventory','office')"><i class="ti ti-printer"></i>사무비품 재고</button>
+          </div>
+        </div>
+        <div class="topnav-group" data-top-group="documents">
+          <button class="topnav-category" type="button" onclick="toggleTopNavGroup(this.parentElement,event)">문서 관리 <i class="ti ti-chevron-down"></i></button>
+          <div class="topnav-menu">
+            <button type="button" data-top-page="notes" onclick="openTopNavItem('notes')"><i class="ti ti-notes"></i>메모·할 일</button>
+            <button type="button" data-top-page="rfq" onclick="openTopNavItem('rfq')"><i class="ti ti-file-description"></i>견적요청서</button>
+            <button type="button" data-top-page="po" onclick="openTopNavItem('po')"><i class="ti ti-file-invoice"></i>구매발주서</button>
+          </div>
+        </div>
+        <div class="topnav-group" data-top-group="business">
+          <button class="topnav-category" type="button" onclick="toggleTopNavGroup(this.parentElement,event)">경영 관리 <i class="ti ti-chevron-down"></i></button>
+          <div class="topnav-menu topnav-menu-wide">
+            <button type="button" data-top-page="salesdoc" onclick="openTopNavItem('salesdoc')"><i class="ti ti-file-text"></i>견적/수주</button>
+            <button type="button" data-top-page="statement" onclick="openTopNavItem('statement')"><i class="ti ti-receipt"></i>거래명세표</button>
+            <button type="button" data-top-page="taxinvoice" onclick="openTopNavItem('taxinvoice')"><i class="ti ti-file-dollar"></i>세금계산서</button>
+            <button type="button" data-top-page="partners" onclick="openTopNavItem('partners')"><i class="ti ti-address-book"></i>거래처 관리</button>
+            <button type="button" data-top-page="bom" onclick="openTopNavItem('bom')"><i class="ti ti-sitemap"></i>BOM·자재명세</button>
+            <button type="button" data-top-page="finance" onclick="openTopNavItem('finance')"><i class="ti ti-coin"></i>재무 관리</button>
+            <button type="button" data-top-page="workers" onclick="openTopNavItem('workers')"><i class="ti ti-id-badge-2"></i>인사 관리</button>
+          </div>
+        </div>
+        <div class="topnav-group" data-top-group="system">
+          <button class="topnav-category" type="button" onclick="toggleTopNavGroup(this.parentElement,event)">시스템 관리 <i class="ti ti-chevron-down"></i></button>
+          <div class="topnav-menu topnav-menu-right">
+            <button type="button" data-top-page="system" onclick="openTopNavItem('system')"><i class="ti ti-settings"></i>시스템 관리</button>
+          </div>
+        </div>
+      </nav>
+    </div>
+
+    <div class="topbar-search">
+      <div class="global-search-wrapper">
+        <input type="text" id="global-search-input" placeholder="통합 검색 (제품, 고객사, 자재, 생산지시, 재고, 직원...)" oninput="onGlobalSearch(this.value)" onfocus="onGlobalSearchFocus()" onkeydown="onGlobalSearchKeyDown(event)">
+        <button type="button" id="global-search-clear" onclick="clearGlobalSearch()" title="검색어 지우기" aria-label="검색어 지우기"><i class="ti ti-x"></i></button>
+        <button type="button" class="global-search-btn" onclick="toggleGlobalSearchBox()" title="검색" aria-label="검색"><i class="ti ti-search"></i></button>
+      </div>
     </div>
 
     <div class="tb-right">
@@ -3856,10 +4274,86 @@ function togglePanel(id) {
 }
 function closePanel(id) { inp(id)?.classList.remove('open'); }
 
+const TOPNAV_GROUP_PAGES = {
+  main: ['dashboard','clients','materials','deliveries','calendar'],
+  process: ['orders','quality','claims','as'],
+  inventory: ['inventory'],
+  documents: ['notes','rfq','po'],
+  business: ['salesdoc','statement','taxinvoice','partners','bom','finance','workers'],
+  system: ['system']
+};
+
+function closeTopNavMenus() {
+  document.querySelectorAll('.topnav-group.open').forEach(group => group.classList.remove('open'));
+}
+
+function setMegaMenuOpen(open) {
+  const menu = inp('topnav');
+  const button = inp('menu-toggle-btn');
+  const backdrop = inp('sidebar-backdrop');
+  if (!menu) return;
+  menu.classList.toggle('mega-open', open);
+  document.body.classList.toggle('mega-menu-open', open);
+  document.body.classList.toggle('mega-menu-backdrop-active', open);
+  button?.classList.toggle('active', open);
+  button?.setAttribute('aria-expanded', open ? 'true' : 'false');
+  backdrop?.classList.toggle('active', open);
+  if (open) {
+    closeTopbarAlerts();
+    closeTopbarMoreMenu();
+  }
+}
+
+function toggleMegaMenu() {
+  setMegaMenuOpen(!inp('topnav')?.classList.contains('mega-open'));
+}
+
+function closeMegaMenu() {
+  setMegaMenuOpen(false);
+}
+
+function toggleTopNavGroup(group, event) {
+  if (event) event.stopPropagation();
+  if (!group) return;
+  const open = !group.classList.contains('open');
+  closeTopNavMenus();
+  closeTopbarAlerts();
+  closeTopbarMoreMenu();
+  if (open) group.classList.add('open');
+}
+
+function syncTopNavActive(page, inventoryKey) {
+  document.querySelectorAll('.topnav-group, .topnav-menu button, .topnav-home').forEach(el => el.classList.remove('active'));
+  const home = document.querySelector('.topnav-home');
+  if (page === 'dashboard' && home?.classList.contains('topnav-home')) home.classList.add('active');
+  const itemSelector = page === 'inventory' && inventoryKey
+    ? `.topnav-menu button[data-top-page="inventory"][data-inventory-key="${inventoryKey}"]`
+    : `.topnav-menu button[data-top-page="${page}"]`;
+  const item = document.querySelector(itemSelector);
+  if (item) {
+    item.classList.add('active');
+    item.closest('.topnav-group')?.classList.add('active');
+  }
+}
+
+function openTopNavItem(page, inventoryKey) {
+  closeMegaMenu();
+  if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  if (page !== 'dashboard' && typeof pageAllowed === 'function' && !pageAllowed(page)) {
+    showToast('이 페이지에 접근할 권한이 없습니다.', 'error');
+    return;
+  }
+  if (page === 'inventory') goInventory(inventoryKey || 'finished', null);
+  else go(page, null);
+  syncTopNavActive(page, inventoryKey);
+}
+
 function toggleTopbarAlerts() {
   const wrap = inp('topbar-alert');
   const button = inp('topbar-alert-btn');
   if (!wrap) return;
+  closeMegaMenu();
+  closeTopNavMenus();
   closeTopbarMoreMenu();
   const open = wrap.classList.toggle('open');
   if (button) button.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -3876,6 +4370,8 @@ function toggleTopbarMoreMenu() {
   const wrap = inp('topbar-more');
   const button = inp('topbar-more-btn');
   if (!wrap) return;
+  closeMegaMenu();
+  closeTopNavMenus();
   closeTopbarAlerts();
   const open = wrap.classList.toggle('open');
   if (button) button.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -3889,11 +4385,15 @@ function closeTopbarMoreMenu() {
 document.addEventListener('click', function(event) {
   const moreWrap = inp('topbar-more');
   const alertWrap = inp('topbar-alert');
+  const topnav = inp('topnav');
   if (moreWrap && !moreWrap.contains(event.target)) closeTopbarMoreMenu();
   if (alertWrap && !alertWrap.contains(event.target)) closeTopbarAlerts();
+  if (topnav && !topnav.contains(event.target)) closeTopNavMenus();
 });
 document.addEventListener('keydown', function(event) {
   if (event.key === 'Escape') {
+    closeMegaMenu();
+    closeTopNavMenus();
     closeTopbarMoreMenu();
     closeTopbarAlerts();
   }
@@ -3948,36 +4448,38 @@ function onPraStageChange(clientId) {
    숨김 버튼 클릭: 사이드바 완전 숨김 ↔ 표시 (숨김 시 탑바에 표시 버튼만 노출)
    화면 폭 681~1280px: 숨김 상태가 아니면 자동으로 미니 레일(아이콘+명칭) 표시
    숨김 상태는 화면 크기가 변해도 유지 (localStorage 보존)
-   미니 레일 hover → 오버레이로 자동 펼침 / 미니 아이콘 클릭 → 바로 이동 */
+   미니 레일은 마우스를 올려도 아이콘 상태를 유지하며, 메뉴 클릭 시 바로 이동 */
 const SB_AUTO_MINI_MAX = 1280;
+let _sidebarScrollTimer = null;
+
+function initSidebarScrollIndicator() {
+  const sidebar = document.querySelector('.sidebar');
+  if (!sidebar || sidebar.dataset.scrollIndicatorBound) return;
+  sidebar.dataset.scrollIndicatorBound = '1';
+  sidebar.addEventListener('scroll', () => {
+    sidebar.classList.add('is-scrolling');
+    if (_sidebarScrollTimer) clearTimeout(_sidebarScrollTimer);
+    _sidebarScrollTimer = setTimeout(() => {
+      sidebar.classList.remove('is-scrolling');
+      _sidebarScrollTimer = null;
+    }, 800);
+  }, { passive: true });
+}
 
 function toggleSidebar() {
-  if (window.innerWidth <= 680) { toggleMobileSidebar(); return; }
-  const hidden = document.body.classList.toggle('sb-collapsed');
-  document.body.classList.remove('sb-expanded');
-  try { localStorage.setItem('mes_sbHidden', hidden ? '1' : ''); } catch(e){}
-  applySidebarMode();
+  toggleMegaMenu();
 }
 
 /* 현재 화면 폭·숨김 여부에 맞는 사이드바 모드 적용 (부팅·리사이즈·토글 시 호출) */
 function applySidebarMode() {
   const body = document.body;
-  if (window.innerWidth <= 680) { body.classList.remove('sb-mini', 'sb-expanded'); return; } // 모바일은 드로어 방식
-  if (body.classList.contains('sb-collapsed')) { body.classList.remove('sb-mini', 'sb-expanded'); return; } // 숨김 우선
-  if (window.innerWidth <= SB_AUTO_MINI_MAX) {
-    if (!body.classList.contains('sb-mini')) {
-      body.classList.add('sb-mini');
-      _initSbMini();
-    }
-  } else {
-    body.classList.remove('sb-mini', 'sb-expanded');
-  }
+  body.classList.remove('sb-mini', 'sb-expanded', 'sb-collapsed');
 }
 window.addEventListener('resize', applySidebarMode);
 
 /* 미니 오버레이 닫기 (배경 딤 클릭 / 메뉴 이동 시) */
 function closeSbOverlay() {
-  document.body.classList.remove('sb-expanded');
+  closeMegaMenu();
 }
 
 /* 미니 레일 → 전체 모드로 복귀 (숨김 해제 포함) */
@@ -3986,8 +4488,7 @@ function expandSidebar() {
   try { localStorage.setItem('mes_sbHidden', ''); } catch(e){}
 }
 
-/* 미니 레일 초기화: 각 .ni에 data-label 부여 + 오버레이 배경 + hover 펼침 */
-let _sbHoverTimer = null;
+/* 미니 레일 초기화: 각 메뉴에 표시용 라벨 정보 부여 */
 function _initSbMini() {
   // data-label (툴팁용)
   document.querySelectorAll('.sidebar .ni').forEach(ni => {
@@ -3995,43 +4496,9 @@ function _initSbMini() {
     const txt = ni.textContent.replace(/[0-9]/g,'').trim();
     ni.dataset.label = txt;
   });
-  // 배경 오버레이
-  if (!document.getElementById('sb-overlay')) {
-    const ov = document.createElement('div');
-    ov.id = 'sb-overlay';
-    ov.className = 'sb-overlay';
-    ov.addEventListener('click', closeSbOverlay);
-    document.body.appendChild(ov);
-  }
-  // 미니 레일 hover → 오버레이 펼침 (마우스 벗어나면 닫힘, 깜빡임 방지 딜레이)
-  const sb = document.querySelector('.sidebar');
-  if (sb && !sb.dataset.hoverBound) {
-    sb.dataset.hoverBound = '1';
-    sb.addEventListener('mouseenter', () => {
-      if (_sbHoverTimer) { clearTimeout(_sbHoverTimer); _sbHoverTimer = null; }
-      if (document.body.classList.contains('sb-mini')) document.body.classList.add('sb-expanded');
-    });
-    sb.addEventListener('mouseleave', () => {
-      if (_sbHoverTimer) clearTimeout(_sbHoverTimer);
-      _sbHoverTimer = setTimeout(() => {
-        document.body.classList.remove('sb-expanded');
-      }, 180);
-    });
-  }
 }
 function toggleMobileSidebar() {
-  const sidebar = document.querySelector('.sidebar');
-  const backdrop = document.getElementById('sidebar-backdrop');
-  if (sidebar && backdrop) {
-    const isOpen = sidebar.classList.contains('mobile-open');
-    if (isOpen) {
-      sidebar.classList.remove('mobile-open');
-      backdrop.classList.remove('active');
-    } else {
-      sidebar.classList.add('mobile-open');
-      backdrop.classList.add('active');
-    }
-  }
+  toggleMegaMenu();
 }
 
 /* ── 페이지 히스토리 스택 ── */
@@ -4099,6 +4566,7 @@ function _goTo(id, el) {
   };
   inp('ptitle').textContent = PN[id] || id;
   currentPage = id;
+  syncTopNavActive(id);
   refreshPage(id);
   // 모바일: 페이지 이동 시 홈 오버레이 해제 + 하단 탭 동기화
   document.body.classList.remove('mhome');
@@ -4126,6 +4594,7 @@ function goInventory(key, el) {
   });
   inp('ptitle').textContent = meta.title;
   currentPage = 'inventory';
+  syncTopNavActive('inventory', key);
   renderInventory();
   // 모바일 드로어 닫기
   const sb = document.querySelector('.sidebar');
@@ -8326,6 +8795,7 @@ function exportChecksCSV() {
 
 /* ════════ 7. 작업 인력 및 출석 관리 ════════ */
 function renderWorkers() {
+  ensureDateView('workersHire', 'workers-table', workers.map(w => w.hireDate), renderWorkers);
   const att = workers.filter(w => w.status !== '결근' && w.status !== '휴가').length;
   inp('w-total').textContent = workers.length + '명';
   inp('w-att').textContent = att + '명';
@@ -8341,6 +8811,7 @@ function renderWorkers() {
   const _wq = (v('workers-q')||'').toLowerCase();
   const _wfs = v('workers-fs');
   const filteredWorkers = workers.filter(w => {
+    if (!dateViewMatch('workersHire', w.hireDate)) return false;
     if (_wq && ![w.id, w.name, w.dept||'', w.position||'', w.line, w.role||''].join(' ').toLowerCase().includes(_wq)) return false;
     if (_wfs && w.status !== _wfs) return false;
     return true;
@@ -9154,8 +9625,8 @@ const _cloudQueue=new Set(); let _cloudTimer=null; let _cloudUnsub=null;
 /* ════════ 프로그램 기동 초기화 (FIREBASE_CONFIG 선언 이후에 실행) ════════ */
 syncFilterDropdowns();
 initTheme();
-// 사이드바 상태 복원: 숨김 상태 유지 + 화면 폭에 따른 자동 미니 레일 적용
-if (localStorage.getItem('mes_sbHidden')==='1') document.body.classList.add('sb-collapsed');
+// 햄버거 메가 메뉴에서는 이전 사이드바 표시 상태를 사용하지 않음
+try { localStorage.removeItem('mes_sbHidden'); } catch(e) {}
 if (typeof applySidebarMode === 'function') applySidebarMode();
 _goTo('dashboard', null);   // 실행 시 항상 종합 대시보드를 먼저 표시
 renderAlerts();
@@ -9215,6 +9686,13 @@ function applyRoleGating(){
     const items=[...g.querySelectorAll('.ni')];
     const anyVisible=items.some(n=>n.style.display!=='none');
     g.style.display = (items.length && !anyVisible) ? 'none' : '';
+  });
+  document.querySelectorAll('.topnav-menu [data-top-page]').forEach(item => {
+    item.style.display = pageAllowed(item.dataset.topPage) ? '' : 'none';
+  });
+  document.querySelectorAll('.topnav-group').forEach(group => {
+    const items = [...group.querySelectorAll('[data-top-page]')];
+    group.style.display = items.some(item => item.style.display !== 'none') ? '' : 'none';
   });
 }
 /* ════════ 열(컬럼) 단위 권한 ════════
@@ -12730,16 +13208,12 @@ function openEmployeeAdd() {
 }
 
 /* ── 근태 관리 ── */
-let attDateFilter = today();
-
-function setAttDate(d) { attDateFilter = d || today(); renderAttendance(); }
-
 function setAttView(view) { attView = view; renderAttendance(); }
 function attPrevMonth() { attMonth = shiftMonth(attMonth, -1); renderAttendance(); }
 function attNextMonth() { attMonth = shiftMonth(attMonth, 1); renderAttendance(); }
 
 function attViewToggle() {
-  return `<div style="display:flex;gap:4px;">
+  return `<div class="hr-view-toggle">
     <button class="btn btn-sm ${attView==='list'?'btn-primary':''}" onclick="setAttView('list')"><i class="ti ti-list"></i>목록</button>
     <button class="btn btn-sm ${attView==='calendar'?'btn-primary':''}" onclick="setAttView('calendar')"><i class="ti ti-calendar-month"></i>달력</button>
   </div>`;
@@ -12747,12 +13221,16 @@ function attViewToggle() {
 
 function renderAttendance() {
   const cont = inp('emp-tab-att'); if (!cont) return;
-  cont.innerHTML = attView === 'calendar' ? _attCalendar() : _attList();
+  cont.innerHTML = `<div class="hr-view-toolbar">${attViewToggle()}</div><div id="attendance-view-body"></div>`;
+  const body = inp('attendance-view-body');
+  ensureDateView('attendance', 'attendance-view-body', attendance.map(a => a.date), renderAttendance);
+  const dateBar = inp('date-view-attendance');
+  if (dateBar) dateBar.style.display = attView === 'list' ? 'flex' : 'none';
+  if (body) body.innerHTML = attView === 'calendar' ? _attCalendar() : _attList();
 }
 
 function _attList() {
-  const d = attDateFilter || today();
-  const recs = attendance.filter(a => a.date === d)
+  const recs = attendance.filter(a => dateViewMatch('attendance', a.date))
     .sort((a,b) => getWorkerName(a.workerId).localeCompare(getWorkerName(b.workerId)));
   const cnt = s => recs.filter(r => r.status === s).length;
   const normal = cnt('정상'), late = cnt('지각'), early = cnt('조퇴'), ot = cnt('연장근무'), absent = cnt('결근');
@@ -12774,7 +13252,7 @@ function _attList() {
     </tr>`).join('') : `<tr><td colspan="8">${empty('해당 일자의 근태 기록이 없습니다. [근태 기록 추가] 버튼으로 등록하세요.')}</td></tr>`;
 
   return `
-    <div class="metrics" style="grid-template-columns:repeat(6,1fr);">
+    <div class="metrics attendance-metrics">
       <div class="mc"><div class="mc-lbl"><i class="ti ti-user-check"></i>정상 출근</div><div class="mc-val" style="color:var(--tx-ok);">${normal}명</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-clock-exclamation"></i>지각</div><div class="mc-val" style="color:var(--tx-w);">${late}명</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-door-exit"></i>조퇴</div><div class="mc-val" style="color:var(--tx-w);">${early}명</div></div>
@@ -12784,10 +13262,8 @@ function _attList() {
     </div>
     <div class="card">
       <div class="card-hd">
-        <span class="card-ttl"><i class="ti ti-clock-check"></i>일자별 근태 기록</span>
+        <span class="card-ttl"><i class="ti ti-clock-check"></i>근태 기록</span>
         <div style="display:flex;gap:6px;align-items:center;">
-          ${attViewToggle()}
-          <input type="date" value="${d}" onchange="setAttDate(this.value)" style="height:28px;font-size:11px;padding:0 8px;border:1px solid var(--br);border-radius:var(--rm);background:var(--bg-p);color:var(--tx);">
           <button class="btn btn-sm btn-primary" onclick="openAttendanceAdd()"><i class="ti ti-plus"></i>근태 기록 추가</button>
         </div>
       </div>
@@ -12838,7 +13314,6 @@ function _attCalendar() {
       <div class="card-hd">
         <span class="card-ttl"><i class="ti ti-calendar-month"></i>근태 달력</span>
         <div style="display:flex;gap:8px;align-items:center;">
-          ${attViewToggle()}
           ${monthNavBar(attMonth, 'attPrevMonth()', 'attNextMonth()')}
           <button class="btn btn-sm btn-primary" onclick="openAttendanceAdd()"><i class="ti ti-plus"></i>근태 기록 추가</button>
         </div>
@@ -12955,7 +13430,7 @@ function setLeaveView(view) { leaveView = view; renderLeaves(); }
 function leavePrevMonth() { leaveMonth = shiftMonth(leaveMonth, -1); renderLeaves(); }
 function leaveNextMonth() { leaveMonth = shiftMonth(leaveMonth, 1); renderLeaves(); }
 function leaveViewToggle() {
-  return `<div style="display:flex;gap:4px;">
+  return `<div class="hr-view-toggle">
     <button class="btn btn-sm ${leaveView==='list'?'btn-primary':''}" onclick="setLeaveView('list')"><i class="ti ti-list"></i>목록</button>
     <button class="btn btn-sm ${leaveView==='calendar'?'btn-primary':''}" onclick="setLeaveView('calendar')"><i class="ti ti-calendar-month"></i>달력</button>
   </div>`;
@@ -12997,17 +13472,27 @@ function _annualStatusCard() {
 
 function renderLeaves() {
   const cont = inp('emp-tab-leave'); if (!cont) return;
-  const pending = leaves.filter(l => l.status === '신청').length;
-  const approved = leaves.filter(l => l.status === '승인').length;
-  const cm = today().slice(0,7);
-  const monthDays = leaves.filter(l => l.status === '승인' && (l.startDate||'').slice(0,7) === cm)
+  cont.innerHTML = `<div class="hr-view-toolbar">${leaveViewToggle()}</div><div id="leave-view-body"></div>`;
+  const body = inp('leave-view-body');
+  ensureDateView('employeeLeaves', 'leave-view-body', leaves.map(l => l.startDate), renderLeaves);
+  const dateBar = inp('date-view-employeeLeaves');
+  if (dateBar) dateBar.style.display = leaveView === 'list' ? 'flex' : 'none';
+
+  const filteredLeaves = leaves.filter(l => dateViewMatch('employeeLeaves', l.startDate));
+  const metricLeaves = leaveView === 'list'
+    ? filteredLeaves
+    : leaves.filter(l => (l.startDate||'').slice(0,7) === leaveMonth);
+  const pending = metricLeaves.filter(l => l.status === '신청').length;
+  const approved = metricLeaves.filter(l => l.status === '승인').length;
+  const usedDays = metricLeaves.filter(l => l.status === '승인')
     .reduce((s,l) => s + (Number(l.days)||0), 0);
+  const usedLabel = leaveView === 'list' ? '조회 기간 사용(승인)' : `${monthLabel(leaveMonth)} 사용(승인)`;
 
   const metrics = `
     <div class="metrics" style="grid-template-columns:repeat(3,1fr);">
       <div class="mc"><div class="mc-lbl"><i class="ti ti-clock-hour-4"></i>승인 대기</div><div class="mc-val" style="color:var(--tx-w);">${pending}건</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-calendar-check"></i>승인 완료</div><div class="mc-val" style="color:var(--tx-ok);">${approved}건</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-beach"></i>이번 달 사용(승인)</div><div class="mc-val">${monthDays}일</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-beach"></i>${usedLabel}</div><div class="mc-val">${usedDays}일</div></div>
     </div>`;
 
   if (leaveView === 'calendar') {
@@ -13019,13 +13504,12 @@ function renderLeaves() {
         return `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${color};">• ${getWorkerName(l.workerId)} <span style="color:var(--tx-t);">${l.type}</span></div>`;
       }).join('');
     });
-    cont.innerHTML = `
+    body.innerHTML = `
       ${metrics}
       <div class="card" style="margin-bottom:16px;">
         <div class="card-hd">
           <span class="card-ttl"><i class="ti ti-calendar-month"></i>휴가 달력</span>
           <div style="display:flex;gap:8px;align-items:center;">
-            ${leaveViewToggle()}
             ${monthNavBar(leaveMonth, 'leavePrevMonth()', 'leaveNextMonth()')}
             <button class="btn btn-sm btn-primary" onclick="openLeaveAdd()"><i class="ti ti-plus"></i>휴가 신청 등록</button>
           </div>
@@ -13036,7 +13520,7 @@ function renderLeaves() {
     return;
   }
 
-  const list = [...leaves].sort((a,b) => (b.startDate||'').localeCompare(a.startDate||''));
+  const list = [...filteredLeaves].sort((a,b) => (b.startDate||'').localeCompare(a.startDate||''));
   const rows = list.length ? list.map(l => `
     <tr>
       <td style="font-weight:700;">${esc(getWorkerName(l.workerId))}</td>
@@ -13054,14 +13538,13 @@ function renderLeaves() {
       </td>
     </tr>`).join('') : `<tr><td colspan="8">${empty('등록된 휴가 신청이 없습니다. [휴가 신청 등록] 버튼으로 추가하세요.')}</td></tr>`;
 
-  cont.innerHTML = `
+  body.innerHTML = `
     ${metrics}
     ${_annualStatusCard()}
     <div class="card">
       <div class="card-hd">
         <span class="card-ttl"><i class="ti ti-beach"></i>휴가 신청 현황</span>
         <div style="display:flex;gap:6px;align-items:center;">
-          ${leaveViewToggle()}
           <button class="btn btn-sm btn-primary" onclick="openLeaveAdd()"><i class="ti ti-plus"></i>휴가 신청 등록</button>
         </div>
       </div>
