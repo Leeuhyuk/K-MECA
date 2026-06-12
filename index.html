@@ -22,6 +22,7 @@
 <style>
 :root {
   --bg-p: #eef0f3; --bg-s: #e4e7ec; --bg-t: #d9dde4;
+  --bg-top: #eef0f3;
   --bg-i: #e6f1fb; --bg-ok: #eaf3de; --bg-w: #faeeda; --bg-d: #fcebeb;
   --tx: #212529; --tx-s: #495057; --tx-t: #868e96;
   --tx-i: #185FA5; --tx-ok: #3B6D11; --tx-w: #854F0B; --tx-d: #791F1F;
@@ -34,6 +35,7 @@
 }
 :root.dark {
   --bg-p: #1a1a1e; --bg-s: #242428; --bg-t: #121214;
+  --bg-top: #1a1a1e;
   --bg-i: #062b4e; --bg-ok: #153205; --bg-w: #3d2304; --bg-d: #491212;
   --tx: #f1f3f5; --tx-s: #ced4da; --tx-t: #868e96;
   --tx-i: #85B7EB; --tx-ok: #97C459; --tx-w: #EF9F27; --tx-d: #F09595;
@@ -75,7 +77,7 @@ body { font-family: var(--f); background: var(--bg-t); color: var(--tx); height:
 
 /* 메인 영역 */
 .main { flex: 1; display: flex; flex-direction: column; overflow: visible; min-width: 0; min-height: 0; }
-.topbar { position: relative; z-index: 9000; overflow: visible; background: var(--bg-p); border-bottom: 1px solid var(--br); padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; min-height: 52px; flex-shrink: 0; }
+.topbar { position: relative; z-index: 9000; overflow: visible; background: var(--bg-top); border-bottom: 1px solid var(--br); padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; min-height: 52px; flex-shrink: 0; }
 .topbar-left { min-width: 0; display: flex; align-items: center; gap: 8px; }
 .tb-title { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tb-right { display: flex; align-items: center; gap: 12px; }
@@ -502,7 +504,7 @@ body.sb-mini.sb-expanded .sb-overlay { display: block; }
 body.sb-mini .main { margin-left: 0 !important; }
 .topbar {
   display: grid;
-  grid-template-columns: minmax(230px, auto) minmax(260px, 620px) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 14px;
   padding: 8px 16px;
 }
@@ -520,13 +522,48 @@ body.sb-mini .main { margin-left: 0 !important; }
 }
 #menu-toggle-btn:hover,
 #menu-toggle-btn.active { background: var(--bg-i); border-color: var(--br-i); color: var(--tx-i); }
-.topbar-search { min-width: 0; display: flex; align-items: center; justify-content: center; }
-.topbar-search .global-search-wrapper {
-  width: 100%;
+.topbar-search-compact {
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  flex: 0 0 32px;
+}
+.topbar-search-compact #global-search-input,
+.topbar-search-compact #global-search-clear { display: none; }
+.topbar-search-compact .global-search-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--rm);
+  border-color: transparent;
+  background: transparent;
+}
+.topbar-search-compact .global-search-btn i { font-size: 19px; }
+.topbar-search-compact.search-open {
+  position: fixed;
+  top: 8px;
+  left: 50%;
+  z-index: 10020;
+  width: min(620px, calc(100vw - 180px));
   height: 36px;
   margin: 0;
+  transform: translateX(-50%);
 }
-.topbar-search #global-search-input { background: var(--bg-s); }
+.topbar-search-compact.search-open #global-search-input {
+  display: block;
+  width: 100%;
+  height: 36px;
+  padding-right: 78px;
+  background: var(--bg-p);
+  box-shadow: 0 5px 20px rgba(0,0,0,.18);
+}
+.topbar-search-compact.search-open #global-search-clear[style*="display: flex"] { display: flex !important; }
+.topbar-search-compact.search-open .global-search-btn {
+  width: 42px;
+  height: 36px;
+  border-color: var(--br);
+  border-radius: 0 20px 20px 0;
+  background: var(--bg-s);
+}
 .topnav.mega-menu {
   display: none;
   position: fixed;
@@ -665,6 +702,93 @@ body.mega-menu-open .topnav.mega-menu {
   isolation: isolate;
 }
 body.mega-menu-open { overflow: hidden; }
+
+/* 시스템 관리 > 화면 크기 */
+.ui-scale-settings { max-width: 720px; padding: 8px 2px; }
+.ui-scale-current {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  color: var(--tx-s);
+  font-size: 12px;
+}
+.ui-scale-current strong { color: var(--tx-i); font-size: 22px; }
+.ui-scale-range { width: 100%; height: 28px; padding: 0; cursor: pointer; accent-color: var(--tx-i); }
+.ui-scale-presets { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+.ui-scale-presets .btn.active { background: var(--bg-i); border-color: var(--br-i); color: var(--tx-i); font-weight: 700; }
+.ui-scale-info {
+  margin-top: 16px;
+  padding: 11px 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border: 1px solid var(--br-i);
+  border-radius: var(--rm);
+  background: var(--bg-i);
+  color: var(--tx-s);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.ui-scale-info i { margin-top: 1px; color: var(--tx-i); font-size: 16px; }
+.ui-scale-preview {
+  margin-top: 14px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--br);
+  border-radius: var(--rl);
+  background: var(--bg-s);
+}
+.ui-scale-preview strong { display: block; font-size: 14px; }
+.ui-scale-preview span { display: block; margin-top: 3px; color: var(--tx-t); font-size: 11px; }
+.ui-color-settings { max-width: 820px; padding: 4px 2px; }
+.ui-color-theme-tabs { display: flex; gap: 7px; margin-bottom: 14px; }
+.ui-color-theme-tabs .btn.active { background: var(--bg-i); border-color: var(--br-i); color: var(--tx-i); font-weight: 700; }
+.ui-color-fields { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 9px 12px; }
+.ui-color-row {
+  min-width: 0;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: minmax(88px,1fr) 34px minmax(92px,120px) 32px;
+  gap: 7px;
+  align-items: center;
+  border: 1px solid var(--br);
+  border-radius: var(--rm);
+  background: var(--bg-s);
+}
+.ui-color-row label { color: var(--tx-s); font-size: 11px; font-weight: 700; }
+.ui-color-input {
+  width: 34px;
+  height: 30px;
+  padding: 2px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.ui-color-hex { width: 100%; height: 30px; text-transform: uppercase; font-family: Consolas, monospace; }
+.ui-eyedropper {
+  width: 32px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--br-s); border-radius: 7px; background: var(--bg-p); color: var(--tx-i); cursor: pointer;
+}
+.ui-eyedropper:hover { background: var(--bg-i); }
+.ui-eyedropper:disabled { opacity: .4; cursor: not-allowed; }
+.ui-color-contrast {
+  min-height: 38px;
+  margin-top: 12px;
+  padding: 9px 11px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--br);
+  border-radius: var(--rm);
+  color: var(--tx-s);
+  font-size: 11px;
+}
+.ui-color-contrast.ok { border-color: var(--br-ok); background: var(--bg-ok); color: var(--tx-ok); }
+.ui-color-contrast.warn { border-color: var(--br-w); background: var(--bg-w); color: var(--tx-w); }
+.ui-color-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 
 /* 뱃지 및 프로그레스 */
 .bd { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 4px; border: 1px solid; white-space: nowrap; font-weight: 600; }
@@ -1072,10 +1196,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
    더 좁은 폭 규칙이 뒤에 와서 우선 적용됨(단계적으로 더 작아짐). */
 /* zoom 으로 축소하면 height:100vh 가 함께 줄어 화면 하단에 빈 여백이 생김 →
    100vh 를 zoom 비율로 나눠 보정해 뷰포트를 꽉 채운다. */
-@media screen and (min-width: 681px) and (max-width: 1600px) { body { zoom: .95; height: calc(100vh / .95); } }
-@media screen and (min-width: 681px) and (max-width: 1366px) { body { zoom: .90; height: calc(100vh / .90); } }
-@media screen and (min-width: 681px) and (max-width: 1100px) { body { zoom: .85; height: calc(100vh / .85); } }
-@media screen and (min-width: 681px) and (max-width: 900px)  { body { zoom: .80; height: calc(100vh / .80); } }
+/* 화면 폭별 자동 배율과 사용자 배율은 applyUiScale()에서 함께 계산합니다. */
 
 @media screen and (min-width: 901px) and (max-width: 1180px) {
   .topnav-category { padding: 0 7px; font-size: 11px; }
@@ -1266,6 +1387,16 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     width: auto !important;
     margin: 10px 12px 4px !important;
   }
+  .global-search-wrapper.topbar-search-compact {
+    width: 32px !important;
+    height: 32px;
+    margin: 0 !important;
+  }
+  .global-search-wrapper.topbar-search-compact.search-open {
+    width: auto !important;
+    height: 36px;
+    margin: 0 !important;
+  }
   body.sb-mini .sidebar .global-search-wrapper { display: block !important; }
   #global-search-input {
     padding: 6px 74px 6px 14px !important;
@@ -1359,8 +1490,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     padding: 8px 10px !important;
   }
   .topbar-left { min-width: 0; }
-  .topbar-search { grid-column: 1 / -1; grid-row: 2; }
-  .topbar-search .global-search-wrapper { width: 100% !important; margin: 0 !important; }
   .topnav.mega-menu {
     display: none !important;
     top: 56px;
@@ -1395,6 +1524,17 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
   .topnav.mega-menu .topnav-menu button { min-height: 72px; font-size: 9.5px; }
   .topnav.mega-menu .topnav-menu button i { width: 38px; height: 38px; flex-basis: 38px; font-size: 21px; }
   .mega-menu-head { position: sticky; top: -12px; z-index: 2; padding: 10px 0; background: var(--bg-p); }
+  .topbar-search-compact.search-open {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    width: auto !important;
+    transform: none;
+  }
+}
+@media screen and (max-width: 680px) {
+  .ui-color-fields { grid-template-columns: 1fr; }
+  .ui-color-row { grid-template-columns: minmax(82px,1fr) 34px minmax(88px,1fr) 32px; }
 }
 
 /* ════════ 모바일 전용 홈 화면 & 하단 탭바 ════════ */
@@ -1716,15 +1856,12 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       </nav>
     </div>
 
-    <div class="topbar-search">
-      <div class="global-search-wrapper">
+    <div class="tb-right">
+      <div class="global-search-wrapper topbar-search-compact">
         <input type="text" id="global-search-input" placeholder="통합 검색 (제품, 고객사, 자재, 생산지시, 재고, 직원...)" oninput="onGlobalSearch(this.value)" onfocus="onGlobalSearchFocus()" onkeydown="onGlobalSearchKeyDown(event)">
         <button type="button" id="global-search-clear" onclick="clearGlobalSearch()" title="검색어 지우기" aria-label="검색어 지우기"><i class="ti ti-x"></i></button>
-        <button type="button" class="global-search-btn" onclick="toggleGlobalSearchBox()" title="검색" aria-label="검색"><i class="ti ti-search"></i></button>
+        <button type="button" class="global-search-btn" onclick="toggleGlobalSearchBox()" title="통합 검색" aria-label="통합 검색"><i class="ti ti-search"></i></button>
       </div>
-    </div>
-
-    <div class="tb-right">
       <div class="topbar-alert" id="topbar-alert">
         <button class="theme-btn topbar-alert-btn" id="topbar-alert-btn" onclick="toggleTopbarAlerts()" title="알림 보기" aria-label="알림 보기" aria-haspopup="true" aria-expanded="false">
           <i class="ti ti-bell"></i>
@@ -2554,6 +2691,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     <div class="toolbar" id="system-tabs" style="margin-bottom:16px;">
       <button class="btn btn-primary" data-systab="permissions" onclick="switchSystemTab('permissions')"><i class="ti ti-user-shield"></i>권한 관리</button>
       <button class="btn" data-systab="company" onclick="switchSystemTab('company')"><i class="ti ti-building"></i>회사 관리</button>
+      <button class="btn" data-systab="display" onclick="switchSystemTab('display')"><i class="ti ti-palette"></i>화면 설정</button>
       <button class="btn" data-systab="templates" onclick="switchSystemTab('templates')"><i class="ti ti-template"></i>양식 내보내기</button>
       <button class="btn" data-systab="api" onclick="switchSystemTab('api')"><i class="ti ti-key"></i>API 관리</button>
       <button class="btn drive-save-btn" data-systab="drive" onclick="switchSystemTab('drive')"><i class="ti ti-cloud"></i>Google Drive 저장</button>
@@ -2573,6 +2711,61 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
         <div id="system-company-summary" style="padding:4px 2px;"></div>
         <div style="margin-top:14px;">
           <button class="btn btn-primary" onclick="openCompanySettings()"><i class="ti ti-edit"></i>회사 정보 수정</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="system-panel" id="system-panel-display" style="display:none;">
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-arrows-maximize"></i>전체 UI 크기</span>
+          <span style="font-size:11px;color:var(--tx-t);">글자·버튼·카드·아이콘·여백을 같은 비율로 조절</span>
+        </div>
+        <div class="ui-scale-settings">
+          <div class="ui-scale-current">
+            <span>사용자 설정</span>
+            <strong id="ui-scale-value">100%</strong>
+          </div>
+          <input id="ui-scale-range" class="ui-scale-range" type="range" min="80" max="120" step="5" value="100"
+            oninput="previewUiScale(this.value)" onchange="saveUiScale(this.value)">
+          <div class="ui-scale-presets">
+            <button class="btn btn-sm" type="button" onclick="setUiScale(80)">80%</button>
+            <button class="btn btn-sm" type="button" onclick="setUiScale(90)">90%</button>
+            <button class="btn btn-sm" type="button" onclick="setUiScale(100)">100%</button>
+            <button class="btn btn-sm" type="button" onclick="setUiScale(110)">110%</button>
+            <button class="btn btn-sm" type="button" onclick="setUiScale(120)">120%</button>
+            <button class="btn btn-sm" type="button" onclick="resetUiScale()"><i class="ti ti-restore"></i>기본값 복원</button>
+          </div>
+          <div class="ui-scale-info">
+            <i class="ti ti-info-circle"></i>
+            <span>화면 폭에 따른 기존 자동 축소 비율에 사용자 설정이 추가 적용됩니다. 모바일에서는 화면 깨짐 방지를 위해 90~110% 범위로 자동 제한됩니다.</span>
+          </div>
+          <div class="ui-scale-preview">
+            <div>
+              <strong>미리보기</strong>
+              <span>현재 스타일과 배치는 그대로 유지됩니다.</span>
+            </div>
+            <button class="btn btn-primary" type="button"><i class="ti ti-check"></i>버튼 예시</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-palette"></i>화면 색상</span>
+          <span style="font-size:11px;color:var(--tx-t);">밝은 테마와 어두운 테마를 각각 저장</span>
+        </div>
+        <div class="ui-color-settings">
+          <div class="ui-color-theme-tabs">
+            <button class="btn btn-sm" type="button" data-color-theme="light" onclick="selectUiColorTheme('light')"><i class="ti ti-sun"></i>밝은 테마</button>
+            <button class="btn btn-sm" type="button" data-color-theme="dark" onclick="selectUiColorTheme('dark')"><i class="ti ti-moon"></i>어두운 테마</button>
+          </div>
+          <div id="ui-color-fields" class="ui-color-fields"></div>
+          <div id="ui-color-contrast" class="ui-color-contrast"></div>
+          <div class="ui-color-actions">
+            <button class="btn btn-primary" type="button" onclick="saveUiColors()"><i class="ti ti-device-floppy"></i>색상 적용</button>
+            <button class="btn" type="button" onclick="cancelUiColorPreview()"><i class="ti ti-arrow-back-up"></i>변경 취소</button>
+            <button class="btn" type="button" onclick="resetUiColors()"><i class="ti ti-restore"></i>현재 테마 기본값 복원</button>
+          </div>
         </div>
       </div>
     </div>
@@ -3934,7 +4127,7 @@ function toggleGlobalSearchBox() {
   const wrapper = document.querySelector('.global-search-wrapper');
   const input = document.getElementById('global-search-input');
   if (!wrapper || !input) return;
-  if (window.matchMedia('(max-width: 680px)').matches && !wrapper.classList.contains('search-open')) {
+  if (!wrapper.classList.contains('search-open')) {
     wrapper.classList.add('search-open');
     setTimeout(() => input.focus(), 0);
     return;
@@ -3945,7 +4138,9 @@ function toggleGlobalSearchBox() {
 
 function navToGlobalSearchResult(category, id, parentId) {
   const resultsDiv = document.getElementById('global-search-results');
+  const wrapper = document.querySelector('.global-search-wrapper');
   if (resultsDiv) resultsDiv.style.display = 'none';
+  if (wrapper) wrapper.classList.remove('search-open');
   
   if (category === 'client') {
     go('clients');
@@ -4064,7 +4259,7 @@ document.addEventListener('click', function(e) {
     || (mhSearchBox && mhSearchBox.contains(e.target));
   if (!inSearchUi) {
     if (results) results.style.display = 'none';
-    if (wrapper && window.matchMedia('(max-width: 680px)').matches) wrapper.classList.remove('search-open');
+    if (wrapper) wrapper.classList.remove('search-open');
   }
 });
 
@@ -9565,6 +9760,7 @@ function initTheme() {
     document.documentElement.classList.remove('dark');
     inp('themeIcon').className = 'ti ti-moon';
   }
+  applyUiThemeColors(getCurrentThemeMode());
 }
 
 function toggleTheme() {
@@ -9578,10 +9774,303 @@ function toggleTheme() {
     localStorage.setItem('mes_theme', 'dark');
     inp('themeIcon').className = 'ti ti-sun';
   }
+  applyUiThemeColors(getCurrentThemeMode());
+  if (currentPage === 'system' && typeof systemTab !== 'undefined' && systemTab === 'display') {
+    renderUiColorSettings();
+  }
   if (currentPage === 'dashboard') {
     renderDashboard();
   }
 }
+
+/* ════════ 전체 UI 크기 ════════ */
+const UI_SCALE_MIN = 80;
+const UI_SCALE_MAX = 120;
+
+function getSavedUiScale() {
+  const value = Number(localStorage.getItem('mes_uiScale') || 100);
+  return Number.isFinite(value) ? Math.min(UI_SCALE_MAX, Math.max(UI_SCALE_MIN, value)) : 100;
+}
+
+function getAutoUiScale() {
+  const width = window.innerWidth;
+  if (width <= 680) return 1;
+  if (width <= 900) return .80;
+  if (width <= 1100) return .85;
+  if (width <= 1366) return .90;
+  if (width <= 1600) return .95;
+  return 1;
+}
+
+function applyUiScale(value) {
+  const requested = Number(value || getSavedUiScale());
+  const userPercent = window.innerWidth <= 680
+    ? Math.min(110, Math.max(90, requested))
+    : Math.min(UI_SCALE_MAX, Math.max(UI_SCALE_MIN, requested));
+  const finalScale = getAutoUiScale() * (userPercent / 100);
+  document.body.style.zoom = String(finalScale);
+  document.body.style.height = `calc(100vh / ${finalScale})`;
+  document.documentElement.style.setProperty('--user-ui-scale', String(userPercent / 100));
+  return { requested, userPercent, finalScale };
+}
+
+function updateUiScaleControls(value) {
+  const requested = Number(value || getSavedUiScale());
+  const range = inp('ui-scale-range');
+  const label = inp('ui-scale-value');
+  if (range) range.value = String(requested);
+  if (label) {
+    const applied = window.innerWidth <= 680 ? Math.min(110, Math.max(90, requested)) : requested;
+    label.textContent = applied === requested ? `${requested}%` : `${applied}% (모바일 제한)`;
+  }
+  document.querySelectorAll('.ui-scale-presets .btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.trim() === `${requested}%`);
+  });
+}
+
+function previewUiScale(value) {
+  applyUiScale(value);
+  updateUiScaleControls(value);
+}
+
+function saveUiScale(value) {
+  const normalized = Math.round(Number(value) / 5) * 5;
+  localStorage.setItem('mes_uiScale', String(Math.min(UI_SCALE_MAX, Math.max(UI_SCALE_MIN, normalized))));
+  applyUiScale(normalized);
+  updateUiScaleControls(normalized);
+  showToast(`화면 크기를 ${normalized}%로 저장했습니다.`, 'success');
+}
+
+function setUiScale(value) {
+  saveUiScale(value);
+}
+
+function resetUiScale() {
+  localStorage.removeItem('mes_uiScale');
+  applyUiScale(100);
+  updateUiScaleControls(100);
+  showToast('화면 크기를 기본값 100%로 복원했습니다.', 'success');
+}
+
+function renderUiScaleSettings() {
+  updateUiScaleControls(getSavedUiScale());
+  renderUiColorSettings();
+}
+
+/* ════════ 테마별 화면 색상 ════════ */
+const UI_COLOR_DEFAULTS = {
+  light: { page:'#d9dde4', card:'#eef0f3', secondary:'#e4e7ec', topbar:'#eef0f3', accent:'#185FA5', text:'#212529' },
+  dark:  { page:'#121214', card:'#1a1a1e', secondary:'#242428', topbar:'#1a1a1e', accent:'#85B7EB', text:'#f1f3f5' }
+};
+const UI_COLOR_FIELDS = [
+  { key:'page', label:'전체 배경' },
+  { key:'card', label:'카드·패널' },
+  { key:'secondary', label:'보조 영역' },
+  { key:'topbar', label:'상단바' },
+  { key:'accent', label:'강조색' },
+  { key:'text', label:'기본 글자' }
+];
+let uiColorTheme = null;
+let uiColorDraft = null;
+
+function getCurrentThemeMode() {
+  return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+}
+
+function normalizeHex(value, fallback='#000000') {
+  let hex = String(value || '').trim();
+  if (!hex.startsWith('#')) hex = '#' + hex;
+  if (/^#[0-9a-f]{3}$/i.test(hex)) {
+    hex = '#' + [...hex.slice(1)].map(ch => ch + ch).join('');
+  }
+  return /^#[0-9a-f]{6}$/i.test(hex) ? hex.toUpperCase() : fallback.toUpperCase();
+}
+
+function hexRgb(hex) {
+  const value = normalizeHex(hex).slice(1);
+  return [
+    parseInt(value.slice(0,2),16),
+    parseInt(value.slice(2,4),16),
+    parseInt(value.slice(4,6),16)
+  ];
+}
+
+function rgbaFromHex(hex, alpha) {
+  const [r,g,b] = hexRgb(hex);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function mixHex(base, overlay, ratio) {
+  const a = hexRgb(base), b = hexRgb(overlay);
+  const mixed = a.map((value, index) => Math.round(value * (1-ratio) + b[index] * ratio));
+  return '#' + mixed.map(value => value.toString(16).padStart(2,'0')).join('').toUpperCase();
+}
+
+function getUiColorStore() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('mes_uiColors') || '{}');
+    return saved && typeof saved === 'object' ? saved : {};
+  } catch(e) {
+    return {};
+  }
+}
+
+function getUiThemeColors(theme) {
+  const mode = theme === 'dark' ? 'dark' : 'light';
+  const saved = getUiColorStore()[mode] || {};
+  const defaults = UI_COLOR_DEFAULTS[mode];
+  const result = {};
+  UI_COLOR_FIELDS.forEach(field => {
+    result[field.key] = normalizeHex(saved[field.key], defaults[field.key]);
+  });
+  return result;
+}
+
+function applyUiThemeColors(theme, colors) {
+  const mode = theme === 'dark' ? 'dark' : 'light';
+  const c = Object.assign({}, UI_COLOR_DEFAULTS[mode], colors || getUiThemeColors(mode));
+  const root = document.documentElement;
+  root.style.setProperty('--bg-t', normalizeHex(c.page, UI_COLOR_DEFAULTS[mode].page));
+  root.style.setProperty('--bg-p', normalizeHex(c.card, UI_COLOR_DEFAULTS[mode].card));
+  root.style.setProperty('--bg-s', normalizeHex(c.secondary, UI_COLOR_DEFAULTS[mode].secondary));
+  root.style.setProperty('--bg-top', normalizeHex(c.topbar, UI_COLOR_DEFAULTS[mode].topbar));
+  root.style.setProperty('--tx-i', normalizeHex(c.accent, UI_COLOR_DEFAULTS[mode].accent));
+  root.style.setProperty('--tx', normalizeHex(c.text, UI_COLOR_DEFAULTS[mode].text));
+  root.style.setProperty('--tx-s', mixHex(c.text, c.card, .25));
+  root.style.setProperty('--tx-t', mixHex(c.text, c.card, .52));
+  root.style.setProperty('--bg-i', mixHex(c.card, c.accent, mode === 'dark' ? .22 : .12));
+  root.style.setProperty('--br', rgbaFromHex(c.text, .08));
+  root.style.setProperty('--br-s', rgbaFromHex(c.text, .15));
+  root.style.setProperty('--br-i', rgbaFromHex(c.accent, .25));
+}
+
+function colorLuminance(hex) {
+  const channels = hexRgb(hex).map(value => {
+    const c = value / 255;
+    return c <= .03928 ? c / 12.92 : Math.pow((c + .055) / 1.055, 2.4);
+  });
+  return .2126 * channels[0] + .7152 * channels[1] + .0722 * channels[2];
+}
+
+function colorContrast(a, b) {
+  const l1 = colorLuminance(a), l2 = colorLuminance(b);
+  return (Math.max(l1,l2) + .05) / (Math.min(l1,l2) + .05);
+}
+
+function updateUiColorContrast() {
+  const el = inp('ui-color-contrast');
+  if (!el || !uiColorDraft) return;
+  const cardRatio = colorContrast(uiColorDraft.text, uiColorDraft.card);
+  const pageRatio = colorContrast(uiColorDraft.text, uiColorDraft.page);
+  const ratio = Math.min(cardRatio, pageRatio);
+  const ok = ratio >= 4.5;
+  el.className = 'ui-color-contrast ' + (ok ? 'ok' : 'warn');
+  el.innerHTML = ok
+    ? `<i class="ti ti-circle-check"></i><span>글자 대비 ${ratio.toFixed(2)}:1 · 읽기 좋은 조합입니다.</span>`
+    : `<i class="ti ti-alert-triangle"></i><span>글자 대비 ${ratio.toFixed(2)}:1 · 권장 기준 4.5:1보다 낮아 가독성이 떨어질 수 있습니다.</span>`;
+}
+
+function renderUiColorFields() {
+  const body = inp('ui-color-fields');
+  if (!body || !uiColorDraft) return;
+  const eyeSupported = typeof window.EyeDropper === 'function';
+  body.innerHTML = UI_COLOR_FIELDS.map(field => {
+    const color = normalizeHex(uiColorDraft[field.key], UI_COLOR_DEFAULTS[uiColorTheme][field.key]);
+    return `<div class="ui-color-row">
+      <label for="ui-color-${field.key}">${field.label}</label>
+      <input class="ui-color-input" id="ui-color-${field.key}" type="color" value="${color}"
+        oninput="updateUiColorField('${field.key}',this.value)">
+      <input class="ui-color-hex" id="ui-color-hex-${field.key}" value="${color}" maxlength="7"
+        onchange="updateUiColorField('${field.key}',this.value)">
+      <button class="ui-eyedropper" type="button" onclick="pickUiColor('${field.key}')" ${eyeSupported?'':'disabled'}
+        title="${eyeSupported?'화면에서 색상 선택':'이 브라우저는 스포이드를 지원하지 않습니다'}" aria-label="${field.label} 스포이드">
+        <i class="ti ti-color-picker"></i>
+      </button>
+    </div>`;
+  }).join('');
+  updateUiColorContrast();
+}
+
+function renderUiColorSettings() {
+  uiColorTheme = getCurrentThemeMode();
+  uiColorDraft = getUiThemeColors(uiColorTheme);
+  document.querySelectorAll('[data-color-theme]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.colorTheme === uiColorTheme);
+  });
+  renderUiColorFields();
+}
+
+function selectUiColorTheme(theme) {
+  uiColorTheme = theme === 'dark' ? 'dark' : 'light';
+  document.documentElement.classList.toggle('dark', uiColorTheme === 'dark');
+  localStorage.setItem('mes_theme', uiColorTheme);
+  const icon = inp('themeIcon');
+  if (icon) icon.className = uiColorTheme === 'dark' ? 'ti ti-sun' : 'ti ti-moon';
+  uiColorDraft = getUiThemeColors(uiColorTheme);
+  applyUiThemeColors(uiColorTheme, uiColorDraft);
+  renderUiColorSettings();
+}
+
+function updateUiColorField(key, value) {
+  if (!uiColorDraft || !UI_COLOR_FIELDS.some(field => field.key === key)) return;
+  const fallback = uiColorDraft[key];
+  const color = normalizeHex(value, fallback);
+  uiColorDraft[key] = color;
+  const picker = inp('ui-color-' + key);
+  const text = inp('ui-color-hex-' + key);
+  if (picker) picker.value = color;
+  if (text) text.value = color;
+  applyUiThemeColors(uiColorTheme, uiColorDraft);
+  updateUiColorContrast();
+}
+
+async function pickUiColor(key) {
+  if (typeof window.EyeDropper !== 'function') {
+    showToast('현재 브라우저는 색상 스포이드를 지원하지 않습니다.', 'error');
+    return;
+  }
+  try {
+    const result = await new window.EyeDropper().open();
+    if (result?.sRGBHex) updateUiColorField(key, result.sRGBHex);
+  } catch(e) {
+    if (e?.name !== 'AbortError') showToast('색상을 선택하지 못했습니다.', 'error');
+  }
+}
+
+function saveUiColors() {
+  if (!uiColorDraft || !uiColorTheme) return;
+  const store = getUiColorStore();
+  store[uiColorTheme] = Object.assign({}, uiColorDraft);
+  localStorage.setItem('mes_uiColors', JSON.stringify(store));
+  applyUiThemeColors(uiColorTheme, uiColorDraft);
+  const ratio = Math.min(colorContrast(uiColorDraft.text, uiColorDraft.card), colorContrast(uiColorDraft.text, uiColorDraft.page));
+  showToast(ratio >= 4.5 ? '화면 색상을 저장했습니다.' : '색상을 저장했습니다. 글자 대비 경고를 확인해주세요.', ratio >= 4.5 ? 'success' : 'info');
+}
+
+function cancelUiColorPreview() {
+  uiColorDraft = getUiThemeColors(uiColorTheme || getCurrentThemeMode());
+  applyUiThemeColors(uiColorTheme, uiColorDraft);
+  renderUiColorFields();
+  showToast('저장하지 않은 색상 변경을 취소했습니다.', 'info');
+}
+
+function resetUiColors() {
+  const mode = uiColorTheme || getCurrentThemeMode();
+  const store = getUiColorStore();
+  delete store[mode];
+  localStorage.setItem('mes_uiColors', JSON.stringify(store));
+  uiColorDraft = Object.assign({}, UI_COLOR_DEFAULTS[mode]);
+  applyUiThemeColors(mode, uiColorDraft);
+  renderUiColorFields();
+  showToast(`${mode === 'dark' ? '어두운' : '밝은'} 테마 색상을 기본값으로 복원했습니다.`, 'success');
+}
+
+window.addEventListener('resize', () => {
+  applyUiScale(getSavedUiScale());
+  if (currentPage === 'system' && typeof systemTab !== 'undefined' && systemTab === 'display') {
+    updateUiScaleControls(getSavedUiScale());
+  }
+});
 
 /* ════════════════════════════════════════════════════════════
    클라우드 동기화 (Firebase Auth + Firestore)
@@ -9625,6 +10114,7 @@ const _cloudQueue=new Set(); let _cloudTimer=null; let _cloudUnsub=null;
 /* ════════ 프로그램 기동 초기화 (FIREBASE_CONFIG 선언 이후에 실행) ════════ */
 syncFilterDropdowns();
 initTheme();
+applyUiScale(getSavedUiScale());
 // 햄버거 메가 메뉴에서는 이전 사이드바 표시 상태를 사용하지 않음
 try { localStorage.removeItem('mes_sbHidden'); } catch(e) {}
 if (typeof applySidebarMode === 'function') applySidebarMode();
@@ -9986,6 +10476,7 @@ function switchSystemTab(tab) {
   });
   if (systemTab === 'permissions') renderPermissions();
   else if (systemTab === 'company') renderSystemCompany();
+  else if (systemTab === 'display') renderUiScaleSettings();
   else if (systemTab === 'templates') renderDocTemplateManagement();
   else if (systemTab === 'api') renderApiSettings();
   else if (systemTab === 'drive') renderGoogleDriveSettings();
