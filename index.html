@@ -13702,6 +13702,26 @@ function _driveHostedOriginAvailable() {
   return location.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(location.hostname);
 }
 
+function getDriveCurrentOrigin() {
+  return location.protocol === 'file:' ? '' : location.origin;
+}
+
+async function copyDriveCurrentOrigin() {
+  const origin = getDriveCurrentOrigin();
+  if (!origin) {
+    showToast('file:// 실행 주소는 OAuth 원본으로 등록할 수 없습니다.', 'error');
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(origin);
+    showToast('현재 JavaScript 원본을 복사했습니다: ' + origin, 'success');
+  } catch (error) {
+    const field = inp('drive-current-origin');
+    if (field) { field.focus(); field.select(); }
+    showToast('주소를 선택했습니다. Ctrl+C로 복사하세요.', 'info');
+  }
+}
+
 function loadGoogleIdentityServices() {
   if (window.google && google.accounts && google.accounts.oauth2) return Promise.resolve();
   return new Promise((resolve, reject) => {
@@ -13946,6 +13966,7 @@ async function renderGoogleDriveSettings() {
   const body = inp('google-drive-settings-body'); if (!body) return;
   const config = getDriveConfig();
   const hosted = _driveHostedOriginAvailable();
+  const currentOrigin = getDriveCurrentOrigin();
   const connected = !!(_driveAccessToken && Date.now() < _driveTokenExpiresAt);
   body.innerHTML =
     '<div class="card" style="margin-bottom:16px;">' +
@@ -13954,6 +13975,10 @@ async function renderGoogleDriveSettings() {
       '<div style="display:grid;gap:12px;max-width:820px;">' +
         (config.connectedEmail ? '<div style="font-size:12px;color:var(--tx-s);"><i class="ti ti-user-check"></i> 연결 계정: <b>' + _driveEsc(config.connectedEmail) + '</b></div>' : '') +
         (!hosted ? '<div class="al al-warn"><i class="ti ti-alert-triangle"></i><div><div class="al-t">웹 주소에서 실행해야 합니다.</div><div class="al-s">현재 file:// 실행 상태에서는 Google OAuth를 사용할 수 없습니다. Firebase Hosting의 HTTPS 주소 또는 localhost를 사용하세요.</div></div></div>' : '') +
+        '<div class="form-row"><label class="form-lbl">현재 JavaScript 원본</label><div style="display:flex;gap:6px;">' +
+          '<input class="form-inp" id="drive-current-origin" value="' + _driveEsc(currentOrigin || 'file:// 실행 중') + '" readonly>' +
+          '<button class="btn" type="button" onclick="copyDriveCurrentOrigin()" ' + (!currentOrigin ? 'disabled' : '') + '><i class="ti ti-copy"></i>복사</button></div></div>' +
+        '<div style="font-size:11px;color:var(--tx-w);line-height:1.7;">위 주소를 Google Cloud Console의 해당 OAuth 클라이언트 → 승인된 JavaScript 원본에 글자 하나까지 동일하게 등록하세요. 경로와 마지막 /는 넣지 않습니다.</div>' +
         '<div class="form-row"><label class="form-lbl">OAuth 웹 클라이언트 ID</label>' +
           '<input class="form-inp" id="drive-client-id" value="' + _driveEsc(config.clientId) + '" placeholder="xxxxxxxx.apps.googleusercontent.com"></div>' +
         '<div style="font-size:11px;color:var(--tx-t);line-height:1.7;">Google Cloud Console에서 Drive API를 활성화하고 OAuth 웹 클라이언트를 만든 뒤 현재 HTTPS 주소를 승인된 JavaScript 원본에 등록하세요. 권한은 앱이 만든 파일만 접근하는 drive.file을 사용합니다.</div>' +
