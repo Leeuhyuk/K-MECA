@@ -76,6 +76,135 @@ body { font-family: var(--f); background: var(--bg-t); color: var(--tx); height:
 .topbar { background: var(--bg-p); border-bottom: 1px solid var(--br); padding: 10px 24px; display: flex; align-items: center; justify-content: space-between; min-height: 52px; flex-shrink: 0; }
 .tb-title { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tb-right { display: flex; align-items: center; gap: 12px; }
+.topbar-alert-btn {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  justify-content: center;
+  font-size: 19px;
+  border-radius: var(--rm);
+}
+.topbar-alert-btn:hover { background: var(--bg-s); color: var(--tx); }
+.topbar-alert { position: relative; }
+.topbar-alert.open .topbar-alert-btn { background: var(--bg-s); color: var(--tx); }
+.topbar-alert-badge {
+  position: absolute;
+  top: -3px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--bg-p);
+  border-radius: 9px;
+  background: #e03131;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+}
+.topbar-alert-popup {
+  display: none;
+  position: absolute;
+  top: calc(100% + 7px);
+  right: 0;
+  z-index: 9500;
+  width: min(380px, calc(100vw - 24px));
+  max-height: min(520px, calc(100vh - 80px));
+  overflow: hidden;
+  background: var(--bg-p);
+  border: 1px solid var(--br-s);
+  border-radius: var(--rl);
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+}
+.topbar-alert.open .topbar-alert-popup { display: flex; flex-direction: column; }
+.topbar-alert-head {
+  min-height: 44px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--br);
+}
+.topbar-alert-head strong { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.topbar-alert-head strong i { color: var(--tx-i); font-size: 17px; }
+.topbar-alert-head span { color: var(--tx-t); font-size: 11px; }
+.topbar-alert-list { overflow-y: auto; padding: 6px; }
+.topbar-alert-item {
+  display: grid;
+  grid-template-columns: 22px minmax(0,1fr) auto;
+  gap: 8px;
+  align-items: start;
+  padding: 10px 8px;
+  border-radius: 7px;
+}
+.topbar-alert-item:hover { background: var(--bg-s); }
+.topbar-alert-item > i { margin-top: 1px; font-size: 17px; }
+.topbar-alert-item.err > i { color: var(--tx-d); }
+.topbar-alert-item.warn > i { color: var(--tx-w); }
+.topbar-alert-item.info > i { color: var(--tx-i); }
+.topbar-alert-item-title { font-size: 12px; font-weight: 700; line-height: 1.45; }
+.topbar-alert-item-sub { margin-top: 3px; color: var(--tx-t); font-size: 10.5px; line-height: 1.45; }
+.topbar-alert-confirm {
+  min-width: 42px;
+  height: 26px;
+  padding: 0 7px;
+  border: 1px solid var(--br);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tx-s);
+  font-family: var(--f);
+  font-size: 10px;
+  cursor: pointer;
+}
+.topbar-alert-confirm:hover { background: var(--bg-s); color: var(--tx); }
+.topbar-alert-empty { padding: 34px 12px; color: var(--tx-t); font-size: 12px; text-align: center; }
+.topbar-more { position: relative; }
+.topbar-more-btn {
+  width: 32px;
+  height: 32px;
+  justify-content: center;
+  font-size: 21px;
+  border-radius: var(--rm);
+}
+.topbar-more.open .topbar-more-btn,
+.topbar-more-btn:hover { background: var(--bg-s); color: var(--tx); }
+.topbar-more-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 7px);
+  right: 0;
+  z-index: 9500;
+  min-width: 145px;
+  padding: 6px;
+  background: var(--bg-p);
+  border: 1px solid var(--br-s);
+  border-radius: var(--rm);
+  box-shadow: 0 8px 24px rgba(0,0,0,.22);
+}
+.topbar-more.open .topbar-more-menu { display: block; }
+.topbar-more-menu button {
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tx);
+  font-family: var(--f);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.topbar-more-menu button:hover { background: var(--bg-s); }
+.topbar-more-menu button i { width: 17px; font-size: 17px; color: var(--tx-s); }
+.topbar-more-menu .topbar-logout-item { color: var(--tx-d); }
+.topbar-more-menu .topbar-logout-item i { color: var(--tx-d); }
 /* 사이드바 로고 하단 배치 — 검색 결과 드롭다운은 JS가 입력창 위치 기준 fixed 로 띄움 */
 .global-search-wrapper {
   position: relative; height: 36px; margin: 10px 12px 4px;
@@ -111,8 +240,6 @@ body { font-family: var(--f); background: var(--bg-t); color: var(--tx); height:
 .dot-a { background: #f76707; }
 .theme-btn { background: none; border: none; color: var(--tx-s); cursor: pointer; font-size: 18px; display: flex; align-items: center; padding: 4px; border-radius: 4px; transition: background 0.15s; }
 .theme-btn:hover { background: var(--bg-s); }
-#back-btn { font-size: 14px !important; font-weight: 600; gap: 4px; color: var(--tx-i) !important; border: 1px solid var(--br-i) !important; background: var(--bg-i) !important; padding: 4px 10px !important; }
-#back-btn:hover { background: var(--tx-i) !important; color: #fff !important; }
 
 /* 컨텐츠 및 레이아웃 */
 .content { flex: 1; overflow-y: auto; padding: 20px 24px; display: none; }
@@ -288,6 +415,30 @@ textarea { height: auto; resize: vertical; }
   flex: 0 0 auto;
 }
 .drive-save-btn:hover { background: var(--bg-i); }
+.date-view-period,
+.date-view-quick {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.date-view-period input {
+  width: 132px;
+  height: 28px;
+  padding: 0 7px;
+  font-size: 11px;
+}
+.date-view-nav,
+.date-view-today,
+.date-view-quick .btn {
+  height: 28px;
+  padding: 0 9px;
+}
+.date-view-label {
+  min-width: 115px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+}
 
 .del-btn, .edit-btn, .restore-btn { padding: 3px 8px; font-size: 11px; height: 24px; border-radius: 4px; cursor: pointer; background: transparent; font-family: var(--f); display: inline-flex; align-items: center; gap: 4px; transition: all .15s; border: 1px solid; }
 .del-btn { border-color: var(--br-d); color: var(--tx-d); }
@@ -718,6 +869,24 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
   }
   /* 페이지 내부 탭 바(직원·재무·견적/수주 등) 가로 스크롤 허용 */
   .toolbar { flex-wrap: wrap; gap: 6px; }
+  [id^="date-view-"] {
+    align-items: center !important;
+    gap: 5px !important;
+  }
+  .date-view-period {
+    flex: 1 1 100%;
+    order: 10;
+  }
+  .date-view-period input {
+    flex: 1 1 125px;
+    min-width: 0;
+    width: auto;
+  }
+  .date-view-quick {
+    flex: 1 1 100%;
+    order: 11;
+    overflow-x: auto;
+  }
   .toolbar > .drive-save-btn {
     display: inline-flex !important;
     width: auto !important;
@@ -749,9 +918,21 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
   #sb-show-btn { display: none !important; }   /* 모바일은 햄버거(드로어)만 사용 */
   /* 데스크톱에서 숨김(sb-collapsed) 상태였어도 모바일 드로어는 열리도록 보장 */
   body.sb-collapsed .sidebar.mobile-open { display: flex !important; }
-  #topbar-admin-area {
-    display: flex !important; /* 모바일 탑바에 로그아웃 버튼 노출 */
-    align-items: center;
+  .topbar-alert-btn,
+  .topbar-more-btn { width: 32px; height: 32px; }
+  .topbar-alert-popup {
+    position: fixed;
+    top: 50px;
+    right: 8px;
+    left: 8px;
+    width: auto;
+    max-height: calc(100vh - 112px);
+  }
+  .topbar-more-menu {
+    position: fixed;
+    top: 50px;
+    right: 8px;
+    min-width: 150px;
   }
   .tb-title {
     white-space: nowrap !important; /* 세로줄 바꿈 원천 차단 */
@@ -833,7 +1014,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
 
   /* 2) 상단 탑바 가로 넘침으로 인한 우측 잘림 방지 */
   .topbar { padding: 8px 10px !important; gap: 6px; }
-  #back-btn { display: none !important; }           /* 하단 탭/드로어로 이동 가능하므로 제거 */
   .tb-right { gap: 6px !important; flex-shrink: 0; }
 
   /* 3) 수주(고객사) 카드 헤더 세로 글자 깨짐 해결: 이름 최소폭 확보 + 버튼 줄바꿈 */
@@ -1123,16 +1303,36 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="theme-btn" id="menu-toggle-btn" onclick="toggleSidebar()" title="메뉴 열기" style="display: none; font-size: 18px; padding: 4px 8px; align-items: center; justify-content: center;">
         <i class="ti ti-menu-2"></i>
       </button>
-      <button class="theme-btn" id="back-btn" onclick="goBack()" title="이전: 이전 화면으로 돌아가기" style="display: inline-flex; font-size: 16px; gap: 4px; padding: 4px 8px;">
-        <i class="ti ti-arrow-left"></i>
-      </button>
       <div class="tb-title" id="ptitle">종합 대시보드</div>
     </div>
 
     <div class="tb-right">
-      <button class="theme-btn" onclick="toggleTheme()" title="화면 테마 전환"><i class="ti ti-sun" id="themeIcon"></i></button>
-      <!-- 로그아웃 아이콘 버튼 영역 (updateAdminUI 가 채움) -->
-      <div id="topbar-admin-area" style="display: inline-flex; align-items: center; gap: 8px;"></div>
+      <div class="topbar-alert" id="topbar-alert">
+        <button class="theme-btn topbar-alert-btn" id="topbar-alert-btn" onclick="toggleTopbarAlerts()" title="알림 보기" aria-label="알림 보기" aria-haspopup="true" aria-expanded="false">
+          <i class="ti ti-bell"></i>
+          <span class="topbar-alert-badge" id="topbar-alert-badge" style="display:none;">0</span>
+        </button>
+        <div class="topbar-alert-popup" id="topbar-alert-popup" role="dialog" aria-label="알림 목록">
+          <div class="topbar-alert-head">
+            <strong><i class="ti ti-bell"></i> 알림</strong>
+            <span id="topbar-alert-count">0건</span>
+          </div>
+          <div class="topbar-alert-list" id="topbar-alert-list"></div>
+        </div>
+      </div>
+      <div class="topbar-more" id="topbar-more">
+        <button class="theme-btn topbar-more-btn" id="topbar-more-btn" onclick="toggleTopbarMoreMenu()" title="사용자 메뉴" aria-label="사용자 메뉴" aria-haspopup="true" aria-expanded="false">
+          <i class="ti ti-dots-vertical"></i>
+        </button>
+        <div class="topbar-more-menu" id="topbar-more-menu" role="menu">
+          <button type="button" role="menuitem" onclick="toggleTheme();closeTopbarMoreMenu()">
+            <i class="ti ti-sun" id="themeIcon"></i><span>밝기 전환</span>
+          </button>
+          <button type="button" role="menuitem" id="topbar-logout-item" class="topbar-logout-item" onclick="closeTopbarMoreMenu();cloudLogout()">
+            <i class="ti ti-logout"></i><span>로그아웃</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2168,7 +2368,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="btn btn-icon" onclick="importRfqXLS()" title="엑셀 가져오기"><i class="ti ti-file-import"></i></button>
       <button class="btn btn-icon" onclick="exportRfqXLS()" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
       <button class="btn btn-icon" onclick="openRfqPrint(null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
-      <button class="btn drive-save-btn" onclick="saveDocumentBundleToGoogleDrive('rfq',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-cloud-upload"></i>Drive PDF/XLSX</button>
+      <button class="btn btn-icon" onclick="saveDocumentBundleToGoogleDrive('rfq',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
     </div>
     <div class="card">
       <div id="rfq-table" style="overflow-x:auto;"><div class="empty"><i class="ti ti-inbox"></i>등록된 견적요청서가 없습니다.</div></div>
@@ -2194,7 +2394,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="btn btn-icon" onclick="importPoListXLS()" title="엑셀 가져오기"><i class="ti ti-file-import"></i></button>
       <button class="btn btn-icon" onclick="exportPoXLS()" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
       <button class="btn btn-icon" onclick="openPoPrint(null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
-      <button class="btn drive-save-btn" onclick="saveDocumentBundleToGoogleDrive('po',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-cloud-upload"></i>Drive PDF/XLSX</button>
+      <button class="btn btn-icon" onclick="saveDocumentBundleToGoogleDrive('po',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
     </div>
 
     <!-- 선택 일괄 동작 바 -->
@@ -2229,7 +2429,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="btn btn-primary btn-icon" onclick="openSalesDocAdd('statement')" title="거래명세표 등록"><i class="ti ti-plus"></i></button>
       <button class="btn btn-icon" onclick="exportSalesDocCSV('statement')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
       <button class="btn btn-icon" onclick="openSalesDocPrint('statement',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
-      <button class="btn drive-save-btn" onclick="saveDocumentBundleToGoogleDrive('statement',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-cloud-upload"></i>Drive PDF/XLSX</button>
+      <button class="btn btn-icon" onclick="saveDocumentBundleToGoogleDrive('statement',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
     </div>
     <div class="card"><div id="st-table" style="overflow-x:auto;"></div></div>
   </div>
@@ -2249,7 +2449,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="btn btn-primary btn-icon" onclick="openSalesDocAdd('tax')" title="세금계산서 등록"><i class="ti ti-plus"></i></button>
       <button class="btn btn-icon" onclick="exportSalesDocCSV('tax')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
       <button class="btn btn-icon" onclick="openSalesDocPrint('tax',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
-      <button class="btn drive-save-btn" onclick="saveDocumentBundleToGoogleDrive('tax',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-cloud-upload"></i>Drive PDF/XLSX</button>
+      <button class="btn btn-icon" onclick="saveDocumentBundleToGoogleDrive('tax',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
     </div>
     <div class="card"><div id="tx-table" style="overflow-x:auto;"></div></div>
   </div>
@@ -2275,7 +2475,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="btn btn-primary btn-icon" onclick="openSODocAdd('quote')" title="견적서 등록"><i class="ti ti-plus"></i></button>
       <button class="btn btn-icon" onclick="exportSODocCSV('quote')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
       <button class="btn btn-icon" onclick="openSODocPrint('quote',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
-      <button class="btn drive-save-btn" onclick="saveDocumentBundleToGoogleDrive('quote',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-cloud-upload"></i>Drive PDF/XLSX</button>
+      <button class="btn btn-icon" onclick="saveDocumentBundleToGoogleDrive('quote',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
     </div>
     <div class="card"><div id="qt-table" style="overflow-x:auto;"></div></div>
     </div><!-- /sd-tab-quote -->
@@ -2293,7 +2493,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <input type="text" id="so-q" placeholder="품목명·고객사 검색..." style="min-width:180px;" oninput="renderSODoc('order')">
       <button class="btn btn-icon" onclick="exportSODocCSV('order')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
       <button class="btn btn-icon" onclick="openSODocPrint('order',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
-      <button class="btn drive-save-btn" onclick="saveDocumentBundleToGoogleDrive('order',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-cloud-upload"></i>Drive PDF/XLSX</button>
+      <button class="btn btn-icon" onclick="saveDocumentBundleToGoogleDrive('order',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
     </div>
     <div class="card"><div id="so-table" style="overflow-x:auto;"></div></div>
     </div><!-- /sd-tab-order -->
@@ -2899,7 +3099,7 @@ const sortState = {
   po:       { key: null, asc: true },
 };
 
-/* ════════ 공통 날짜 보기 전환 (전체 · 연도 · 월 · 일) ════════ */
+/* ════════ 공통 날짜 보기 전환 (전체 · 연도 · 월 · 일 · 기간) ════════ */
 const dateViewState = (() => {
   try { return JSON.parse(localStorage.getItem('mes_dateViewState') || '{}'); }
   catch(e) { return {}; }
@@ -2915,8 +3115,23 @@ function _dateViewDefault(mode) {
   if (mode === 'day') return t;
   return '';
 }
+function _dateViewRangeDefault() {
+  const end = today();
+  return { from:end.slice(0,7) + '-01', to:end };
+}
+function _dateViewNormalize(value) {
+  const raw = String(value || '').trim();
+  const compact = raw.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if (compact) return compact[1] + '-' + compact[2] + '-' + compact[3];
+  const dashed = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (dashed) return dashed[1] + '-' + dashed[2].padStart(2,'0') + '-' + dashed[3].padStart(2,'0');
+  const dotted = raw.match(/^(\d{4})[./](\d{1,2})[./](\d{1,2})/);
+  if (dotted) return dotted[1] + '-' + dotted[2].padStart(2,'0') + '-' + dotted[3].padStart(2,'0');
+  return '';
+}
 function _dateViewLabel(mode, value) {
   if (mode === 'all') return '전체 기간';
+  if (mode === 'range') return '기간 선택';
   value = value || _dateViewDefault(mode);
   const p = value.split('-');
   if (mode === 'year') return p[0] + '년';
@@ -2926,7 +3141,8 @@ function _dateViewLabel(mode, value) {
 function ensureDateView(key, containerId, dates, renderer) {
   const container = inp(containerId); if (!container || !container.parentNode) return;
   dateViewRenderers[key] = renderer;
-  const state = dateViewState[key] || (dateViewState[key] = { mode:'all', value:'' });
+  const state = dateViewState[key] || (dateViewState[key] = { mode:'all', value:'', from:'', to:'' });
+  if (state.mode === 'range' && (!state.from || !state.to)) Object.assign(state, _dateViewRangeDefault());
   let bar = inp('date-view-' + key);
   if (!bar) {
     bar = document.createElement('div');
@@ -2934,7 +3150,8 @@ function ensureDateView(key, containerId, dates, renderer) {
     bar.style.cssText = 'display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:0 0 8px;padding:4px 8px;background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rm);';
     container.parentNode.insertBefore(bar, container);
   }
-  const disabled = state.mode === 'all';
+  const disabled = state.mode === 'all' || state.mode === 'range';
+  const range = state.mode === 'range';
   bar.innerHTML = `
     <span style="font-size:11px;font-weight:700;color:var(--tx-s);">날짜 보기</span>
     <select onchange="dateViewModeChange('${key}',this.value)" style="height:28px;min-width:96px;font-size:11px;">
@@ -2942,15 +3159,27 @@ function ensureDateView(key, containerId, dates, renderer) {
       <option value="year"${state.mode==='year'?' selected':''}>연</option>
       <option value="month"${state.mode==='month'?' selected':''}>월</option>
       <option value="day"${state.mode==='day'?' selected':''}>일</option>
+      <option value="range"${state.mode==='range'?' selected':''}>기간</option>
     </select>
-    <button class="btn btn-sm" style="height:28px;padding:0 9px;" onclick="dateViewMove('${key}',-1)" title="이전" ${disabled?'disabled':''}><i class="ti ti-chevron-left"></i></button>
-    <span style="font-weight:800;min-width:${state.mode==='day'?'135':'115'}px;text-align:center;font-size:13px;">${_dateViewLabel(state.mode,state.value)}</span>
-    <button class="btn btn-sm" style="height:28px;padding:0 9px;" onclick="dateViewMove('${key}',1)" title="다음" ${disabled?'disabled':''}><i class="ti ti-chevron-right"></i></button>
-    <button class="btn btn-sm" style="height:28px;padding:0 10px;" onclick="dateViewToday('${key}')" title="오늘" ${disabled?'disabled':''}>오늘</button>
+    <div class="date-view-period"${range?'':' style="display:none;"'}>
+      <input type="date" value="${state.from||''}" onchange="dateViewRangeChange('${key}','from',this.value)" title="시작일">
+      <span>~</span>
+      <input type="date" value="${state.to||''}" onchange="dateViewRangeChange('${key}','to',this.value)" title="종료일">
+    </div>
+    <button class="btn btn-sm date-view-nav" onclick="dateViewMove('${key}',-1)" title="이전" ${disabled?'disabled':''}><i class="ti ti-chevron-left"></i></button>
+    <span class="date-view-label"${range?' style="display:none;"':''}>${_dateViewLabel(state.mode,state.value)}</span>
+    <button class="btn btn-sm date-view-nav" onclick="dateViewMove('${key}',1)" title="다음" ${disabled?'disabled':''}><i class="ti ti-chevron-right"></i></button>
+    <button class="btn btn-sm date-view-today" onclick="dateViewToday('${key}')" title="오늘" ${disabled?'disabled':''}>오늘</button>
+    <div class="date-view-quick"${range?'':' style="display:none;"'}>
+      <button class="btn btn-sm" onclick="dateViewQuickRange('${key}','7d')">최근 7일</button>
+      <button class="btn btn-sm" onclick="dateViewQuickRange('${key}','month')">이번 달</button>
+      <button class="btn btn-sm" onclick="dateViewQuickRange('${key}','prevMonth')">지난달</button>
+    </div>
     <button class="btn btn-sm" style="height:28px;padding:0 9px;" onclick="dateViewReset('${key}')" title="전체 보기"><i class="ti ti-x"></i></button>`;
 }
 function dateViewModeChange(key, mode) {
-  dateViewState[key] = { mode, value:_dateViewDefault(mode) };
+  const range = _dateViewRangeDefault();
+  dateViewState[key] = { mode, value:_dateViewDefault(mode), from:range.from, to:range.to };
   _dateViewSave();
   if (dateViewRenderers[key]) dateViewRenderers[key]();
 }
@@ -2960,8 +3189,37 @@ function dateViewValueChange(key, value) {
   _dateViewSave();
   if (dateViewRenderers[key]) dateViewRenderers[key]();
 }
+function dateViewRangeChange(key, field, value) {
+  const state = dateViewState[key] || { mode:'range', value:'', from:'', to:'' };
+  state.mode = 'range';
+  state[field] = _dateViewNormalize(value);
+  if (state.from && state.to && state.from > state.to) {
+    const swap = state.from; state.from = state.to; state.to = swap;
+  }
+  dateViewState[key] = state;
+  _dateViewSave();
+  if (dateViewRenderers[key]) dateViewRenderers[key]();
+}
+function dateViewQuickRange(key, preset) {
+  const now = new Date();
+  let from, to;
+  const fmt = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  if (preset === '7d') {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
+    from = fmt(start); to = fmt(now);
+  } else if (preset === 'prevMonth') {
+    from = fmt(new Date(now.getFullYear(), now.getMonth()-1, 1));
+    to = fmt(new Date(now.getFullYear(), now.getMonth(), 0));
+  } else {
+    from = fmt(new Date(now.getFullYear(), now.getMonth(), 1));
+    to = fmt(now);
+  }
+  dateViewState[key] = { mode:'range', value:'', from, to };
+  _dateViewSave();
+  if (dateViewRenderers[key]) dateViewRenderers[key]();
+}
 function dateViewReset(key) {
-  dateViewState[key] = { mode:'all', value:'' };
+  dateViewState[key] = { mode:'all', value:'', from:'', to:'' };
   _dateViewSave();
   if (dateViewRenderers[key]) dateViewRenderers[key]();
 }
@@ -2992,8 +3250,15 @@ function dateViewToday(key) {
 }
 function dateViewMatch(key, dateValue) {
   const state = dateViewState[key] || { mode:'all', value:'' };
-  if (state.mode === 'all' || !state.value) return true;
-  const d = String(dateValue||'');
+  if (state.mode === 'all') return true;
+  const d = _dateViewNormalize(dateValue);
+  if (!d) return false;
+  if (state.mode === 'range') {
+    const from = _dateViewNormalize(state.from);
+    const to = _dateViewNormalize(state.to);
+    return (!from || d >= from) && (!to || d <= to);
+  }
+  if (!state.value) return true;
   if (state.mode === 'year') return d.slice(0,4) === state.value;
   if (state.mode === 'month') return d.slice(0,7) === state.value;
   if (state.mode === 'day') return d.slice(0,10) === state.value;
@@ -3569,13 +3834,8 @@ function stageColor(s) { return STAGE_COLORS[s] || '#868e96'; }
    관리자 비밀번호 인증 기능 제거됨 — 클라우드 로그인(추후 구글 로그인 연동)이 인증 담당.
    세부 권한은 역할 기반(RBAC)으로 관리. */
 function updateAdminUI() {
-  const topbarRight = inp('topbar-admin-area');
-  if (topbarRight) {
-    // 클라우드 로그인 시 로그아웃 아이콘 버튼만 표시 (시계 자리, 최우측)
-    topbarRight.innerHTML = _cloudActive
-      ? `<button class="btn btn-sm btn-danger btn-icon" onclick="cloudLogout()" title="로그아웃" aria-label="로그아웃" style="height:26px;width:28px;"><i class="ti ti-logout"></i></button>`
-      : '';
-  }
+  const logoutItem = inp('topbar-logout-item');
+  if (logoutItem) logoutItem.style.display = _cloudActive ? 'flex' : 'none';
   refreshPage(currentPage);
 }
 
@@ -3595,6 +3855,49 @@ function togglePanel(id) {
   }
 }
 function closePanel(id) { inp(id)?.classList.remove('open'); }
+
+function toggleTopbarAlerts() {
+  const wrap = inp('topbar-alert');
+  const button = inp('topbar-alert-btn');
+  if (!wrap) return;
+  closeTopbarMoreMenu();
+  const open = wrap.classList.toggle('open');
+  if (button) button.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open && typeof renderTopbarAlerts === 'function') renderTopbarAlerts(true);
+}
+function closeTopbarAlerts() {
+  const wrap = inp('topbar-alert');
+  const button = inp('topbar-alert-btn');
+  if (wrap) wrap.classList.remove('open');
+  if (button) button.setAttribute('aria-expanded', 'false');
+}
+
+function toggleTopbarMoreMenu() {
+  const wrap = inp('topbar-more');
+  const button = inp('topbar-more-btn');
+  if (!wrap) return;
+  closeTopbarAlerts();
+  const open = wrap.classList.toggle('open');
+  if (button) button.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+function closeTopbarMoreMenu() {
+  const wrap = inp('topbar-more');
+  const button = inp('topbar-more-btn');
+  if (wrap) wrap.classList.remove('open');
+  if (button) button.setAttribute('aria-expanded', 'false');
+}
+document.addEventListener('click', function(event) {
+  const moreWrap = inp('topbar-more');
+  const alertWrap = inp('topbar-alert');
+  if (moreWrap && !moreWrap.contains(event.target)) closeTopbarMoreMenu();
+  if (alertWrap && !alertWrap.contains(event.target)) closeTopbarAlerts();
+});
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Escape') {
+    closeTopbarMoreMenu();
+    closeTopbarAlerts();
+  }
+});
 
 let _cfn = null;
 function confirm_(title, msg, fn, btnCls = 'btn-danger', btnIcon = 'ti-trash') {
@@ -3796,7 +4099,6 @@ function _goTo(id, el) {
   };
   inp('ptitle').textContent = PN[id] || id;
   currentPage = id;
-  _updateBackBtn();
   refreshPage(id);
   // 모바일: 페이지 이동 시 홈 오버레이 해제 + 하단 탭 동기화
   document.body.classList.remove('mhome');
@@ -3824,27 +4126,10 @@ function goInventory(key, el) {
   });
   inp('ptitle').textContent = meta.title;
   currentPage = 'inventory';
-  _updateBackBtn();
   renderInventory();
   // 모바일 드로어 닫기
   const sb = document.querySelector('.sidebar');
   if (sb && sb.classList.contains('mobile-open')) { sb.classList.remove('mobile-open'); document.getElementById('sidebar-backdrop')?.classList.remove('active'); }
-}
-
-function _updateBackBtn() {
-  const btn = inp('back-btn');
-  if (!btn) return;
-  if (pageHistory.length > 0) {
-    btn.style.display = 'inline-flex';
-    const PN = {
-      dashboard:'대시보드', clients:'수주관리', materials:'자재관리',
-      orders:'생산지시', process:'공정관리', quality:'품질검사',
-      workers:'인사', system:'시스템 관리', inventory:'재고', finance:'재무', claims:'클레임', notes:'메모·할 일', statement:'거래명세표', taxinvoice:'세금계산서', salesdoc:'견적/수주'
-    };
-    btn.title = `이전: ${PN[pageHistory[pageHistory.length-1]] || '이전 화면'}으로 돌아가기`;
-  } else {
-    btn.style.display = 'none';
-  }
 }
 
 function refreshPage(id) {
@@ -6469,8 +6754,11 @@ function exportInvCSV() {
 function renderInventoryLedger() {
   const cont = document.getElementById('inv-ledger-table');
   if (!cont) return;
+  ensureDateView('inventoryLedger', 'inv-ledger-table', inventoryLedger.map(e=>e.date), renderInventoryLedger);
   const filter = document.getElementById('inv-ledger-inv') ? document.getElementById('inv-ledger-inv').value : '';
-  const rows = inventoryLedger.filter(e => !filter || e.invId === filter);
+  const rows = inventoryLedger.filter(e =>
+    (!filter || e.invId === filter) && dateViewMatch('inventoryLedger', e.date)
+  );
   if (!rows.length) { cont.innerHTML = empty('입출고 이력이 없습니다.'); return; }
   const typeColor = { '입고': 'var(--tx-ok)', '출고': 'var(--tx-d)', '조정': 'var(--tx-w)' };
   cont.innerHTML = '<table><thead><tr>' +
@@ -8442,8 +8730,47 @@ function renderAlerts() {
   }).join('') : empty('수신 및 보존된 알림 내역이 비어있습니다.');
 
   // 안 읽은 긴급 알림 배지 수량은 필터링(활성화된 것만) 기준으로 갱신합니다.
-  const activeErrCount = alertsList.filter(a => a.type === 'err' && (a.auto === false || !a.category || alertSettings[a.category] !== false)).length;
-  inp('alertBadge').textContent = activeErrCount;
+  const activeAlerts = alertsList.filter(a => a.auto === false || !a.category || alertSettings[a.category] !== false);
+  const activeErrCount = activeAlerts.filter(a => a.type === 'err').length;
+  const sidebarBadge = inp('alertBadge');
+  if (sidebarBadge) sidebarBadge.textContent = activeErrCount;
+  const topbarBadge = inp('topbar-alert-badge');
+  if (topbarBadge) {
+    topbarBadge.textContent = activeAlerts.length > 99 ? '99+' : activeAlerts.length;
+    topbarBadge.style.display = activeAlerts.length ? 'flex' : 'none';
+  }
+  renderTopbarAlerts(false);
+}
+
+function renderTopbarAlerts(scan) {
+  const listEl = inp('topbar-alert-list');
+  if (!listEl) return;
+  if (scan && typeof scanAndGenerateAlerts === 'function') scanAndGenerateAlerts();
+
+  const activeAlerts = alertsList.filter(a =>
+    a.auto === false || !a.category || alertSettings[a.category] !== false
+  );
+  const icons = { err: 'ti-alert-circle', warn: 'ti-alert-triangle', info: 'ti-info-circle' };
+  const countEl = inp('topbar-alert-count');
+  const badgeEl = inp('topbar-alert-badge');
+
+  if (countEl) countEl.textContent = `${activeAlerts.length}건`;
+  if (badgeEl) {
+    badgeEl.textContent = activeAlerts.length > 99 ? '99+' : activeAlerts.length;
+    badgeEl.style.display = activeAlerts.length ? 'flex' : 'none';
+  }
+
+  listEl.innerHTML = activeAlerts.length ? activeAlerts.map(a => {
+    const realIdx = alertsList.indexOf(a);
+    return `<div class="topbar-alert-item ${a.type || 'info'}">
+      <i class="ti ${icons[a.type] || icons.info}"></i>
+      <div>
+        <div class="topbar-alert-item-title">${esc(a.title)}</div>
+        <div class="topbar-alert-item-sub">${esc(a.sub)}${a.createdAt ? ` · ${esc(a.createdAt)}` : ''}</div>
+      </div>
+      <button type="button" class="topbar-alert-confirm" onclick="delAlert(${realIdx})">확인</button>
+    </div>`;
+  }).join('') : '<div class="topbar-alert-empty"><i class="ti ti-bell-off"></i><br>새로운 알림이 없습니다.</div>';
 }
 
 function filterAlerts(type) {
@@ -9013,6 +9340,9 @@ function cloudBootstrap(){
         }
         _cloudActive = true; _hideLogin(); _cloudChip('online');
         updateAdminUI(); applyRoleGating(); applyColumnGating(); applyFeatureGating(); cloudSubscribe();   // 역할 UI/컬럼/기능 반영 + 실시간 동기화 시작
+        if (typeof autoConnectGoogleDriveAfterLogin === 'function') {
+          setTimeout(autoConnectGoogleDriveAfterLogin, 300);
+        }
       } else {
         _cloudUser=null; _cloudActive=false;
         sessionStorage.removeItem('mes_cloud_synced');
@@ -13147,6 +13477,7 @@ function updateAsBadge(){
 }
 function renderAS(){
   const body = inp('as-body'); if(!body) return;
+  ensureDateView('asRecords', 'as-body', asList.map(a=>a.recvDate), renderAS);
   const kpi = inp('as-kpi');
   updateAsBadge();
   const fil = (inp('as-filter')?.value)||'';
@@ -13156,6 +13487,7 @@ function renderAS(){
   const done = asList.filter(a=>a.status==='완료').length;
   const paidCost = asList.reduce((s,a)=>s+(a.warranty==='유상'?(Number(a.cost)||0):0),0);
   const list = asList.filter(a=>{
+    if (!dateViewMatch('asRecords', a.recvDate)) return false;
     if (fil === 'open') { if (!(a.status==='접수'||a.status==='처리중')) return false; }
     else if (fil && a.status!==fil) return false;
     if (q && ![getClientName(a.clientId),a.productName,a.symptom,a.id].join(' ').toLowerCase().includes(q)) return false;
@@ -13714,17 +14046,20 @@ let _driveAccessToken = '';
 let _driveTokenExpiresAt = 0;
 let _driveBackups = [];
 let _driveAutoBackupTimer = null;
+let _driveAutoConnectAttempted = false;
 
 function getDriveConfig() {
-  return loadStorage('googleDriveConfig', {
+  const defaults = {
     clientId: '',
     folderId: '',
     folderUrl: '',
     connectedEmail: '',
     lastBackupAt: '',
+    autoConnectEnabled: true,
     autoBackupEnabled: false,
     autoBackupHours: 24
-  });
+  };
+  return Object.assign({}, defaults, loadStorage('googleDriveConfig', defaults) || {});
 }
 
 function saveDriveConfig(config) {
@@ -13885,6 +14220,9 @@ async function connectGoogleDrive() {
   try {
     await requestDriveAccessToken('consent');
     await ensureDriveBackupFolder();
+    const connectedConfig = getDriveConfig();
+    connectedConfig.autoConnectEnabled = true;
+    saveDriveConfig(connectedConfig);
     try {
       const about = await driveApi('/drive/v3/about?fields=user(displayName,emailAddress)');
       const config = getDriveConfig();
@@ -13901,6 +14239,21 @@ async function connectGoogleDrive() {
   }
 }
 
+async function autoConnectGoogleDriveAfterLogin() {
+  if (_driveAutoConnectAttempted || _driveAccessToken) return;
+  _driveAutoConnectAttempted = true;
+  const config = getDriveConfig();
+  if (!config.autoConnectEnabled || !config.clientId || !config.folderId || !_driveHostedOriginAvailable()) return;
+  try {
+    await requestDriveAccessToken('');
+    await ensureDriveBackupFolder();
+    scheduleGoogleDriveAutoBackup();
+    if (currentPage === 'system' && systemTab === 'drive') renderGoogleDriveSettings();
+  } catch (error) {
+    console.info('Google Drive 자동 연결 대기:', error && error.message ? error.message : error);
+  }
+}
+
 function disconnectGoogleDrive() {
   if (_driveAccessToken && window.google && google.accounts && google.accounts.oauth2) {
     google.accounts.oauth2.revoke(_driveAccessToken, () => {});
@@ -13913,6 +14266,7 @@ function disconnectGoogleDrive() {
   config.folderId = '';
   config.folderUrl = '';
   config.connectedEmail = '';
+  config.autoConnectEnabled = false;
   saveDriveConfig(config);
   renderGoogleDriveSettings();
   showToast('Google Drive 연결 정보를 해제했습니다.', 'info');
@@ -13921,6 +14275,7 @@ function disconnectGoogleDrive() {
 function saveGoogleDriveSettings() {
   const config = getDriveConfig();
   config.clientId = v('drive-client-id').trim();
+  config.autoConnectEnabled = !!(inp('drive-auto-connect') && inp('drive-auto-connect').checked);
   config.autoBackupEnabled = !!(inp('drive-auto-enabled') && inp('drive-auto-enabled').checked);
   config.autoBackupHours = Math.max(1, Number(v('drive-auto-hours')) || 24);
   saveDriveConfig(config);
@@ -14306,6 +14661,9 @@ async function renderGoogleDriveSettings() {
         '<div class="form-row"><label class="form-lbl">OAuth 웹 클라이언트 ID</label>' +
           '<input class="form-inp" id="drive-client-id" value="' + _driveEsc(config.clientId) + '" placeholder="xxxxxxxx.apps.googleusercontent.com"></div>' +
         '<div style="font-size:11px;color:var(--tx-t);line-height:1.7;">Google Cloud Console에서 Drive API를 활성화하고 OAuth 웹 클라이언트를 만든 뒤 현재 HTTPS 주소를 승인된 JavaScript 원본에 등록하세요. 권한은 앱이 만든 파일만 접근하는 drive.file을 사용합니다.</div>' +
+        '<label style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;">' +
+          '<input type="checkbox" id="drive-auto-connect" ' + (config.autoConnectEnabled !== false ? 'checked' : '') + '>시스템 로그인 후 Google Drive 자동 연결</label>' +
+        '<div style="font-size:10px;color:var(--tx-t);line-height:1.6;">최초 1회 Drive 연결과 권한 승인이 필요합니다. Google 로그인 세션 또는 브라우저 정책에 따라 연결 버튼을 다시 눌러야 할 수 있습니다.</div>' +
         '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px;border:1px solid var(--br);border-radius:var(--rm);">' +
           '<label style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;"><input type="checkbox" id="drive-auto-enabled" ' + (config.autoBackupEnabled ? 'checked' : '') + '>자동 백업</label>' +
           '<label style="font-size:11px;color:var(--tx-s);">주기 <input id="drive-auto-hours" type="number" min="1" value="' + (Number(config.autoBackupHours)||24) + '" style="width:70px;height:30px;text-align:right;"> 시간</label>' +
@@ -14368,6 +14726,12 @@ function updateTodoBadge() {
 function renderNotes() {
   var content = inp('memo-content');
   if (!content) return;
+  var noteDates = memoTab === 'memos'
+    ? memoList.map(function(m) { return m.updatedAt || m.createdAt; })
+    : todoList.map(function(t) { return t.dueDate || t.startDate || t.createdAt; });
+  ensureDateView('notes', 'memo-content', noteDates, renderNotes);
+  var dateBar = inp('date-view-notes');
+  if (dateBar) dateBar.style.display = memoTab === 'report' ? 'none' : 'flex';
   updateTodoBadge();
   scanTodoReminders();
   renderMemoKpi();
@@ -14403,6 +14767,7 @@ function renderMemoCards() {
   var filter = v('memo-filter');
   var list = memoList.filter(function(m) {
     if (!_memoQueryMatch(m, q)) return false;
+    if (!dateViewMatch('notes', m.updatedAt || m.createdAt)) return false;
     return filter !== 'important' || m.important;
   }).sort(function(a, b) {
     return Number(!!b.important) - Number(!!a.important) || String(b.updatedAt).localeCompare(String(a.updatedAt));
@@ -14435,6 +14800,7 @@ function _filteredTodos() {
   var filter = v('memo-filter');
   return todoList.filter(function(t) {
     if (!_memoQueryMatch(t, q)) return false;
+    if (!dateViewMatch('notes', t.dueDate || t.startDate || t.createdAt)) return false;
     if (filter === 'important') return t.priority === '긴급' || t.priority === '높음';
     if (filter === 'overdue') return t.status !== '완료' && t.dueDate && t.dueDate < today();
     if (filter === 'today') return t.status !== '완료' && t.dueDate === today();
