@@ -1824,6 +1824,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
         <label>첨부파일 <span style="font-weight:400;color:var(--tx-t);">(파일당 1MB, 최대 5개)</span></label>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <button class="btn btn-sm" type="button" onclick="inp('memo-attachment-input').click()"><i class="ti ti-paperclip"></i>파일 추가</button>
+          <button class="btn btn-sm" id="memo-drive-upload-btn" type="button" onclick="uploadMemoAttachmentsToGoogleDrive()"><i class="ti ti-brand-google-drive"></i>Drive 저장</button>
           <input id="memo-attachment-input" type="file" multiple style="display:none;" onchange="addMemoAttachments(this)">
           <div id="memo-attachment-list" class="memo-meta"></div>
         </div>
@@ -2155,6 +2156,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="btn btn-icon" onclick="importRfqXLS()" title="엑셀 가져오기"><i class="ti ti-file-import"></i></button>
       <button class="btn btn-icon" onclick="exportRfqXLS()" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
       <button class="btn btn-icon" onclick="openRfqPrint(null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
+      <button class="btn btn-icon" onclick="saveDocumentBundleToGoogleDrive('rfq',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
     </div>
 
     <div class="card">
@@ -2181,6 +2183,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="btn btn-icon" onclick="importPoListXLS()" title="엑셀 가져오기"><i class="ti ti-file-import"></i></button>
       <button class="btn btn-icon" onclick="exportPoXLS()" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
       <button class="btn btn-icon" onclick="openPoPrint(null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
+      <button class="btn btn-icon" onclick="saveDocumentBundleToGoogleDrive('po',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
     </div>
 
     <!-- 선택 일괄 동작 바 -->
@@ -2189,6 +2192,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="btn btn-sm" id="po-clone-btn" onclick="poBulkClone()"><i class="ti ti-copy"></i>선택 복제</button>
       <button class="btn btn-sm" onclick="poBulkPrint()"><i class="ti ti-printer"></i>선택 PDF 출력</button>
       <button class="btn btn-sm" onclick="poBulkExport()"><i class="ti ti-file-spreadsheet"></i>선택 엑셀</button>
+      <button class="btn btn-sm" onclick="poBulkDrive()"><i class="ti ti-brand-google-drive"></i>Drive 저장</button>
       <button class="btn btn-sm" onclick="poBulkEmail()"><i class="ti ti-mail"></i>선택 이메일</button>
       <button class="btn btn-sm btn-danger" onclick="poBulkDelete()"><i class="ti ti-trash"></i>선택 삭제</button>
       <button class="btn btn-sm" style="margin-left:auto;" onclick="poToggleAll(false)"><i class="ti ti-x"></i>선택 해제</button>
@@ -2214,6 +2218,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="btn btn-primary btn-icon" onclick="openSalesDocAdd('statement')" title="거래명세표 등록"><i class="ti ti-plus"></i></button>
       <button class="btn btn-icon" onclick="exportSalesDocCSV('statement')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
       <button class="btn btn-icon" onclick="openSalesDocPrint('statement',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
+      <button class="btn btn-icon" onclick="saveDocumentBundleToGoogleDrive('statement',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
     </div>
     <div class="card"><div id="st-table" style="overflow-x:auto;"></div></div>
   </div>
@@ -2233,6 +2238,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="btn btn-primary btn-icon" onclick="openSalesDocAdd('tax')" title="세금계산서 등록"><i class="ti ti-plus"></i></button>
       <button class="btn btn-icon" onclick="exportSalesDocCSV('tax')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
       <button class="btn btn-icon" onclick="openSalesDocPrint('tax',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
+      <button class="btn btn-icon" onclick="saveDocumentBundleToGoogleDrive('tax',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
     </div>
     <div class="card"><div id="tx-table" style="overflow-x:auto;"></div></div>
   </div>
@@ -2258,6 +2264,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="btn btn-primary btn-icon" onclick="openSODocAdd('quote')" title="견적서 등록"><i class="ti ti-plus"></i></button>
       <button class="btn btn-icon" onclick="exportSODocCSV('quote')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
       <button class="btn btn-icon" onclick="openSODocPrint('quote',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
+      <button class="btn btn-icon" onclick="saveDocumentBundleToGoogleDrive('quote',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
     </div>
     <div class="card"><div id="qt-table" style="overflow-x:auto;"></div></div>
     </div><!-- /sd-tab-quote -->
@@ -2275,6 +2282,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <input type="text" id="so-q" placeholder="품목명·고객사 검색..." style="min-width:180px;" oninput="renderSODoc('order')">
       <button class="btn btn-icon" onclick="exportSODocCSV('order')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
       <button class="btn btn-icon" onclick="openSODocPrint('order',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
+      <button class="btn btn-icon" onclick="saveDocumentBundleToGoogleDrive('order',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
     </div>
     <div class="card"><div id="so-table" style="overflow-x:auto;"></div></div>
     </div><!-- /sd-tab-order -->
@@ -10027,6 +10035,7 @@ function renderRfq() {
           <button class="edit-btn" onclick="openRfqEdit('${r.id}')"><i class="ti ti-edit"></i>수정</button>
           <button class="btn btn-sm" style="margin-left:3px;" onclick="openRfqPrint('${r.id}')" title="PDF 출력"><i class="ti ti-printer"></i></button>
           <button class="btn btn-sm" style="margin-left:3px;border-color:var(--br-ok);color:var(--tx-ok);" onclick="exportRfqXLS('${r.id}')" title="엑셀 다운로드"><i class="ti ti-file-spreadsheet"></i></button>
+          <button class="btn btn-sm" style="margin-left:3px;" onclick="saveDocumentBundleToGoogleDrive('rfq','${r.id}')" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
           <button class="btn btn-sm" style="margin-left:3px;border-color:var(--br-i);color:var(--tx-i);" onclick="openEmailModal(rfqList.find(x=>x.id==='${r.id}'),'rfq')" title="이메일 발송"><i class="ti ti-mail"></i></button>
           <button class="del-btn" style="margin-left:3px;" onclick="deleteRfq('${r.id}')"><i class="ti ti-trash"></i></button>
         </td>
@@ -10369,6 +10378,7 @@ function poUpdateBulkBar(){
 function poBulkPrint(){ const ids=poCheckedIds(); if(!ids.length) return; openPoPrint(ids, true); }   // 선택 건은 건별 개별 출력
 function poBulkClone(){ const ids=poCheckedIds(); if(ids.length===1) clonePo(ids[0]); }
 function poBulkExport(){ const ids=poCheckedIds(); if(!ids.length) return; exportPoXLS(ids); }
+function poBulkDrive(){ const ids=poCheckedIds(); if(!ids.length) return; saveDocumentBundleToGoogleDrive('po', ids); }
 function poBulkEmail(){ const ids=poCheckedIds(); if(ids.length!==1){ showToast('이메일은 한 건만 선택해 발송하세요.','info'); return; } openEmailModal(poList.find(x=>x.id===ids[0]),'po'); }
 function poBulkDelete(){
   const ids=poCheckedIds(); if(!ids.length) return;
@@ -11344,6 +11354,7 @@ function renderSalesDoc(type) {
         <td style="white-space:nowrap;">
           <button class="edit-btn" onclick="openSalesDocEdit('${type}','${d.id}')"><i class="ti ti-edit"></i>수정</button>
           <button class="btn btn-sm" style="margin-left:3px;" onclick="openSalesDocPrint('${type}','${d.id}')" title="PDF 출력"><i class="ti ti-printer"></i></button>
+          <button class="btn btn-sm" style="margin-left:3px;" onclick="saveDocumentBundleToGoogleDrive('${type}','${d.id}')" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
           <button class="btn btn-sm" style="margin-left:3px;border-color:var(--br-i);color:var(--tx-i);" onclick="openEmailModal(salesList('${type}').find(x=>x.id==='${d.id}'),'${type}')" title="이메일 발송"><i class="ti ti-mail"></i></button>
           <button class="del-btn" style="margin-left:3px;" onclick="deleteSalesDoc('${type}','${d.id}')"><i class="ti ti-trash"></i></button>
         </td>
@@ -11803,6 +11814,7 @@ function renderSODoc(type) {
         <td style="white-space:nowrap;">
           <button class="edit-btn" onclick="openSODocEdit('${type}','${d.id}')"><i class="ti ti-edit"></i>수정</button>
           <button class="btn btn-sm" style="margin-left:3px;" onclick="openSODocPrint('${type}','${d.id}')" title="PDF 출력"><i class="ti ti-printer"></i></button>
+          <button class="btn btn-sm" style="margin-left:3px;" onclick="saveDocumentBundleToGoogleDrive('${type}','${d.id}')" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
           <button class="btn btn-sm" style="margin-left:3px;border-color:var(--br-i);color:var(--tx-i);" onclick="openEmailModal(soDocList('${type}').find(x=>x.id==='${d.id}'),'${type}')" title="이메일 발송"><i class="ti ti-mail"></i></button>
           ${type==='quote'
             ? `<button class="btn btn-sm" style="margin-left:3px;border-color:var(--br-ok);color:var(--tx-ok);" onclick="convertQuoteToOrder('${d.id}')" title="수주 전환"${d.status==='수주전환'?' disabled':''}><i class="ti ti-arrow-right-bar"></i>수주전환</button>`
@@ -13677,6 +13689,7 @@ let _driveTokenClient = null;
 let _driveAccessToken = '';
 let _driveTokenExpiresAt = 0;
 let _driveBackups = [];
+let _driveAutoBackupTimer = null;
 
 function getDriveConfig() {
   return loadStorage('googleDriveConfig', {
@@ -13684,7 +13697,9 @@ function getDriveConfig() {
     folderId: '',
     folderUrl: '',
     connectedEmail: '',
-    lastBackupAt: ''
+    lastBackupAt: '',
+    autoBackupEnabled: false,
+    autoBackupHours: 24
   });
 }
 
@@ -13815,6 +13830,33 @@ async function ensureDriveBackupFolder() {
   return folder;
 }
 
+async function ensureDriveSubfolder(name, parentId) {
+  const safeName = String(name || '').replace(/'/g, "\\'");
+  const query = encodeURIComponent(
+    "name='" + safeName + "' and '" + parentId + "' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
+  );
+  const found = await driveApi('/drive/v3/files?q=' + query + '&spaces=drive&fields=files(id,name,webViewLink)&pageSize=1');
+  if (found.files && found.files[0]) return found.files[0];
+  return driveApi('/drive/v3/files?fields=id,name,webViewLink', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name:name,mimeType:'application/vnd.google-apps.folder',parents:[parentId]})
+  });
+}
+
+async function uploadBlobToGoogleDrive(blob, fileName, folderName) {
+  const root = await ensureDriveBackupFolder();
+  const folder = folderName ? await ensureDriveSubfolder(folderName, root.id) : root;
+  const metadata = { name:fileName, parents:[folder.id], mimeType:blob.type || 'application/octet-stream' };
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(metadata)], {type:'application/json'}));
+  form.append('file', blob, fileName);
+  return driveApi('/upload/drive/v3/files?uploadType=multipart&fields=id,name,size,modifiedTime,webViewLink,mimeType', {
+    method:'POST',
+    body:form
+  });
+}
+
 async function connectGoogleDrive() {
   try {
     await requestDriveAccessToken('consent');
@@ -13828,6 +13870,7 @@ async function connectGoogleDrive() {
       saveDriveConfig(config);
     } catch (error) {}
     showToast('Google Drive 연결이 완료되었습니다.', 'success');
+    scheduleGoogleDriveAutoBackup();
     await renderGoogleDriveSettings();
   } catch (error) {
     showToast(error.message || 'Google Drive 연결에 실패했습니다.', 'error');
@@ -13841,6 +13884,7 @@ function disconnectGoogleDrive() {
   _driveAccessToken = '';
   _driveTokenExpiresAt = 0;
   _driveBackups = [];
+  if (_driveAutoBackupTimer) clearInterval(_driveAutoBackupTimer);
   const config = getDriveConfig();
   config.folderId = '';
   config.folderUrl = '';
@@ -13853,7 +13897,10 @@ function disconnectGoogleDrive() {
 function saveGoogleDriveSettings() {
   const config = getDriveConfig();
   config.clientId = v('drive-client-id').trim();
+  config.autoBackupEnabled = !!(inp('drive-auto-enabled') && inp('drive-auto-enabled').checked);
+  config.autoBackupHours = Math.max(1, Number(v('drive-auto-hours')) || 24);
   saveDriveConfig(config);
+  scheduleGoogleDriveAutoBackup();
   showToast('Google Drive OAuth 설정을 저장했습니다.', 'success');
   renderGoogleDriveSettings();
 }
@@ -13876,19 +13923,13 @@ async function backupDataToGoogleDrive() {
   const button = inp('drive-backup-btn');
   if (button) { button.disabled = true; button.innerHTML = '<i class="ti ti-loader animate-spin"></i>백업 중'; }
   try {
-    const folder = await ensureDriveBackupFolder();
     const name = _driveBackupName();
     const payload = JSON.stringify(buildDataBackupPayload(), null, 2);
-    const boundary = 'mespro_' + Date.now();
-    const metadata = JSON.stringify({ name, parents:[folder.id], mimeType:'application/json' });
-    const body = '--' + boundary + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' +
-      metadata + '\r\n--' + boundary + '\r\nContent-Type: application/json\r\n\r\n' +
-      payload + '\r\n--' + boundary + '--';
-    const file = await driveApi('/upload/drive/v3/files?uploadType=multipart&fields=id,name,modifiedTime,webViewLink', {
-      method: 'POST',
-      headers: { 'Content-Type':'multipart/related; boundary=' + boundary },
-      body
-    });
+    const file = await uploadBlobToGoogleDrive(
+      new Blob([payload], {type:'application/json'}),
+      name,
+      'Backups'
+    );
     const config = getDriveConfig();
     config.lastBackupAt = new Date().toISOString();
     saveDriveConfig(config);
@@ -13901,11 +13942,214 @@ async function backupDataToGoogleDrive() {
   }
 }
 
+function scheduleGoogleDriveAutoBackup() {
+  if (_driveAutoBackupTimer) clearInterval(_driveAutoBackupTimer);
+  if (!getDriveConfig().autoBackupEnabled) return;
+  const check = async () => {
+    if (!_driveAccessToken || Date.now() >= _driveTokenExpiresAt - 60000) return;
+    const config = getDriveConfig();
+    if (!config.autoBackupEnabled) return;
+    const last = config.lastBackupAt ? new Date(config.lastBackupAt).getTime() : 0;
+    const interval = Math.max(1, Number(config.autoBackupHours) || 24) * 3600000;
+    if (!last || Date.now() - last >= interval) await backupDataToGoogleDrive();
+  };
+  _driveAutoBackupTimer = setInterval(check, 10 * 60000);
+  setTimeout(check, 1500);
+}
+
+function _driveWithSingleDocument(type, id, callback) {
+  if (!id || Array.isArray(id)) return callback();
+  let original;
+  if (type === 'statement') {
+    original = statementList;
+    statementList = statementList.filter(item=>item.id === id);
+  } else if (type === 'tax') {
+    original = taxList;
+    taxList = taxList.filter(item=>item.id === id);
+  } else if (type === 'quote') {
+    original = quoteList;
+    quoteList = quoteList.filter(item=>item.id === id);
+  } else if (type === 'order') {
+    original = orderList;
+    orderList = orderList.filter(item=>item.id === id);
+  } else {
+    return callback();
+  }
+  try {
+    return callback();
+  } finally {
+    if (type === 'statement') statementList = original;
+    else if (type === 'tax') taxList = original;
+    else if (type === 'quote') quoteList = original;
+    else if (type === 'order') orderList = original;
+  }
+}
+
+function _driveDocumentConfig(type) {
+  const map = {
+    rfq:{label:'견적요청서',print:id=>openRfqPrint(id),xlsx:id=>exportRfqXLS(id)},
+    po:{label:'구매발주서',print:id=>openPoPrint(id),xlsx:id=>exportPoXLS(id)},
+    statement:{label:'거래명세표',print:id=>openSalesDocPrint('statement',id),xlsx:id=>_driveWithSingleDocument('statement',id,()=>exportSalesDocCSV('statement'))},
+    tax:{label:'세금계산서',print:id=>openSalesDocPrint('tax',id),xlsx:id=>_driveWithSingleDocument('tax',id,()=>exportSalesDocCSV('tax'))},
+    quote:{label:'견적서',print:id=>openSODocPrint('quote',id),xlsx:id=>_driveWithSingleDocument('quote',id,()=>exportSODocCSV('quote'))},
+    order:{label:'수주서',print:id=>openSODocPrint('order',id),xlsx:id=>_driveWithSingleDocument('order',id,()=>exportSODocCSV('order'))}
+  };
+  return map[type];
+}
+
+function captureDocumentPrintHtml(callback) {
+  let html = '';
+  const originalOpen = window.open;
+  window.open = function() {
+    return {
+      document:{
+        write:value=>{ html += String(value || ''); },
+        close:()=>{}
+      },
+      print:()=>{}
+    };
+  };
+  try { callback(); }
+  finally { window.open = originalOpen; }
+  if (!html) throw new Error('문서 인쇄 내용을 생성하지 못했습니다.');
+  return html;
+}
+
+async function documentPdfBlob(type, id) {
+  const config = _driveDocumentConfig(type);
+  if (!config) throw new Error('지원하지 않는 문서 형식입니다.');
+  if (typeof html2pdf === 'undefined') throw new Error('PDF 생성 라이브러리가 준비되지 않았습니다.');
+  const html = captureDocumentPrintHtml(()=>config.print(id));
+  const parsed = new DOMParser().parseFromString(html, 'text/html');
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;left:-100000px;top:0;width:794px;background:#fff;color:#111;';
+  Array.from(parsed.head.querySelectorAll('style')).forEach(style=>wrap.appendChild(style.cloneNode(true)));
+  const content = document.createElement('div');
+  content.innerHTML = parsed.body.innerHTML;
+  wrap.appendChild(content);
+  document.body.appendChild(wrap);
+  try {
+    return await html2pdf().from(content).set({
+      margin:10,
+      image:{type:'jpeg',quality:.96},
+      html2canvas:{scale:2,useCORS:true},
+      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
+    }).outputPdf('blob');
+  } finally {
+    wrap.remove();
+  }
+}
+
+function captureDocumentXlsxBlob(callback) {
+  if (typeof XLSX === 'undefined') throw new Error('엑셀 생성 라이브러리가 준비되지 않았습니다.');
+  const original = XLSX.writeFile;
+  let result = null;
+  XLSX.writeFile = function(workbook, fileName) {
+    result = {
+      blob:new Blob([XLSX.write(workbook, {bookType:'xlsx',type:'array'})], {
+        type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      }),
+      fileName:fileName
+    };
+  };
+  try { callback(); }
+  finally { XLSX.writeFile = original; }
+  if (!result) throw new Error('엑셀 문서를 생성하지 못했습니다.');
+  return result;
+}
+
+async function saveDocumentToGoogleDrive(type, id, format) {
+  const config = _driveDocumentConfig(type);
+  if (!config) { showToast('지원하지 않는 문서입니다.', 'error'); return; }
+  try {
+    await requestDriveAccessToken('');
+    const base = String(id || config.label + '_' + today()).replace(/[\\/:*?"<>|,]/g, '_');
+    let blob, fileName;
+    if (format === 'pdf') {
+      blob = await documentPdfBlob(type, id);
+      fileName = base + '.pdf';
+    } else {
+      const result = captureDocumentXlsxBlob(()=>config.xlsx(id));
+      blob = result.blob;
+      fileName = id ? base + '.xlsx' : result.fileName;
+    }
+    const file = await uploadBlobToGoogleDrive(blob, fileName, 'Documents');
+    showToast(file.name + ' Google Drive 저장 완료', 'success');
+  } catch (error) {
+    showToast(error.message || 'Google Drive 문서 저장에 실패했습니다.', 'error');
+  }
+}
+
+async function saveDocumentBundleToGoogleDrive(type, id) {
+  const config = _driveDocumentConfig(type);
+  if (!config) { showToast('지원하지 않는 문서입니다.', 'error'); return; }
+  try {
+    await requestDriveAccessToken('');
+    const base = String(id || config.label + '_' + today()).replace(/[\\/:*?"<>|,]/g, '_');
+    const pdfBlob = await documentPdfBlob(type, id);
+    const xlsxResult = captureDocumentXlsxBlob(()=>config.xlsx(id));
+    await uploadBlobToGoogleDrive(pdfBlob, base + '.pdf', 'Documents');
+    await uploadBlobToGoogleDrive(xlsxResult.blob, id ? base + '.xlsx' : xlsxResult.fileName, 'Documents');
+    showToast(config.label + ' PDF/XLSX Drive 저장 완료', 'success');
+  } catch (error) {
+    showToast(error.message || 'Google Drive 문서 저장에 실패했습니다.', 'error');
+  }
+}
+
+function dataUrlToBlob(dataUrl) {
+  const parts = String(dataUrl || '').split(',');
+  if (parts.length < 2) throw new Error('첨부파일 데이터가 올바르지 않습니다.');
+  const mime = (parts[0].match(/data:([^;]+)/) || [,'application/octet-stream'])[1];
+  const binary = atob(parts[1]);
+  const bytes = new Uint8Array(binary.length);
+  for (let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], {type:mime});
+}
+
+async function uploadMemoAttachmentsToGoogleDrive() {
+  if (!_memoAttachments.length) { showToast('Drive에 저장할 첨부파일이 없습니다.', 'info'); return; }
+  const button = inp('memo-drive-upload-btn');
+  if (button) { button.disabled=true; button.innerHTML='<i class="ti ti-loader animate-spin"></i>업로드 중'; }
+  try {
+    await requestDriveAccessToken('');
+    let uploaded = 0;
+    for (const attachment of _memoAttachments) {
+      if (attachment.driveFileId) continue;
+      const dataUrl = attachment.dataUrl || memoAttachmentData[attachment.id];
+      if (!dataUrl) continue;
+      const file = await uploadBlobToGoogleDrive(dataUrlToBlob(dataUrl), attachment.name, 'Attachments');
+      attachment.driveFileId = file.id;
+      attachment.driveUrl = file.webViewLink || '';
+      uploaded++;
+    }
+    renderMemoAttachments();
+    showToast(uploaded ? uploaded + '개 첨부파일을 Drive에 저장했습니다.' : '이미 Drive에 저장된 첨부파일입니다.', uploaded ? 'success' : 'info');
+  } catch (error) {
+    showToast(error.message || '첨부파일 Drive 저장에 실패했습니다.', 'error');
+  } finally {
+    if (button) { button.disabled=false; button.innerHTML='<i class="ti ti-brand-google-drive"></i>Drive 저장'; }
+  }
+}
+
+async function downloadMemoAttachmentFromDrive(attachment) {
+  const token = await requestDriveAccessToken('');
+  const response = await fetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(attachment.driveFileId) + '?alt=media', {
+    headers:{Authorization:'Bearer ' + token}
+  });
+  if (!response.ok) throw new Error('Drive 첨부파일 다운로드에 실패했습니다. (' + response.status + ')');
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href=url; link.download=attachment.name || 'attachment'; link.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
 async function loadGoogleDriveBackups() {
   const list = inp('drive-backup-list');
   if (list) list.innerHTML = '<div class="empty"><i class="ti ti-loader animate-spin"></i>Drive 백업 목록을 불러오는 중...</div>';
   try {
-    const folder = await ensureDriveBackupFolder();
+    const root = await ensureDriveBackupFolder();
+    const folder = await ensureDriveSubfolder('Backups', root.id);
     const query = encodeURIComponent(
       "'" + folder.id + "' in parents and name contains 'mes-data-' and mimeType='application/json' and trashed=false"
     );
@@ -13982,6 +14226,10 @@ async function renderGoogleDriveSettings() {
         '<div class="form-row"><label class="form-lbl">OAuth 웹 클라이언트 ID</label>' +
           '<input class="form-inp" id="drive-client-id" value="' + _driveEsc(config.clientId) + '" placeholder="xxxxxxxx.apps.googleusercontent.com"></div>' +
         '<div style="font-size:11px;color:var(--tx-t);line-height:1.7;">Google Cloud Console에서 Drive API를 활성화하고 OAuth 웹 클라이언트를 만든 뒤 현재 HTTPS 주소를 승인된 JavaScript 원본에 등록하세요. 권한은 앱이 만든 파일만 접근하는 drive.file을 사용합니다.</div>' +
+        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px;border:1px solid var(--br);border-radius:var(--rm);">' +
+          '<label style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;"><input type="checkbox" id="drive-auto-enabled" ' + (config.autoBackupEnabled ? 'checked' : '') + '>자동 백업</label>' +
+          '<label style="font-size:11px;color:var(--tx-s);">주기 <input id="drive-auto-hours" type="number" min="1" value="' + (Number(config.autoBackupHours)||24) + '" style="width:70px;height:30px;text-align:right;"> 시간</label>' +
+          '<span style="font-size:10px;color:var(--tx-t);">페이지가 열려 있고 Drive가 연결된 동안 실행됩니다.</span></div>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
           '<button class="btn" onclick="saveGoogleDriveSettings()"><i class="ti ti-device-floppy"></i>설정 저장</button>' +
           '<button class="btn btn-primary" onclick="connectGoogleDrive()" ' + (!hosted || !config.clientId ? 'disabled' : '') + '><i class="ti ti-plug-connected"></i>Drive 연결</button>' +
@@ -14245,7 +14493,10 @@ function saveMemo(closeAfter) {
   memo.important = inp('memo-important').checked;
   memo.attachments = _memoAttachments.map(function(a) {
     if (a.dataUrl) memoAttachmentData[a.id] = a.dataUrl;
-    return { id:a.id, name:a.name, type:a.type, size:a.size };
+    return {
+      id:a.id, name:a.name, type:a.type, size:a.size,
+      driveFileId:a.driveFileId || '', driveUrl:a.driveUrl || ''
+    };
   });
   saveStorage('memoAttachmentData', memoAttachmentData);
   memo.updatedAt = _memoNow();
@@ -14571,7 +14822,8 @@ function renderMemoAttachments() {
   box.innerHTML = _memoAttachments.map(function(a) {
     return '<span class="memo-tag"><button type="button" onclick="downloadMemoAttachment(\'' + a.id +
       '\')" style="border:0;background:none;color:inherit;cursor:pointer;padding:0;"><i class="ti ti-paperclip"></i>' +
-      _memoEsc(a.name) + '</button> <button type="button" onclick="removeMemoAttachment(\'' + a.id +
+      _memoEsc(a.name) + (a.driveFileId ? ' <i class="ti ti-brand-google-drive" title="Google Drive 저장됨"></i>' : '') +
+      '</button> <button type="button" onclick="removeMemoAttachment(\'' + a.id +
       '\')" style="border:0;background:none;color:var(--tx-d);cursor:pointer;">×</button></span>';
   }).join('');
 }
@@ -14583,7 +14835,7 @@ function removeMemoAttachment(id) {
   renderMemoAttachments();
 }
 
-function downloadMemoAttachment(id) {
+async function downloadMemoAttachment(id) {
   var pending = _memoAttachments.find(function(a) { return a.id === id; });
   var saved = null;
   memoList.some(function(m) {
@@ -14591,7 +14843,16 @@ function downloadMemoAttachment(id) {
     return !!saved;
   });
   var dataUrl = memoAttachmentData[id] || (pending && pending.dataUrl);
-  if (!dataUrl) { showToast('이 첨부파일은 현재 기기에 저장되어 있지 않습니다.', 'error'); return; }
+  if (!dataUrl) {
+    var driveAttachment = pending || saved;
+    if (driveAttachment && driveAttachment.driveFileId && typeof downloadMemoAttachmentFromDrive === 'function') {
+      try { await downloadMemoAttachmentFromDrive(driveAttachment); }
+      catch (error) { showToast(error.message || 'Drive 첨부파일을 내려받지 못했습니다.', 'error'); }
+      return;
+    }
+    showToast('이 첨부파일은 현재 기기 또는 Drive에 저장되어 있지 않습니다.', 'error');
+    return;
+  }
   var link = document.createElement('a');
   link.href = dataUrl;
   link.download = (pending && pending.name) || (saved && saved.name) || 'attachment';
