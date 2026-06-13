@@ -7,6 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js" integrity="sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4.4.1/dist/email.min.js" integrity="sha384-SALc35EccAf6RzGw4iNsyj7kTPr33K7RoGzYu+7heZhT8s0GZouafRiCg1qy44AS" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha384-Yv5O+t3uE3hunW8uyrbpPW3iw6/5/Y7HitWJBLgqfMoA36NogMmy+8wWZMpn3HWc" crossorigin="anonymous"></script>
 <!-- Firebase (클라우드 공유 동기화) -->
@@ -393,6 +394,47 @@ body { font-family: var(--f); background: var(--bg-t); color: var(--tx); height:
   min-height: 32px;
   margin: 0;
 }
+.att-quick-card { padding: 14px 16px; }
+.att-quick-head { align-items: flex-start; }
+.att-quick-help { margin-top: 4px; color: var(--tx-t); font-size: 10.5px; }
+.att-quick-filters { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.att-quick-filters input,
+.att-quick-filters select,
+.att-quick-bulkbar select {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--br);
+  border-radius: var(--rm);
+  background: var(--bg-p);
+  color: var(--tx);
+  font-family: var(--f);
+  font-size: 11px;
+}
+.att-quick-filters input[type="date"] { width: 130px; }
+.att-quick-filters input[type="search"] { width: 140px; }
+.att-quick-bulkbar {
+  margin-bottom: 8px;
+  padding: 7px 9px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  border: 1px solid var(--br-i);
+  border-radius: var(--rm);
+  background: var(--bg-i);
+  font-size: 11px;
+}
+.att-quick-table-wrap { max-height: 430px !important; overflow: auto !important; }
+.att-quick-table th,
+.att-quick-table td { padding: 6px 8px; }
+.att-quick-table .att-quick-worker strong { display: block; white-space: nowrap; }
+.att-quick-table .att-quick-worker span { display: block; margin-top: 2px; color: var(--tx-t); font-size: 9.5px; white-space: nowrap; }
+.att-quick-table .att-quick-status { min-width: 88px; }
+.att-quick-time { width: 88px; height: 28px; padding: 0 5px; font-size: 11px; }
+.att-quick-extra { width: 66px; height: 28px; padding: 0 5px; font-size: 11px; text-align: right; }
+.att-quick-note { min-width: 120px; width: 100%; height: 28px; padding: 0 7px; font-size: 11px; }
+.att-quick-actions { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.att-quick-exception td { box-shadow: inset 0 1px 0 var(--br-w), inset 0 -1px 0 var(--br-w); }
 .card-ttl { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
 .card-ttl i { font-size: 16px; color: var(--tx-i); }
 
@@ -695,7 +737,7 @@ body.sb-mini .main { margin-left: 0 !important; }
   border-radius: 14px;
   background: var(--bg-p);
   color: var(--tx-i);
-  font-size: 26px;
+  font-size: 29px;
   box-shadow: 0 2px 5px rgba(0,0,0,.06);
 }
 .topnav.mega-menu .topnav-menu button:hover,
@@ -1314,6 +1356,47 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
   }
   /* 페이지 내부 탭 바(직원·재무·견적/수주 등) 가로 스크롤 허용 */
   .toolbar { flex-wrap: wrap; gap: 6px; }
+  .att-quick-card { padding: 11px; }
+  .att-quick-head { display: block; }
+  .att-quick-filters { margin-top: 9px; display: grid; grid-template-columns: 32px minmax(120px,1fr) 32px 48px; }
+  .att-quick-filters input[type="date"] { width: 100%; }
+  .att-quick-filters select,
+  .att-quick-filters input[type="search"] { width: 100%; grid-column: span 2; }
+  .att-quick-table-wrap { max-height: none !important; overflow: visible !important; }
+  .att-quick-table,
+  .att-quick-table tbody { display: block; }
+  .att-quick-table thead { display: none; }
+  .att-quick-table tr {
+    margin-bottom: 8px;
+    padding: 9px;
+    display: grid;
+    grid-template-columns: 28px minmax(0,1fr) 100px;
+    gap: 7px;
+    border: 1px solid var(--br);
+    border-radius: var(--rm);
+    background: var(--bg-p);
+  }
+  .att-quick-table td {
+    padding: 0 !important;
+    display: flex;
+    align-items: center;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  .att-quick-table td:last-child { position: static !important; right: auto !important; }
+  .att-quick-table td:nth-child(1) { grid-column: 1; grid-row: 1; }
+  .att-quick-table td:nth-child(2) { grid-column: 2; grid-row: 1; }
+  .att-quick-table td:nth-child(3) { grid-column: 3; grid-row: 1; }
+  .att-quick-table td:nth-child(4) { grid-column: 1 / span 2; grid-row: 2; }
+  .att-quick-table td:nth-child(5) { grid-column: 3; grid-row: 2; }
+  .att-quick-table td:nth-child(6) { grid-column: 1; grid-row: 3; }
+  .att-quick-table td:nth-child(7) { grid-column: 2 / span 2; grid-row: 3; }
+  .att-quick-table td:nth-child(8) { grid-column: 1 / -1; grid-row: 4; justify-content: flex-end; }
+  .att-quick-time,
+  .att-quick-extra,
+  .att-quick-note,
+  .att-quick-status { width: 100% !important; min-width: 0 !important; }
   [id^="date-view-"] {
     align-items: center !important;
     gap: 5px !important;
@@ -1561,7 +1644,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
   .topnav.mega-menu .topnav-menu,
   .topnav.mega-menu .topnav-menu-wide { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .topnav.mega-menu .topnav-menu button { min-height: 62px; font-size: 8.5px; gap:3px; }
-  .topnav.mega-menu .topnav-menu button i { width: 42px; height: 42px; flex-basis: 42px; font-size: 24px; border-radius:13px; }
+  .topnav.mega-menu .topnav-menu button i { width: 42px; height: 42px; flex-basis: 42px; font-size: 27px; border-radius:13px; }
   .mega-menu-head { position: sticky; top: -12px; z-index: 2; padding: 10px 0; background: var(--bg-p); }
   .topbar-search-compact.search-open {
     top: 8px;
@@ -1900,7 +1983,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
 
     <div class="tb-right">
       <div class="global-search-wrapper topbar-search-compact">
-        <input type="text" id="global-search-input" placeholder="통합 검색 (제품, 고객사, 자재, 생산지시, 재고, 직원...)" oninput="onGlobalSearch(this.value)" onfocus="onGlobalSearchFocus()" onkeydown="onGlobalSearchKeyDown(event)">
+        <input type="text" id="global-search-input" placeholder="통합 검색 (제품, 고객사, 자재, 직원, 메모, 할 일...)" oninput="onGlobalSearch(this.value)" onfocus="onGlobalSearchFocus()" onkeydown="onGlobalSearchKeyDown(event)">
         <button type="button" id="global-search-clear" onclick="clearGlobalSearch()" title="검색어 지우기" aria-label="검색어 지우기"><i class="ti ti-x"></i></button>
         <button type="button" class="global-search-btn" onclick="toggleGlobalSearchBox()" title="통합 검색" aria-label="통합 검색"><i class="ti ti-search"></i></button>
       </div>
@@ -2579,12 +2662,14 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     .todo-board{display:grid;grid-template-columns:repeat(3,minmax(250px,1fr));gap:12px;overflow-x:auto}
     .todo-col{background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rl);padding:10px;min-height:250px}
     .todo-item{background:var(--bg-p);border:1px solid var(--br);border-radius:var(--rm);padding:11px;margin-top:8px}
-    #todo-bulkbar{background:#062f55!important;border-color:#0d5c96!important;color:#85bceb!important}
+    #todo-bulkbar{background:var(--bg-i)!important;border:1px solid var(--br-i)!important;color:var(--tx-i)!important}
+    #todo-bulkbar>span{color:var(--tx-i)!important}
     #todo-bulkbar .btn-danger{background:#681010;border-color:#a62a2a;color:#ff9b9b}
     #todo-bulkbar .btn-danger:hover{background:#821717}
-    .todo-row-selected td{background:#06375f!important}
-    .todo-row-selected:hover td{background:#084875!important}
-    .todo-select,#todo-check-all{accent-color:#2388df;cursor:pointer}
+    .todo-row-selected td{background:var(--bg-i)!important;color:var(--tx)!important;border-top:1px solid var(--br-i);border-bottom:1px solid var(--br-i)}
+    .todo-row-selected:hover td{background:var(--bg-i)!important}
+    .todo-row-selected select{background:var(--bg-p);color:var(--tx);border-color:var(--br-i)}
+    .todo-select,#todo-check-all{accent-color:var(--tx-i);cursor:pointer}
     @media(max-width:780px){.todo-board{grid-template-columns:1fr}.memo-grid{grid-template-columns:1fr}}
   </style>
 
@@ -2617,7 +2702,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     <div class="dlg-title"><i class="ti ti-notes"></i><span id="memo-editor-title">메모 작성</span></div>
     <input type="hidden" id="memo-id">
     <div style="display:grid;gap:12px;">
-      <div class="ff"><label>제목</label><input id="memo-title" maxlength="120" placeholder="메모 제목"></div>
+      <div class="ff"><label>제목 <span style="font-weight:400;color:var(--tx-t);">(선택 · 비워두면 내용에서 자동 생성)</span></label><input id="memo-title" maxlength="120" placeholder="선택 입력"></div>
       <div class="ff"><label>내용</label><textarea id="memo-content-input" rows="9" placeholder="업무 내용, 회의 기록, 확인 사항을 입력하세요."></textarea></div>
       <div style="display:grid;grid-template-columns:1fr 160px;gap:10px;">
         <div class="ff"><label>태그</label><input id="memo-tags" placeholder="납기, 구매, 고객 (쉼표 구분)"></div>
@@ -2813,6 +2898,22 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     </div>
 
     <div class="system-panel" id="system-panel-templates" style="display:none;">
+      <div class="card" style="margin-bottom:16px;border-color:var(--br-i);">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-package-export"></i>공용 양식 패키지</span>
+          <span id="template-package-status" style="font-size:11px;color:var(--tx-t);">다른 MESPro 또는 외부 프로그램에서 사용할 수 있는 ZIP 패키지</span>
+        </div>
+        <div style="font-size:11.5px;color:var(--tx-s);line-height:1.75;margin-bottom:12px;">
+          현재 등록된 XLSX 양식, PDF 인쇄 CSS, 데이터 변수 규격과 사용 안내를 하나의 ZIP 파일로 내보냅니다.
+          가져오기 전 형식과 버전을 검사하며 기존 사용자 양식은 자동 백업됩니다.
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          <button class="btn btn-primary" onclick="exportDocTemplatePackage()"><i class="ti ti-package-export"></i>전체 양식 패키지 내보내기</button>
+          <button class="btn" onclick="inp('template-package-input').click()"><i class="ti ti-package-import"></i>양식 패키지 가져오기</button>
+          <button class="btn" onclick="restoreDocTemplatePackageBackup()"><i class="ti ti-history"></i>가져오기 전 양식 복원</button>
+          <input id="template-package-input" type="file" accept=".zip,application/zip" style="display:none;" onchange="importDocTemplatePackage(this)">
+        </div>
+      </div>
       <div class="card" style="margin-bottom:16px;">
         <div class="card-hd">
           <span class="card-ttl"><i class="ti ti-file-description"></i>견적요청서 엑셀 인쇄 양식</span>
@@ -4142,6 +4243,49 @@ function onGlobalSearch(q) {
     });
   }
 
+  // 8. 메모
+  const matchingMemos = (typeof memoList !== 'undefined' ? memoList : []).filter(m => {
+    const attachments = (m.attachments || []).map(file => file.name || '').join(' ');
+    return [m.title, m.content, m.summary, m.author, m.owner, (m.tags || []).join(' '), attachments]
+      .join(' ').toLowerCase().includes(q);
+  });
+  if (matchingMemos.length > 0) {
+    html += '<div style="padding:8px 12px; font-size:11px; font-weight:700; color:var(--tx-i); background:rgba(255,255,255,0.02); border-bottom:1px solid var(--br);"><i class="ti ti-notes"></i> 메모 (' + matchingMemos.length + ')</div>';
+    matchingMemos.forEach(m => {
+      matchCount++;
+      const title = m.title || '제목 없는 메모';
+      const preview = String(m.summary || m.content || '').replace(/\s+/g, ' ').trim().slice(0, 90);
+      const tags = (m.tags || []).slice(0, 3).map(tag => '#' + tag).join(' ');
+      const attachmentCount = (m.attachments || []).length;
+      html += `<div class="search-result-item" onclick="navToGlobalSearchResult('memo', '${m.id}')" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--br); transition: background 0.15s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background='transparent'">
+        <div style="font-weight:700; font-size:12px;"><i class="ti ti-notes" style="color:var(--tx-i);margin-right:4px;"></i>${esc(title)}</div>
+        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">${esc(preview) || '내용 없음'}</div>
+        <div style="font-size:9.5px; color:var(--tx-t); margin-top:3px;">${esc(tags)}${attachmentCount ? ' · 첨부 '+attachmentCount+'개' : ''}${m.author ? ' · '+esc(m.author) : ''}</div>
+      </div>`;
+    });
+  }
+
+  // 9. 할 일
+  const matchingTodos = (typeof todoList !== 'undefined' ? todoList : []).filter(t => {
+    const checklist = (t.checklist || []).map(entry =>
+      typeof entry === 'string' ? entry : (entry.text || entry.title || '')
+    ).join(' ');
+    return [t.title, t.content, t.owner, t.status, t.priority, checklist]
+      .join(' ').toLowerCase().includes(q);
+  });
+  if (matchingTodos.length > 0) {
+    html += '<div style="padding:8px 12px; font-size:11px; font-weight:700; color:var(--tx-ok); background:rgba(255,255,255,0.02); border-bottom:1px solid var(--br);"><i class="ti ti-list-check"></i> 할 일 (' + matchingTodos.length + ')</div>';
+    matchingTodos.forEach(t => {
+      matchCount++;
+      const preview = String(t.content || '').replace(/\s+/g, ' ').trim().slice(0, 90);
+      html += `<div class="search-result-item" onclick="navToGlobalSearchResult('todo', '${t.id}')" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--br); transition: background 0.15s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background='transparent'">
+        <div style="font-weight:700; font-size:12px;"><i class="ti ti-list-check" style="color:var(--tx-ok);margin-right:4px;"></i>${esc(t.title || '할 일')}</div>
+        ${preview ? `<div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">${esc(preview)}</div>` : ''}
+        <div style="font-size:9.5px; color:var(--tx-t); margin-top:3px;">${esc(t.status || '대기')} · ${esc(t.owner || '담당자 미지정')}${t.dueDate ? ' · 마감 '+esc(t.dueDate) : ''}</div>
+      </div>`;
+    });
+  }
+
   if (matchCount === 0) {
     html = `<div style="padding:24px 16px; text-align:center; color:var(--tx-t); font-size:12px;">
       <i class="ti ti-search-off" style="font-size:24px; display:block; margin-bottom:8px; opacity:0.4;"></i>
@@ -4248,6 +4392,14 @@ function navToGlobalSearchResult(category, id, parentId) {
     const w = workers.find(x => x.id === id);
     sv('workers-q', w ? w.name : id);
     renderWorkers();
+  } else if (category === 'memo') {
+    go('notes');
+    switchMemoTab('memos');
+    openMemoEditor(id);
+  } else if (category === 'todo') {
+    go('notes');
+    switchMemoTab('todos');
+    openTodoEditor(id);
   }
 }
 
@@ -4459,6 +4611,27 @@ function getClientName(id) { return clients.find(c => c.id === id)?.name || id; 
 function getProductById(id) { return products.find(p => p.id === id); }
 function getProductName(id) { return getProductById(id)?.name || id; }
 function getMatAmt(m) { return m.unitPrice * m.qty; }
+
+function normalizeTimeValue(value, fallback='') {
+  const raw = String(value == null ? '' : value).trim();
+  if (!raw) return fallback;
+  let hour, minute;
+  if (/^\d{1,2}$/.test(raw)) {
+    hour = Number(raw);
+    minute = 0;
+  } else if (/^\d{3,4}$/.test(raw)) {
+    const padded = raw.padStart(4, '0');
+    hour = Number(padded.slice(0, 2));
+    minute = Number(padded.slice(2));
+  } else {
+    const match = raw.match(/^(\d{1,2}):(\d{1,2})$/);
+    if (!match) return fallback || raw;
+    hour = Number(match[1]);
+    minute = Number(match[2]);
+  }
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return fallback || raw;
+  return String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+}
 
 function statusBadge(s) {
   const m = {
@@ -4748,12 +4921,128 @@ function toggleMobileSidebar() {
   toggleMegaMenu();
 }
 
-/* ── 페이지 히스토리 스택 ── */
+/* ── 모듈형 SPA 라우팅 ──
+   각 업무 화면은 하나의 index.html 안에서 동작하지만 고유 URL을 가진다.
+   예: #/finance/labor, #/workers/att, #/inventory/parts */
 let pageHistory = [];
+let _routeApplying = false;
+let _routeDepth = 0;
+
+const ROUTE_SUBPAGES = {
+  system: ['permissions','company','display','templates','api','drive','alimtalk','alerts','trash'],
+  workers: ['roster','att','leave'],
+  finance: ['dashboard','revenue','purchase','labor','cost','pnl','ar','etc'],
+  notes: ['memos','todos','board','report'],
+  salesdoc: ['quote','order'],
+  deliveries: ['list','closed'],
+  inventory: ['finished','parts','office']
+};
+
+function currentRouteSegment(page) {
+  if (page === 'system') return typeof systemTab === 'string' ? systemTab : 'permissions';
+  if (page === 'workers') return typeof empTab === 'string' ? empTab : 'roster';
+  if (page === 'finance') return typeof financeTab === 'string' ? financeTab : 'dashboard';
+  if (page === 'notes') return typeof memoTab === 'string' ? memoTab : 'memos';
+  if (page === 'salesdoc') return typeof salesTab === 'string' ? salesTab : 'quote';
+  if (page === 'deliveries') return typeof currentDlvTab === 'string' ? currentDlvTab : 'list';
+  if (page === 'inventory') {
+    return invCategory === '완제품' ? 'finished' : invCategory === '사무비품' ? 'office' : 'parts';
+  }
+  return '';
+}
+
+function appRouteHash(page, segment) {
+  const safePage = String(page || 'dashboard').replace(/[^a-z0-9-]/gi, '');
+  const allowed = ROUTE_SUBPAGES[safePage];
+  const safeSegment = allowed && allowed.includes(segment) ? segment : '';
+  return '#/' + safePage + (safeSegment ? '/' + safeSegment : '');
+}
+
+function parseAppRoute() {
+  const parts = String(location.hash || '').replace(/^#\/?/, '').split('/').filter(Boolean);
+  let page = parts[0] || 'dashboard';
+  if (!inp('pg-' + page)) page = 'dashboard';
+  const allowed = ROUTE_SUBPAGES[page] || [];
+  const segment = allowed.includes(parts[1]) ? parts[1] : (allowed[0] || '');
+  return { page, segment };
+}
+
+function writeAppRoute(page, segment, mode) {
+  const hash = appRouteHash(page, segment);
+  if (location.hash === hash && mode !== 'replace') return;
+  if (mode === 'replace') {
+    history.replaceState({ mesRoute:true, depth:_routeDepth }, '', hash);
+  } else {
+    _routeDepth += 1;
+    history.pushState({ mesRoute:true, depth:_routeDepth }, '', hash);
+  }
+  updateTopbarBackButton();
+}
+
+function applyRouteSubpage(page, segment) {
+  if (page === 'system') systemTab = segment || 'permissions';
+  else if (page === 'workers') empTab = segment || 'roster';
+  else if (page === 'finance') financeTab = segment || 'dashboard';
+  else if (page === 'notes') memoTab = segment || 'memos';
+  else if (page === 'salesdoc') salesTab = segment || 'quote';
+  else if (page === 'deliveries') currentDlvTab = segment || 'list';
+  else if (page === 'inventory') {
+    const meta = INV_CATS[segment] || INV_CATS.finished;
+    invCategory = meta.cat;
+  }
+}
+
+function applyAppRoute() {
+  const route = parseAppRoute();
+  const canCheckPermission = typeof cloudConfigured !== 'function' || !cloudConfigured() || !!_cloudUser;
+  if (canCheckPermission && route.page !== 'dashboard' && typeof pageAllowed === 'function' && !pageAllowed(route.page)) {
+    showToast('이 페이지에 접근할 권한이 없습니다.', 'error');
+    _routeDepth = 0;
+    writeAppRoute('dashboard', '', 'replace');
+    return _goTo('dashboard', null);
+  }
+  _routeApplying = true;
+  try {
+    applyRouteSubpage(route.page, route.segment);
+    if (route.page === 'inventory') {
+      const meta = INV_CATS[route.segment] || INV_CATS.finished;
+      return _showInventoryPage(route.segment || 'finished', meta, null);
+    }
+    return _goTo(route.page, null);
+  } finally {
+    _routeApplying = false;
+  }
+}
+
+function initAppRouter() {
+  const route = parseAppRoute();
+  const initialHash = appRouteHash(route.page, route.segment);
+  const stateDepth = history.state && history.state.mesRoute ? Number(history.state.depth) || 0 : 0;
+  _routeDepth = stateDepth;
+  history.replaceState({ mesRoute:true, depth:_routeDepth }, '', initialHash);
+  applyAppRoute();
+  window.addEventListener('popstate', function(event) {
+    _routeDepth = event.state && event.state.mesRoute ? Number(event.state.depth) || 0 : 0;
+    applyAppRoute();
+    updateTopbarBackButton();
+  });
+  window.addEventListener('hashchange', function() {
+    const route = parseAppRoute();
+    if (appRouteHash(currentPage, currentRouteSegment(currentPage)) !== appRouteHash(route.page, route.segment)) {
+      applyAppRoute();
+    }
+  });
+}
+
+function syncCurrentSubRoute(page, segment) {
+  if (_routeApplying || currentPage !== page) return;
+  const nextHash = appRouteHash(page, segment);
+  if (location.hash !== nextHash) writeAppRoute(page, segment, 'push');
+}
 
 function updateTopbarBackButton() {
   const btn = inp('topnav-back-btn');
-  if (btn) btn.disabled = pageHistory.length === 0;
+  if (btn) btn.disabled = _routeDepth <= 0;
 }
 
 function go(id, el) {
@@ -4763,19 +5052,20 @@ function go(id, el) {
     closeSbOverlay();
     return;
   }
-  if (currentPage) pageHistory.push(currentPage);
-  if (pageHistory.length > 30) pageHistory.shift(); // 최대 30개 유지
-
+  if (id !== 'dashboard' && typeof pageAllowed === 'function' && !pageAllowed(id)) {
+    showToast('이 페이지에 접근할 권한이 없습니다.', 'error');
+    return;
+  }
+  writeAppRoute(id, currentRouteSegment(id), 'push');
   _goTo(id, el);
 }
 
 function goBack() {
-  if (!pageHistory.length) {
+  if (_routeDepth <= 0) {
     updateTopbarBackButton();
     return;
   }
-  const prev = pageHistory.pop();
-  _goTo(prev, null);
+  history.back();
 }
 
 function _goTo(id, el) {
@@ -4787,7 +5077,12 @@ function _goTo(id, el) {
   }
   document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
   document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
-  inp('pg-' + id).classList.add('active');
+  const page = inp('pg-' + id);
+  if (!page) {
+    showToast('요청한 화면을 찾을 수 없습니다.', 'error');
+    return false;
+  }
+  page.classList.add('active');
 
   if (el) {
     el.classList.add('active');
@@ -4820,6 +5115,7 @@ function _goTo(id, el) {
     calendar: '납기 캘린더'
   };
   inp('ptitle').textContent = PN[id] || id;
+  document.title = (PN[id] || id) + ' — MES Pro';
   currentPage = id;
   syncTopNavActive(id);
   refreshPage(id);
@@ -4827,6 +5123,7 @@ function _goTo(id, el) {
   // 모바일: 페이지 이동 시 홈 오버레이 해제 + 하단 탭 동기화
   document.body.classList.remove('mhome');
   if (typeof syncMobileTab === 'function') syncMobileTab();
+  return true;
 }
 
 /* 재고 관리 — 분류별(완제품/생산부품/사무비품) 사이드바 진입 */
@@ -4839,8 +5136,16 @@ let invCategory = '완제품';
 
 function goInventory(key, el) {
   const meta = INV_CATS[key] || INV_CATS.finished;
+  if (currentPage === 'inventory' && invCategory === meta.cat) {
+    closeSbOverlay();
+    return;
+  }
+  writeAppRoute('inventory', key in INV_CATS ? key : 'finished', 'push');
+  _showInventoryPage(key, meta, el);
+}
+
+function _showInventoryPage(key, meta, el) {
   invCategory = meta.cat;
-  if (currentPage !== 'inventory' && currentPage) pageHistory.push(currentPage);
   document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
   document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
   inp('pg-inventory').classList.add('active');
@@ -4849,6 +5154,7 @@ function goInventory(key, el) {
     if (item.getAttribute('onclick')?.includes(`goInventory('${key}'`)) item.classList.add('active');
   });
   inp('ptitle').textContent = meta.title;
+  document.title = meta.title + ' — MES Pro';
   currentPage = 'inventory';
   syncTopNavActive('inventory', key);
   renderInventory();
@@ -4856,6 +5162,7 @@ function goInventory(key, el) {
   // 모바일 드로어 닫기
   const sb = document.querySelector('.sidebar');
   if (sb && sb.classList.contains('mobile-open')) { sb.classList.remove('mobile-open'); document.getElementById('sidebar-backdrop')?.classList.remove('active'); }
+  return true;
 }
 
 function refreshPage(id) {
@@ -4872,7 +5179,10 @@ function refreshPage(id) {
   else if (id === 'workers') switchEmpTab(empTab);
   else if (id === 'process') { go('dashboard'); setTimeout(()=>switchDashTab('process'),50); return; }
   else if (id === 'inventory') renderInventory();
-  else if (id === 'deliveries') { renderDeliveries(); if (currentDlvTab === 'closed') renderClosedProjects(); }
+  else if (id === 'deliveries') {
+    renderDeliveries();
+    switchDlvTab(currentDlvTab, inp('dlv-tab-' + currentDlvTab));
+  }
   else if (id === 'rfq') renderRfq();
   else if (id === 'po') renderPo();
   else if (id === 'partners') renderPartners();
@@ -5193,6 +5503,7 @@ let currentDlvTab = 'list';
 
 function switchDlvTab(tab, el) {
   currentDlvTab = tab;
+  syncCurrentSubRoute('deliveries', currentDlvTab);
   document.querySelectorAll('#pg-deliveries .dash-tab').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('#pg-deliveries .dash-panel').forEach(p => p.classList.remove('active'));
   if (el) el.classList.add('active');
@@ -9092,6 +9403,19 @@ function exportChecksCSV() {
 }
 
 /* ════════ 7. 작업 인력 및 출석 관리 ════════ */
+function repairWorkerTimeValues() {
+  let changed = false;
+  workers.forEach(worker => {
+    const normalized = normalizeTimeValue(worker.tin, '08:00');
+    if (worker.tin !== normalized) {
+      worker.tin = normalized;
+      changed = true;
+    }
+  });
+  if (changed) saveStorage('workers', workers);
+  return changed;
+}
+
 function renderWorkers() {
   ensureDateView('workersHire', 'workers-table', workers.map(w => w.hireDate), renderWorkers);
   const att = workers.filter(w => w.status !== '결근' && w.status !== '휴가').length;
@@ -9266,7 +9590,7 @@ function openWorkerEdit(id) {
   sv('wa-line', w.line || 'A');
   sv('wa-role', w.role || '');
   sv('wa-status', w.status || '근무중');
-  sv('wa-in', w.tin || '');
+  sv('wa-in', normalizeTimeValue(w.tin, '08:00'));
   sv('wa-ot', w.ot || '');
   sv('wa-email', w.email || '');
   modal.classList.add('open');
@@ -9291,7 +9615,7 @@ function saveWorkerForm() {
     annualLeave: v('wa-annual') !== '' ? Number(v('wa-annual')) : 15,
     line: v('wa-line'),
     role: v('wa-role') || '조립',
-    tin: v('wa-in') || '08:00',
+    tin: normalizeTimeValue(v('wa-in'), '08:00'),
     ot: v('wa-ot') || '0h',
     email: v('wa-email').trim(),
     status: v('wa-status')
@@ -10240,10 +10564,11 @@ const _cloudQueue=new Set(); let _cloudTimer=null; let _cloudUnsub=null;
 syncFilterDropdowns();
 initTheme();
 applyUiScale(getSavedUiScale());
+repairWorkerTimeValues();
 // 햄버거 메가 메뉴에서는 이전 사이드바 표시 상태를 사용하지 않음
 try { localStorage.removeItem('mes_sbHidden'); } catch(e) {}
 if (typeof applySidebarMode === 'function') applySidebarMode();
-_goTo('dashboard', null);   // 실행 시 항상 종합 대시보드를 먼저 표시
+setTimeout(initAppRouter, 0); // 모든 업무 모듈 선언 후 URL 화면을 복원
 renderAlerts();
 updateTrashBadge();
 updateDlvBadge();
@@ -10433,6 +10758,11 @@ function cloudBootstrap(){
         }
         _cloudActive = true; _hideLogin(); _cloudChip('online');
         updateAdminUI(); applyRoleGating(); applyColumnGating(); applyFeatureGating(); cloudSubscribe();   // 역할 UI/컬럼/기능 반영 + 실시간 동기화 시작
+        if (currentPage !== 'dashboard' && !pageAllowed(currentPage)) {
+          showToast('이 페이지에 접근할 권한이 없습니다.', 'error');
+          if (typeof writeAppRoute === 'function') writeAppRoute('dashboard', '', 'replace');
+          if (typeof _goTo === 'function') _goTo('dashboard', null);
+        }
         if (typeof autoConnectGoogleDriveAfterLogin === 'function') {
           setTimeout(autoConnectGoogleDriveAfterLogin, 300);
         }
@@ -10496,6 +10826,7 @@ function cloudResyncGlobals(){
   poList=L('poList',poList); partners=L('partners',partners); statementList=L('statementList',statementList);
   taxList=L('taxList',taxList); quoteList=L('quoteList',quoteList); orderList=L('orderList',orderList);
   financeData=L('financeData',financeData); attendance=L('attendance',attendance); leaves=L('leaves',leaves); payrollRecords=L('payrollRecords',payrollRecords);
+  if (typeof repairWorkerTimeValues === 'function') repairWorkerTimeValues();
   if(!financeData.entries) financeData.entries=[]; if(!financeData.paidReceivable) financeData.paidReceivable={};
   if(!financeData.paidPayable) financeData.paidPayable={}; if(!financeData.closedMonths) financeData.closedMonths=[];
   if(!financeData.auditLog) financeData.auditLog=[]; if(!financeData.payrollSettings) financeData.payrollSettings={};
@@ -10596,6 +10927,7 @@ function _cloudChip(state){
 let systemTab = 'permissions';
 function switchSystemTab(tab) {
   systemTab = tab || 'permissions';
+  syncCurrentSubRoute('system', systemTab);
   document.querySelectorAll('#system-tabs [data-systab]').forEach(btn => {
     btn.classList.toggle('btn-primary', btn.dataset.systab === systemTab);
   });
@@ -10639,6 +10971,15 @@ function renderDocTemplateManagement() {
     el.textContent = saved ? `등록됨: ${saved.name}` : '기본 양식 사용 중';
     el.style.color = saved ? 'var(--tx-ok)' : 'var(--tx-t)';
   });
+  const packageStatus = inp('template-package-status');
+  if (packageStatus) {
+    let meta = null;
+    try { meta = JSON.parse(localStorage.getItem('mes_docTemplatePackageMeta') || 'null'); } catch(e) {}
+    packageStatus.textContent = meta
+      ? `최근 가져오기: ${meta.name} · ${new Date(meta.importedAt).toLocaleString('ko-KR')}`
+      : '다른 MESPro 또는 외부 프로그램에서 사용할 수 있는 ZIP 패키지';
+    packageStatus.style.color = meta ? 'var(--tx-ok)' : 'var(--tx-t)';
+  }
 }
 async function renderPermissions(){
   const body=inp('perm-body'); if(!body) return;
@@ -12161,6 +12502,191 @@ const DOC_XLS_TEMPLATE_INFO = {
   statement: { title:'거래명세표', file:'거래명세표_인쇄양식.xlsx' },
   tax: { title:'세금계산서', file:'세금계산서_인쇄양식.xlsx' }
 };
+const DOC_TEMPLATE_PACKAGE_VERSION = 1;
+const DOC_TEMPLATE_PACKAGE_TYPES = ['rfq','po','quote','statement','tax'];
+
+function _requireTemplatePackageModules() {
+  if (!_requireExcelJS()) return false;
+  if (typeof JSZip === 'undefined') {
+    showToast('ZIP 양식 패키지 모듈을 불러오지 못했습니다. 인터넷 연결 후 다시 시도해 주세요.', 'error');
+    return false;
+  }
+  return true;
+}
+
+function _downloadBlob(blob, fileName) {
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = fileName;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1500);
+}
+
+function _docTemplateVariableSchema() {
+  return {
+    version:1,
+    common:['회사명','회사주소','회사전화','회사팩스','회사연락처','회사사업자정보','사업자번호','대표자','부서'],
+    document:['문서번호','발행일','공급처','공급처이메일','고객사','고객이메일','연결제품','결제조건','납품방법','납품주소','상태','비고'],
+    amounts:['공급가액','부가세','합계금액'],
+    repeating:{
+      pattern:['번호{n}','품목명{n}','규격{n}','수량{n}','단위{n}','단가{n}','금액{n}','품목비고{n}'],
+      supportedItems:20
+    }
+  };
+}
+
+async function _validateDocTemplateBuffer(type, data) {
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(data);
+  const ws = wb.worksheets[0];
+  if (!ws) throw new Error(`${DOC_XLS_TEMPLATE_INFO[type].title}: 첫 번째 시트가 없습니다.`);
+  let text = '';
+  ws.eachRow(row => row.eachCell(cell => { text += ' ' + String(cell.value ?? ''); }));
+  if (!text.includes('{{문서번호}}') || !text.includes('{{품목명1}}')) {
+    throw new Error(`${DOC_XLS_TEMPLATE_INFO[type].title}: {{문서번호}}와 {{품목명1}} 표시값이 필요합니다.`);
+  }
+}
+
+function _docTemplatePackageReadme() {
+  return `MESPro 공용 문서 양식 패키지
+
+1. templates 폴더의 XLSX 파일은 Excel에서 직접 편집할 수 있습니다.
+2. {{문서번호}}, {{품목명1}} 같은 변수는 삭제하지 말고 필요한 셀로 이동하세요.
+3. schemas/variables.json은 다른 프로그램에서 데이터를 연결할 때 사용하는 변수 규격입니다.
+4. print/print.css는 MESPro의 PDF 인쇄 색상, 표, 결재란과 A4 규격을 재현하기 위한 스타일입니다.
+5. 수정한 패키지는 manifest.json과 파일명을 유지해야 MESPro에서 다시 가져올 수 있습니다.
+6. MESPro에서 가져올 때 기존 사용자 양식은 자동으로 백업되며 '가져오기 전 양식 복원'으로 되돌릴 수 있습니다.
+`;
+}
+
+async function exportDocTemplatePackage() {
+  if (!_requireTemplatePackageModules()) return;
+  const button = document.querySelector('[onclick="exportDocTemplatePackage()"]');
+  if (button) { button.disabled = true; button.innerHTML = '<i class="ti ti-loader animate-spin"></i>패키지 생성 중'; }
+  try {
+    const zip = new JSZip();
+    const store = _docTemplateStore();
+    const files = [];
+    for (const type of DOC_TEMPLATE_PACKAGE_TYPES) {
+      const info = DOC_XLS_TEMPLATE_INFO[type];
+      const data = await _docTemplateArray(type);
+      const path = 'templates/' + info.file;
+      zip.file(path, data);
+      files.push({
+        type,
+        title:info.title,
+        path,
+        source:store[type] ? 'custom' : 'default',
+        savedName:store[type]?.name || info.file,
+        savedAt:store[type]?.savedAt || ''
+      });
+    }
+    zip.file('print/print.css', _docPrintStyle().replace(/^<style>|<\/style>$/g, '').trim());
+    zip.file('schemas/variables.json', JSON.stringify(_docTemplateVariableSchema(), null, 2));
+    zip.file('README.txt', _docTemplatePackageReadme());
+    const manifest = {
+      format:'MESPro-Document-Templates',
+      version:DOC_TEMPLATE_PACKAGE_VERSION,
+      generatedAt:new Date().toISOString(),
+      generator:'MES Pro',
+      files,
+      print:{ css:'print/print.css', page:'A4', orientation:'portrait' },
+      schema:'schemas/variables.json'
+    };
+    zip.file('manifest.json', JSON.stringify(manifest, null, 2));
+    const blob = await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+    const stamp = today().replace(/-/g, '');
+    _downloadBlob(blob, `MESPro-Templates-${stamp}.zip`);
+    showToast('전체 문서 양식 패키지를 내보냈습니다.', 'success');
+  } catch (error) {
+    showToast('양식 패키지 생성 실패: ' + error.message, 'error');
+  } finally {
+    if (button) { button.disabled = false; button.innerHTML = '<i class="ti ti-package-export"></i>전체 양식 패키지 내보내기'; }
+  }
+}
+
+function _saveDocTemplatePackageBackup() {
+  const backup = {
+    savedAt:new Date().toISOString(),
+    templates:_docTemplateStore()
+  };
+  localStorage.setItem('mes_docTemplatePackageBackup', JSON.stringify(backup));
+}
+
+function restoreDocTemplatePackageBackup() {
+  let backup = null;
+  try { backup = JSON.parse(localStorage.getItem('mes_docTemplatePackageBackup') || 'null'); } catch(e) {}
+  if (!backup || !backup.templates) {
+    showToast('복원할 가져오기 전 양식 백업이 없습니다.', 'info');
+    return;
+  }
+  confirm_('가져오기 전 양식 복원',
+    `<strong>${new Date(backup.savedAt).toLocaleString('ko-KR')}</strong> 시점의 양식으로 되돌리시겠습니까?<br><span style="font-size:11px;color:var(--tx-t);">업무 문서 데이터에는 영향을 주지 않습니다.</span>`,
+    () => {
+      saveStorage('docXlsxTemplates', backup.templates);
+      renderDocTemplateManagement();
+      showToast('가져오기 전 문서 양식으로 복원했습니다.', 'success');
+    },
+    'btn-primary', 'ti-history'
+  );
+}
+
+async function importDocTemplatePackage(input) {
+  const file = input && input.files && input.files[0];
+  if (input) input.value = '';
+  if (!file || !_requireTemplatePackageModules()) return;
+  if (file.size > 8 * 1024 * 1024) {
+    showToast('양식 패키지는 8MB 이하의 ZIP 파일을 사용해 주세요.', 'error');
+    return;
+  }
+  try {
+    const zip = await JSZip.loadAsync(await file.arrayBuffer());
+    const manifestFile = zip.file('manifest.json');
+    if (!manifestFile) throw new Error('manifest.json이 없는 양식 패키지입니다.');
+    const manifest = JSON.parse(await manifestFile.async('string'));
+    if (manifest.format !== 'MESPro-Document-Templates') throw new Error('MESPro 문서 양식 패키지가 아닙니다.');
+    if (Number(manifest.version) !== DOC_TEMPLATE_PACKAGE_VERSION) {
+      throw new Error(`지원하지 않는 패키지 버전입니다. 현재 지원 버전: ${DOC_TEMPLATE_PACKAGE_VERSION}`);
+    }
+    const pending = {};
+    const imported = [];
+    for (const type of DOC_TEMPLATE_PACKAGE_TYPES) {
+      const entry = (manifest.files || []).find(item => item.type === type);
+      if (!entry || !entry.path) continue;
+      const templateFile = zip.file(entry.path);
+      if (!templateFile) throw new Error(`${DOC_XLS_TEMPLATE_INFO[type].title} 파일이 패키지에 없습니다.`);
+      const data = await templateFile.async('arraybuffer');
+      await _validateDocTemplateBuffer(type, data);
+      pending[type] = {
+        name:entry.savedName || entry.path.split('/').pop(),
+        data:_arrayToBase64(data),
+        savedAt:new Date().toISOString(),
+        packageVersion:manifest.version
+      };
+      imported.push(DOC_XLS_TEMPLATE_INFO[type].title);
+    }
+    if (!imported.length) throw new Error('가져올 수 있는 XLSX 문서 양식이 없습니다.');
+    confirm_('공용 양식 패키지 가져오기',
+      `<strong>${imported.join(', ')}</strong><br>${imported.length}개 양식을 적용합니다.<br><span style="font-size:11px;color:var(--tx-t);">현재 양식은 자동 백업되며 가져오기 전 상태로 복원할 수 있습니다.</span>`,
+      () => {
+        _saveDocTemplatePackageBackup();
+        const next = Object.assign({}, _docTemplateStore(), pending);
+        saveStorage('docXlsxTemplates', next);
+        localStorage.setItem('mes_docTemplatePackageMeta', JSON.stringify({
+          name:file.name,
+          importedAt:new Date().toISOString(),
+          version:manifest.version,
+          types:Object.keys(pending)
+        }));
+        renderDocTemplateManagement();
+        showToast(`${imported.length}개 문서 양식을 가져왔습니다.`, 'success');
+      },
+      'btn-primary', 'ti-package-import'
+    );
+  } catch (error) {
+    showToast('양식 패키지 가져오기 실패: ' + error.message, 'error');
+  }
+}
 
 function _docTemplateStore() {
   return loadStorage('docXlsxTemplates', {});
@@ -13181,6 +13707,7 @@ const SODOCS = {
 let salesTab = 'quote';
 function switchSalesTab(tab) {
   salesTab = tab;
+  syncCurrentSubRoute('salesdoc', salesTab);
   document.querySelectorAll('#sd-tabs [data-sdtab]').forEach(b => b.classList.toggle('btn-primary', b.dataset.sdtab === tab));
   const q = inp('sd-tab-quote'), o = inp('sd-tab-order');
   if (q) q.style.display = tab === 'quote' ? '' : 'none';
@@ -13749,11 +14276,17 @@ let attView = 'list',   attMonth   = today().slice(0,7);
 let leaveView = 'list', leaveMonth = today().slice(0,7);
 let attDateFilter = today();
 let attShowAll = false;
+let attQuickDate = today();
+let attQuickQuery = '';
+let attQuickDept = '';
+const attQuickSelected = new Set();
 
 function getWorkerName(id) { return workers.find(w => w.id === id)?.name || id; }
 
 /* 근무시간 계산 (분 단위) */
 function workMinutes(ci, co) {
+  ci = normalizeTimeValue(ci);
+  co = normalizeTimeValue(co);
   if (!ci || !co) return 0;
   const [h1,m1] = ci.split(':').map(Number), [h2,m2] = co.split(':').map(Number);
   const d = (h2*60+m2) - (h1*60+m1);
@@ -13810,6 +14343,7 @@ function workerSelectOptions(sel) {
 
 function switchEmpTab(tab) {
   empTab = tab;
+  syncCurrentSubRoute('workers', empTab);
   document.querySelectorAll('#emp-tabs [data-emptab]').forEach(b =>
     b.classList.toggle('btn-primary', b.dataset.emptab === tab));
   const r = inp('emp-tab-roster'), a = inp('emp-tab-att'), l = inp('emp-tab-leave');
@@ -13833,6 +14367,41 @@ function setAttView(view) { attView = view; renderAttendance(); }
 function attPrevMonth() { attMonth = shiftMonth(attMonth, -1); renderAttendance(); }
 function attNextMonth() { attMonth = shiftMonth(attMonth, 1); renderAttendance(); }
 function toggleAttendanceAll() { attShowAll = !attShowAll; renderAttendance(); }
+function setAttQuickDate(value) {
+  attQuickDate = value || today();
+  attDateFilter = attQuickDate;
+  attQuickSelected.clear();
+  renderAttendance();
+}
+function moveAttQuickDate(amount) {
+  const date = new Date((attQuickDate || today()) + 'T00:00:00');
+  date.setDate(date.getDate() + amount);
+  setAttQuickDate(dateText(date));
+}
+function setAttQuickFilter(type, value) {
+  if (type === 'query') attQuickQuery = value || '';
+  else attQuickDept = value || '';
+  renderAttendance();
+}
+function toggleAttQuickSelect(workerId, checked) {
+  if (checked) attQuickSelected.add(workerId);
+  else attQuickSelected.delete(workerId);
+  const bar = inp('att-quick-bulkbar');
+  if (bar) bar.style.display = attQuickSelected.size ? 'flex' : 'none';
+  const count = inp('att-quick-selected-count');
+  if (count) count.textContent = attQuickSelected.size;
+}
+function toggleAttQuickAll(checked) {
+  document.querySelectorAll('.att-quick-check').forEach(box => {
+    box.checked = checked;
+    if (checked) attQuickSelected.add(box.dataset.workerId);
+    else attQuickSelected.delete(box.dataset.workerId);
+  });
+  const bar = inp('att-quick-bulkbar');
+  if (bar) bar.style.display = attQuickSelected.size ? 'flex' : 'none';
+  const count = inp('att-quick-selected-count');
+  if (count) count.textContent = attQuickSelected.size;
+}
 
 function dateText(date) {
   return date.getFullYear() + '-' + String(date.getMonth()+1).padStart(2,'0') + '-' + String(date.getDate()).padStart(2,'0');
@@ -13877,6 +14446,123 @@ function attendanceExtraMinutes(row) {
   if (row.status === '연장근무') return Math.max(0, minutes - 8 * 60);
   return 0;
 }
+function attendanceDefaultFor(worker, date) {
+  const day = new Date(date + 'T00:00:00').getDay();
+  const leave = approvedLeaveOn(worker.id, date);
+  if (leave) {
+    const half = HALF_DAY_TYPES.includes(leave.type);
+    return {
+      workerId:worker.id, date,
+      checkIn:half ? (leave.type === '오전반차' ? '13:00' : normalizeTimeValue(worker.tin, '08:00')) : '',
+      checkOut:half ? (leave.type === '오전반차' ? '17:00' : '12:00') : '',
+      status:half ? '반차' : '휴가', note:leave.type, source:'leave', extraMinutes:0
+    };
+  }
+  if (day === 0 || day === 6) {
+    return { workerId:worker.id, date, checkIn:'', checkOut:'', status:'휴무', note:'', source:'auto', extraMinutes:0 };
+  }
+  return {
+    workerId:worker.id, date, checkIn:normalizeTimeValue(worker.tin, '08:00'), checkOut:'17:00',
+    status:'정상', note:'자동 만근', source:'auto', extraMinutes:0
+  };
+}
+function quickAttendanceRow(workerId, date=attQuickDate) {
+  const worker = workers.find(item => item.id === workerId);
+  if (!worker) return null;
+  const saved = attendance.find(row => row.workerId === workerId && row.date === date);
+  return saved ? { ...saved, source:'exception', extraMinutes:attendanceExtraMinutes(saved) } : attendanceDefaultFor(worker, date);
+}
+function quickAttendanceData(workerId, status) {
+  const worker = workers.find(item => item.id === workerId);
+  const current = quickAttendanceRow(workerId);
+  const baseIn = normalizeTimeValue(worker?.tin, '08:00');
+  const data = {
+    workerId, date:attQuickDate, status,
+    checkIn:current?.checkIn || baseIn,
+    checkOut:current?.checkOut || '17:00',
+    extraMinutes:attendanceExtraMinutes(current),
+    note:current?.source === 'exception' ? current.note || '' : ''
+  };
+  if (status === '결근' || status === '휴가') {
+    data.checkIn = ''; data.checkOut = ''; data.extraMinutes = 0;
+  } else if (status === '연장근무') {
+    data.checkIn = data.checkIn || baseIn; data.checkOut = data.checkOut || '19:00';
+    data.extraMinutes = data.extraMinutes || 120;
+  } else if (status === '휴일근무') {
+    data.checkIn = data.checkIn || '09:00'; data.checkOut = data.checkOut || '18:00';
+    data.extraMinutes = data.extraMinutes || 480;
+  } else if (status === '정상') {
+    data.checkIn = baseIn; data.checkOut = '17:00'; data.extraMinutes = 0; data.note = '';
+  }
+  return data;
+}
+function upsertQuickAttendance(workerId, data) {
+  const index = attendance.findIndex(row => row.workerId === workerId && row.date === attQuickDate);
+  if (index >= 0) Object.assign(attendance[index], data);
+  else attendance.push({ id:nextCode('ATT', attendance), ...data });
+}
+function restoreQuickAttendance(workerId, quiet=false) {
+  attendance = attendance.filter(row => !(row.workerId === workerId && row.date === attQuickDate));
+  saveStorage('attendance', attendance);
+  if (!quiet) {
+    showToast('자동 근태 상태로 복구했습니다.', 'success');
+    renderAttendance();
+  }
+}
+function changeQuickAttendanceStatus(workerId, status) {
+  if (!checkAdminAction()) return;
+  const current = quickAttendanceRow(workerId);
+  if (current?.source === 'leave') {
+    showToast('승인 휴가는 휴가 관리에서 수정하세요.', 'info');
+    renderAttendance();
+    return;
+  }
+  const day = new Date(attQuickDate + 'T00:00:00').getDay();
+  if ((status === '정상' && day !== 0 && day !== 6) || (status === '휴무' && (day === 0 || day === 6))) {
+    restoreQuickAttendance(workerId);
+    return;
+  }
+  upsertQuickAttendance(workerId, quickAttendanceData(workerId, status));
+  saveStorage('attendance', attendance);
+  renderAttendance();
+}
+function changeQuickAttendanceField(workerId, field, value) {
+  if (!checkAdminAction()) return;
+  const current = quickAttendanceRow(workerId);
+  if (!current || current.source === 'leave') {
+    showToast('승인 휴가는 휴가 관리에서 수정하세요.', 'info');
+    renderAttendance();
+    return;
+  }
+  const status = ['휴무'].includes(current.status) ? '정상' : current.status;
+  const data = quickAttendanceData(workerId, status);
+  if (field === 'extraMinutes') data.extraMinutes = Math.max(0, Math.round((Number(value) || 0) * 60));
+  else if (field === 'checkIn' || field === 'checkOut') data[field] = normalizeTimeValue(value, '');
+  else data[field] = value || '';
+  upsertQuickAttendance(workerId, data);
+  saveStorage('attendance', attendance);
+  renderAttendance();
+}
+function applyQuickAttendanceBulk() {
+  if (!checkAdminAction()) return;
+  const status = v('att-quick-bulk-status');
+  if (!status || !attQuickSelected.size) return;
+  let changed = 0;
+  attQuickSelected.forEach(workerId => {
+    const current = quickAttendanceRow(workerId);
+    if (current?.source === 'leave') return;
+    if (status === '정상복구') {
+      attendance = attendance.filter(row => !(row.workerId === workerId && row.date === attQuickDate));
+    } else {
+      upsertQuickAttendance(workerId, quickAttendanceData(workerId, status));
+    }
+    changed++;
+  });
+  saveStorage('attendance', attendance);
+  attQuickSelected.clear();
+  showToast(`${changed}명의 근태를 일괄 적용했습니다.`, 'success');
+  renderAttendance();
+}
 function attendanceVirtualRows(from, to) {
   const explicit = new Map();
   attendance.forEach(row => {
@@ -13905,7 +14591,7 @@ function attendanceVirtualRows(from, to) {
       } else {
         rows.push({
           id:`AUTO-NORMAL-${worker.id}-${date}`, workerId:worker.id, date,
-          checkIn:worker.tin || '08:00', checkOut:'17:00',
+          checkIn:normalizeTimeValue(worker.tin, '08:00'), checkOut:'17:00',
           status:'정상', note:'자동 만근', source:'auto', extraMinutes:0
         });
       }
@@ -13953,6 +14639,97 @@ function renderAttendance() {
   if (body) body.innerHTML = attView === 'calendar' ? _attCalendar() : _attList();
 }
 
+function attendanceQuickStatusOptions(selected, weekend=false) {
+  const statuses = weekend
+    ? ['휴무','휴일근무','외근','결근']
+    : ['정상','지각','조퇴','외근','결근','연장근무','휴가'];
+  if (selected && !statuses.includes(selected)) statuses.push(selected);
+  return statuses.map(status => `<option value="${status}"${status===selected?' selected':''}>${status}</option>`).join('');
+}
+function openAttendanceQuickDetail(workerId) {
+  const saved = attendance.find(row => row.workerId === workerId && row.date === attQuickDate);
+  if (saved) {
+    openAttendanceEdit(saved.id);
+    return;
+  }
+  openAttendanceAdd();
+  sv('at-worker', workerId);
+  sv('at-date', attQuickDate);
+  const row = quickAttendanceRow(workerId);
+  sv('at-status', row?.status === '휴무' ? '휴일근무' : row?.status || '지각');
+  sv('at-in', row?.checkIn || '');
+  sv('at-out', row?.checkOut || '');
+  sv('at-extra-hours', row?.status === '휴일근무' ? '8' : '');
+  sv('at-note', '');
+  onAttendanceStatusChange();
+}
+function openAttendanceLeaveDetail(workerId) {
+  const leave = approvedLeaveOn(workerId, attQuickDate);
+  if (!leave) return;
+  switchEmpTab('leave');
+  openLeaveEdit(leave.id);
+}
+function _attQuickEditor() {
+  const query = attQuickQuery.trim().toLowerCase();
+  const depts = [...new Set(workers.map(worker => worker.dept).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko-KR'));
+  const list = workers.filter(worker => workerActiveOn(worker, attQuickDate)
+    && (!attQuickDept || worker.dept === attQuickDept)
+    && (!query || [worker.name,worker.id,worker.dept,worker.position].join(' ').toLowerCase().includes(query)));
+  const weekend = [0,6].includes(new Date(attQuickDate + 'T00:00:00').getDay());
+  const rows = list.length ? list.map(worker => {
+    const row = quickAttendanceRow(worker.id);
+    const linkedLeave = row?.source === 'leave';
+    const extraEnabled = ['연장근무','휴일근무'].includes(row?.status);
+    const checked = attQuickSelected.has(worker.id);
+    return `<tr class="${row?.source === 'exception' ? 'att-quick-exception' : ''}">
+      <td><input class="att-quick-check" data-worker-id="${esc(worker.id)}" type="checkbox" ${checked?'checked':''} onchange="toggleAttQuickSelect('${worker.id}',this.checked)"></td>
+      <td class="att-quick-worker"><strong>${esc(worker.name)}</strong><span>${esc(worker.dept)||'—'} · ${esc(worker.position)||'—'}</span></td>
+      <td>
+        <select class="stat-sel att-quick-status" onchange="changeQuickAttendanceStatus('${worker.id}',this.value)" ${linkedLeave?'disabled':''}>
+          ${attendanceQuickStatusOptions(row?.status || (weekend?'휴무':'정상'), weekend)}
+        </select>
+      </td>
+      <td><input class="att-quick-time" type="time" value="${esc(normalizeTimeValue(row?.checkIn,''))}" onchange="changeQuickAttendanceField('${worker.id}','checkIn',this.value)" ${linkedLeave||['결근','휴가','휴무'].includes(row?.status)?'disabled':''}></td>
+      <td><input class="att-quick-time" type="time" value="${esc(normalizeTimeValue(row?.checkOut,''))}" onchange="changeQuickAttendanceField('${worker.id}','checkOut',this.value)" ${linkedLeave||['결근','휴가','휴무'].includes(row?.status)?'disabled':''}></td>
+      <td><input class="att-quick-extra" type="number" min="0" step=".5" value="${extraEnabled ? attendanceExtraMinutes(row)/60 : ''}" placeholder="시간" onchange="changeQuickAttendanceField('${worker.id}','extraMinutes',this.value)" ${linkedLeave||!extraEnabled?'disabled':''}></td>
+      <td><input class="att-quick-note" value="${esc(row?.source==='auto'?'':row?.note||'')}" placeholder="${linkedLeave?'휴가 연동':'특이사항'}" onchange="changeQuickAttendanceField('${worker.id}','note',this.value)" ${linkedLeave?'disabled':''}></td>
+      <td class="att-quick-actions">
+        <span class="bd ${row?.source==='exception'?'bd-warn':linkedLeave?'bd-info':'bd-ok'}">${row?.source==='exception'?'예외':linkedLeave?'휴가':'자동'}</span>
+        <button class="btn btn-sm btn-icon" onclick="${linkedLeave?`openAttendanceLeaveDetail('${worker.id}')`:`openAttendanceQuickDetail('${worker.id}')`}" title="${linkedLeave?'휴가 편집':'상세 편집'}"><i class="ti ti-edit"></i></button>
+        ${row?.source==='exception'?`<button class="btn btn-sm btn-icon" onclick="restoreQuickAttendance('${worker.id}')" title="자동 상태로 복구"><i class="ti ti-restore"></i></button>`:''}
+      </td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="8">${empty('조건에 맞는 직원이 없습니다.')}</td></tr>`;
+
+  return `<div class="card att-quick-card">
+    <div class="card-hd att-quick-head">
+      <div>
+        <span class="card-ttl"><i class="ti ti-bolt"></i>하루 근태 간편 편집</span>
+        <div class="att-quick-help">${weekend?'휴일 기본값은 휴무입니다. 근무자만 휴일근무로 변경하세요.':'별도 입력이 없으면 전 직원 정상근무로 자동 처리됩니다.'}</div>
+      </div>
+      <div class="att-quick-filters">
+        <button class="btn btn-sm btn-icon" onclick="moveAttQuickDate(-1)" title="이전 날짜"><i class="ti ti-chevron-left"></i></button>
+        <input type="date" value="${attQuickDate}" onchange="setAttQuickDate(this.value)">
+        <button class="btn btn-sm btn-icon" onclick="moveAttQuickDate(1)" title="다음 날짜"><i class="ti ti-chevron-right"></i></button>
+        <button class="btn btn-sm" onclick="setAttQuickDate(today())">오늘</button>
+        <select onchange="setAttQuickFilter('dept',this.value)"><option value="">전체 부서</option>${depts.map(dept=>`<option${dept===attQuickDept?' selected':''}>${esc(dept)}</option>`).join('')}</select>
+        <input type="search" value="${esc(attQuickQuery)}" placeholder="직원 검색" onchange="setAttQuickFilter('query',this.value)">
+      </div>
+    </div>
+    <div id="att-quick-bulkbar" class="att-quick-bulkbar" style="display:${attQuickSelected.size?'flex':'none'};">
+      <b><i class="ti ti-checkbox"></i> <span id="att-quick-selected-count">${attQuickSelected.size}</span>명 선택</b>
+      <select id="att-quick-bulk-status">
+        <option value="">상태 선택</option><option>지각</option><option>조퇴</option><option>외근</option><option>결근</option><option>연장근무</option><option>휴일근무</option><option value="정상복구">정상·휴무 복구</option>
+      </select>
+      <button class="btn btn-sm btn-primary" onclick="applyQuickAttendanceBulk()">일괄 적용</button>
+    </div>
+    <div class="att-quick-table-wrap"><table class="att-quick-table">
+      <thead><tr><th><input type="checkbox" onchange="toggleAttQuickAll(this.checked)"></th><th>직원</th><th>상태</th><th>출근</th><th>퇴근</th><th>추가시간</th><th>비고</th><th>관리</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+  </div>`;
+}
+
 function _attList() {
   const [from, to] = attendanceDateRange();
   const allRows = attendanceVirtualRows(from, to);
@@ -13993,6 +14770,7 @@ function _attList() {
       <div class="mc"><div class="mc-lbl"><i class="ti ti-user-x"></i>결근</div><div class="mc-val" style="color:var(--tx-err);">${absent}건</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-clock-hour-9"></i>선택 기간 근무시간</div><div class="mc-val" style="color:var(--tx-i);">${fmtHm(dayMins)}</div></div>
     </div>
+    ${_attQuickEditor()}
     <div class="al al-info" style="margin-bottom:10px;"><i class="ti ti-wand"></i><div><div class="al-t">기본 근태 자동 처리</div><div class="al-s">재직 직원의 평일은 정상근무로 자동 계산됩니다. 휴가는 승인 기록을 연동하고, 지각·조퇴·결근·연장·휴일근무만 추가하세요.</div></div></div>
     <div class="card">
       <div class="card-hd">
@@ -14583,6 +15361,7 @@ function finEntryMonth(ym,type){ return financeData.entries.filter(e=>e.type===t
 /* ── 탭 전환 ── */
 function switchFinTab(tab) {
   financeTab = tab;
+  syncCurrentSubRoute('finance', financeTab);
   renderFinance();
 }
 
@@ -16201,16 +16980,42 @@ async function documentPdfBlob(type, id) {
   const parsed = new DOMParser().parseFromString(html, 'text/html');
   const wrap = document.createElement('div');
   wrap.style.cssText = 'position:fixed;left:-100000px;top:0;width:794px;background:#fff;color:#111;';
-  Array.from(parsed.head.querySelectorAll('style')).forEach(style=>wrap.appendChild(style.cloneNode(true)));
   const content = document.createElement('div');
   content.innerHTML = parsed.body.innerHTML;
+  Array.from(parsed.head.querySelectorAll('style')).reverse().forEach(style => {
+    content.insertBefore(style.cloneNode(true), content.firstChild);
+  });
+  // 일반 인쇄의 @media print body 규칙과 동일한 A4 레이아웃을 직접 적용한다.
+  // html2canvas는 print 미디어 규칙을 적용하지 않으므로 별도 지정하지 않으면
+  // Drive PDF에서 여백과 표 폭이 달라진다.
+  content.style.cssText = [
+    'width:794px',
+    'min-height:1123px',
+    'padding:20px 24px',
+    'margin:0',
+    'box-sizing:border-box',
+    'background:#fff',
+    'color:#111',
+    'font-family:Malgun Gothic,맑은 고딕,sans-serif',
+    'font-size:12px'
+  ].join(';');
+  const pageElements = Array.from(content.children).filter(element => element.tagName !== 'STYLE');
+  const lastPage = pageElements[pageElements.length - 1];
+  if (lastPage) lastPage.style.pageBreakAfter = 'auto';
   wrap.appendChild(content);
   document.body.appendChild(wrap);
   try {
     return await html2pdf().from(content).set({
-      margin:10,
-      image:{type:'jpeg',quality:.96},
-      html2canvas:{scale:2,useCORS:true},
+      margin:[0,0,0,0],
+      image:{type:'jpeg',quality:.98},
+      html2canvas:{
+        scale:2,
+        useCORS:true,
+        logging:false,
+        backgroundColor:'#ffffff',
+        windowWidth:794
+      },
+      pagebreak:{mode:['css','legacy']},
       jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
     }).outputPdf('blob');
   } finally {
@@ -16505,9 +17310,25 @@ function _memoAuthor() {
 function _memoTags(value) {
   return String(value || '').split(',').map(function(x) { return x.trim(); }).filter(Boolean);
 }
+function _memoAutoTitle(content, summary) {
+  var source = String(content || '').trim() || String(summary || '').trim();
+  if (!source) return '제목 없는 메모';
+  var line = source.split(/\r?\n/).map(function(value) { return value.trim(); }).find(Boolean) || source;
+  line = line
+    .replace(/^#{1,6}\s*/, '')
+    .replace(/^[-*+]\s+/, '')
+    .replace(/^\d+[.)]\s+/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  var sentence = line.match(/^(.{1,80}?)(?:[.!?。]|$)/);
+  var title = (sentence && sentence[1] ? sentence[1] : line).trim();
+  if (title.length > 60) title = title.slice(0, 60).trim() + '…';
+  return title || '제목 없는 메모';
+}
 
 function switchMemoTab(tab) {
   memoTab = tab || 'memos';
+  syncCurrentSubRoute('notes', memoTab);
   document.querySelectorAll('[data-memotab]').forEach(function(btn) {
     btn.classList.toggle('btn-primary', btn.dataset.memotab === memoTab);
   });
@@ -16557,7 +17378,11 @@ function renderMemoKpi() {
 }
 
 function _memoQueryMatch(item, q) {
-  return !q || [item.title, item.content, item.owner, (item.tags || []).join(' '), item.summary]
+  var attachmentNames = (item.attachments || []).map(function(file) { return file.name || ''; }).join(' ');
+  var checklist = (item.checklist || []).map(function(entry) {
+    return typeof entry === 'string' ? entry : (entry.text || entry.title || '');
+  }).join(' ');
+  return !q || [item.title, item.content, item.owner, item.author, (item.tags || []).join(' '), item.summary, attachmentNames, checklist]
     .join(' ').toLowerCase().includes(q);
 }
 
@@ -16622,7 +17447,7 @@ function renderTodoList() {
   var allVisibleSelected = list.length > 0 && visibleSelected === list.length;
   var bulkBar = '<div id="todo-bulkbar" style="display:' + (_todoSelected.size ? 'flex' : 'none') +
     ';align-items:center;gap:14px;margin:0 0 12px;padding:12px 18px;border-radius:9px;flex-wrap:wrap;">' +
-    '<span style="font-weight:700;font-size:13px;color:#85bceb;"><i class="ti ti-checkbox"></i> ' +
+    '<span style="font-weight:700;font-size:13px;"><i class="ti ti-checkbox"></i> ' +
     _todoSelected.size + '건 선택됨</span>' +
     '<button class="btn btn-sm btn-danger" onclick="deleteSelectedTodos()"><i class="ti ti-trash"></i>선택 삭제</button></div>';
   content.innerHTML = bulkBar + '<div class="card" style="overflow-x:auto;"><table style="min-width:900px;"><thead><tr>' +
@@ -16715,7 +17540,9 @@ function saveMemo(closeAfter) {
   if (closeAfter === undefined) closeAfter = true;
   var title = v('memo-title').trim();
   var content = v('memo-content-input').trim();
-  if (!title || !content) { showToast('제목과 내용을 입력하세요.', 'error'); return ''; }
+  if (!content) { showToast('메모 내용을 입력하세요.', 'error'); return ''; }
+  var autoTitle = !title;
+  title = title || _memoAutoTitle(content, _memoAiResult && _memoAiResult.summary);
   var id = v('memo-id');
   var memo = memoList.find(function(m) { return m.id === id; });
   if (!memo) {
@@ -16731,6 +17558,7 @@ function saveMemo(closeAfter) {
     memo.history = memo.history.slice(0, 20);
   }
   memo.title = title;
+  memo.autoTitle = autoTitle;
   memo.content = content;
   memo.tags = _memoTags(v('memo-tags'));
   memo.entityType = v('memo-entity');
@@ -17569,7 +18397,7 @@ function renderMobileHome() {
 
     <div class="mh-search">
       <i class="ti ti-search mh-s-ico"></i>
-      <input type="text" id="mh-search-input" placeholder="통합 검색 (제품·고객사·자재·재고·직원…)"
+      <input type="text" id="mh-search-input" placeholder="통합 검색 (제품·직원·메모·할 일…)"
              autocomplete="off" oninput="mhSearch(this.value)" onkeydown="mhSearchKeyDown(event)">
       <i class="ti ti-x mh-s-clear" id="mh-search-clear" onclick="mhSearchClear()"></i>
     </div>
