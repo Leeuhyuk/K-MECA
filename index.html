@@ -11701,7 +11701,7 @@ async function doEmailJS() {
 /* ════════ 인쇄 공통 스타일 ════════ */
 function _docPrintStyle() {
   return `<style>
-    @page{ size:A4; margin:10mm; }
+    @page{size:A4;margin:0;}
     *{box-sizing:border-box;margin:0;padding:0;}
     body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;padding:0;color:#111;font-size:12px;}
     .doc-header{display:flex;align-items:flex-end;justify-content:space-between;border-bottom:3px solid #1a3a6e;padding-bottom:12px;margin-bottom:20px;}
@@ -11712,29 +11712,29 @@ function _docPrintStyle() {
     .approval-box{display:flex;border:1px solid #bbb;width:fit-content;margin-left:auto;margin-bottom:16px;}
     .apv-cell{width:60px;border-right:1px solid #bbb;text-align:center;}
     .apv-cell:last-child{border-right:none;}
-    .apv-title{font-size:9px;font-weight:700;background:#f3f5f8;color:#555;padding:3px 0;border-bottom:1px solid #bbb;}
+    .apv-title{font-size:9px;font-weight:700;background:#fff;color:#555;padding:3px 0;border-bottom:1px solid #bbb;}
     .apv-sign{height:40px;}
     table{width:100%;border-collapse:collapse;margin-bottom:14px;}
     th,td{border:1px solid #ccc;padding:6px 9px;vertical-align:middle;}
-    .info-tbl th{background:#f3f5f8;font-weight:700;color:#333;width:100px;text-align:left;font-size:11px;}
+    .info-tbl th{background:#fff;font-weight:700;color:#333;width:100px;text-align:left;font-size:11px;}
     .info-tbl td{font-size:12px;}
     .info-tbl .hl{font-weight:800;font-size:13px;color:#1a3a6e;}
-    .sec-title{font-size:10px;font-weight:800;color:#1a3a6e;letter-spacing:.05em;background:#eef2fb;border-left:4px solid #1a3a6e;padding:5px 9px;margin-bottom:0;}
-    .items-tbl th{background:#1a3a6e;color:#fff;font-size:10px;font-weight:700;text-align:center;padding:7px 6px;}
+    .sec-title{font-size:10px;font-weight:800;color:#1a3a6e;letter-spacing:.05em;background:#fff;border-left:4px solid #1a3a6e;padding:5px 9px;margin-bottom:0;}
+    .items-tbl th{background:#fff;color:#1a3a6e;font-size:10px;font-weight:700;text-align:center;padding:7px 6px;}
     .items-tbl td{font-size:11px;padding:7px 6px;}
-    .items-tbl tbody tr:nth-child(even) td{background:#fafbfc;}
+    .items-tbl tbody tr:nth-child(even) td{background:#fff;}
     .num{text-align:right;} .ctr{text-align:center;}
-    .total-row td{background:#f0f4ff;font-weight:800;border-top:2px solid #1a3a6e;}
+    .total-row td{background:#fff;font-weight:800;border-top:2px solid #1a3a6e;}
     .empty-row td{color:#ccc;font-size:10px;text-align:center;height:24px;}
     .sum-wrap{display:flex;justify-content:flex-end;margin-bottom:16px;}
     .sum-box{border:2px solid #1a3a6e;border-radius:5px;overflow:hidden;min-width:280px;}
     .sum-row{display:flex;border-bottom:1px solid #dde;font-size:11px;}
     .sum-row:last-child{border-bottom:none;}
-    .sum-lbl{padding:7px 14px;background:#f3f5f8;font-weight:700;color:#555;flex:0 0 110px;}
+    .sum-lbl{padding:7px 14px;background:#fff;font-weight:700;color:#555;flex:0 0 110px;}
     .sum-val{padding:7px 14px;font-weight:700;text-align:right;flex:1;}
-    .sum-final .sum-lbl{background:#1a3a6e;color:#fff;font-size:12px;}
+    .sum-final .sum-lbl{background:#fff;color:#1a3a6e;font-size:12px;}
     .sum-final .sum-val{font-size:14px;font-weight:900;color:#1a3a6e;}
-    .remarks{border:1px solid #ccc;border-radius:4px;padding:10px 12px;font-size:10.5px;color:#444;line-height:1.8;margin-bottom:20px;background:#fafbfc;}
+    .remarks{border:1px solid #ccc;border-radius:4px;padding:10px 12px;font-size:10.5px;color:#444;line-height:1.8;margin-bottom:20px;background:#fff;}
     .remarks-title{font-weight:800;color:#1a3a6e;font-size:10px;margin-bottom:5px;letter-spacing:.04em;}
     .sign-area{display:flex;justify-content:space-between;align-items:flex-end;}
     .sign-left{font-size:10px;color:#777;line-height:1.8;}
@@ -11742,7 +11742,7 @@ function _docPrintStyle() {
     .sign-box{border:1px solid #bbb;border-radius:3px;text-align:center;padding:6px 0 0;min-width:82px;}
     .sign-title{font-size:9.5px;font-weight:700;color:#555;margin-bottom:3px;}
     .sign-content{height:46px;border-top:1px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:9px;color:#ccc;}
-    @page{size:A4;margin:0;} @media print{body{padding:20px 24px;}}
+    @media print{body{padding:20px 24px;}}
   </style>`;
 }
 
@@ -12023,12 +12023,11 @@ function openRfqPrint(id) {
       </div>
     </div>`;
   }).join('');
-  const win = window.open('', '_blank', 'width=860,height=960');
   const docTitle = id ? id : '견적요청서_목록';
-  win.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${docTitle}</title>${_docPrintStyle()}</head><body>${pages}
-
-</body></html>`);
-  win.document.close(); win.print();
+  openDocumentPdfPreview(
+    `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${docTitle}</title>${_docPrintStyle()}</head><body>${pages}</body></html>`,
+    docTitle
+  );
 }
 
 function exportRfqXLS(id = null) {
@@ -12374,10 +12373,11 @@ function openPoPrint(id, individual=false) {
       </div>
     </div>`;
   }).join('');
-  const win = window.open('', '_blank', 'width=860,height=960');
   const docTitle = id ? id : '구매발주서_목록';
-  win.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${docTitle}</title>${_docPrintStyle()}</head><body>${pages}</body></html>`);
-  win.document.close(); win.print();
+  openDocumentPdfPreview(
+    `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${docTitle}</title>${_docPrintStyle()}</head><body>${pages}</body></html>`,
+    docTitle
+  );
 }
 
 function exportPoXLS(id = null) {
@@ -12762,7 +12762,7 @@ function _defaultDocTemplateBook(type) {
   ws.properties.defaultRowHeight = 16;
   [4,10,10,10,7,7,9,9,10,10,10,12].forEach((width, i) => { ws.getColumn(i + 1).width = width; });
 
-  const navy = 'FF1A3A6E', lightBlue = 'FFEEF2FB', lightGray = 'FFF3F5F8';
+  const navy = 'FF1A3A6E', white = 'FFFFFFFF';
   const gray = 'FF666666', border = _excelBorder();
   const font = { name:'맑은 고딕', size:9, color:{argb:'FF222222'} };
   _styleRange(ws, 'A1:L42', { font, alignment:{ vertical:'middle' } });
@@ -12778,7 +12778,7 @@ function _defaultDocTemplateBook(type) {
     _styleRange(ws, `${startCol}1:${endCol}3`, {
       border, alignment:{ horizontal:'center', vertical:'middle' }
     });
-    ws.getCell(start).fill = { type:'pattern', pattern:'solid', fgColor:{argb:lightGray} };
+    ws.getCell(start).fill = { type:'pattern', pattern:'solid', fgColor:{argb:white} };
     ws.getCell(start).font = { name:'맑은 고딕', size:8, bold:true, color:{argb:gray} };
   });
   ws.getRow(1).height = 17; ws.getRow(2).height = 19; ws.getRow(3).height = 19;
@@ -12820,7 +12820,7 @@ function _defaultDocTemplateBook(type) {
       const isLabel = i % 4 === 0;
       _styleRange(ws, range, {
         border,
-        fill:isLabel ? {type:'pattern',pattern:'solid',fgColor:{argb:lightGray}} : undefined,
+        fill:isLabel ? {type:'pattern',pattern:'solid',fgColor:{argb:white}} : undefined,
         font:{ name:'맑은 고딕', size:isLabel ? 9 : 10, bold:isLabel || (range === 'C9:L9'), color:{argb:isLabel?'FF333333':navy} },
         alignment:{ horizontal:isLabel?'left':'left', vertical:'middle', wrapText:true }
       });
@@ -12831,7 +12831,7 @@ function _defaultDocTemplateBook(type) {
 
   _mergeValue(ws, 'A14:L14', isPo ? '■ 발주 품목' : isRfq ? '■ 견적 요청 품목' : isQuote ? '■ 견적 품목' : '■ 거래 품목');
   _styleRange(ws, 'A14:L14', {
-    fill:{type:'pattern',pattern:'solid',fgColor:{argb:lightBlue}},
+    fill:{type:'pattern',pattern:'solid',fgColor:{argb:white}},
     border:{left:{style:'medium',color:{argb:navy}}},
     font:{name:'맑은 고딕',size:9,bold:true,color:{argb:navy}},
     alignment:{vertical:'middle'}
@@ -12843,9 +12843,9 @@ function _defaultDocTemplateBook(type) {
   headerRanges.forEach((range, i) => {
     _mergeValue(ws, range, headers[i]);
     _styleRange(ws, range, {
-      fill:{type:'pattern',pattern:'solid',fgColor:{argb:navy}},
-      border:_excelBorder('FFFFFFFF'),
-      font:{name:'맑은 고딕',size:8,bold:true,color:{argb:'FFFFFFFF'}},
+      fill:{type:'pattern',pattern:'solid',fgColor:{argb:white}},
+      border,
+      font:{name:'맑은 고딕',size:8,bold:true,color:{argb:navy}},
       alignment:{horizontal:'center',vertical:'middle',wrapText:true}
     });
   });
@@ -12867,7 +12867,7 @@ function _defaultDocTemplateBook(type) {
       });
       if ([5,6].includes(idx)) cell.numFmt = '#,##0;[Red]-#,##0';
     });
-    if (i % 2 === 0) _styleRange(ws, `A${row}:L${row}`, { fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFFAFBFC'}} });
+    if (i % 2 === 0) _styleRange(ws, `A${row}:L${row}`, { fill:{type:'pattern',pattern:'solid',fgColor:{argb:white}} });
     ws.getRow(row).height = 19;
   }
 
@@ -12875,7 +12875,7 @@ function _defaultDocTemplateBook(type) {
   ws.getCell('K28').value = '{{공급가액}}';
   ws.getCell('L28').value = '';
   _styleRange(ws, 'A28:L28', {
-    fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFF0F4FF'}},
+    fill:{type:'pattern',pattern:'solid',fgColor:{argb:white}},
     border:{top:{style:'medium',color:{argb:navy}},left:border.left,right:border.right,bottom:border.bottom},
     font:{name:'맑은 고딕',size:9,bold:true,color:{argb:navy}},
     alignment:{horizontal:'right',vertical:'middle'}
@@ -12889,12 +12889,12 @@ function _defaultDocTemplateBook(type) {
     const value = _mergeValue(ws, parts[2], parts[3]);
     _styleRange(ws, `${parts[0].split(':')[0]}:${parts[2].split(':')[1]}`, {
       border:_excelBorder(idx===2?navy:'FFDDE0E8',idx===2?'medium':'thin'),
-      fill:{type:'pattern',pattern:'solid',fgColor:{argb:idx===2?navy:lightGray}},
-      font:{name:'맑은 고딕',size:idx===2?11:9,bold:true,color:{argb:idx===2?'FFFFFFFF':'FF555555'}},
+      fill:{type:'pattern',pattern:'solid',fgColor:{argb:white}},
+      font:{name:'맑은 고딕',size:idx===2?11:9,bold:true,color:{argb:idx===2?navy:'FF555555'}},
       alignment:{horizontal:'right',vertical:'middle'}
     });
     value.numFmt = '#,##0" 원";[Red]-#,##0" 원"';
-    value.font = {name:'맑은 고딕',size:idx===2?12:9,bold:true,color:{argb:idx===2?'FFFFFFFF':navy}};
+    value.font = {name:'맑은 고딕',size:idx===2?12:9,bold:true,color:{argb:navy}};
     label.alignment = {horizontal:'left',vertical:'middle'};
     ws.getRow(30 + idx).height = idx===2 ? 23 : 20;
   });
@@ -12911,7 +12911,7 @@ function _defaultDocTemplateBook(type) {
     ? '3. 세금계산서는 납품 완료 후 익일 발행 바랍니다.'
     : isRfq ? '3. 납품 가능 수량 및 납기일을 반드시 명시하여 주시기 바랍니다.' : '');
   _styleRange(ws, 'A34:L37', {
-    border, fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFFAFBFC'}},
+    border, fill:{type:'pattern',pattern:'solid',fgColor:{argb:white}},
     font:{name:'맑은 고딕',size:8,color:{argb:'FF444444'}},
     alignment:{vertical:'middle',wrapText:true}
   });
@@ -12950,7 +12950,7 @@ function _defaultDocTemplateBook(type) {
   _styleRange(guide, 'A1:B9', {font:{name:'맑은 고딕',size:10},alignment:{vertical:'middle',wrapText:true},border});
   _mergeValue(guide, 'A1:B1', '엑셀 인쇄 양식 사용 방법');
   guide.getCell('A1').font = {name:'맑은 고딕',size:16,bold:true,color:{argb:navy}};
-  guide.getCell('A1').fill = {type:'pattern',pattern:'solid',fgColor:{argb:lightBlue}};
+  guide.getCell('A1').fill = {type:'pattern',pattern:'solid',fgColor:{argb:white}};
   return wb;
 }
 
@@ -12961,13 +12961,13 @@ function _defaultTaxTemplateBook() {
     views:[{showGridLines:false}]
   });
   [4,8,11,11,11,11,11,11,11,11,11,13].forEach((w,i)=>ws.getColumn(i+1).width=w);
-  const red='FFC0392B', blue='FF1C5AA8', gray='FFF3F3F3', border=_excelBorder('FFB9B9B9');
+  const red='FFC0392B', blue='FF1C5AA8', white='FFFFFFFF', border=_excelBorder('FFB9B9B9');
   _mergeValue(ws,'A1:H2','전 자 세 금 계 산 서');
   _mergeValue(ws,'I1:J2','승인번호');
   _mergeValue(ws,'K1:L2','{{승인번호}}');
   _styleRange(ws,'A1:L2',{border,alignment:{horizontal:'center',vertical:'middle'},font:{name:'맑은 고딕',size:10,bold:true}});
   ws.getCell('A1').font={name:'맑은 고딕',size:18,bold:true,color:{argb:'FF222222'}};
-  ws.getCell('I1').fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFEAF1FB'}};
+  ws.getCell('I1').fill={type:'pattern',pattern:'solid',fgColor:{argb:white}};
   const party = (startRow, title, color, prefix) => {
     _mergeValue(ws,`A${startRow}:A${startRow+4}`,title);
     ws.getCell(`A${startRow}`).alignment={horizontal:'center',vertical:'middle',textRotation:90};
@@ -12981,11 +12981,11 @@ function _defaultTaxTemplateBook() {
         const actual=parts[i].includes(':') ? parts[i].replace(/(\D+):(\D+)/,`$1${startRow+idx}:$2${startRow+idx}`) : range;
         _mergeValue(ws,actual,parts[i+1]);
         _styleRange(ws,actual,{border,alignment:{vertical:'middle',wrapText:true},font:{name:'맑은 고딕',size:8,bold:i%4===0}});
-        if(i%4===0) ws.getCell(actual.split(':')[0]).fill={type:'pattern',pattern:'solid',fgColor:{argb:color}};
+        if(i%4===0) ws.getCell(actual.split(':')[0]).fill={type:'pattern',pattern:'solid',fgColor:{argb:white}};
       }
     });
     _styleRange(ws,`A${startRow}:L${startRow+4}`,{border});
-    ws.getCell(`A${startRow}`).fill={type:'pattern',pattern:'solid',fgColor:{argb:color}};
+    ws.getCell(`A${startRow}`).fill={type:'pattern',pattern:'solid',fgColor:{argb:white}};
     ws.getCell(`A${startRow}`).font={name:'맑은 고딕',size:9,bold:true,color:{argb:prefix==='공급자' ? red : blue}};
   };
   party(4,'공급자','FFFDECEC','공급자');
@@ -12996,11 +12996,11 @@ function _defaultTaxTemplateBook() {
   ];
   rows.forEach(([r,vals])=>{
     const ranges=r===15?['A:B','C:D','E:F','G:H','I:J','K:L']:['A:B','C:L'];
-    ranges.forEach((cols,i)=>{const rg=cols.replace(':',r+':')+r;_mergeValue(ws,rg,vals[i]);_styleRange(ws,rg,{border,alignment:{vertical:'middle'},font:{name:'맑은 고딕',size:8,bold:i%2===0},fill:i%2===0?{type:'pattern',pattern:'solid',fgColor:{argb:gray}}:undefined});});
+    ranges.forEach((cols,i)=>{const rg=cols.replace(':',r+':')+r;_mergeValue(ws,rg,vals[i]);_styleRange(ws,rg,{border,alignment:{vertical:'middle'},font:{name:'맑은 고딕',size:8,bold:i%2===0},fill:i%2===0?{type:'pattern',pattern:'solid',fgColor:{argb:white}}:undefined});});
   });
   const heads=['월','일','품목','규격','수량','단가','공급가액','세액','비고'];
   const ranges=['A','B','C:E','F:G','H','I','J','K','L'];
-  heads.forEach((h,i)=>{const rg=ranges[i].includes(':')?ranges[i].replace(':','17:')+'17':ranges[i]+'17';_mergeValue(ws,rg,h);_styleRange(ws,rg,{border,fill:{type:'pattern',pattern:'solid',fgColor:{argb:gray}},font:{name:'맑은 고딕',size:8,bold:true},alignment:{horizontal:'center'}});});
+  heads.forEach((h,i)=>{const rg=ranges[i].includes(':')?ranges[i].replace(':','17:')+'17':ranges[i]+'17';_mergeValue(ws,rg,h);_styleRange(ws,rg,{border,fill:{type:'pattern',pattern:'solid',fgColor:{argb:white}},font:{name:'맑은 고딕',size:8,bold:true},alignment:{horizontal:'center'}});});
   for(let i=1;i<=12;i++){
     const r=17+i;
     const vals=[`{{월${i}}}`,`{{일${i}}}`,`{{품목명${i}}}`,`{{규격${i}}}`,`{{수량${i}}}`,`{{단가${i}}}`,`{{금액${i}}}`,`{{세액${i}}}`,`{{품목비고${i}}}`];
@@ -13667,9 +13667,11 @@ function openSalesDocPrint(type, id) {
   if (!targets.length) { showToast('출력할 문서가 없습니다.', 'error'); return; }
   const ci = getCompanyInfo();
   const pages = targets.map((d,i) => `<div style="${i<targets.length-1?'page-break-after:always;':''}">${_salesDocBodyHtml(d, type, ci)}</div>`).join('');
-  const win = window.open('', '_blank', 'width=860,height=960');
-  win.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${id || cfg.title}</title>${_docPrintStyle()}</head><body>${pages}</body></html>`);
-  win.document.close(); win.print();
+  const docTitle = id || cfg.title;
+  openDocumentPdfPreview(
+    `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${docTitle}</title>${_docPrintStyle()}</head><body>${pages}</body></html>`,
+    docTitle
+  );
 }
 
 function buildSalesEmailBody(d, ci, label) {
@@ -13950,10 +13952,14 @@ function openSODocPrint(type, id) {
   const targets = Array.isArray(id) ? list.filter(x=>id.includes(x.id)) : (id ? list.filter(x=>x.id===id) : list);
   if (!targets.length) { showToast('출력할 문서가 없습니다.', 'error'); return; }
   const ci = getCompanyInfo();
-  const pages = targets.map(d => `<div style="page-break-after:always;">${_salesDocBodyHtml(d, cfg.docType, ci)}</div>`).join('');
-  const win = window.open('', '_blank', 'width=860,height=960');
-  win.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${id||cfg.title}</title>${_docPrintStyle()}</head><body>${pages}</body></html>`);
-  win.document.close(); win.print();
+  const pages = targets.map((d, index) =>
+    `<div style="${index < targets.length - 1 ? 'page-break-after:always;' : ''}">${_salesDocBodyHtml(d, cfg.docType, ci)}</div>`
+  ).join('');
+  const docTitle = id || cfg.title;
+  openDocumentPdfPreview(
+    `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${docTitle}</title>${_docPrintStyle()}</head><body>${pages}</body></html>`,
+    docTitle
+  );
 }
 
 /* 견적 → 수주 전환: 고객사 자동등록 + 제품(공정 '설계/도면') 자동생성 + 수주 레코드 생성 */
@@ -16956,7 +16962,9 @@ function _driveDocumentConfig(type) {
 
 function captureDocumentPrintHtml(callback) {
   let html = '';
+  const originalCapture = window._mesDocumentPrintCapture;
   const originalOpen = window.open;
+  window._mesDocumentPrintCapture = value => { html += String(value || ''); };
   window.open = function() {
     return {
       document:{
@@ -16967,21 +16975,24 @@ function captureDocumentPrintHtml(callback) {
     };
   };
   try { callback(); }
-  finally { window.open = originalOpen; }
+  finally {
+    window._mesDocumentPrintCapture = originalCapture;
+    window.open = originalOpen;
+  }
   if (!html) throw new Error('문서 인쇄 내용을 생성하지 못했습니다.');
   return html;
 }
 
-async function documentPdfBlob(type, id) {
-  const config = _driveDocumentConfig(type);
-  if (!config) throw new Error('지원하지 않는 문서 형식입니다.');
+async function createDocumentPdfBlobFromHtml(html) {
   if (typeof html2pdf === 'undefined') throw new Error('PDF 생성 라이브러리가 준비되지 않았습니다.');
-  const html = captureDocumentPrintHtml(()=>config.print(id));
   const parsed = new DOMParser().parseFromString(html, 'text/html');
   const printStyles = Array.from(parsed.head.querySelectorAll('style')).map(style => style.textContent || '').join('\n');
   const frame = document.createElement('iframe');
   frame.setAttribute('aria-hidden', 'true');
-  frame.style.cssText = 'position:fixed;left:-100000px;top:0;width:794px;height:1123px;border:0;pointer-events:none;';
+  // html2canvas uses the rendered element coordinates. A large negative offset
+  // clips the left side of the captured page, so keep the frame at page origin
+  // and place it behind the application instead.
+  frame.style.cssText = 'position:fixed;left:0;top:0;width:794px;height:1123px;border:0;pointer-events:none;z-index:-2147483647;';
   document.body.appendChild(frame);
   try {
     const frameDoc = frame.contentDocument;
@@ -17002,7 +17013,10 @@ async function documentPdfBlob(type, id) {
     if (!content) throw new Error('PDF 문서 영역을 생성하지 못했습니다.');
     const pageElements = Array.from(content.children);
     const lastPage = pageElements[pageElements.length - 1];
-    if (lastPage) lastPage.style.pageBreakAfter = 'auto';
+    if (lastPage) {
+      lastPage.style.pageBreakAfter = 'auto';
+      lastPage.style.breakAfter = 'auto';
+    }
     return await html2pdf().from(content).set({
       margin:[0,0,0,0],
       image:{type:'jpeg',quality:.98},
@@ -17022,6 +17036,63 @@ async function documentPdfBlob(type, id) {
   } finally {
     frame.remove();
   }
+}
+
+async function documentPdfBlob(type, id) {
+  const config = _driveDocumentConfig(type);
+  if (!config) throw new Error('지원하지 않는 문서 형식입니다.');
+  const html = captureDocumentPrintHtml(()=>config.print(id));
+  return createDocumentPdfBlobFromHtml(html);
+}
+
+function openDocumentPdfPreview(html, title) {
+  if (typeof window._mesDocumentPrintCapture === 'function') {
+    window._mesDocumentPrintCapture(html);
+    return;
+  }
+  const preview = window.open('', '_blank', 'width=900,height=960');
+  if (!preview) {
+    showToast('PDF 미리보기 창을 열 수 없습니다. 팝업 차단을 해제해 주세요.', 'error');
+    return;
+  }
+  const parsed = new DOMParser().parseFromString(html, 'text/html');
+  const head = parsed.head.innerHTML;
+  const body = parsed.body.innerHTML;
+  preview.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+    <title>${_driveEsc(title || '인쇄 미리보기')}</title>${head}
+    <style>
+      html{background:#292b2f;}
+      body{margin:0!important;padding:76px 24px 36px!important;background:#292b2f!important;color:#111;}
+      .mes-print-toolbar{position:fixed;z-index:100;left:0;right:0;top:0;height:56px;padding:0 22px;
+        display:flex;align-items:center;justify-content:space-between;background:#202226;color:#fff;
+        box-shadow:0 2px 12px rgba(0,0,0,.35);font:13px 'Malgun Gothic',sans-serif;}
+      .mes-print-actions{display:flex;gap:8px;}
+      .mes-print-actions button{height:34px;padding:0 14px;border:1px solid #59606b;border-radius:6px;
+        background:#343941;color:#fff;font:inherit;font-weight:700;cursor:pointer;}
+      .mes-print-actions button.primary{background:#2878d0;border-color:#2878d0;}
+      .mes-print-sheet{width:794px;min-height:1123px;margin:0 auto;padding:20px 24px;box-sizing:border-box;
+        background:#fff;color:#111;box-shadow:0 8px 30px rgba(0,0,0,.45);}
+      @media(max-width:850px){
+        body{padding-left:8px!important;padding-right:8px!important;}
+        .mes-print-sheet{transform-origin:top left;}
+      }
+      @media print{
+        html,body{background:#fff!important;}
+        body{padding:20px 24px!important;}
+        .mes-print-toolbar{display:none!important;}
+        .mes-print-sheet{width:auto;min-height:0;margin:0;padding:0;box-shadow:none;}
+      }
+    </style></head><body>
+      <div class="mes-print-toolbar">
+        <strong>${_driveEsc(title || '인쇄 미리보기')} · A4 출력 기준</strong>
+        <div class="mes-print-actions">
+          <button onclick="window.close()">닫기</button>
+          <button class="primary" onclick="window.print()">인쇄 / PDF 저장</button>
+        </div>
+      </div>
+      <main class="mes-print-sheet">${body}</main>
+    </body></html>`);
+  preview.document.close();
 }
 
 function captureDocumentXlsxBlob(callback) {
