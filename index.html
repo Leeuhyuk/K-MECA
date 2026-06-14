@@ -558,6 +558,20 @@ body.sb-mini.sb-expanded .sb-overlay { display: block; }
 .sb-overlay { display: none !important; }
 .main,
 body.sb-mini .main { margin-left: 0 !important; }
+@media (min-width: 1440px) {
+  body.wide-sidebar .sidebar {
+    display: flex !important;
+    position: relative;
+    inset: auto;
+    width: 210px;
+    min-width: 210px;
+    height: auto;
+    box-shadow: none;
+  }
+  body.wide-sidebar .main { margin-left: 0 !important; }
+  body.wide-sidebar #menu-toggle-btn { display: none !important; }
+  body.wide-sidebar .sb-overlay { display: none !important; }
+}
 .topbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1851,7 +1865,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <div class="logo-title"><i class="ti ti-building-factory-2"></i>MES Pro</div>
       <div class="logo-sub">제조실행 시스템 v3.8</div>
     </div>
-    <button class="theme-btn" id="sb-toggle-btn" onclick="toggleSidebar()" title="사이드바 접기/펴기"><i class="ti ti-layout-sidebar"></i></button>
+    <button class="theme-btn" id="sb-toggle-btn" onclick="toggleSidebar()" title="사이드바 숨기기" aria-label="사이드바 숨기기"><i class="ti ti-layout-sidebar"></i></button>
   </div>
 
   <div class="nav-g">
@@ -1907,7 +1921,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
 <div class="main">
   <div class="topbar">
     <div class="topbar-left">
-      <button class="theme-btn" id="menu-toggle-btn" onclick="toggleMegaMenu()" title="전체 메뉴" aria-label="전체 메뉴" aria-haspopup="true" aria-expanded="false">
+      <button class="theme-btn" id="menu-toggle-btn" onclick="togglePrimaryMenu()" title="사이드바 또는 전체 메뉴 열기" aria-label="사이드바 또는 전체 메뉴 열기" aria-haspopup="true" aria-expanded="false">
         <i class="ti ti-menu-2"></i>
       </button>
       <button class="topnav-back" id="topnav-back-btn" type="button" onclick="goBack()" title="이전 페이지" aria-label="이전 페이지" disabled>
@@ -4871,6 +4885,9 @@ function onPraStageChange(clientId) {
    미니 레일은 마우스를 올려도 아이콘 상태를 유지하며, 메뉴 클릭 시 바로 이동 */
 const SB_AUTO_MINI_MAX = 1280;
 let _sidebarScrollTimer = null;
+const SB_WIDE_MIN = 1440;
+let _sidebarModeFrame = 0;
+let _sidebarModeObserver = null;
 
 function initSidebarScrollIndicator() {
   const sidebar = document.querySelector('.sidebar');
@@ -4887,15 +4904,63 @@ function initSidebarScrollIndicator() {
 }
 
 function toggleSidebar() {
+  try { localStorage.setItem('mes_sbHidden', '1'); } catch(e){}
+  document.body.classList.remove('wide-sidebar');
+  closeMegaMenu();
+}
+
+function isSidebarHiddenByUser() {
+  try { return localStorage.getItem('mes_sbHidden') === '1'; }
+  catch(e) { return false; }
+}
+
+function togglePrimaryMenu() {
+  if (window.innerWidth >= SB_WIDE_MIN && isSidebarHiddenByUser()) {
+    try { localStorage.removeItem('mes_sbHidden'); } catch(e){}
+    applySidebarMode();
+    if (document.body.classList.contains('wide-sidebar')) return;
+  }
   toggleMegaMenu();
+}
+
+function activePageTableOverflows() {
+  const activePage = document.querySelector('.content.active');
+  if (!activePage) return false;
+  return Array.from(activePage.querySelectorAll('table')).some(table => {
+    if (!table.offsetParent) return false;
+    const wrap = table.parentElement;
+    if (!wrap || wrap.clientWidth < 1) return false;
+    return table.scrollWidth > wrap.clientWidth + 2;
+  });
+}
+
+function scheduleSidebarModeCheck() {
+  if (_sidebarModeFrame) cancelAnimationFrame(_sidebarModeFrame);
+  _sidebarModeFrame = requestAnimationFrame(() => {
+    _sidebarModeFrame = requestAnimationFrame(() => {
+      _sidebarModeFrame = 0;
+      applySidebarMode();
+    });
+  });
+}
+
+function initAdaptiveSidebarObserver() {
+  const main = document.querySelector('.main');
+  if (_sidebarModeObserver || !main) return;
+  _sidebarModeObserver = new MutationObserver(scheduleSidebarModeCheck);
+  _sidebarModeObserver.observe(main, { childList: true, subtree: true });
 }
 
 /* 현재 화면 폭·숨김 여부에 맞는 사이드바 모드 적용 (부팅·리사이즈·토글 시 호출) */
 function applySidebarMode() {
   const body = document.body;
-  body.classList.remove('sb-mini', 'sb-expanded', 'sb-collapsed');
+  body.classList.remove('sb-mini', 'sb-expanded', 'sb-collapsed', 'wide-sidebar');
+  closeMegaMenu();
+  if (window.innerWidth < SB_WIDE_MIN || isSidebarHiddenByUser()) return;
+  body.classList.add('wide-sidebar');
+  if (activePageTableOverflows()) body.classList.remove('wide-sidebar');
 }
-window.addEventListener('resize', applySidebarMode);
+window.addEventListener('resize', scheduleSidebarModeCheck);
 
 /* 미니 오버레이 닫기 (배경 딤 클릭 / 메뉴 이동 시) */
 function closeSbOverlay() {
@@ -5119,6 +5184,7 @@ function _goTo(id, el) {
   currentPage = id;
   syncTopNavActive(id);
   refreshPage(id);
+  scheduleSidebarModeCheck();
   updateTopbarBackButton();
   // 모바일: 페이지 이동 시 홈 오버레이 해제 + 하단 탭 동기화
   document.body.classList.remove('mhome');
@@ -5158,6 +5224,7 @@ function _showInventoryPage(key, meta, el) {
   currentPage = 'inventory';
   syncTopNavActive('inventory', key);
   renderInventory();
+  scheduleSidebarModeCheck();
   updateTopbarBackButton();
   // 모바일 드로어 닫기
   const sb = document.querySelector('.sidebar');
@@ -10566,8 +10633,8 @@ initTheme();
 applyUiScale(getSavedUiScale());
 repairWorkerTimeValues();
 // 햄버거 메가 메뉴에서는 이전 사이드바 표시 상태를 사용하지 않음
-try { localStorage.removeItem('mes_sbHidden'); } catch(e) {}
 if (typeof applySidebarMode === 'function') applySidebarMode();
+if (typeof initAdaptiveSidebarObserver === 'function') initAdaptiveSidebarObserver();
 setTimeout(initAppRouter, 0); // 모든 업무 모듈 선언 후 URL 화면을 복원
 renderAlerts();
 updateTrashBadge();
