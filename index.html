@@ -33,6 +33,8 @@
   --rm: 8px; --rl: 12px;
   --f: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', '맑은 고딕', sans-serif;
   --shadow: 0 2px 8px rgba(0,0,0,0.05);
+  --ui-density-scale: 1;
+  --ui-font-scale: 1;
 }
 :root.dark {
   --bg-p: #1a1a1e; --bg-s: #242428; --bg-t: #121214;
@@ -46,7 +48,7 @@
   --shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: var(--f); background: var(--bg-t); color: var(--tx); height: 100vh; overflow: hidden; display: flex; transition: background 0.2s, color 0.2s; }
+body { font-family: var(--f); font-size: calc(12px * var(--ui-font-scale)); background: var(--bg-t); color: var(--tx); height: 100vh; overflow: hidden; display: flex; transition: background 0.2s, color 0.2s; }
 
 /* 토스트 알림 컨테이너 */
 #toast-container { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 10000; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
@@ -358,24 +360,25 @@ body { font-family: var(--f); background: var(--bg-t); color: var(--tx); height:
 .theme-btn:hover { background: var(--bg-s); }
 
 /* 컨텐츠 및 레이아웃 */
-.content { flex: 1; overflow-y: auto; padding: 20px 24px; display: none; }
+.content { flex: 1; overflow-y: auto; padding: calc(20px * var(--ui-density-scale)) calc(24px * var(--ui-density-scale)); display: none; }
 .content.active { display: block; }
-.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
-.mc { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: 11px 14px; cursor: default; box-shadow: var(--shadow); transition: transform 0.15s, border-color 0.15s; min-width: 0; }
+.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px; }
+.mc { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rm); padding: 8px 11px; cursor: default; box-shadow: var(--shadow); transition: transform 0.15s, border-color 0.15s; min-width: 0; min-height: 58px; display: flex; flex-direction: column; justify-content: center; }
 .mc.clickable { cursor: pointer; }
-.mc.clickable:hover { border-color: var(--tx-i); transform: translateY(-2px); }
+.mc.clickable:hover { border-color: var(--tx-i); transform: translateY(-1px); }
 .mc.clickable.kpi-active { border-color: var(--tx-i); box-shadow: 0 0 0 2px var(--br-i) inset, var(--shadow); }
 .mc.clickable.kpi-active .mc-lbl::after { content: '필터됨'; margin-left: auto; font-size: 9px; font-weight: 700; color: var(--tx-i); background: var(--bg-i); border: 1px solid var(--br-i); border-radius: 8px; padding: 0 6px; }
-.mc-lbl { font-size: 11px; color: var(--tx-s); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; font-weight: 500; }
-.mc-val { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
-.mc-sub { font-size: 10.5px; color: var(--tx-t); margin-top: 2px; font-weight: 500; }
+.mc-lbl { font-size: 11px; color: var(--tx-s); margin-bottom: 3px; display: flex; align-items: center; gap: 5px; font-weight: 500; line-height: 1.2; min-width: 0; }
+.mc-lbl i { font-size: 13px; flex: 0 0 auto; }
+.mc-val { font-size: 20px; font-weight: 700; letter-spacing: 0; line-height: 1.05; min-width: 0; overflow-wrap: anywhere; }
+.mc-sub { font-size: 10.5px; color: var(--tx-t); margin-top: 2px; font-weight: 500; line-height: 1.2; }
 .up { color: var(--tx-ok) !important; }
 .dn { color: var(--tx-d) !important; }
 
 .row2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
 .row3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
 
-.card { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: 18px 20px; box-shadow: var(--shadow); margin-bottom: 16px; min-width: 0; }
+.card { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: calc(18px * var(--ui-density-scale)) calc(20px * var(--ui-density-scale)); box-shadow: var(--shadow); margin-bottom: calc(16px * var(--ui-density-scale)); min-width: 0; }
 .card-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
 .hr-view-toolbar {
   min-height: 34px;
@@ -439,9 +442,16 @@ body { font-family: var(--f); background: var(--bg-t); color: var(--tx); height:
 .card-ttl i { font-size: 16px; color: var(--tx-i); }
 
 /* 테이블 스타일 */
-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-th { text-align: left; padding: 9px 12px; color: var(--tx-s); border-bottom: 1px solid var(--br); font-weight: 600; white-space: nowrap; background: var(--bg-s); }
-td { padding: 9px 12px; border-bottom: 1px solid var(--br); vertical-align: middle; color: var(--tx); word-break: keep-all; }
+table { width: 100%; border-collapse: collapse; font-size: calc(12px * var(--ui-font-scale)); }
+th { text-align: left; padding: calc(9px * var(--ui-density-scale)) calc(12px * var(--ui-density-scale)); color: var(--tx-s); border-bottom: 1px solid var(--br); font-weight: 600; white-space: nowrap; background: var(--bg-s); }
+td { padding: calc(9px * var(--ui-density-scale)) calc(12px * var(--ui-density-scale)); border-bottom: 1px solid var(--br); vertical-align: middle; color: var(--tx); word-break: keep-all; }
+.content { font-size: calc(12px * var(--ui-font-scale)); }
+.content :where(input, select, textarea, button, .btn, .bd, .pill, .empty, .stat-sel, .table-action-select) { font-size: calc(12px * var(--ui-font-scale)) !important; }
+.content :where(table th, table td, table th *, table td *) { font-size: calc(12px * var(--ui-font-scale)) !important; }
+.content :where(.card-ttl, .system-section-title, .table-display-title strong) { font-size: calc(14px * var(--ui-font-scale)) !important; }
+.content :where(.mc-lbl, .mc-sub, .action-sub, .system-help-text, .table-display-help) { font-size: calc(11px * var(--ui-font-scale)) !important; }
+.content :where(.mc-val, .system-kpi strong) { font-size: calc(20px * var(--ui-font-scale)) !important; }
+.content :where(.dlg-title, .tb-title) { font-size: calc(15px * var(--ui-font-scale)) !important; }
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: var(--bg-s); }
 /* ── 데이터 표 가독성: ① 줄무늬 ② 헤더 고정 ③ 첫 열 고정 (불투명 배경으로 고정셀 비침 방지) ── */
@@ -817,6 +827,19 @@ body.mega-menu-open { overflow: hidden; }
 }
 .ui-scale-preview strong { display: block; font-size: 14px; }
 .ui-scale-preview span { display: block; margin-top: 3px; color: var(--tx-t); font-size: 11px; }
+.ui-font-settings { max-width: 720px; padding: 8px 2px; }
+.ui-font-presets { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+.ui-font-presets .btn.active { background: var(--bg-i); border-color: var(--br-i); color: var(--tx-i); font-weight: 700; }
+.ui-font-preview {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--br);
+  border-radius: var(--rl);
+  background: var(--bg-s);
+  line-height: 1.6;
+}
+.ui-font-preview strong { display: block; font-size: calc(14px * var(--ui-font-scale)); }
+.ui-font-preview span { display: block; margin-top: 3px; color: var(--tx-t); font-size: calc(11px * var(--ui-font-scale)); }
 .ui-color-settings { max-width: 820px; padding: 4px 2px; }
 .ui-color-theme-tabs { display: flex; gap: 7px; margin-bottom: 14px; }
 .ui-color-theme-tabs .btn.active { background: var(--bg-i); border-color: var(--br-i); color: var(--tx-i); font-weight: 700; }
@@ -932,6 +955,23 @@ textarea { height: auto; resize: vertical; }
 .edit-btn:hover { background: var(--bg-i); }
 .restore-btn { border-color: var(--br-ok); color: var(--tx-ok); }
 .restore-btn:hover { background: var(--bg-ok); }
+.table-row-select-th,
+.table-row-select-td { width: 34px; min-width: 34px; text-align: center !important; }
+.table-row-select,
+.table-check-all { width: 15px; height: 15px; padding: 0; cursor: pointer; accent-color: var(--tx-i); }
+.content tbody tr.table-row-selected td { background: var(--bg-i) !important; }
+.table-action-cell { min-width: 96px; text-align: center; }
+.table-action-select {
+  width: 92px;
+  height: 28px;
+  padding: 0 24px 0 8px;
+  font-size: calc(11px * var(--ui-font-scale));
+  background: var(--bg-p);
+  color: var(--tx);
+  border: 1px solid var(--br-s);
+  border-radius: var(--rm);
+  cursor: pointer;
+}
 
 /* 패널 디자인 */
 .add-panel { background: var(--bg-s); border: 1px solid var(--br-i); border-radius: var(--rl); padding: 16px 20px; margin-bottom: 16px; display: none; box-shadow: inset 0 1px 3px rgba(0,0,0,0.02); }
@@ -1065,20 +1105,20 @@ textarea { height: auto; resize: vertical; }
   box-shadow: 0 4px 16px rgba(0,0,0,.08);
 }
 .dash-sticky-header .dash-tabs { border-bottom: 2px solid var(--br); margin-bottom: 12px; }
-.dash-sticky-header .metrics { margin-bottom: 0; padding-bottom: 14px; }
+.dash-sticky-header .metrics { margin-bottom: 0; padding-bottom: 9px; }
 
 /* 자재 수급 고정 헤더 */
 .mat-sticky-header {
   position: sticky;
-  top: -20px;
+  top: 0;
   z-index: 90;
-  background: var(--bg-p);
-  margin: -20px -24px 16px;
-  padding: 14px 24px 12px;
-  border-bottom: 2px solid var(--br);
-  box-shadow: 0 4px 16px rgba(0,0,0,.08);
+  background: var(--bg-t);
+  margin: 0 0 10px;
+  padding: 0;
+  border-bottom: 1px solid var(--br);
+  box-shadow: none;
 }
-.mat-sticky-header .metrics { margin-bottom: 10px; }
+.mat-sticky-header .metrics { margin-bottom: 8px; }
 .dash-tab { background:none; border:none; padding:8px 16px; font-size:12px; font-weight:600; color:var(--tx-s); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; border-radius:var(--rm) var(--rm) 0 0; transition:all .15s; }
 .dash-tab:hover { color:var(--tx-i); background:var(--bg-i); }
 .dash-tab.active { color:var(--tx-i); border-bottom-color:var(--tx-i); background:var(--bg-i); }
@@ -1129,6 +1169,88 @@ textarea { height: auto; resize: vertical; }
 .stat-sel { font-size: 11px; padding: 3px 6px; height: 26px; border-radius: 4px; border: 1px solid var(--br-s); background: var(--bg-p); cursor: pointer; font-family: var(--f); font-weight: 500; }
 
 /* 액션 리스트 */
+/* 시스템 관리 */
+#pg-system { background: var(--bg-t); }
+.system-shell { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 22px; align-items: start; }
+.system-sidebar { position: static; align-self: start; margin: 0; background: var(--bg-p); border: 1px solid var(--br); border-radius: 14px; padding: 18px 14px 14px; box-shadow: var(--shadow); }
+.system-sidebar-title { padding: 0 10px 14px; color: var(--tx-t); font-size: 13px; font-weight: 700; }
+.system-nav { display: flex; flex-direction: column; gap: 8px; }
+.system-nav button { width: 100%; min-height: 46px; display: flex; align-items: center; gap: 12px; border: 1px solid var(--br); border-radius: 10px; background: var(--bg-s); color: var(--tx); padding: 0 16px; font-family: var(--f); font-size: 13px; font-weight: 700; text-align: left; cursor: pointer; transition: background .15s, border-color .15s, color .15s, transform .15s; }
+.system-nav button i { width: 17px; color: var(--tx-i); font-size: 16px; text-align: center; }
+.system-nav button:hover { border-color: var(--br-i); background: var(--bg-i); }
+.system-nav button.active, .system-nav button.btn-primary { border-color: var(--tx-i); background: var(--tx-i); color: #fff; box-shadow: 0 8px 18px rgba(25, 113, 194, .22); }
+.system-nav button.active i, .system-nav button.btn-primary i { color: #fff; }
+.system-workspace { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.system-workspace .system-panel { min-width: 0; }
+.system-workspace > .system-panel > .card, .system-workspace .system-panel > .card:first-child { border-radius: 14px; }
+.system-workspace .system-panel > .card:first-child,
+.system-workspace .system-panel > div > .card:first-child { margin-top: 0; }
+.system-section-title { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; color: var(--tx); font-size: 14px; font-weight: 900; }
+.system-section-title i { color: var(--tx-i); font-size: 18px; }
+.system-hero { padding: 18px 28px 28px; border-color: var(--br-i); }
+.system-kpi-row { display: grid; grid-template-columns: repeat(3, minmax(190px, 1fr)); gap: 14px; overflow: hidden; }
+.system-kpi { min-height: 104px; padding: 18px 20px; border: 1px solid var(--br); border-radius: 14px; background: var(--bg-s); box-shadow: var(--shadow); }
+.system-kpi-label { display: flex; align-items: center; gap: 8px; color: var(--tx-s); font-size: 12px; font-weight: 700; }
+.system-kpi-label i { color: var(--tx-i); }
+.system-kpi strong { display: block; margin-top: 10px; font-size: 24px; line-height: 1; color: var(--tx); }
+.system-kpi span { display: block; margin-top: 8px; color: var(--tx-t); font-size: 12px; font-weight: 700; }
+.system-kpi.warn strong, .system-kpi.warn .system-kpi-label i { color: var(--tx-w); }
+.system-kpi.danger strong, .system-kpi.danger .system-kpi-label i { color: var(--tx-d); }
+.system-progress { height: 10px; margin-top: 20px; border-radius: 999px; overflow: hidden; background: var(--bg-t); border: 1px solid var(--br); }
+.system-progress span { display: block; height: 100%; background: var(--tx-i); }
+.system-action-card, .system-check-card { padding: 18px 28px 22px; }
+.system-action-line { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.setup-pill { display: inline-flex; align-items: center; min-height: 30px; padding: 0 12px; border: 1px solid var(--br); border-radius: 6px; background: var(--bg-s); color: var(--tx-s); font-size: 12px; font-weight: 800; }
+.system-help-text { margin-top: 12px; color: var(--tx-t); font-size: 12px; line-height: 1.6; }
+.system-check-table { overflow-x: auto; }
+.system-check-head, .system-check-row { display: grid; grid-template-columns: 140px 260px minmax(360px, 1fr); align-items: center; min-width: 760px; }
+.system-check-head { min-height: 44px; padding: 0 16px; background: var(--bg-t); color: var(--tx-s); font-size: 12px; font-weight: 900; }
+.system-check-row { width: 100%; min-height: 58px; border: 0; border-top: 1px solid var(--br); background: var(--bg-s); color: var(--tx); padding: 0 16px; font-family: var(--f); text-align: left; cursor: pointer; }
+.system-check-row:nth-child(odd) { background: var(--bg-p); }
+.system-check-row:hover { background: var(--bg-i); }
+.system-check-row strong { font-size: 13px; font-weight: 900; }
+.system-check-row span:last-child { color: var(--tx-s); font-size: 12.5px; line-height: 1.5; }
+.setup-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 52px; height: 26px; border-radius: 6px; border: 1px solid var(--br); font-size: 12px; font-weight: 900; }
+.setup-badge.done { color: var(--tx-ok); background: var(--bg-ok); border-color: var(--br-ok); }
+.setup-badge.need { color: var(--tx-d); background: var(--bg-d); border-color: var(--br-d); }
+.setup-badge.check { color: var(--tx-w); background: var(--bg-w); border-color: var(--br-w); }
+.table-display-card { padding: 18px 28px 22px; overflow: hidden; }
+.table-display-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
+.table-display-title > div { display: flex; align-items: center; gap: 9px; min-width: 0; flex-wrap: wrap; }
+.table-display-title i { color: var(--tx-i); font-size: 17px; }
+.table-display-title strong { font-size: 15px; font-weight: 900; }
+.table-display-title span { color: var(--tx-t); font-size: 12px; }
+.table-display-layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 16px; align-items: start; }
+.table-display-tabs { display: flex; flex-direction: column; gap: 8px; max-height: calc(100vh - 250px); overflow-y: auto; padding-right: 3px; }
+.table-display-tabs button { width: 100%; min-height: 42px; padding: 0 14px; border: 1px solid var(--br); border-radius: 8px; background: var(--bg-s); color: var(--tx); font-family: var(--f); font-size: 12.5px; font-weight: 800; cursor: pointer; text-align: left; }
+.table-display-tabs button.active { background: var(--tx-i); border-color: var(--tx-i); color: #fff; }
+.table-display-main { min-width: 0; }
+.table-display-grid { overflow-x: auto; border-top: 1px solid var(--br); }
+.table-display-head, .table-display-row { display: grid; grid-template-columns: 38px max(64px, calc((var(--base-max-ch, 6) * 1.05ch) + 28px)) minmax(120px, 1fr); column-gap: 10px; align-items: center; min-width: 360px; }
+.table-display-head { min-height: 36px; padding: 0 10px; background: var(--bg-t); color: var(--tx-s); font-size: 12px; font-weight: 900; }
+.table-display-row { min-height: 46px; padding: 5px 10px; border-top: 1px solid var(--br); background: var(--bg-s); }
+.table-display-row:nth-child(odd) { background: var(--bg-p); }
+.table-display-row label { display: inline-flex; justify-content: center; }
+.table-display-row input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; }
+.table-display-row strong { color: var(--tx-s); font-size: 12.5px; font-weight: 800; }
+.table-display-row .table-display-base-col { white-space: nowrap; overflow-wrap: normal; }
+.table-display-row input[type="text"], .table-display-row input:not([type]) { width: auto; min-height: 32px; border-radius: 8px; }
+.table-display-row input.table-display-label-input { width: min(100%, max(120px, calc((var(--label-ch, 8) * 1ch) + 34px))); justify-self: start; }
+.table-display-help { margin-top: 14px; color: var(--tx-t); font-size: 12px; line-height: 1.7; }
+.permission-card { min-height: 520px; }
+.permission-tabs button { display: flex; align-items: center; gap: 9px; }
+.permission-tabs button i { width: 16px; color: var(--tx-i); font-size: 15px; text-align: center; }
+.permission-tabs button.active i { color: #fff; }
+.permission-main { border: 1px solid var(--br); border-radius: 10px; background: var(--bg-p); overflow: hidden; }
+.permission-section { min-height: 430px; padding: 16px; }
+.permission-section .card-hd { padding: 0 0 12px; margin-bottom: 12px; border-bottom: 1px solid var(--br); }
+.permission-info-row { display: flex; align-items: center; gap: 13px; padding: 14px; border: 1px solid var(--br); border-radius: 10px; background: var(--bg-s); }
+.permission-info-row > i { color: var(--tx-i); font-size: 21px; }
+.permission-info-row div { flex: 1; min-width: 0; }
+.permission-info-row strong { font-size: 13.5px; font-weight: 900; }
+.permission-info-row p { margin: 4px 0 0; color: var(--tx-s); font-size: 12px; line-height: 1.45; }
+.permission-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 0; }
+
 .action-row { display: flex; flex-direction: column; gap: 8px; }
 .action-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: var(--rm); background: var(--bg-s); border: 1px solid var(--br); min-width: 0; }
 .action-item i { font-size: 18px; flex-shrink: 0; }
@@ -1241,28 +1363,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
 [data-reorderable] th { position: relative; }
 
 /* ── 인라인 편집 / 셀 선택 / 열 폭 조절 ── */
-#mat-table td.cell-sel {
-  outline: 2px solid var(--accent, #4f8ef7);
-  outline-offset: -2px;
-  background: rgba(79,142,247,.08);
-}
-#mat-table td.cell-edit {
-  padding: 0 !important;
-  outline: 2px solid var(--accent, #4f8ef7);
-  outline-offset: -2px;
-}
-.cell-inp {
-  width: 100%;
-  box-sizing: border-box;
-  border: none;
-  background: var(--bg2, #1e1e2e);
-  color: var(--tx, #e0e0e0);
-  font: inherit;
-  padding: 4px 6px;
-  outline: none;
-  resize: none;
-}
-.cell-inp:focus { background: var(--bg3, #2a2a3e); }
 
 /* ── 화면 폭별 UI 전체 자동 축소 (데스크톱 전용, 인쇄 제외) ──
    px 기반 폰트·아이콘·여백을 zoom 으로 비율 축소. 모바일(≤680px)은 기존 레이아웃 유지.
@@ -1671,6 +1771,26 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
 @media screen and (max-width: 680px) {
   .ui-color-fields { grid-template-columns: 1fr; }
   .ui-color-row { grid-template-columns: minmax(82px,1fr) 34px minmax(88px,1fr) 32px; }
+}
+
+@media screen and (max-width: 900px) {
+  .system-shell { grid-template-columns: 1fr; gap: 12px; }
+  .system-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .system-kpi-row { grid-template-columns: 1fr; }
+  .system-check-head, .system-check-row { grid-template-columns: 90px 160px minmax(260px, 1fr); min-width: 560px; }
+  .table-display-layout { grid-template-columns: 1fr; }
+  .table-display-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: none; overflow: visible; padding-right: 0; }
+  .table-display-head, .table-display-row { grid-template-columns: 36px max(58px, calc((var(--base-max-ch, 6) * 1.05ch) + 26px)) minmax(150px, 1fr); min-width: 320px; }
+  .permission-section { min-height: 0; }
+}
+
+@media screen and (max-width: 560px) {
+  .system-nav { grid-template-columns: 1fr; }
+  .system-hero, .system-action-card, .system-check-card, .table-display-card { padding: 18px; }
+  .table-display-title { flex-direction: column; }
+  .table-display-tabs { grid-template-columns: 1fr; }
+  .permission-section { padding: 12px; }
+  .permission-info-row { align-items: flex-start; flex-direction: column; }
 }
 
 /* ════════ 모바일 전용 홈 화면 & 하단 탭바 ════════ */
@@ -2668,11 +2788,19 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
   <style>
     .memo-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
     .memo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
-    .memo-card{border:1px solid var(--br);border-radius:var(--rl);background:var(--bg-p);padding:14px;min-width:0}
+    .memo-card{border:1px solid var(--br);border-radius:var(--rl);background:var(--bg-p);padding:12px;min-width:0;cursor:pointer;transition:border-color .15s,background .15s}
+    .memo-card.memo-selected{background:var(--bg-i);border-color:var(--br-i)}
+    .memo-card-head{display:flex;align-items:center;gap:8px}
+    .memo-select{width:14px;height:14px;accent-color:var(--tx-i);cursor:pointer;flex:0 0 auto}
     .memo-card-title{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .memo-star{width:28px;height:28px;border:0;background:transparent;color:var(--tx-t);display:inline-flex;align-items:center;justify-content:center;border-radius:var(--rm);cursor:pointer;flex:0 0 auto}
+    .memo-star:hover{background:var(--bg-s);color:var(--tx-w)}
+    .memo-star.active{color:var(--tx-w)}
     .memo-card-body{font-size:12px;line-height:1.65;color:var(--tx-s);white-space:pre-wrap;margin:10px 0;max-height:115px;overflow:hidden}
     .memo-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:10.5px;color:var(--tx-t)}
     .memo-tag{padding:2px 7px;border-radius:999px;background:var(--bg-s);border:1px solid var(--br)}
+    #memo-bulkbar{display:none;align-items:center;gap:8px;margin:0 0 12px;padding:9px 14px;background:var(--bg-i);border:1px solid var(--br-i);border-radius:8px;flex-wrap:wrap;color:var(--tx-i)}
+    #memo-bulkbar>span{font-weight:700;font-size:12.5px}
     .todo-board{display:grid;grid-template-columns:repeat(3,minmax(250px,1fr));gap:12px;overflow-x:auto}
     .todo-col{background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rl);padding:10px;min-height:250px}
     .todo-item{background:var(--bg-p);border:1px solid var(--br);border-radius:var(--rm);padding:11px;margin-top:8px}
@@ -2705,8 +2833,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     </select>
     <button class="btn btn-primary btn-icon" onclick="openMemoEditor()" title="새 메모"><i class="ti ti-plus"></i></button>
     <button class="btn btn-icon" onclick="openTodoEditor()" title="새 할 일"><i class="ti ti-list-check"></i></button>
-    <button class="btn btn-icon" onclick="addMemoApiSamples()" title="Gemini API 테스트 예문 추가"><i class="ti ti-flask"></i></button>
-    <button class="btn btn-icon" onclick="removeMemoApiSamples()" title="API 테스트 예문 정리"><i class="ti ti-eraser"></i></button>
   </div>
   <div id="memo-content"></div>
 </div>
@@ -2828,20 +2954,32 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
   </div>
 
   <!-- 시스템 관리 -->
-  <div class="content" id="pg-system">
-    <div class="toolbar" id="system-tabs" style="margin-bottom:16px;">
-      <button class="btn btn-primary" data-systab="permissions" onclick="switchSystemTab('permissions')"><i class="ti ti-user-shield"></i>권한 관리</button>
-      <button class="btn" data-systab="company" onclick="switchSystemTab('company')"><i class="ti ti-building"></i>회사 관리</button>
-      <button class="btn" data-systab="display" onclick="switchSystemTab('display')"><i class="ti ti-palette"></i>화면 설정</button>
-      <button class="btn" data-systab="templates" onclick="switchSystemTab('templates')"><i class="ti ti-template"></i>양식 내보내기</button>
-      <button class="btn" data-systab="api" onclick="switchSystemTab('api')"><i class="ti ti-key"></i>API 관리</button>
-      <button class="btn drive-save-btn" data-systab="drive" onclick="switchSystemTab('drive')"><i class="ti ti-cloud"></i>Google Drive 저장</button>
-      <button class="btn" data-systab="alimtalk" onclick="switchSystemTab('alimtalk')"><i class="ti ti-brand-kakao"></i>알림톡 설정</button>
-      <button class="btn" data-systab="alerts" onclick="switchSystemTab('alerts')"><i class="ti ti-bell"></i>알림 관리</button>
-      <button class="btn" data-systab="trash" onclick="switchSystemTab('trash')"><i class="ti ti-trash"></i>휴지통</button>
+<div class="content" id="pg-system">
+    <div class="system-shell">
+      <aside class="system-sidebar">
+        <div class="system-sidebar-title">시스템 설정</div>
+        <div id="system-tabs" class="system-nav">
+          <button type="button" class="active" data-systab="initial" onclick="switchSystemTab('initial')"><i class="ti ti-list-check"></i>초기 설정</button>
+          <button type="button" data-systab="permissions" onclick="switchSystemTab('permissions')"><i class="ti ti-user-shield"></i>권한 관리</button>
+          <button type="button" data-systab="company" onclick="switchSystemTab('company')"><i class="ti ti-building"></i>회사 관리</button>
+          <button type="button" data-systab="columns" onclick="switchSystemTab('columns')"><i class="ti ti-table-options"></i>표시 설정</button>
+          <button type="button" data-systab="display" onclick="switchSystemTab('display')"><i class="ti ti-palette"></i>화면 설정</button>
+          <button type="button" data-systab="templates" onclick="switchSystemTab('templates')"><i class="ti ti-template"></i>양식 내보내기</button>
+          <button type="button" data-systab="api" onclick="switchSystemTab('api')"><i class="ti ti-key"></i>API 관리</button>
+          <button type="button" class="drive-save-btn" data-systab="drive" onclick="switchSystemTab('drive')"><i class="ti ti-cloud"></i>Google Drive 저장</button>
+          <button type="button" data-systab="alimtalk" onclick="switchSystemTab('alimtalk')"><i class="ti ti-brand-kakao"></i>알림톡 설정</button>
+          <button type="button" data-systab="alerts" onclick="switchSystemTab('alerts')"><i class="ti ti-bell"></i>알림 관리</button>
+          <button type="button" data-systab="trash" onclick="switchSystemTab('trash')"><i class="ti ti-trash"></i>휴지통</button>
+        </div>
+      </aside>
+
+      <section class="system-workspace">
+
+    <div class="system-panel" id="system-panel-initial">
+      <div id="system-initial-body"></div>
     </div>
 
-    <div class="system-panel" id="system-panel-permissions"><div id="perm-body"></div></div>
+    <div class="system-panel" id="system-panel-permissions" style="display:none;"><div id="perm-body"></div></div>
 
     <div class="system-panel" id="system-panel-company" style="display:none;">
       <div class="card">
@@ -2856,18 +2994,22 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       </div>
     </div>
 
+    <div class="system-panel" id="system-panel-columns" style="display:none;">
+      <div id="table-display-settings-body"></div>
+    </div>
+
     <div class="system-panel" id="system-panel-display" style="display:none;">
       <div class="card">
         <div class="card-hd">
-          <span class="card-ttl"><i class="ti ti-arrows-maximize"></i>전체 UI 크기</span>
-          <span style="font-size:11px;color:var(--tx-t);">글자·버튼·카드·아이콘·여백을 같은 비율로 조절</span>
+          <span class="card-ttl"><i class="ti ti-arrows-maximize"></i>화면 밀도</span>
+          <span style="font-size:11px;color:var(--tx-t);">화면 폭이 좁아져도 글자 크기는 유지하고 여백만 조절</span>
         </div>
         <div class="ui-scale-settings">
           <div class="ui-scale-current">
             <span>사용자 설정</span>
             <strong id="ui-scale-value">100%</strong>
           </div>
-          <input id="ui-scale-range" class="ui-scale-range" type="range" min="80" max="120" step="5" value="100"
+          <input id="ui-scale-range" class="ui-scale-range" type="range" min="80" max="120" step="1" value="100"
             oninput="previewUiScale(this.value)" onchange="saveUiScale(this.value)">
           <div class="ui-scale-presets">
             <button class="btn btn-sm" type="button" onclick="setUiScale(80)">80%</button>
@@ -2879,14 +3021,39 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
           </div>
           <div class="ui-scale-info">
             <i class="ti ti-info-circle"></i>
-            <span>화면 폭에 따른 기존 자동 축소 비율에 사용자 설정이 추가 적용됩니다. 모바일에서는 화면 깨짐 방지를 위해 90~110% 범위로 자동 제한됩니다.</span>
+            <span>이 설정은 표와 카드의 여백 밀도만 조절합니다. 브라우저 폭이 줄어도 글자는 자동으로 작아지지 않습니다.</span>
           </div>
           <div class="ui-scale-preview">
             <div>
               <strong>미리보기</strong>
-              <span>현재 스타일과 배치는 그대로 유지됩니다.</span>
+              <span>글자 크기는 유지되고 표 간격만 조절됩니다.</span>
             </div>
             <button class="btn btn-primary" type="button"><i class="ti ti-check"></i>버튼 예시</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-text-size"></i>글자 크기</span>
+          <span style="font-size:11px;color:var(--tx-t);">표·입력창·버튼의 기본 글자 크기 조절</span>
+        </div>
+        <div class="ui-font-settings">
+          <div class="ui-scale-current">
+            <span>글자 설정</span>
+            <strong id="ui-font-value">100%</strong>
+          </div>
+          <input id="ui-font-range" class="ui-scale-range" type="range" min="90" max="120" step="1" value="100"
+            oninput="previewUiFontScale(this.value)" onchange="saveUiFontScale(this.value)">
+          <div class="ui-font-presets">
+            <button class="btn btn-sm" type="button" onclick="setUiFontScale(90)">90%</button>
+            <button class="btn btn-sm" type="button" onclick="setUiFontScale(100)">100%</button>
+            <button class="btn btn-sm" type="button" onclick="setUiFontScale(110)">110%</button>
+            <button class="btn btn-sm" type="button" onclick="setUiFontScale(120)">120%</button>
+            <button class="btn btn-sm" type="button" onclick="resetUiFontScale()"><i class="ti ti-restore"></i>기본값 복원</button>
+          </div>
+          <div class="ui-font-preview">
+            <strong>표 본문 예시</strong>
+            <span>수주 제품, 자재 발주, 재고 관리 화면의 글자 크기에 함께 적용됩니다.</span>
           </div>
         </div>
       </div>
@@ -3063,6 +3230,8 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       </div>
       <div class="card"><div id="trash-table" style="overflow-x:auto;"></div></div>
     </div>
+      </section>
+    </div>
   </div>
 
   <!-- BOM · 자재명세 -->
@@ -3168,13 +3337,14 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     <!-- 선택 일괄 동작 바 -->
     <div id="po-bulkbar" style="display:none;align-items:center;gap:8px;margin:0 0 12px;padding:9px 14px;background:var(--bg-i);border:1px solid var(--br-i);border-radius:8px;flex-wrap:wrap;">
       <span style="font-weight:700;font-size:12.5px;color:var(--tx-i);"><i class="ti ti-checkbox"></i> <span id="po-sel-count">0</span>건 선택됨</span>
-      <button class="btn btn-sm" id="po-clone-btn" onclick="poBulkClone()"><i class="ti ti-copy"></i>선택 복제</button>
-      <button class="btn btn-sm" onclick="poBulkPrint()"><i class="ti ti-printer"></i>선택 PDF 출력</button>
-      <button class="btn btn-sm" onclick="poBulkExport()"><i class="ti ti-file-spreadsheet"></i>선택 엑셀</button>
-      <button class="btn btn-sm drive-save-btn" onclick="poBulkDrive()"><i class="ti ti-cloud-upload"></i>선택 Drive 저장</button>
-      <button class="btn btn-sm" onclick="poBulkEmail()"><i class="ti ti-mail"></i>선택 이메일</button>
-      <button class="btn btn-sm btn-danger" onclick="poBulkDelete()"><i class="ti ti-trash"></i>선택 삭제</button>
-      <button class="btn btn-sm" style="margin-left:auto;" onclick="poToggleAll(false)"><i class="ti ti-x"></i>선택 해제</button>
+      <button class="btn btn-sm" id="po-edit-btn" onclick="poBulkEdit()"><i class="ti ti-edit"></i>수정</button>
+      <button class="btn btn-sm" id="po-clone-btn" onclick="poBulkClone()"><i class="ti ti-copy"></i>복제</button>
+      <button class="btn btn-sm" onclick="poBulkPrint()"><i class="ti ti-printer"></i>PDF 출력</button>
+      <button class="btn btn-sm" onclick="poBulkExport()"><i class="ti ti-file-spreadsheet"></i>엑셀</button>
+      <button class="btn btn-sm drive-save-btn" onclick="poBulkDrive()"><i class="ti ti-cloud-upload"></i>Drive 저장</button>
+      <button class="btn btn-sm" onclick="poBulkEmail()"><i class="ti ti-mail"></i>이메일</button>
+      <button class="btn btn-sm btn-danger" onclick="poBulkDelete()"><i class="ti ti-trash"></i>삭제</button>
+      <button class="btn btn-sm" style="margin-left:auto;" onclick="poToggleAll(false)"><i class="ti ti-x"></i>해제</button>
     </div>
 
     <div class="card">
@@ -4081,7 +4251,7 @@ let globalSearchSelectedIndex = -1;
 
 /* 검색 결과 드롭다운 위치 계산 — 검색창이 사이드바 안에 있어 absolute 로는
    사이드바 overflow/210px 폭에 잘리므로, 입력창 위치 기준 fixed 로 띄운다.
-   body zoom 축소 환경에서는 rect 좌표를 zoom 비율로 되돌려 보정. */
+   화면 밀도 조절은 좌표계를 바꾸지 않으므로 rect 값을 그대로 사용한다. */
 function positionGlobalSearchResults() {
   const input = document.getElementById('global-search-input');
   const resultsDiv = document.getElementById('global-search-results');
@@ -4093,11 +4263,10 @@ function positionGlobalSearchResults() {
     document.documentElement.style.setProperty('--mh-results-top', (r.bottom + 6) + 'px');
     return;
   }
-  const z = parseFloat(getComputedStyle(document.body).zoom) || 1;
   resultsDiv.style.position = 'fixed';
-  resultsDiv.style.top = (r.bottom / z + 6) + 'px';
-  resultsDiv.style.left = (r.left / z) + 'px';
-  resultsDiv.style.width = Math.min(440, window.innerWidth / z - r.left / z - 12) + 'px';
+  resultsDiv.style.top = (r.bottom + 6) + 'px';
+  resultsDiv.style.left = r.left + 'px';
+  resultsDiv.style.width = Math.min(440, window.innerWidth - r.left - 12) + 'px';
 }
 
 function onGlobalSearch(q) {
@@ -4994,7 +5163,7 @@ let _routeApplying = false;
 let _routeDepth = 0;
 
 const ROUTE_SUBPAGES = {
-  system: ['permissions','company','display','templates','api','drive','alimtalk','alerts','trash'],
+  system: ['initial','permissions','company','columns','display','templates','api','drive','alimtalk','alerts','trash'],
   workers: ['roster','att','leave'],
   finance: ['dashboard','revenue','purchase','labor','cost','pnl','ar','etc'],
   notes: ['memos','todos','board','report'],
@@ -5004,7 +5173,7 @@ const ROUTE_SUBPAGES = {
 };
 
 function currentRouteSegment(page) {
-  if (page === 'system') return typeof systemTab === 'string' ? systemTab : 'permissions';
+  if (page === 'system') return typeof systemTab === 'string' ? systemTab : 'initial';
   if (page === 'workers') return typeof empTab === 'string' ? empTab : 'roster';
   if (page === 'finance') return typeof financeTab === 'string' ? financeTab : 'dashboard';
   if (page === 'notes') return typeof memoTab === 'string' ? memoTab : 'memos';
@@ -5045,7 +5214,7 @@ function writeAppRoute(page, segment, mode) {
 }
 
 function applyRouteSubpage(page, segment) {
-  if (page === 'system') systemTab = segment || 'permissions';
+  if (page === 'system') systemTab = segment || 'initial';
   else if (page === 'workers') empTab = segment || 'roster';
   else if (page === 'finance') financeTab = segment || 'dashboard';
   else if (page === 'notes') memoTab = segment || 'memos';
@@ -7278,8 +7447,8 @@ function renderMaterials() {
   if (!rows.length) { cont.innerHTML = empty('자재 발주 내역이 없습니다.'); return; }
   const sColor = {발주전:'var(--tx-t)',발주중:'var(--tx-i)',입고완료:'var(--tx-ok)',지연:'var(--tx-d)'};
   // editField/editType: 인라인 편집 대상 헤더에 부여 (열 순서가 바뀌어도 필드 기준으로 편집)
-  const thSort = (key, label, editField, editType) => {
-    const ef = editField ? ' data-field="'+editField+'" data-type="'+(editType||'text')+'"' : '';
+  const thSort = (key, label) => {
+    const ef = '';
     return '<th onclick="toggleSort(\'materials\',\''+key+'\')" style="cursor:pointer;user-select:none;"'+ef+'>'+label+' '+sortIcon('materials',key)+'</th>';
   };
   cont.innerHTML = '<table style="min-width:1080px;"><thead><tr>' +
@@ -7422,308 +7591,17 @@ function importPoXLS(input) {
   if (input) input.value = '';
 }
 
-/* ════════ 자재 테이블 인라인 편집 / 붙여넣기 ════════
-   열 순서 변경(table-reorder)과 공존하기 위해, 편집 대상 판정은 셀 위치가 아니라
-   현재 DOM 헤더의 data-field/data-type을 기준으로 한다. */
+/* Cell double-click editing is intentionally disabled.
+   Row-level selection and bulk actions are handled by table-selection.js/cloud-sync.js. */
 (function () {
   'use strict';
-
-  // 현재 DOM 상의 col(셀 인덱스)에 해당하는 헤더 메타 정보 조회
-  function getColMeta(col) {
-    const ths = document.querySelectorAll('#mat-table thead th');
-    const th = ths[col];
-    if (!th) return { field: null, type: 'text', editable: false };
-    const field = th.dataset.field || null;
-    return { field: field, type: th.dataset.type || 'text', editable: !!field };
-  }
-  function colCount() {
-    return document.querySelectorAll('#mat-table thead th').length;
-  }
-
-  let selMid = null;
-  let selCol = -1;
-  let editMid = null;
-  let editCol = -1;
-  let editOrig = '';
-  let docBound = false;
-
-  /* ──────────── 초기화 (renderMaterials 끝에서 setTimeout 0으로 호출) ──────────── */
-  function initMatInlineEdit() {
+  window.initMatInlineEdit = function initMatInlineEdit() {
     const cont = document.getElementById('mat-table');
     if (!cont) return;
-
-    // 컨테이너 이벤트 위임 — innerHTML 교체 후에도 cont 요소는 유지되므로 한 번만 붙임
-    if (!cont.dataset.ileInit) {
-      cont.dataset.ileInit = '1';
-      cont.addEventListener('click', onContainerClick);
-      cont.addEventListener('dblclick', onContainerDblClick);
-    }
-
-    // 도큐먼트 이벤트 한 번만
-    if (!docBound) {
-      docBound = true;
-      document.addEventListener('keydown', onDocKey, true); // capture:true
-      document.addEventListener('paste', onDocPaste);
-    }
-  }
-
-  /* ──────────── 셀/행 헬퍼 ──────────── */
-  function getTbody() {
-    return document.querySelector('#mat-table tbody');
-  }
-
-  function getRowIdxByMid(mid) {
-    const tbody = getTbody();
-    if (!tbody) return -1;
-    // cells[1] = 자재코드 (cells[0]은 체크박스)
-    return Array.prototype.findIndex.call(tbody.rows, tr => tr.cells[1] && tr.cells[1].textContent.trim() === mid);
-  }
-
-  function getTd(mid, col) {
-    const ri = getRowIdxByMid(mid);
-    if (ri < 0) return null;
-    const tbody = getTbody();
-    const tr = tbody.rows[ri];
-    return tr && tr.cells[col] ? tr.cells[col] : null;
-  }
-
-  function getMidFromTr(tr) {
-    return tr && tr.cells[1] ? tr.cells[1].textContent.trim() : null;
-  }
-
-  function tdFromEvent(e) {
-    const td = e.target.closest('td');
-    if (!td) return null;
-    if (!td.closest('#mat-table tbody')) return null;
-    return td;
-  }
-
-  /* ──────────── 선택 하이라이트 ──────────── */
-  function setSelected(mid, col) {
-    clearHighlight();
-    selMid = mid;
-    selCol = col;
-    const td = getTd(mid, col);
-    if (td) td.classList.add('cell-sel');
-  }
-
-  function clearHighlight() {
-    const cont = document.getElementById('mat-table');
-    if (cont) cont.querySelectorAll('.cell-sel').forEach(el => el.classList.remove('cell-sel'));
-  }
-
-  /* ──────────── 단일 클릭 → 선택 ──────────── */
-  function onContainerClick(e) {
-    if (e.target.closest('select, button, input, textarea')) return;
-    const td = tdFromEvent(e);
-    if (!td) return;
-    const mid = getMidFromTr(td.closest('tr'));
-    const col = td.cellIndex;
-    if (editMid && (editMid !== mid || editCol !== col)) commitEdit();
-    if (!editMid) setSelected(mid, col);
-  }
-
-  /* ──────────── 더블클릭 → 편집 시작 ──────────── */
-  function onContainerDblClick(e) {
-    if (e.target.closest('select, button')) return;
-    const td = tdFromEvent(e);
-    if (!td) return;
-    const mid = getMidFromTr(td.closest('tr'));
-    const col = td.cellIndex;
-    startEdit(mid, col, td);
-  }
-
-  /* ──────────── 편집 시작 ──────────── */
-  function startEdit(mid, col, td) {
-    const meta = getColMeta(col);
-    if (!meta.editable) return;
-    if (editMid) commitEdit();
-
-    const m = materials.find(x => x.id === mid);
-    if (!m) return;
-
-    editMid = mid;
-    editCol = col;
-    editOrig = td.textContent.trim();
-
-    const rawVal = getRawVal(m, col);
-    td.classList.add('cell-edit');
-
-    const isNote = (meta.type === 'textarea');
-    const el = document.createElement(isNote ? 'textarea' : 'input');
-    if (!isNote) {
-      el.type = meta.type === 'date' ? 'date' : meta.type === 'number' ? 'number' : 'text';
-      if (el.type === 'number') el.min = '0';
-    } else {
-      el.rows = 2;
-    }
-    el.value = rawVal;
-    el.className = 'cell-inp';
-
-    td.innerHTML = '';
-    td.appendChild(el);
-    el.focus();
-    try { el.select(); } catch(err) {}
-
-    el.addEventListener('blur', () => {
-      setTimeout(() => { if (editMid === mid && editCol === col) commitEdit(); }, 80);
+    cont.querySelectorAll('.cell-sel,.cell-edit').forEach(el => {
+      el.classList.remove('cell-sel', 'cell-edit');
     });
-    el.addEventListener('keydown', e => {
-      if (e.key === 'Escape') { e.stopPropagation(); cancelEdit(); }
-      else if (e.key === 'Enter' && !isNote) { e.preventDefault(); commitEdit(); moveFocus(mid, col, 1); }
-      else if (e.key === 'Tab') { e.preventDefault(); commitEdit(); moveFocus(mid, col, e.shiftKey ? -1 : 1); }
-    });
-  }
-
-  function getRawVal(m, col) {
-    const meta = getColMeta(col);
-    if (!meta.field) return '';
-    const val = m[meta.field];
-    if (meta.type === 'number') return String(val || 0);
-    return val || '';
-  }
-
-  function commitEdit() {
-    if (!editMid) return;
-    const td = getTd(editMid, editCol);
-    const el = td && td.querySelector('input, textarea');
-    const val = el ? el.value.trim() : '';
-    const mid = editMid, col = editCol;
-    editMid = null; editCol = -1; editOrig = '';
-
-    const m = materials.find(x => x.id === mid);
-    if (m) {
-      applyVal(m, col, val);
-      saveStorage('materials', materials);
-      renderMaterials();
-      // renderMaterials → setTimeout(initMatInlineEdit,0) → enhanceBulk 순이므로 50ms 후 선택 복원
-      setTimeout(() => setSelected(mid, col), 50);
-    }
-  }
-
-  function cancelEdit() {
-    if (!editMid) return;
-    const td = getTd(editMid, editCol);
-    if (td) {
-      td.classList.remove('cell-edit');
-      td.textContent = editOrig;
-    }
-    editMid = null; editCol = -1; editOrig = '';
-  }
-
-  function applyVal(m, col, val) {
-    const meta = getColMeta(col);
-    if (!meta.field) return;
-    if (meta.type === 'number') m[meta.field] = parseInt(val) || 0;
-    else m[meta.field] = val;
-  }
-
-  /* ──────────── Tab 이동 (다음 편집 가능 열로) ──────────── */
-  function moveFocus(mid, col, dcol) {
-    const N = colCount();
-    let c = col + dcol;
-    while (c >= 0 && c < N) {
-      if (getColMeta(c).editable) break;
-      c += dcol;
-    }
-    if (c < 0 || c >= N) return;
-    setSelected(mid, c);
-    setTimeout(() => {
-      const td = getTd(mid, c);
-      if (td) startEdit(mid, c, td);
-    }, 50);
-  }
-
-  /* ──────────── 키보드 네비게이션 ──────────── */
-  function onDocKey(e) {
-    if (editMid) {
-      if (e.key !== 'Escape' && e.key !== 'Tab' && e.key !== 'Enter') return;
-      return; // input 자체 keydown 리스너가 처리
-    }
-    if (!selMid) return;
-
-    // mat-table이 속한 페이지가 숨겨져 있으면 키 이벤트를 가로채지 않음
-    const matTable = document.getElementById('mat-table');
-    if (!matTable) return;
-    const pg = matTable.closest('[id^="pg-"]');
-    if (pg && (pg.style.display === 'none' || pg.hidden)) return;
-
-    const tbody = getTbody();
-    if (!tbody) return;
-
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      const ri = getRowIdxByMid(selMid);
-      const nr = e.key === 'ArrowDown' ? Math.min(ri + 1, tbody.rows.length - 1) : Math.max(ri - 1, 0);
-      const newMid = getMidFromTr(tbody.rows[nr]);
-      if (newMid) setSelected(newMid, selCol);
-    } else if (e.key === 'ArrowRight') {
-      e.preventDefault();
-      setSelected(selMid, Math.min(selCol + 1, colCount() - 1));
-    } else if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      setSelected(selMid, Math.max(selCol - 1, 0));
-    } else if (e.key === 'Enter' || e.key === 'F2') {
-      e.preventDefault();
-      const td = getTd(selMid, selCol);
-      if (td) startEdit(selMid, selCol, td);
-    } else if ((e.key === 'Delete' || e.key === 'Backspace') && getColMeta(selCol).editable) {
-      const m = materials.find(x => x.id === selMid);
-      if (m) {
-        applyVal(m, selCol, '');
-        saveStorage('materials', materials);
-        const savedMid = selMid, savedCol = selCol;
-        renderMaterials();
-        setTimeout(() => setSelected(savedMid, savedCol), 50);
-      }
-    }
-  }
-
-  /* ──────────── 붙여넣기 (Ctrl+V) ──────────── */
-  function onDocPaste(e) {
-    if (editMid) return; // 인풋 내 붙여넣기는 브라우저가 처리
-    if (!selMid) return;
-    if (!document.getElementById('mat-table')) return;
-
-    const text = (e.clipboardData || window.clipboardData).getData('text');
-    if (!text) return;
-    e.preventDefault();
-
-    const tbody = getTbody();
-    if (!tbody) return;
-
-    const pasteRows = text.split(/\r?\n/).filter(r => r !== '');
-    const startRi = getRowIdxByMid(selMid);
-    let changed = false;
-
-    pasteRows.forEach((rowStr, ri) => {
-      const trIdx = startRi + ri;
-      if (trIdx >= tbody.rows.length) return;
-      const mid = getMidFromTr(tbody.rows[trIdx]);
-      const m = materials.find(x => x.id === mid);
-      if (!m) return;
-
-      const cells = rowStr.split('\t');
-      const N = colCount();
-      let ci = 0;
-      // col과 ci를 함께 전진 — 비편집 열의 클립보드 값도 위치 맞춤을 위해 소비
-      for (let col = selCol; col < N && ci < cells.length; col++, ci++) {
-        if (getColMeta(col).editable) {
-          applyVal(m, col, cells[ci].trim());
-          changed = true;
-        }
-      }
-    });
-
-    if (changed) {
-      saveStorage('materials', materials);
-      const savedMid = selMid, savedCol = selCol;
-      renderMaterials();
-      setTimeout(() => setSelected(savedMid, savedCol), 50);
-    }
-  }
-
-  window.initMatInlineEdit = initMatInlineEdit;
+  };
 })();
 
 /* ════════ [복구] 실시간 재고 관리 (inventory) ════════ */
@@ -10302,6 +10180,8 @@ function toggleTheme() {
 /* ════════ 전체 UI 크기 ════════ */
 const UI_SCALE_MIN = 80;
 const UI_SCALE_MAX = 120;
+const UI_FONT_MIN = 90;
+const UI_FONT_MAX = 120;
 
 function getSavedUiScale() {
   const value = Number(localStorage.getItem('mes_uiScale') || 100);
@@ -10311,10 +10191,10 @@ function getSavedUiScale() {
 function getAutoUiScale() {
   const width = window.innerWidth;
   if (width <= 680) return 1;
-  if (width <= 900) return .80;
-  if (width <= 1100) return .85;
-  if (width <= 1366) return .90;
-  if (width <= 1600) return .95;
+  if (width <= 900) return .92;
+  if (width <= 1100) return .94;
+  if (width <= 1366) return .96;
+  if (width <= 1600) return .98;
   return 1;
 }
 
@@ -10324,8 +10204,9 @@ function applyUiScale(value) {
     ? Math.min(110, Math.max(90, requested))
     : Math.min(UI_SCALE_MAX, Math.max(UI_SCALE_MIN, requested));
   const finalScale = getAutoUiScale() * (userPercent / 100);
-  document.body.style.zoom = String(finalScale);
-  document.body.style.height = `calc(100vh / ${finalScale})`;
+  document.body.style.removeProperty('zoom');
+  document.body.style.height = '100vh';
+  document.documentElement.style.setProperty('--ui-density-scale', String(finalScale));
   document.documentElement.style.setProperty('--user-ui-scale', String(userPercent / 100));
   return { requested, userPercent, finalScale };
 }
@@ -10350,7 +10231,7 @@ function previewUiScale(value) {
 }
 
 function saveUiScale(value) {
-  const normalized = Math.round(Number(value) / 5) * 5;
+  const normalized = Math.round(Number(value));
   localStorage.setItem('mes_uiScale', String(Math.min(UI_SCALE_MAX, Math.max(UI_SCALE_MIN, normalized))));
   applyUiScale(normalized);
   updateUiScaleControls(normalized);
@@ -10368,8 +10249,56 @@ function resetUiScale() {
   showToast('화면 크기를 기본값 100%로 복원했습니다.', 'success');
 }
 
+function getSavedUiFontScale() {
+  const value = Number(localStorage.getItem('mes_uiFontScale') || 100);
+  return Number.isFinite(value) ? Math.min(UI_FONT_MAX, Math.max(UI_FONT_MIN, value)) : 100;
+}
+
+function applyUiFontScale(value) {
+  const requested = Number(value || getSavedUiFontScale());
+  const userPercent = Math.min(UI_FONT_MAX, Math.max(UI_FONT_MIN, requested));
+  document.documentElement.style.setProperty('--ui-font-scale', String(userPercent / 100));
+  return userPercent;
+}
+
+function updateUiFontControls(value) {
+  const requested = Number(value || getSavedUiFontScale());
+  const range = inp('ui-font-range');
+  const label = inp('ui-font-value');
+  if (range) range.value = String(requested);
+  if (label) label.textContent = `${requested}%`;
+  document.querySelectorAll('.ui-font-presets .btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.trim() === `${requested}%`);
+  });
+}
+
+function previewUiFontScale(value) {
+  applyUiFontScale(value);
+  updateUiFontControls(value);
+}
+
+function saveUiFontScale(value) {
+  const normalized = Math.round(Number(value));
+  localStorage.setItem('mes_uiFontScale', String(Math.min(UI_FONT_MAX, Math.max(UI_FONT_MIN, normalized))));
+  applyUiFontScale(normalized);
+  updateUiFontControls(normalized);
+  showToast(`글자 크기를 ${normalized}%로 저장했습니다.`, 'success');
+}
+
+function setUiFontScale(value) {
+  saveUiFontScale(value);
+}
+
+function resetUiFontScale() {
+  localStorage.removeItem('mes_uiFontScale');
+  applyUiFontScale(100);
+  updateUiFontControls(100);
+  showToast('글자 크기를 기본값 100%로 복원했습니다.', 'success');
+}
+
 function renderUiScaleSettings() {
   updateUiScaleControls(getSavedUiScale());
+  updateUiFontControls(getSavedUiFontScale());
   renderUiColorSettings();
 }
 
@@ -10631,6 +10560,7 @@ const _cloudQueue=new Set(); let _cloudTimer=null; let _cloudUnsub=null;
 syncFilterDropdowns();
 initTheme();
 applyUiScale(getSavedUiScale());
+applyUiFontScale(getSavedUiFontScale());
 repairWorkerTimeValues();
 // 햄버거 메가 메뉴에서는 이전 사이드바 표시 상태를 사용하지 않음
 if (typeof applySidebarMode === 'function') applySidebarMode();
@@ -10713,6 +10643,13 @@ const COLUMN_TABLES = {
   claims:     { sel:'#claims-table-full', label:'고객 클레임',       addBtn:'openClaimAdd',  cols:['인입일','유형','의뢰 고객사','해당 제품','클레임 사양','내용','조치 방안','상태','관리'] },
   as:         { sel:'#as-body',           label:'고객 A/S',         addBtn:'openAsAdd',     cols:['접수번호','접수일','고객사','제품','증상','보증','상태','담당자','수리비','관리'] },
   materials:  { sel:'#mat-table',         label:'자재 수급/발주',    addBtn:'openMatAdd',    cols:['자재코드','고객사','매칭제품','자재명','공급처','구매단가','수량','매입총액','주문일자','입고예정일','진행상황','참고','관리'] },
+  rfq:        { sel:'#rfq-table',         label:'견적요청서',        addBtn:'openRfqAdd',    cols:['문서번호','요청일','고객사','연결제품','공급처','품목명','규격','수량','희망단가','상태','비고','관리'] },
+  po:         { sel:'#po-table',          label:'구매발주서',        addBtn:'openPoAdd',     cols:['발주번호','발행일','고객사','연결제품','공급처','품목명','규격','수량','단가','금액','결제조건','납품방법','상태','비고'] },
+  quote:      { sel:'#qt-table',          label:'견적/수주-견적서',   addBtn:'openSODocAdd',  cols:['견적번호','일자','고객사','품목명','규격','수량','단가','공급가액','납기','상태','관리'] },
+  order:      { sel:'#so-table',          label:'견적/수주-수주서',   addBtn:'openSODocAdd',  cols:['수주번호','일자','고객사','품목명','규격','수량','단가','공급가액','연결 제품(공정)','상태','관리'] },
+  statement:  { sel:'#st-table',          label:'거래명세표',        addBtn:'openSalesDocAdd', cols:['문서번호','발행일','공급받는 고객사','연결제품','품목명','규격','수량','단가','공급가액','부가세','합계','상태','관리'] },
+  tax:        { sel:'#tx-table',          label:'세금계산서',        addBtn:'openSalesDocAdd', cols:['문서번호','발행일','공급받는 고객사','연결제품','품목명','규격','수량','단가','공급가액','부가세','합계','상태','관리'] },
+  partners:   { sel:'#bp-table',          label:'거래처 관리',       addBtn:'openPartnerModal', cols:['코드','거래처명','유형','담당자','전화번호','이메일','사업자번호','비고','납기이행률','거래금액','관리'] },
   deliveries: { sel:'#dlv-table',         label:'납품 현황',        cols:['납품번호','납품일자','고객사','제품명','규격','수량','단가','납품금액','비고','삭제'] },
   inventory:  { sel:'#inventory-table',   label:'재고',             addBtn:'openInvAdd',    cols:['재고코드','품목명','분류','현재고','안전재고','보관위치','참고','관리'] }
 };
@@ -10991,18 +10928,22 @@ function _cloudChip(state){
 }
 
 /* ════════ 권한 관리 화면 ════════ */
-let systemTab = 'permissions';
+let systemTab = 'initial';
 function switchSystemTab(tab) {
-  systemTab = tab || 'permissions';
+  systemTab = tab || 'initial';
   syncCurrentSubRoute('system', systemTab);
   document.querySelectorAll('#system-tabs [data-systab]').forEach(btn => {
-    btn.classList.toggle('btn-primary', btn.dataset.systab === systemTab);
+    const active = btn.dataset.systab === systemTab;
+    btn.classList.toggle('btn-primary', active);
+    btn.classList.toggle('active', active);
   });
   document.querySelectorAll('#pg-system .system-panel').forEach(panel => {
     panel.style.display = panel.id === 'system-panel-' + systemTab ? '' : 'none';
   });
-  if (systemTab === 'permissions') renderPermissions();
+  if (systemTab === 'initial') renderSystemInitial();
+  else if (systemTab === 'permissions') renderPermissions();
   else if (systemTab === 'company') renderSystemCompany();
+  else if (systemTab === 'columns') renderTableDisplaySettings();
   else if (systemTab === 'display') renderUiScaleSettings();
   else if (systemTab === 'templates') renderDocTemplateManagement();
   else if (systemTab === 'api') renderApiSettings();
@@ -11013,6 +10954,257 @@ function switchSystemTab(tab) {
 }
 function renderSystem() {
   switchSystemTab(systemTab);
+}
+function renderSystemInitial() {
+  const body = inp('system-initial-body');
+  if (!body) return;
+  const ci = typeof getCompanyInfo === 'function' ? getCompanyInfo() : {};
+  const companyReady = !!(ci.name && ci.bizNo);
+  const workerCount = Array.isArray(workers) ? workers.length : 0;
+  const workerReady = workerCount > 0;
+  const standardReady = Array.isArray(products) && products.length > 0;
+  const materialReady = Array.isArray(materials) && materials.length > 0;
+  const templateStore = typeof _docTemplateStore === 'function' ? _docTemplateStore() : {};
+  const templateReady = ['rfq','po','quote','statement','tax'].some(type => templateStore[type]);
+  const driveConfig = typeof getGoogleDriveConfig === 'function' ? getGoogleDriveConfig() : {};
+  const driveReady = !!(driveConfig.enabled || driveConfig.folderId || driveConfig.accessToken);
+  const apiReady = !!(_cloudActive || localStorage.getItem('mes_apiSettings') || localStorage.getItem('mes_geminiApiKey'));
+  const required = [
+    {key:'company', label:'회사 정보', status:companyReady?'done':'need', current:companyReady ? `${ci.name}${ci.bizNo ? ' · ' + ci.bizNo : ''}` : '회사명과 사업자등록번호를 등록하세요.', tab:'company'},
+    {key:'workers', label:'인력·기술책임자', status:workerReady?'done':'need', current:workerReady ? `${workerCount}명 등록` : '사원 또는 담당자를 등록하세요.', tab:'permissions'},
+    {key:'standards', label:'제품·표준 기준', status:standardReady?'done':'need', current:standardReady ? `제품 ${products.length}건 등록` : '제품과 표준 기준 데이터를 등록하세요.', tab:'company'},
+    {key:'materials', label:'자재·공급 기준', status:materialReady?'done':'need', current:materialReady ? `자재 ${materials.length}건 등록` : '자재와 공급처 기준을 등록하세요.', tab:'company'},
+    {key:'drive', label:'Google Drive 백업', status:driveReady?'done':'check', current:driveReady ? '외부 저장 연결 확인됨' : '외부 문서와 백업을 쓰려면 연결하세요.', tab:'drive'},
+    {key:'api', label:'API·클라우드', status:apiReady?'done':'check', current:apiReady ? '연결 또는 설정 확인됨' : 'API 관리에서 필요한 키와 클라우드 연결을 확인하세요.', tab:'api'},
+    {key:'templates', label:'문서 양식', status:templateReady?'done':'check', current:templateReady ? '사용자 양식 등록됨' : '기본 양식 사용 중입니다. 필요 시 회사 양식을 등록하세요.', tab:'templates'}
+  ];
+  const done = required.filter(x => x.status === 'done').length;
+  const need = required.filter(x => x.status === 'need').length;
+  const check = required.filter(x => x.status === 'check').length;
+  const rate = Math.round((done / required.length) * 100);
+  const badge = item => {
+    const text = item.status === 'done' ? '완료' : (item.status === 'need' ? '필요' : '확인');
+    return `<span class="setup-badge ${item.status}">${text}</span>`;
+  };
+  body.innerHTML = `
+    <div class="system-hero card">
+      <div class="system-section-title"><i class="ti ti-list-check"></i><span>초기 설정 체크리스트</span></div>
+      <div class="system-kpi-row">
+        <div class="system-kpi"><div class="system-kpi-label"><i class="ti ti-progress-check"></i>준비율</div><strong>${rate}%</strong><span>${done}/${required.length} 완료</span></div>
+        <div class="system-kpi warn"><div class="system-kpi-label"><i class="ti ti-alert-circle"></i>확인 필요</div><strong>${check}건</strong><span>선택 설정</span></div>
+        <div class="system-kpi danger"><div class="system-kpi-label"><i class="ti ti-circle-x"></i>필수 미완료</div><strong>${need}건</strong><span>운영 전 점검</span></div>
+      </div>
+      <div class="system-progress"><span style="width:${rate}%;"></span></div>
+    </div>
+    <div class="system-action-card card">
+      <div class="system-section-title"><i class="ti ti-database-plus"></i><span>예제 생성·제거</span></div>
+      <div class="system-action-line">
+        <span class="setup-pill">현재 예제 ${typeof countSampleRecords === 'function' ? countSampleRecords() : 0}건</span>
+        <button class="btn btn-primary" onclick="runSystemSampleAction('create')"><i class="ti ti-plus"></i>예제 생성</button>
+        <button class="btn btn-danger" onclick="runSystemSampleAction('remove')"><i class="ti ti-trash"></i>예제 제거</button>
+      </div>
+      <div class="system-help-text">샘플 데이터가 필요할 때만 예제 생성을 누르고, 실제 운영 전에는 예제 제거를 실행하세요.</div>
+    </div>
+    <div class="system-check-card card">
+      <div class="system-section-title"><i class="ti ti-clipboard-check"></i><span>설정 항목</span></div>
+      <div class="system-check-table">
+        <div class="system-check-head"><span>상태</span><span>항목</span><span>현재 상태</span></div>
+        ${required.map(item => `
+          <button type="button" class="system-check-row" onclick="switchSystemTab('${item.tab}')">
+            <span>${badge(item)}</span>
+            <strong>${item.label}</strong>
+            <span>${item.current}</span>
+          </button>
+        `).join('')}
+      </div>
+    </div>`;
+}
+function runSystemSampleAction(action) {
+  const fn = action === 'create' ? window.createSampleData : window.removeSampleData;
+  if (typeof fn === 'function') {
+    fn();
+    renderSystemInitial();
+    return;
+  }
+  showToast('현재 버전에는 예제 데이터 자동 생성 기능이 연결되어 있지 않습니다.', 'info');
+}
+function tableDisplayConfig(){ return loadStorage('tableDisplayConfig', {}); }
+function saveTableDisplayConfig(cfg){
+  saveStorage('tableDisplayConfig', cfg || {});
+  applyTableDisplaySettings();
+}
+function _tableDisplayTables(){
+  return (typeof COLUMN_TABLES !== 'undefined') ? COLUMN_TABLES : {};
+}
+function renderTableDisplaySettings(){
+  const body = inp('table-display-settings-body');
+  if (!body) return;
+  const tables = _tableDisplayTables();
+  const keys = Object.keys(tables);
+  if (!keys.length) {
+    body.innerHTML = `<div class="card"><div class="empty"><i class="ti ti-table-off"></i>설정 가능한 테이블이 없습니다.</div></div>`;
+    return;
+  }
+  const active = localStorage.getItem('mes_tableDisplayActive') || keys[0];
+  const tableKey = tables[active] ? active : keys[0];
+  localStorage.setItem('mes_tableDisplayActive', tableKey);
+  const cfg = tableDisplayConfig();
+  const tableCfg = cfg[tableKey] || {};
+  const hidden = tableCfg.hidden || {};
+  const labels = tableCfg.labels || {};
+  const cols = tables[tableKey].cols || [];
+  const baseMaxCh = Math.max(4, ...cols.map(col => String(col || '').length));
+  body.innerHTML = `
+    <div class="table-display-card card">
+      <div class="table-display-title">
+        <div><i class="ti ti-table-options"></i><strong>표시 설정</strong><span>테이블별 컬럼 표시/숨김 · 라벨 변경</span></div>
+        <button class="btn btn-sm" type="button" onclick="resetTableDisplaySettings('${tableKey}')"><i class="ti ti-restore"></i>현재 테이블 초기화</button>
+      </div>
+      <div class="table-display-layout">
+        <div class="table-display-tabs">
+          ${keys.map(key => `<button type="button" class="${key===tableKey?'active':''}" onclick="selectTableDisplaySettings('${key}')">${tables[key].label}</button>`).join('')}
+        </div>
+        <div class="table-display-main">
+          <div class="table-display-grid" style="--base-max-ch:${baseMaxCh}">
+        <div class="table-display-head"><span>표시</span><span>기본 컬럼</span><span>표시 라벨(비우면 기본값)</span></div>
+        ${cols.map((col, index) => `
+          <div class="table-display-row">
+            <label><input type="checkbox" ${hidden[col] ? '' : 'checked'} onchange="setTableColumnVisible('${tableKey}', ${index}, this.checked)"></label>
+            <strong class="table-display-base-col">${col}</strong>
+            <input class="table-display-label-input" style="--label-ch:${Math.max(6, String(labels[col] || col || '').length)}" value="${esc(labels[col] || col)}" placeholder="${esc(col)}" oninput="this.style.setProperty('--label-ch', Math.max(6, this.value.length)); setTableColumnLabel('${tableKey}', ${index}, this.value)">
+          </div>
+        `).join('')}
+          </div>
+      <div class="table-display-help">
+        <div>· 표시 해제 시 모든 사용자 화면에서 해당 컬럼이 숨겨집니다. 데이터는 유지됩니다.</div>
+        <div>· 라벨은 화면에 보이는 텍스트만 바꾸며 데이터와 정렬 기능에는 영향이 없습니다.</div>
+        <div>· 역할별 컬럼 숨김은 권한 관리 탭에서 별도로 설정합니다.</div>
+      </div>
+        </div>
+      </div>
+    </div>`;
+}
+function selectTableDisplaySettings(key){
+  localStorage.setItem('mes_tableDisplayActive', key);
+  renderTableDisplaySettings();
+}
+function _tableDisplayColumn(tableKey, index){
+  const table = _tableDisplayTables()[tableKey];
+  return table && table.cols ? table.cols[index] : '';
+}
+function setTableColumnVisible(tableKey, index, visible){
+  const col = _tableDisplayColumn(tableKey, index);
+  if (!col) return;
+  const cfg = tableDisplayConfig();
+  const tableCfg = cfg[tableKey] || { hidden:{}, labels:{} };
+  tableCfg.hidden = tableCfg.hidden || {};
+  if (visible) delete tableCfg.hidden[col];
+  else tableCfg.hidden[col] = true;
+  cfg[tableKey] = tableCfg;
+  saveTableDisplayConfig(cfg);
+}
+function setTableColumnLabel(tableKey, index, label){
+  const col = _tableDisplayColumn(tableKey, index);
+  if (!col) return;
+  const cfg = tableDisplayConfig();
+  const tableCfg = cfg[tableKey] || { hidden:{}, labels:{} };
+  tableCfg.labels = tableCfg.labels || {};
+  const next = String(label || '').trim();
+  if (!next || next === col) delete tableCfg.labels[col];
+  else tableCfg.labels[col] = next;
+  cfg[tableKey] = tableCfg;
+  saveTableDisplayConfig(cfg);
+}
+function resetTableDisplaySettings(tableKey){
+  const cfg = tableDisplayConfig();
+  delete cfg[tableKey];
+  saveTableDisplayConfig(cfg);
+  renderTableDisplaySettings();
+  showToast('표시 설정을 초기화했습니다.', 'success');
+}
+function applyTableDisplaySettings(){
+  const cfg = tableDisplayConfig();
+  const tables = _tableDisplayTables();
+  let css = '';
+  Object.keys(tables).forEach(tableKey => {
+    const table = tables[tableKey];
+    const tableCfg = cfg[tableKey] || {};
+    const hidden = tableCfg.hidden || {};
+    _markTableDisplayCells(tableKey, table);
+    (table.cols || []).forEach((col, index) => {
+      if (!hidden[col]) return;
+      css += `${table.sel} [data-table-display-col="${tableKey}-${index}"]{display:none!important;}\n`;
+    });
+  });
+  let st = document.getElementById('table-display-style');
+  if (!st) { st = document.createElement('style'); st.id = 'table-display-style'; document.head.appendChild(st); }
+  st.textContent = css;
+  applyTableDisplayLabels();
+}
+function _tableDisplayColumnOffset(table, tableEl){
+  tableEl = tableEl || null;
+  const wrap = document.querySelector(table.sel);
+  if (!tableEl && wrap) tableEl = wrap.matches && wrap.matches('table') ? wrap : wrap.querySelector('table');
+  if (!tableEl || !tableEl.tHead || !tableEl.tHead.rows.length) return 0;
+  const first = tableEl.tHead.rows[0].cells[0];
+  if (!first) return 0;
+  const firstLabel = ((table.cols || [])[0] || '').replace(/\s+/g, '');
+  const isSelectionConfig = /선택|체크/.test(firstLabel);
+  return !isSelectionConfig && first.querySelector('input[type="checkbox"]') ? 1 : 0;
+}
+function _markTableDisplayCells(tableKey, table){
+  const wrap = document.querySelector(table.sel);
+  if (!wrap) return null;
+  const tableEl = wrap.matches && wrap.matches('table') ? wrap : wrap.querySelector('table');
+  if (!tableEl || !tableEl.tHead || !tableEl.tHead.rows.length) return null;
+  const head = tableEl.tHead.rows[0];
+  const offset = _tableDisplayColumnOffset(table, tableEl);
+  const cols = table.cols || [];
+  Array.from(head.cells).forEach((th, visualIndex) => {
+    let originalIndex = Number(th.dataset.oidx);
+    if (!Number.isFinite(originalIndex)) {
+      originalIndex = visualIndex;
+      th.dataset.oidx = String(originalIndex);
+    }
+    const colIndex = originalIndex - offset;
+    if (colIndex < 0 || colIndex >= cols.length) {
+      th.removeAttribute('data-table-display-col');
+      return;
+    }
+    th.dataset.tableDisplayCol = `${tableKey}-${colIndex}`;
+  });
+  Array.from(tableEl.tBodies || []).forEach(tbody => {
+    Array.from(tbody.rows).forEach(row => {
+      Array.from(row.cells).forEach((cell, visualIndex) => {
+        const th = head.cells[visualIndex];
+        const key = th && th.dataset.tableDisplayCol;
+        if (key) cell.dataset.tableDisplayCol = key;
+        else cell.removeAttribute('data-table-display-col');
+      });
+    });
+  });
+  return { tableEl, head, offset };
+}
+function applyTableDisplayLabels(){
+  const cfg = tableDisplayConfig();
+  const tables = _tableDisplayTables();
+  Object.keys(tables).forEach(tableKey => {
+    const table = tables[tableKey];
+    const labels = (cfg[tableKey] && cfg[tableKey].labels) || {};
+    const marked = _markTableDisplayCells(tableKey, table);
+    if (!marked) return;
+    const head = marked.head;
+    (table.cols || []).forEach((col, index) => {
+      const th = head.querySelector(`[data-table-display-col="${tableKey}-${index}"]`);
+      if (!th) return;
+      const label = labels[col] || col;
+      if (th.dataset.tableDisplayLabel === label) return;
+      const icons = Array.from(th.querySelectorAll('i')).map(icon => icon.cloneNode(true));
+      th.textContent = label + (icons.length ? ' ' : '');
+      icons.forEach(icon => th.appendChild(icon));
+      th.dataset.tableDisplayLabel = label;
+    });
+  });
 }
 function renderSystemCompany() {
   const el = inp('system-company-summary');
@@ -11048,36 +11240,74 @@ function renderDocTemplateManagement() {
     packageStatus.style.color = meta ? 'var(--tx-ok)' : 'var(--tx-t)';
   }
 }
+let permSection = 'pages';
+function setPermSection(section){
+  permSection = section || 'pages';
+  renderPermissions();
+}
 async function renderPermissions(){
   const body=inp('perm-body'); if(!body) return;
   if (!_cloudActive){ body.innerHTML=`<div class="card"><div class="empty"><i class="ti ti-cloud-off"></i>클라우드 로그인 후 사용할 수 있는 기능입니다. (Firebase 미설정 시 로컬 전용)</div></div>`; return; }
   if (currentRole!=='admin'){ body.innerHTML=`<div class="card"><div class="empty"><i class="ti ti-lock"></i>권한 관리는 관리자만 접근할 수 있습니다.</div></div>`; return; }
+  const sections = [
+    {key:'account', icon:'ti-users', title:'계정 승인/역할', desc:'직원 계정 연결과 역할 지정'},
+    {key:'pages', icon:'ti-table-options', title:'페이지 접근 권한', desc:'역할별 메뉴 접근'},
+    {key:'columns', icon:'ti-columns-3', title:'테이블 컬럼 권한', desc:'역할별 열 표시/숨김'},
+    {key:'features', icon:'ti-tool', title:'기능 권한', desc:'내보내기와 출력 허용'},
+    {key:'backup', icon:'ti-database-cog', title:'데이터 백업/복구', desc:'파일 내보내기와 복구'}
+  ];
+  if (!sections.some(s => s.key === permSection)) permSection = 'pages';
+  const sectionButton = (s) => `<button type="button" class="${permSection===s.key?'active':''}" onclick="setPermSection('${s.key}')"><i class="ti ${s.icon}"></i><span>${s.title}</span></button>`;
   body.innerHTML = `
-    <div class="card" style="margin-bottom:16px;background:var(--bg-s);"><div style="display:flex;align-items:center;gap:10px;padding:4px 2px;">
-      <i class="ti ti-users" style="font-size:20px;color:var(--tx-i);"></i>
-      <div style="flex:1;"><div style="font-weight:700;">직원 계정·역할·승인은 「인사 관리」에서 관리합니다</div>
-        <div style="font-size:11.5px;color:var(--tx-s);margin-top:2px;">직원 명부에서 이메일로 로그인 계정을 연결해 역할 지정·승인을 함께 처리하세요.</div></div>
-      <button class="btn btn-sm btn-primary" onclick="go('workers')"><i class="ti ti-external-link"></i>인사 관리로 이동</button>
-    </div></div>
-    <div class="card" style="margin-bottom:16px;"><div class="card-hd"><span class="card-ttl"><i class="ti ti-table-options"></i>역할별 접근 페이지</span>
-      <span style="font-size:11px;color:var(--tx-t);">관리자는 항상 전체 · 변경 즉시 저장</span></div>
-      <div id="perm-matrix"></div></div>
-    <div class="card" style="margin-bottom:16px;"><div class="card-hd"><span class="card-ttl"><i class="ti ti-columns-3"></i>역할별 표시 컬럼 (열 권한)</span>
-      <span style="font-size:11px;color:var(--tx-t);">체크 해제 시 해당 역할에게 그 열이 숨겨짐 · 관리자는 항상 전체</span></div>
-      <div id="perm-columns"></div></div>
-    <div class="card" style="margin-bottom:16px;"><div class="card-hd"><span class="card-ttl"><i class="ti ti-tool"></i>역할별 기능 권한 (내보내기 · 출력)</span>
-      <span style="font-size:11px;color:var(--tx-t);">엑셀 CSV 내보내기 / PDF·인쇄 출력 허용 여부 · 관리자는 항상 전체</span></div>
-      <div id="perm-features"></div></div>
-    <div class="card"><div class="card-hd"><span class="card-ttl"><i class="ti ti-database-cog"></i>데이터 백업 · 복구</span>
-      <span style="font-size:11px;color:var(--tx-t);">전체 데이터를 파일로 내보내거나 파일에서 복구 · 관리자 전용</span></div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 2px;">
-        <button class="btn btn-sm" onclick="exportAllXLS()"><i class="ti ti-file-spreadsheet"></i>엑셀(XLS) 내보내기</button>
-        <button class="btn btn-sm" onclick="inp('xls-import-input').click()"><i class="ti ti-upload"></i>엑셀(XLS) 불러오기</button>
-        <button class="btn btn-sm" onclick="exportDataJSON()"><i class="ti ti-file-code-2"></i>JSON 내보내기</button>
-        <button class="btn btn-sm" onclick="inp('json-import-input').click()"><i class="ti ti-database-import"></i>JSON 불러오기</button>
-        <input type="file" id="xls-import-input" accept=".xlsx,.xls" style="display:none;" onchange="importAllXLS(this)">
-        <input type="file" id="json-import-input" accept=".json,application/json" style="display:none;" onchange="importDataJSON(this)">
-      </div></div>`;
+    <div class="table-display-card card permission-card">
+      <div class="table-display-title">
+        <div><i class="ti ti-user-shield"></i><strong>권한 관리</strong><span>데이터 구조는 유지하고 항목별 배치만 분리</span></div>
+      </div>
+      <div class="table-display-layout permission-layout">
+        <div class="table-display-tabs permission-tabs">
+          ${sections.map(sectionButton).join('')}
+        </div>
+        <div class="table-display-main permission-main">
+          <div class="permission-section" style="${permSection==='account'?'':'display:none;'}">
+            <div class="card-hd"><span class="card-ttl"><i class="ti ti-users"></i>계정 승인/역할</span>
+              <span style="font-size:11px;color:var(--tx-t);">직원 계정 연결과 역할 지정은 인사 관리에서 처리</span></div>
+            <div class="permission-info-row">
+              <i class="ti ti-users"></i>
+              <div><strong>직원 계정·역할·승인은 「인사 관리」에서 관리합니다</strong>
+                <p>직원 명부에서 이메일로 로그인 계정을 연결해 역할 지정·승인을 함께 처리하세요.</p></div>
+              <button class="btn btn-sm btn-primary" onclick="go('workers')"><i class="ti ti-external-link"></i>인사 관리로 이동</button>
+            </div>
+          </div>
+          <div class="permission-section" style="${permSection==='pages'?'':'display:none;'}">
+            <div class="card-hd"><span class="card-ttl"><i class="ti ti-table-options"></i>역할별 접근 페이지</span>
+              <span style="font-size:11px;color:var(--tx-t);">관리자는 항상 전체 · 변경 즉시 저장</span></div>
+            <div id="perm-matrix"></div>
+          </div>
+          <div class="permission-section" style="${permSection==='columns'?'':'display:none;'}">
+            <div class="card-hd"><span class="card-ttl"><i class="ti ti-columns-3"></i>역할별 표시 컬럼 (열 권한)</span>
+              <span style="font-size:11px;color:var(--tx-t);">체크 해제 시 해당 역할에게 그 열이 숨겨짐 · 관리자는 항상 전체</span></div>
+            <div id="perm-columns"></div>
+          </div>
+          <div class="permission-section" style="${permSection==='features'?'':'display:none;'}">
+            <div class="card-hd"><span class="card-ttl"><i class="ti ti-tool"></i>역할별 기능 권한 (내보내기 · 출력)</span>
+              <span style="font-size:11px;color:var(--tx-t);">엑셀 CSV 내보내기 / PDF·인쇄 출력 허용 여부 · 관리자는 항상 전체</span></div>
+            <div id="perm-features"></div>
+          </div>
+          <div class="permission-section" style="${permSection==='backup'?'':'display:none;'}">
+            <div class="card-hd"><span class="card-ttl"><i class="ti ti-database-cog"></i>데이터 백업 · 복구</span>
+              <span style="font-size:11px;color:var(--tx-t);">전체 데이터를 파일로 내보내거나 파일에서 복구 · 관리자 전용</span></div>
+            <div class="permission-actions">
+              <button class="btn btn-sm" onclick="exportAllXLS()"><i class="ti ti-file-spreadsheet"></i>엑셀(XLS) 내보내기</button>
+              <button class="btn btn-sm" onclick="inp('xls-import-input').click()"><i class="ti ti-upload"></i>엑셀(XLS) 불러오기</button>
+              <button class="btn btn-sm" onclick="exportDataJSON()"><i class="ti ti-file-code-2"></i>JSON 내보내기</button>
+              <button class="btn btn-sm" onclick="inp('json-import-input').click()"><i class="ti ti-database-import"></i>JSON 불러오기</button>
+              <input type="file" id="xls-import-input" accept=".xlsx,.xls" style="display:none;" onchange="importAllXLS(this)">
+              <input type="file" id="json-import-input" accept=".json,application/json" style="display:none;" onchange="importDataJSON(this)">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
   renderPermMatrix();
   renderPermColumns();
   renderPermFeatures();
@@ -11240,7 +11470,7 @@ async function permToggleRolePage(role, pageId, on){
 /* ════════ 일괄 선택/동작 (테이블 비종속) — 체크박스 + 전체 선택 + 0건 시 비활성 ════════
    각 표의 행 삭제 버튼 onclick에서 id를 추출하므로 렌더 함수 수정 불필요. */
 const BULK_CFG = {
-  rfq:        {sel:'#rfq-table',        del:'deleteRfq',       edit:'openRfqEdit',    clone:'cloneRfq', pdf:'openRfqPrint', csv:'exportRfqXLS', email:'openEmailModal', drive:true},
+  rfq:        {sel:'#rfq-table',        del:'deleteRfq',       edit:'openRfqEdit',    clone:'cloneRfq', pdf:'openRfqPrint', csv:'exportRfqXLS', email:'openEmailModal', drive:true, toPo:true},
   materials:  {sel:'#mat-table',        del:'deleteMat',       edit:'openMatEdit',    clone:'cloneMat'},
   inventory:  {sel:'#inventory-table',  del:'deleteInventory', edit:'openInvEdit'},
   orders:     {sel:'#orders-table',     del:'deleteOrder',     edit:'openOrderEdit',  clone:'cloneOrder'},
@@ -11269,7 +11499,7 @@ function enhanceBulk(key){
   const delRe = c.type
     ? new RegExp(_escRe(c.del)+"\\(\\s*['\"][^'\"]*['\"]\\s*,\\s*['\"]([^'\"]+)['\"]")
     : new RegExp(_escRe(c.del)+"\\(\\s*['\"]([^'\"]+)['\"]");
-  const hideFns=[c.del,c.clone,c.pdf,c.csv,c.email, c.drive ? 'saveDocumentBundleToGoogleDrive' : null].filter(Boolean);
+  const hideFns=[c.del,c.edit,c.clone,c.pdf,c.csv,c.email, c.drive ? 'saveDocumentBundleToGoogleDrive' : null].filter(Boolean);
   tables.forEach(table=>{
     if(table.dataset.bulk) return;
     const headRow=table.querySelector('thead tr'); if(!headRow) return;
@@ -11287,23 +11517,42 @@ function enhanceBulk(key){
       }
       tr.insertBefore(td, tr.firstChild);
     });
+    hideBulkActionColumn(table);
   });
   ensureBulkBar(key, tables[0], cont);
   updateBulkBar(key);
+}
+function bulkActionColumnIndex(table) {
+  const headRow=table&&table.querySelector('thead tr'); if(!headRow) return -1;
+  const cells=[...headRow.children];
+  for(let i=cells.length-1;i>=0;i--){
+    if(/(관리|동작|처리|작업)/.test((cells[i].textContent||'').trim())) return i;
+  }
+  return -1;
+}
+function hideBulkActionColumn(table) {
+  const idx=bulkActionColumnIndex(table);
+  if(idx<0) return;
+  table.querySelectorAll('tr').forEach(row=>{
+    const cell=row.children[idx];
+    if(cell) cell.style.display='none';
+  });
 }
 function ensureBulkBar(key, table, cont){
   if(document.getElementById('bulkbar-'+key)) return;
   const c=BULK_CFG[key]; const wrap=table.parentElement; if(!wrap||!wrap.parentNode) return;
   let btns='';
-  if(c.clone) btns+=`<button class="btn btn-sm" data-clone onclick="bulkRun('${key}','clone')"><i class="ti ti-copy"></i>선택 복제</button>`;
-  if(c.pdf)   btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','pdf')"><i class="ti ti-printer"></i>선택 PDF 출력</button>`;
-  if(c.csv)   btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','csv')"><i class="ti ti-file-spreadsheet"></i>선택 엑셀</button>`;
-  if(c.drive) btns+=`<button class="btn btn-sm drive-save-btn" data-act onclick="bulkRun('${key}','drive')"><i class="ti ti-cloud-upload"></i>선택 Google Drive 저장</button>`;
-  if(c.email) btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','email')"><i class="ti ti-mail"></i>선택 이메일</button>`;
-  btns+=`<button class="btn btn-sm btn-danger" data-act onclick="bulkRun('${key}','delete')"><i class="ti ti-trash"></i>선택 삭제</button>`;
+  if(c.edit) btns+=`<button class="btn btn-sm" data-edit onclick="bulkRun('${key}','edit')"><i class="ti ti-edit"></i>수정</button>`;
+  if(c.clone) btns+=`<button class="btn btn-sm" data-clone onclick="bulkRun('${key}','clone')"><i class="ti ti-copy"></i>복제</button>`;
+  if(c.toPo) btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','toPo')"><i class="ti ti-file-invoice"></i>발주서 생성</button>`;
+  if(c.pdf)   btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','pdf')"><i class="ti ti-printer"></i>PDF 출력</button>`;
+  if(c.csv)   btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','csv')"><i class="ti ti-file-spreadsheet"></i>엑셀</button>`;
+  if(c.drive) btns+=`<button class="btn btn-sm drive-save-btn" data-act onclick="bulkRun('${key}','drive')"><i class="ti ti-cloud-upload"></i>Google Drive 저장</button>`;
+  if(c.email) btns+=`<button class="btn btn-sm" data-email data-act onclick="bulkRun('${key}','email')"><i class="ti ti-mail"></i>이메일</button>`;
+  btns+=`<button class="btn btn-sm btn-danger" data-act onclick="bulkRun('${key}','delete')"><i class="ti ti-trash"></i>삭제</button>`;
   const bar=document.createElement('div'); bar.id='bulkbar-'+key;
   bar.style.cssText='display:none;align-items:center;gap:8px;margin:0 0 12px;padding:9px 14px;background:var(--bg-i);border:1px solid var(--br-i);border-radius:8px;flex-wrap:wrap;';
-  bar.innerHTML=`<span style="font-weight:700;font-size:12.5px;color:var(--tx-i);"><i class="ti ti-checkbox"></i> <span id="bulkcnt-${key}">0</span>건 선택됨</span>${btns}<button class="btn btn-sm" style="margin-left:auto;" onclick="bulkToggleAll('${key}',false)"><i class="ti ti-x"></i>선택 해제</button>`;
+  bar.innerHTML=`<span style="font-weight:700;font-size:12.5px;color:var(--tx-i);"><i class="ti ti-checkbox"></i> <span id="bulkcnt-${key}">0</span>건 선택됨</span>${btns}<button class="btn btn-sm" style="margin-left:auto;" onclick="bulkToggleAll('${key}',false)"><i class="ti ti-x"></i>해제</button>`;
   if(key==='products' || key==='bom') cont.parentNode.insertBefore(bar, cont);
   else wrap.parentNode.insertBefore(bar, wrap);
 }
@@ -11311,13 +11560,22 @@ function updateBulkBar(key){
   const n=(bulkSel[key]||new Set()).size;
   const cnt=document.getElementById('bulkcnt-'+key); if(cnt) cnt.textContent=n;
   const bar=document.getElementById('bulkbar-'+key); if(bar) bar.style.display = n>0 ? 'flex' : 'none';   // 선택 시에만 표시
+  const edit=bar&&bar.querySelector('[data-edit]'); if(edit) edit.style.display = n===1 ? '' : 'none';
   const clone=bar&&bar.querySelector('[data-clone]'); if(clone) clone.style.display = n===1 ? '' : 'none';
+  const email=bar&&bar.querySelector('[data-email]'); if(email) email.style.display = n===1 ? '' : 'none';
 }
 function bulkToggle(key,id,on){ const s=bulkSel[key]=bulkSel[key]||new Set(); if(on)s.add(id);else s.delete(id); updateBulkBar(key); }
 function bulkToggleAll(key,on){ const s=bulkSel[key]=new Set(); const cont=document.querySelector(BULK_CFG[key].sel); if(cont) cont.querySelectorAll('tbody input[type=checkbox][data-bid]').forEach(cb=>{ cb.checked=on; if(on) s.add(cb.getAttribute('data-bid')); }); updateBulkBar(key); }
 function bulkRun(key, action){
   const c=BULK_CFG[key]; const ids=[...(bulkSel[key]||[])]; if(!ids.length) return;
-  if(action==='clone' && c.clone){
+  if(action==='edit' && c.edit){
+    if(ids.length!==1) return;
+    const id=ids[0];
+    if(key==='products'){
+      const p=products.find(x=>x.id===id); if(p) window[c.edit](p.clientId,id);
+    } else if(c.type) window[c.edit](c.type,id);
+    else window[c.edit](id);
+  } else if(action==='clone' && c.clone){
     if(ids.length!==1) return;
     const id=ids[0];
     if(key==='products'){
@@ -11342,6 +11600,11 @@ function bulkRun(key, action){
   else if(action==='csv' && c.csv){ ids.forEach(id=>{ try{ window[c.csv](id); }catch(e){} }); }
   else if(action==='drive' && c.drive){
     saveDocumentBundleToGoogleDrive(c.type || key, ids);
+  }
+  else if(action==='toPo' && key==='rfq' && typeof convertRfqToPo === 'function'){
+    convertRfqToPo(ids);
+    bulkSel[key]=new Set();
+    bulkToggleAll(key,false);
   }
   else if(action==='email' && c.email){
     if(ids.length!==1){ showToast('이메일은 한 건만 선택해 발송하세요.','info'); return; }
@@ -12012,6 +12275,55 @@ function changeRfqStatus(id, val) {
   r.status = val; saveStorage('rfqList', rfqList); renderRfq();
 }
 
+function convertRfqToPo(ids) {
+  if (!checkAdminAction()) return;
+  const idList = Array.isArray(ids) ? ids : [ids];
+  const targets = idList.map(id => rfqList.find(r => r.id === id)).filter(Boolean);
+  if (!targets.length) {
+    showToast('구매발주서로 보낼 견적요청서가 없습니다.', 'info');
+    return;
+  }
+
+  const existing = new Set(poList.map(p => p.sourceRfqId).filter(Boolean));
+  const fresh = targets.filter(r => !existing.has(r.id));
+  const skipped = targets.length - fresh.length;
+  if (!fresh.length) {
+    showToast('이미 구매발주서로 생성된 견적요청서입니다.', 'info');
+    return;
+  }
+
+  const suffix = skipped ? `\n이미 생성된 ${skipped}건은 제외됩니다.` : '';
+  if (!confirm(`${fresh.length}건의 견적요청서를 구매발주서로 생성하시겠습니까?${suffix}`)) return;
+
+  fresh.forEach(r => {
+    poList.unshift({
+      id: nextDocCode('P', poList),
+      date: today(),
+      clientId: r.clientId || '',
+      productId: r.productId || '',
+      supplier: r.supplier || '',
+      supplierEmail: r.supplierEmail || '',
+      itemName: r.itemName || '',
+      spec: r.spec || '',
+      qty: Number(r.qty) || 1,
+      unit: r.unit || 'EA',
+      unitPrice: Number(r.targetPrice) || 0,
+      payMethod: '현금',
+      dlvMethod: '직납',
+      status: '작성중',
+      note: `견적요청서 ${r.id}에서 생성${r.note ? ' - ' + r.note : ''}`,
+      sourceRfqId: r.id
+    });
+    if (r.status !== '미채택') r.status = '채택';
+  });
+
+  saveStorage('poList', poList);
+  saveStorage('rfqList', rfqList);
+  renderRfq();
+  if (typeof renderPo === 'function') renderPo();
+  showToast(`구매발주서 ${fresh.length}건이 생성되었습니다.${skipped ? ` 중복 ${skipped}건 제외` : ''}`);
+}
+
 function deleteRfq(id) {
   if (!checkAdminAction()) return;
   if (!confirm('이 견적요청서를 삭제하시겠습니까?')) return;
@@ -12184,11 +12496,11 @@ function renderPo() {
       <th style="width:24px;padding:6px 3px;text-align:center;"><input type="checkbox" id="po-check-all" onclick="poToggleAll(this.checked)" style="width:12px;height:12px;cursor:pointer;vertical-align:middle;"></th>
       ${_poth('id','발주번호')}${_poth('date','발행일')}${_poth('client','고객사')}${_poth('product','연결제품')}
       ${_poth('supplier','공급처')}${_poth('itemName','품목명')}<th>규격</th>${_poth('qty','수량')}
-      ${_poth('unitPrice','단가')}${_poth('totalAmt','금액')}<th>결제조건</th><th>납품방법</th>${_poth('status','상태')}<th>비고</th><th>관리</th>
+      ${_poth('unitPrice','단가')}${_poth('totalAmt','금액')}<th>결제조건</th><th>납품방법</th>${_poth('status','상태')}<th>비고</th>
     </tr></thead>
     <tbody>${rows.map(p => `
-      <tr>
-        <td style="text-align:center;padding:6px 3px;"><input type="checkbox" class="po-check" value="${p.id}" onchange="poUpdateBulkBar()" style="width:12px;height:12px;cursor:pointer;vertical-align:middle;"></td>
+      <tr onclick="poRowClick(event,'${p.id}')">
+        <td style="text-align:center;padding:6px 3px;"><input type="checkbox" class="po-check" value="${p.id}" onclick="event.stopPropagation()" onchange="poUpdateBulkBar()" style="width:12px;height:12px;cursor:pointer;vertical-align:middle;"></td>
         <td style="font-weight:700;color:var(--tx-i);">${p.id}</td>
         <td>${p.date}</td>
         <td>${getClientName(p.clientId)||'—'}</td>
@@ -12201,13 +12513,10 @@ function renderPo() {
         <td style="font-weight:700;color:var(--tx-i);">${p.unitPrice?'₩'+Number(p.unitPrice*p.qty).toLocaleString('ko-KR'):'—'}</td>
         <td><span class="bd bd-neu">${p.payMethod||'현금'}</span></td>
         <td><span class="bd bd-info">${p.dlvMethod||'직납'}</span></td>
-        <td><select class="stat-sel" onchange="changePoStatus('${p.id}',this.value)" style="color:${poStatusColor(p.status)}">
+        <td><select class="stat-sel" onclick="event.stopPropagation()" onchange="changePoStatus('${p.id}',this.value)" style="color:${poStatusColor(p.status)}">
           ${['작성중','발송완료','확인완료','입고완료'].map(s=>`<option${s===p.status?' selected':''}>${s}</option>`).join('')}
         </select></td>
         <td style="font-size:11px;color:var(--tx-t);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${p.note||''}">${p.note||'—'}</td>
-        <td style="white-space:nowrap;">
-          <button class="edit-btn" onclick="openPoEdit('${p.id}')"><i class="ti ti-edit"></i>수정</button>
-        </td>
       </tr>`).join('')}
     </tbody>
   </table>`;
@@ -12215,6 +12524,13 @@ function renderPo() {
 }
 /* ── 구매발주서 선택 일괄 동작 ── */
 function poCheckedIds(){ return [...document.querySelectorAll('#po-table .po-check:checked')].map(c=>c.value); }
+function poRowClick(event, id){
+  if (event.target.closest('button,input,select,textarea,a')) return;
+  const cb = [...document.querySelectorAll('#po-table .po-check')].find(c => c.value === id);
+  if (!cb) return;
+  cb.checked = !cb.checked;
+  poUpdateBulkBar();
+}
 function poToggleAll(checked){
   document.querySelectorAll('#po-table .po-check').forEach(c=>c.checked=checked);
   poUpdateBulkBar();
@@ -12222,12 +12538,14 @@ function poToggleAll(checked){
 function poUpdateBulkBar(){
   const ids=poCheckedIds(), bar=inp('po-bulkbar');
   if(bar){ bar.style.display = ids.length ? 'flex' : 'none'; const cnt=inp('po-sel-count'); if(cnt) cnt.textContent=ids.length; }
+  const edit=inp('po-edit-btn'); if(edit) edit.style.display=ids.length===1?'':'none';
   const clone=inp('po-clone-btn'); if(clone) clone.style.display=ids.length===1?'':'none';
   const all=inp('po-check-all');
   if(all){ const total=document.querySelectorAll('#po-table .po-check').length;
     all.checked = total>0 && ids.length===total; all.indeterminate = ids.length>0 && ids.length<total; }
 }
 function poBulkPrint(){ const ids=poCheckedIds(); if(!ids.length) return; openPoPrint(ids, true); }   // 선택 건은 건별 개별 출력
+function poBulkEdit(){ const ids=poCheckedIds(); if(ids.length===1) openPoEdit(ids[0]); }
 function poBulkClone(){ const ids=poCheckedIds(); if(ids.length===1) clonePo(ids[0]); }
 function poBulkExport(){ const ids=poCheckedIds(); if(!ids.length) return; exportPoXLS(ids); }
 function poBulkDrive(){ const ids=poCheckedIds(); if(!ids.length) return; saveDocumentBundleToGoogleDrive('po', ids); }
@@ -15751,9 +16069,9 @@ function _finLabor() {
     ${finFilterBar('labor',{noDate:true,placeholder:'사번·성명·부서 검색',statuses:['작성중','확정']})}
     <div id="payroll-bulkbar" style="display:${payrollSelected.size?'flex':'none'};align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:10px;padding:9px 12px;background:var(--bg-i);border:1px solid var(--br-i);border-radius:var(--rm);">
       <b><i class="ti ti-checkbox"></i> ${payrollSelected.size}명 선택</b>
-      <button class="btn btn-sm" onclick="bulkConfirmPayroll(true)" ${closed?'disabled':''}><i class="ti ti-checks"></i>선택 확정</button>
-      <button class="btn btn-sm drive-save-btn" onclick="bulkSavePayrollDrive()"><i class="ti ti-cloud-upload"></i>선택 Drive 저장</button>
-      <button class="btn btn-sm" onclick="clearPayrollSelection()"><i class="ti ti-x"></i>선택 해제</button>
+      <button class="btn btn-sm" onclick="bulkConfirmPayroll(true)" ${closed?'disabled':''}><i class="ti ti-checks"></i>확정</button>
+      <button class="btn btn-sm drive-save-btn" onclick="bulkSavePayrollDrive()"><i class="ti ti-cloud-upload"></i>Drive 저장</button>
+      <button class="btn btn-sm" onclick="clearPayrollSelection()"><i class="ti ti-x"></i>해제</button>
     </div>
     <div class="metrics">
       <div class="mc"><div class="mc-lbl"><i class="ti ti-cash" style="color:var(--tx-i);"></i>${monthLabel(payrollMonth)} 지급총액</div><div class="mc-val" style="color:var(--tx-i);">${fmtW(payroll)}</div></div>
@@ -17434,6 +17752,7 @@ let _memoAiResult = null;
 let _memoAttachments = [];
 let _todoChecklist = [];
 let _weeklyReportDraft = null;
+let _memoSelected = new Set();
 let _todoSelected = new Set();
 
 function _memoEsc(value) {
@@ -17537,18 +17856,29 @@ function renderMemoCards() {
   });
   var content = inp('memo-content');
   if (!list.length) {
+    _memoSelected.clear();
     content.innerHTML = '<div class="card"><div class="empty"><i class="ti ti-notes"></i>등록된 메모가 없습니다.</div></div>';
     return;
   }
-  content.innerHTML = '<div class="memo-grid">' + list.map(function(m) {
+  var validIds = new Set(memoList.map(function(m) { return m.id; }));
+  _memoSelected.forEach(function(id) { if (!validIds.has(id)) _memoSelected.delete(id); });
+  var bulkBar = '<div id="memo-bulkbar" style="display:' + (_memoSelected.size ? 'flex' : 'none') + ';">' +
+    '<span><i class="ti ti-checkbox"></i> ' + _memoSelected.size + '건 선택됨</span>' +
+    '<button class="btn btn-sm" onclick="editSelectedMemo()" ' + (_memoSelected.size === 1 ? '' : 'style="display:none;"') + '><i class="ti ti-edit"></i>수정</button>' +
+    '<button class="btn btn-sm" onclick="markSelectedMemosImportant(true)"><i class="ti ti-star"></i>중요</button>' +
+    '<button class="btn btn-sm" onclick="moveSelectedMemosToTodos()"><i class="ti ti-arrow-right"></i>할 일로 이동</button>' +
+    '<button class="btn btn-sm btn-danger" onclick="deleteSelectedMemos()"><i class="ti ti-trash"></i>삭제</button>' +
+    '<button class="btn btn-sm" style="margin-left:auto;" onclick="clearMemoSelection()"><i class="ti ti-x"></i>해제</button></div>';
+  content.innerHTML = bulkBar + '<div class="memo-grid">' + list.map(function(m) {
     var tags = (m.tags || []).map(function(tag) { return '<span class="memo-tag">#' + _memoEsc(tag) + '</span>'; }).join('');
     var linked = m.entityType ? '<span><i class="ti ti-link"></i>' + _memoEsc(m.entityType + ' ' + (m.entityId || '')) + '</span>' : '';
     var attachmentCount = (m.attachments || []).length;
-    return '<div class="memo-card">' +
-      '<div style="display:flex;align-items:center;gap:8px;"><div class="memo-card-title" style="flex:1;">' +
-      (m.important ? '<i class="ti ti-pin" style="color:var(--tx-w);"></i> ' : '') + _memoEsc(m.title) + '</div>' +
-      '<button class="btn btn-sm btn-icon" onclick="openMemoEditor(\'' + m.id + '\')" title="수정"><i class="ti ti-edit"></i></button>' +
-      '<button class="btn btn-sm btn-icon" onclick="deleteMemo(\'' + m.id + '\')" title="삭제"><i class="ti ti-trash"></i></button></div>' +
+    var selected = _memoSelected.has(m.id);
+    return '<div class="memo-card ' + (selected ? 'memo-selected' : '') + '" onclick="onMemoCardClick(event,\'' + m.id + '\')">' +
+      '<div class="memo-card-head"><input type="checkbox" class="memo-select" ' + (selected ? 'checked ' : '') +
+      'onclick="event.stopPropagation()" onchange="toggleMemoSelection(\'' + m.id + '\',this.checked)">' +
+      '<div class="memo-card-title" style="flex:1;">' + _memoEsc(m.title) + '</div>' +
+      '<button class="memo-star ' + (m.important ? 'active' : '') + '" onclick="toggleMemoImportant(event,\'' + m.id + '\')" title="중요 표시"><i class="ti ' + (m.important ? 'ti-star-filled' : 'ti-star') + '"></i></button></div>' +
       '<div class="memo-card-body">' + _memoEsc(m.content) + '</div>' +
       (m.summary ? '<div style="font-size:11px;padding:8px;border-left:3px solid var(--tx-i);background:var(--bg-i);margin-bottom:9px;"><b>AI 요약</b><br>' + _memoEsc(m.summary) + '</div>' : '') +
       '<div class="memo-meta">' + tags + linked +
@@ -17571,6 +17901,104 @@ function _filteredTodos() {
   });
 }
 
+function onMemoCardClick(event, id) {
+  if (event.target.closest('button,input,select,textarea,a')) return;
+  toggleMemoSelection(id, !_memoSelected.has(id));
+}
+
+function toggleMemoSelection(id, checked) {
+  if (checked) _memoSelected.add(id);
+  else _memoSelected.delete(id);
+  renderMemoCards();
+}
+
+function clearMemoSelection() {
+  _memoSelected.clear();
+  renderMemoCards();
+}
+
+function editSelectedMemo() {
+  var ids = Array.from(_memoSelected);
+  if (ids.length !== 1) return;
+  openMemoEditor(ids[0]);
+}
+
+function markSelectedMemosImportant(on) {
+  var ids = Array.from(_memoSelected);
+  if (!ids.length) return;
+  memoList.forEach(function(memo) {
+    if (ids.includes(memo.id)) {
+      memo.important = !!on;
+      memo.updatedAt = _memoNow();
+    }
+  });
+  saveStorage('memoList', memoList);
+  renderNotes();
+  showToast(ids.length + '개의 메모를 중요 표시했습니다.', 'success');
+}
+
+function toggleMemoImportant(event, id) {
+  event.stopPropagation();
+  var memo = memoList.find(function(m) { return m.id === id; });
+  if (!memo) return;
+  memo.important = !memo.important;
+  memo.updatedAt = _memoNow();
+  saveStorage('memoList', memoList);
+  renderNotes();
+}
+
+function deleteSelectedMemos() {
+  var ids = Array.from(_memoSelected);
+  if (!ids.length) return;
+  confirm_('메모 일괄 삭제', ids.length + '개의 메모를 삭제하시겠습니까? 연결된 할 일은 유지됩니다.', function() {
+    memoList.filter(function(memo) { return ids.includes(memo.id); }).forEach(function(memo) {
+      (memo.attachments || []).forEach(function(a) { delete memoAttachmentData[a.id]; });
+    });
+    memoList = memoList.filter(function(memo) { return !ids.includes(memo.id); });
+    _memoSelected.clear();
+    saveStorage('memoAttachmentData', memoAttachmentData);
+    saveStorage('memoList', memoList);
+    renderNotes();
+    showToast(ids.length + '개의 메모를 삭제했습니다.', 'success');
+  });
+}
+
+function moveSelectedMemosToTodos() {
+  var ids = Array.from(_memoSelected);
+  if (!ids.length) return;
+  confirm_('할 일로 이동', ids.length + '개의 메모를 할 일로 이동하시겠습니까? 원본 메모는 삭제됩니다.', function() {
+    var moved = 0;
+    memoList.filter(function(memo) { return ids.includes(memo.id); }).forEach(function(memo) {
+      todoList.unshift({
+        id: nextCode('TODO', todoList),
+        title: memo.title || _memoAutoTitle(memo.content, memo.summary),
+        content: memo.content || '',
+        owner: memo.author || '',
+        dueDate: '',
+        startDate: today(),
+        reminderDate: '',
+        status: '대기',
+        priority: memo.important ? '높음' : '보통',
+        memoId: '',
+        checklist: [],
+        createdAt: _memoNow(),
+        updatedAt: _memoNow(),
+        author: _memoAuthor()
+      });
+      (memo.attachments || []).forEach(function(a) { delete memoAttachmentData[a.id]; });
+      moved++;
+    });
+    memoList = memoList.filter(function(memo) { return !ids.includes(memo.id); });
+    _memoSelected.clear();
+    saveStorage('memoAttachmentData', memoAttachmentData);
+    saveStorage('memoList', memoList);
+    saveStorage('todoList', todoList);
+    memoTab = 'todos';
+    renderNotes();
+    showToast(moved + '개의 메모를 할 일로 이동했습니다.', 'success');
+  }, 'btn-primary', 'ti-arrow-right');
+}
+
 function renderTodoList() {
   var list = _filteredTodos().sort(function(a, b) {
     return (a.status === '완료') - (b.status === '완료') || String(a.dueDate || '9999').localeCompare(String(b.dueDate || '9999'));
@@ -17588,24 +18016,25 @@ function renderTodoList() {
     ';align-items:center;gap:14px;margin:0 0 12px;padding:12px 18px;border-radius:9px;flex-wrap:wrap;">' +
     '<span style="font-weight:700;font-size:13px;"><i class="ti ti-checkbox"></i> ' +
     _todoSelected.size + '건 선택됨</span>' +
-    '<button class="btn btn-sm btn-danger" onclick="deleteSelectedTodos()"><i class="ti ti-trash"></i>선택 삭제</button></div>';
+    '<button class="btn btn-sm" onclick="editSelectedTodo()" ' + (_todoSelected.size === 1 ? '' : 'style="display:none;"') + '><i class="ti ti-edit"></i>수정</button>' +
+    '<button class="btn btn-sm btn-danger" onclick="deleteSelectedTodos()"><i class="ti ti-trash"></i>삭제</button></div>';
   content.innerHTML = bulkBar + '<div class="card" style="overflow-x:auto;"><table style="min-width:900px;"><thead><tr>' +
     '<th style="width:34px;text-align:center;"><input type="checkbox" id="todo-check-all" title="현재 목록 전체 선택" ' +
     (allVisibleSelected ? 'checked ' : '') + (visibleSelected && !allVisibleSelected ? 'data-indeterminate="1" ' : '') +
     'onchange="toggleAllVisibleTodos(this.checked)"></th>' +
-    '<th>할 일</th><th>담당자</th><th>마감일</th><th>우선순위</th><th>상태</th><th style="width:82px;text-align:center;">관리</th></tr></thead><tbody>' +
+    '<th>할 일</th><th>담당자</th><th>마감일</th><th>우선순위</th><th>상태</th></tr></thead><tbody>' +
     list.map(function(t) {
       var late = t.status !== '완료' && t.dueDate && t.dueDate < today();
       var selected = _todoSelected.has(t.id);
-      return '<tr class="' + (selected ? 'todo-row-selected' : '') + '">' +
+      return '<tr class="' + (selected ? 'todo-row-selected' : '') + '" onclick="onTodoRowClick(event,\'' + t.id + '\')">' +
         '<td style="text-align:center;"><input type="checkbox" class="todo-select" ' + (selected ? 'checked ' : '') +
-        'onchange="toggleTodoSelection(\'' + t.id + '\',this.checked)"></td>' +
+        'onclick="event.stopPropagation()" onchange="toggleTodoSelection(\'' + t.id + '\',this.checked)"></td>' +
         '<td><b style="' + (t.status === '완료' ? 'text-decoration:line-through;color:var(--tx-t);' : '') + '">' + _memoEsc(t.title) + '</b>' +
         (t.content ? '<div style="font-size:10.5px;color:var(--tx-t);margin-top:3px;">' + _memoEsc(t.content) + '</div>' : '') + '</td>' +
         '<td>' + _memoEsc(t.owner || '미지정') + '</td><td style="color:' + (late ? 'var(--tx-d)' : 'inherit') + ';">' + _memoEsc(t.dueDate || '미설정') + '</td>' +
-        '<td>' + _memoEsc(t.priority || '보통') + '</td><td><select onchange="setTodoStatus(\'' + t.id + '\',this.value)" style="height:27px;">' +
+        '<td>' + _memoEsc(t.priority || '보통') + '</td><td><select onclick="event.stopPropagation()" onchange="setTodoStatus(\'' + t.id + '\',this.value)" style="height:27px;">' +
         ['대기','진행중','완료'].map(function(s) { return '<option' + (s === t.status ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select></td>' +
-        '<td style="text-align:center;"><button class="btn btn-sm" onclick="openTodoEditor(\'' + t.id + '\')" title="수정"><i class="ti ti-edit"></i>수정</button></td></tr>';
+        '</tr>';
     }).join('') + '</tbody></table></div>';
   var selectAll = content.querySelector('thead input[type=checkbox]');
   if (selectAll) selectAll.indeterminate = visibleSelected > 0 && !allVisibleSelected;
@@ -17615,6 +18044,17 @@ function toggleTodoSelection(id, checked) {
   if (checked) _todoSelected.add(id);
   else _todoSelected.delete(id);
   renderTodoList();
+}
+
+function onTodoRowClick(event, id) {
+  if (event.target.closest('button,input,select,textarea,a')) return;
+  toggleTodoSelection(id, !_todoSelected.has(id));
+}
+
+function editSelectedTodo() {
+  var ids = Array.from(_todoSelected);
+  if (ids.length !== 1) return;
+  openTodoEditor(ids[0]);
 }
 
 function toggleAllVisibleTodos(checked) {
@@ -17924,74 +18364,6 @@ function addAiTodos() {
   sv('memo-filter', '');
   renderNotes();
   showToast(created ? created + '개의 할 일이 등록되었습니다.' : '이미 등록된 할 일입니다.', created ? 'success' : 'info');
-}
-
-function addMemoApiSamples() {
-  var existing = new Set(memoList.filter(function(m) { return m.sampleKey; }).map(function(m) { return m.sampleKey; }));
-  var samples = [
-    {
-      sampleKey:'api-meeting',
-      title:'[API 테스트] 신제품 제작 회의록',
-      content:'오늘 신제품 내구성 시험기 제작 회의를 진행했다. 프레임 도면은 김대리가 6월 12일까지 수정하고, 구매팀은 감속기와 LM가이드 견적을 6월 13일까지 받아야 한다. 전장 부품 수급이 늦어질 가능성이 있어 납기 위험을 확인해야 한다. 조립 시작 목표일은 6월 17일이며 고객사 중간 점검은 6월 20일로 예정되어 있다.',
-      tags:['API 테스트','회의록','신제품'],
-      important:true
-    },
-    {
-      sampleKey:'api-purchase',
-      title:'[API 테스트] 자재 구매 및 납기 확인',
-      content:'프로파일은 예주산업에 발주 완료했고 6월 14일 입고 예정이다. 감속기는 기존 견적보다 단가가 8% 상승하여 대체 공급처 검토가 필요하다. 베어링은 재고 2개를 우선 사용하고 부족한 4개를 추가 발주한다. 모든 자재의 확정 납기를 금요일 오전까지 생산팀에 공유한다.',
-      tags:['API 테스트','구매','납기'],
-      important:false
-    },
-    {
-      sampleKey:'api-as',
-      title:'[API 테스트] 고객 A/S 접수 내용',
-      content:'고객사에서 장비 작동 중 반복 소음과 위치 오차가 발생한다고 연락했다. 우선 원격으로 센서 영점과 체결 상태를 확인하고 해결되지 않으면 6월 15일 현장 방문한다. 담당자는 박지호이며 보증 기간 내 접수 건이다. 방문 전 교체용 베어링과 센서를 준비해야 한다.',
-      tags:['API 테스트','A/S','고객'],
-      important:true
-    },
-    {
-      sampleKey:'api-risk',
-      title:'[API 테스트] 생산 지연 위험 보고',
-      content:'현재 제작 진행률은 65%이다. 레이저 가공품 입고가 이틀 지연되었고 배선 작업 담당자가 다른 긴급 프로젝트를 지원 중이다. 계획 납기일을 맞추려면 조립 인원을 한 명 추가 배치하고 검사 일정을 하루 앞당겨야 한다. 고객에게는 현재 상황과 회복 계획을 내일까지 안내한다.',
-      tags:['API 테스트','생산','위험'],
-      important:true
-    }
-  ];
-  var added = 0;
-  samples.forEach(function(sample) {
-    if (existing.has(sample.sampleKey)) return;
-    memoList.unshift({
-      id:nextCode('MEM', memoList), sampleKey:sample.sampleKey,
-      title:sample.title, content:sample.content, tags:sample.tags,
-      important:sample.important, entityType:'', entityId:'',
-      attachments:[], history:[], author:'API 테스트',
-      createdAt:_memoNow(), updatedAt:_memoNow()
-    });
-    added++;
-  });
-  saveStorage('memoList', memoList);
-  memoTab = 'memos';
-  sv('memo-search', 'API 테스트');
-  renderNotes();
-  showToast(added ? added + '개의 API 테스트 예문을 추가했습니다.' : '테스트 예문이 이미 등록되어 있습니다.', added ? 'success' : 'info');
-}
-
-function removeMemoApiSamples() {
-  var count = memoList.filter(function(m) { return !!m.sampleKey; }).length;
-  if (!count) { showToast('정리할 API 테스트 예문이 없습니다.', 'info'); return; }
-  confirm_('API 테스트 예문 정리', count + '개의 테스트 메모와 연결된 테스트 할 일을 삭제하시겠습니까?', function() {
-    var ids = new Set(memoList.filter(function(m) { return !!m.sampleKey; }).map(function(m) { return m.id; }));
-    memoList = memoList.filter(function(m) { return !m.sampleKey; });
-    todoList = todoList.filter(function(t) {
-      return !ids.has(t.memoId) && t.author !== 'API 테스트';
-    });
-    saveStorage('memoList', memoList);
-    saveStorage('todoList', todoList);
-    sv('memo-search', '');
-    renderNotes();
-    showToast('API 테스트 예문을 정리했습니다.', 'success');
-  }, 'btn-danger', 'ti-eraser');
 }
 
 function fillMemoEntityOptions() {
@@ -18304,6 +18676,7 @@ function saveWeeklyReportAsMemo() {
     if (order && order.length === N && isValidOrder(order, N)) {
       applyOrderToTable(table, order, N);
     }
+    if (typeof applyTableDisplaySettings === 'function') applyTableDisplaySettings();
 
     // 드래그 핸들러 부착
     attachDragHandlers(container, table);
@@ -18413,6 +18786,7 @@ function saveWeeklyReportAsMemo() {
     moveColumn(table, dragSrc.index, target);
     const container = table.closest('[data-reorderable]');
     if (container) persistOrder(container, table);
+    if (typeof applyTableDisplaySettings === 'function') applyTableDisplaySettings();
   }
   function onDragEnd(e) {
     e.currentTarget.classList.remove('col-dragging');
@@ -18454,6 +18828,248 @@ function saveWeeklyReportAsMemo() {
   else document.addEventListener('DOMContentLoaded', function () { setTimeout(initTableReorder, 400); });
   setInterval(initTableReorder, 4000);
 })();
+
+/* Common table row selection and action dropdowns. */
+const TABLE_ACTION_HEADER_RE = /(관리|동작|처리|작업)/;
+const TABLE_INTERACTIVE_SEL = 'button,a,input,select,textarea,label,[contenteditable="true"]';
+
+function tableActionLabel(button, index) {
+  const title = (button.getAttribute('title') || button.getAttribute('aria-label') || '').trim();
+  const text = (button.textContent || '').replace(/\s+/g, ' ').trim();
+  if (title) return title;
+  if (text) return text;
+  const icon = button.querySelector('i');
+  const cls = icon ? icon.className : '';
+  if (cls.includes('trash') || button.classList.contains('del-btn')) return '삭제';
+  if (cls.includes('edit') || button.classList.contains('edit-btn')) return '수정';
+  if (cls.includes('restore') || button.classList.contains('restore-btn')) return '복원';
+  if (cls.includes('box')) return '자재';
+  return '작업 ' + (index + 1);
+}
+
+function tableHasDataRows(table) {
+  const rows = Array.from(table.tBodies || []).flatMap(tbody => Array.from(tbody.rows));
+  return rows.some(row => row.cells.length > 1 && !row.querySelector('.empty'));
+}
+
+function findManagedActionIndex(table) {
+  const head = table.tHead && table.tHead.rows[0];
+  if (!head) return -1;
+  const headers = Array.from(head.cells);
+  for (let i = headers.length - 1; i >= 0; i--) {
+    if (TABLE_ACTION_HEADER_RE.test((headers[i].textContent || '').trim())) return i;
+  }
+  const firstBody = Array.from(table.tBodies || []).find(tbody => tbody.rows.length);
+  const row = firstBody && Array.from(firstBody.rows).find(r => r.cells.length > 1);
+  if (!row) return -1;
+  for (let i = row.cells.length - 1; i >= 0; i--) {
+    if (row.cells[i].querySelector('.edit-btn,.del-btn,.restore-btn,button[onclick]')) return i;
+  }
+  return -1;
+}
+
+function updateManagedTableCheckAll(table) {
+  const all = table.querySelector('thead .table-check-all');
+  if (!all) return;
+  const checks = Array.from(table.querySelectorAll('tbody .table-row-select'));
+  const selected = checks.filter(chk => chk.checked);
+  all.checked = checks.length > 0 && selected.length === checks.length;
+  all.indeterminate = selected.length > 0 && selected.length < checks.length;
+}
+
+function syncManagedTableRow(row) {
+  const check = rowSelectionCheckbox(row);
+  if (check) row.classList.toggle('table-row-selected', check.checked);
+  updateManagedTableCheckAll(row.closest('table'));
+}
+
+function syncManagedTableRows(table) {
+  if (!table) return;
+  table.querySelectorAll('tbody tr').forEach(syncManagedTableRow);
+  updateManagedTableCheckAll(table);
+}
+
+function rowSelectionCheckbox(row) {
+  if (!row) return null;
+  return row.querySelector('.table-row-select') ||
+    row.querySelector('input[type="checkbox"][data-bid]') ||
+    (row.cells[0] && row.cells[0].querySelector('input[type="checkbox"]'));
+}
+
+function tableHasExistingSelectionColumn(table) {
+  const head = table.tHead && table.tHead.rows[0];
+  const firstHead = head && head.cells[0];
+  if (firstHead && firstHead.querySelector('input[type="checkbox"]')) return true;
+  const firstBody = Array.from(table.tBodies || []).find(tbody => tbody.rows.length);
+  const row = firstBody && Array.from(firstBody.rows).find(r => r.cells.length > 1);
+  return !!(row && row.cells[0] && row.cells[0].querySelector('input[type="checkbox"]'));
+}
+
+function tableBulkKey(table) {
+  try {
+    if (typeof BULK_CFG === 'undefined') return '';
+    return Object.keys(BULK_CFG).find(key => {
+      const cont = document.querySelector(BULK_CFG[key].sel);
+      return cont && (cont === table || cont.contains(table));
+    }) || '';
+  } catch(e) {
+    return '';
+  }
+}
+
+function removeDuplicateManagedSelectionColumn(table) {
+  const head = table.tHead && table.tHead.rows[0];
+  if (!head) return false;
+  const generated = head.querySelector('.table-row-select-th');
+  if (!generated) return false;
+  const generatedIndex = Array.prototype.indexOf.call(head.cells, generated);
+  const hasOtherSelection = Array.from(head.cells).some((cell, index) => {
+    return index !== generatedIndex && cell.querySelector('input[type="checkbox"]');
+  });
+  const bulkManaged = !!tableBulkKey(table);
+  if (!hasOtherSelection && !bulkManaged) return false;
+  generated.remove();
+  Array.from(table.tBodies || []).forEach(tbody => {
+    Array.from(tbody.rows).forEach(row => {
+      const cell = row.cells[generatedIndex];
+      if (cell && cell.classList.contains('table-row-select-td')) cell.remove();
+    });
+  });
+  return true;
+}
+
+function addManagedSelectionColumn(table) {
+  const head = table.tHead && table.tHead.rows[0];
+  if (!head) return false;
+  if (head.querySelector('.table-check-all') || tableHasExistingSelectionColumn(table) || tableBulkKey(table)) return false;
+  const th = document.createElement('th');
+  th.className = 'table-row-select-th';
+  th.style.cssText = 'width:34px;text-align:center;';
+  th.innerHTML = '<input type="checkbox" class="table-check-all" title="현재 표 전체 선택">';
+  head.insertBefore(th, head.firstChild);
+  Array.from(table.tBodies || []).forEach(tbody => {
+    Array.from(tbody.rows).forEach(row => {
+      if (row.cells.length <= 1 || row.querySelector('.empty')) return;
+      const td = document.createElement('td');
+      td.className = 'table-row-select-td';
+      td.style.cssText = 'width:34px;text-align:center;';
+      td.innerHTML = '<input type="checkbox" class="table-row-select" title="행 선택">';
+      row.insertBefore(td, row.firstChild);
+    });
+  });
+  return true;
+}
+
+function convertActionCellToSelect(cell) {
+  if (!cell || cell.querySelector('.table-action-select')) return;
+  const actions = Array.from(cell.querySelectorAll('button,a')).filter(el => {
+    if (el.closest('.table-action-source')) return false;
+    if (el.classList.contains('table-action-select')) return false;
+    return el.matches('button,a') && (el.getAttribute('onclick') || el.href || el.className);
+  });
+  if (!actions.length) return;
+  const source = document.createElement('div');
+  source.className = 'table-action-source';
+  source.hidden = true;
+  actions.forEach(action => source.appendChild(action));
+
+  const select = document.createElement('select');
+  select.className = 'table-action-select';
+  select.setAttribute('aria-label', '관리 작업 선택');
+  select.innerHTML = '<option value="">관리 선택</option>' +
+    actions.map((action, index) => '<option value="' + index + '">' + tableActionLabel(action, index) + '</option>').join('');
+  select.addEventListener('change', function() {
+    const index = Number(this.value);
+    const target = actions[index];
+    this.value = '';
+    if (target) target.click();
+  });
+
+  cell.classList.add('table-action-cell');
+  cell.textContent = '';
+  cell.appendChild(select);
+  cell.appendChild(source);
+}
+
+function bindManagedTableRows(table) {
+  if (table.dataset.rowSelectBound === '1') return;
+  table.dataset.rowSelectBound = '1';
+  table.addEventListener('change', event => {
+    const target = event.target;
+    if (target.classList && target.classList.contains('table-check-all')) {
+      table.querySelectorAll('tbody .table-row-select').forEach(chk => {
+        chk.checked = target.checked;
+        syncManagedTableRow(chk.closest('tr'));
+      });
+    } else if (target.matches && target.matches('tbody input[type="checkbox"]')) {
+      syncManagedTableRow(target.closest('tr'));
+    }
+    setTimeout(() => syncManagedTableRows(table), 0);
+  });
+  table.addEventListener('click', event => {
+    const row = event.target.closest('tbody tr');
+    if (!row || !table.contains(row)) return;
+    if (event.target.closest(TABLE_INTERACTIVE_SEL)) return;
+    const check = rowSelectionCheckbox(row);
+    if (!check) return;
+    check.click();
+    setTimeout(() => syncManagedTableRows(table), 0);
+  });
+}
+
+function enhanceManagedTable(table) {
+  if (!table) return;
+  if (table.closest('.overlay')) return;
+  if (!table.tHead || !table.tBodies.length || !tableHasDataRows(table)) return;
+  if (table.dataset.managedEnhanced === '1') {
+    removeDuplicateManagedSelectionColumn(table);
+    bindManagedTableRows(table);
+    syncManagedTableRows(table);
+    return;
+  }
+  const actionIndex = findManagedActionIndex(table);
+  if (actionIndex < 0) return;
+  table.dataset.managedEnhanced = '1';
+  removeDuplicateManagedSelectionColumn(table);
+  if (tableBulkKey(table)) {
+    bindManagedTableRows(table);
+    syncManagedTableRows(table);
+    return;
+  }
+  const inserted = addManagedSelectionColumn(table);
+  const adjustedActionIndex = actionIndex + (inserted ? 1 : 0);
+  Array.from(table.tBodies || []).forEach(tbody => {
+    Array.from(tbody.rows).forEach(row => {
+      const cell = row.cells[adjustedActionIndex];
+      convertActionCellToSelect(cell);
+      syncManagedTableRow(row);
+    });
+  });
+  bindManagedTableRows(table);
+  syncManagedTableRows(table);
+}
+
+function enhanceManagedTables(root) {
+  (root || document).querySelectorAll('table').forEach(enhanceManagedTable);
+  if (typeof applyTableDisplaySettings === 'function') applyTableDisplaySettings();
+}
+
+function initManagedTableEnhancer() {
+  enhanceManagedTables(document);
+  const main = document.querySelector('.main') || document.body;
+  const observer = new MutationObserver(mutations => {
+    if (mutations.some(m => m.addedNodes.length)) {
+      requestAnimationFrame(() => enhanceManagedTables(main));
+    }
+  });
+  observer.observe(main, { childList: true, subtree: true });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initManagedTableEnhancer);
+} else {
+  initManagedTableEnhancer();
+}
 
 /* ════════════════════════════════════════════════════════════
    모바일 전용 홈 화면 + 하단 탭바
