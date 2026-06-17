@@ -462,9 +462,7 @@ tr:hover td { background: var(--bg-s); }
 .content div:has(> table) { max-height: calc(100vh - 170px); overflow-y: auto; }
 .content th:first-child, .content td:first-child { position: sticky; left: 0; z-index: 2; }
 .content thead th:first-child { z-index: 4; }
-/* ④ 관리(편집·삭제) 열 우측 고정 — 넓은 표를 가로 스크롤해도 항상 보이게 (첫 열 고정과 대칭) */
-.content th:last-child, .content td:last-child { position: sticky; right: 0; z-index: 2; box-shadow: -6px 0 8px -6px rgba(0,0,0,.18); }
-.content thead th:last-child { z-index: 4; }
+/* 관리 동작은 선택 상태바로 이동했으므로 마지막 열은 고정하지 않습니다. */
 /* ── 가는 스크롤바(전역) ── */
 * { scrollbar-width: thin; scrollbar-color: rgba(140,140,140,0.4) transparent; }
 *::-webkit-scrollbar { width: 8px; height: 8px; }
