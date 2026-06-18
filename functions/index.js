@@ -315,3 +315,66 @@ exports.popbillHometaxSearch = onCall(
     );
   }
 );
+
+/* ════════════════════════════════════════════════════════════════
+   메시징 (문자) — 5순위
+   - 읽기(발신번호 목록·단가)는 안전. 발송(sendSMS)은 외부 전송·과금이므로
+     프론트에서 확인 후에만 호출되며, 기본 정책상 테스트 발송 용도다.
+   ════════════════════════════════════════════════════════════════ */
+function msgService() {
+  ensureConfigured();
+  return popbill.MessageService();
+}
+
+function maskPhone(v) {
+  const d = String(v || "").replace(/[^0-9]/g, "");
+  if (d.length < 4) return "***";
+  return d.slice(0, 3) + "-****-" + d.slice(-4); // 010-****-5678
+}
+
+// 등록된 발신번호 목록 (읽기 전용)
+exports.popbillMsgSenderNumbers = onCall(
+  { region: REGION, secrets: [POPBILL_LINK_ID, POPBILL_SECRET_KEY] },
+  async (request) => {
+    requireAuth(request);
+    const svc = msgService();
+    return await callPopbill((ok, err) => svc.getSenderNumberList(memberCorpNum(), "", ok, err));
+  }
+);
+
+// 문자 단가 정보 (읽기 전용)
+exports.popbillMsgChargeInfo = onCall(
+  { region: REGION, secrets: [POPBILL_LINK_ID, POPBILL_SECRET_KEY] },
+  async (request) => {
+    requireAuth(request);
+    const messageType = ["SMS", "LMS", "MMS"].includes(request.data && request.data.messageType) ? request.data.messageType : "SMS";
+    const svc = msgService();
+    return await callPopbill((ok, err) => svc.getChargeInfo(memberCorpNum(), messageType, "", ok, err));
+  }
+);
+
+// 문자(SMS) 발송 — 외부 전송·과금. 프론트에서 확인 후 호출.
+exports.popbillSendSMS = onCall(
+  { region: REGION, secrets: [POPBILL_LINK_ID, POPBILL_SECRET_KEY] },
+  async (request) => {
+    requireAuth(request);
+    const d = request.data || {};
+    const sender = String(d.sender || "").replace(/[^0-9]/g, "");
+    const receiver = String(d.receiver || "").replace(/[^0-9]/g, "");
+    const contents = String(d.contents || "").trim();
+    if (!sender || !receiver || !contents) {
+      throw new HttpsError("invalid-argument", "발신번호·수신번호·내용을 입력하세요.");
+    }
+    const svc = msgService();
+    try {
+      const receiptNum = await callPopbill((ok, err) =>
+        svc.sendSMS(memberCorpNum(), sender, receiver, "", contents, "", false, "", "", "", ok, err)
+      );
+      await writeLog(request, { type: "sms", target: maskPhone(receiver), ok: true, summary: "전송요청" });
+      return { receiptNum: receiptNum };
+    } catch (e) {
+      await writeLog(request, { type: "sms", target: maskPhone(receiver), ok: false, errorCode: (e && e.details && e.details.code) || (e && e.code) || "" });
+      throw e;
+    }
+  }
+);

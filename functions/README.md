@@ -14,6 +14,8 @@ MES Pro 프론트에서 호출하는 Popbill 연동 서버다. 비밀값(LinkID/
   - 홈택스 전자세금계산서 수집(부서사용자 방식, `HTTaxinvoiceService`):
     `popbillHometaxDeptUserState`(상태) · `popbillHometaxRegisterDeptUser`(등록) ·
     `popbillHometaxRequestJob`(수집요청) · `popbillHometaxJobState`(상태폴링) · `popbillHometaxSearch`(검색)
+  - 메시징(문자, `MessageService`): `popbillMsgSenderNumbers`(발신번호) · `popbillMsgChargeInfo`(단가) ·
+    `popbillSendSMS`(SMS 발송 — 외부 전송·과금, 프론트 확인창 후 호출)
 - 조회 로그: 모든 조회의 성공/실패를 **마스킹**해 Firestore `popbill_logs`에 기록(admin SDK, 규칙 우회).
   앱의 "로그" 탭에서 보려면 Firestore 규칙에 `popbill_logs` **읽기 허용**이 필요(아래 보안 메모).
 

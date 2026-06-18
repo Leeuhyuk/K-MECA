@@ -312,8 +312,63 @@ function _pbDocument() {
   return _pbNotReady('전자세금계산서 등 문서 발행은 운영 영향이 커 테스트 샌드박스 연동 후 활성화됩니다.');
 }
 
+/* ── 메시징(문자) — 읽기(발신번호·단가) + 테스트 발송 ── */
 function _pbMessaging() {
-  return _pbNotReady('카카오톡·문자·팩스는 기존 알림톡/API 설정과 중복 검토 후 연동합니다.');
+  if (!_pbCloudReady()) {
+    return _pbNotReady('클라우드 로그인 후, 백엔드(Functions) 배포가 완료되면 사용할 수 있습니다.');
+  }
+  return `<div style="display:grid;gap:12px;max-width:620px;">
+    <div class="card">
+      <div style="font-weight:600;margin-bottom:8px;">발신 정보 (읽기 전용)</div>
+      <button class="btn" onclick="pbMsgSenders()"><i class="ti ti-address-book"></i>발신번호 목록</button>
+      <button class="btn" onclick="pbMsgCharge()"><i class="ti ti-coin"></i>문자 단가</button>
+      <div id="pb-msg-info" style="margin-top:10px;"></div>
+    </div>
+    <div class="card" style="border-left:3px solid #e8590c;">
+      <div style="font-weight:600;margin-bottom:4px;">테스트 발송 (SMS)</div>
+      <div style="font-size:11px;color:#e8590c;margin-bottom:8px;"><i class="ti ti-alert-triangle"></i> 실제 문자가 전송되고 과금됩니다. 발송 전 확인창이 표시됩니다.</div>
+      <div class="ff" style="margin-bottom:8px;"><label>발신번호 (사전 등록된 번호)</label><input id="pb-msg-sender" type="text" inputmode="numeric" placeholder="0212345678" style="width:100%;height:32px;"></div>
+      <div class="ff" style="margin-bottom:8px;"><label>수신번호</label><input id="pb-msg-receiver" type="text" inputmode="numeric" placeholder="01012345678" style="width:100%;height:32px;"></div>
+      <div class="ff" style="margin-bottom:8px;"><label>내용 (SMS 90바이트)</label><textarea id="pb-msg-content" rows="3" maxlength="90" style="width:100%;font-family:inherit;"></textarea></div>
+      <button class="btn btn-primary" onclick="pbSendSMS()"><i class="ti ti-send"></i>테스트 발송</button>
+      <div id="pb-msg-send-result" style="margin-top:10px;"></div>
+    </div>
+  </div>`;
+}
+
+async function pbMsgSenders() {
+  _pbLoading('pb-msg-info');
+  try {
+    const res = await _pbCallable('popbillMsgSenderNumbers')({});
+    const list = Array.isArray(res.data) ? res.data : (res.data && res.data.list) || null;
+    if (list && list.length) {
+      const rows = list.map(s => `<tr><td style="padding:4px 10px;">${esc(s.number || s.senderNumber || '')}</td><td style="padding:4px 10px;">${esc(s.representYN ? '대표' : '')}</td></tr>`).join('');
+      _pbResultBox('pb-msg-info', '<div style="font-weight:600;margin-bottom:6px;">발신번호</div><table style="border-collapse:collapse;font-size:12px;">' + rows + '</table>');
+    } else {
+      _pbResultBox('pb-msg-info', '<div style="font-weight:600;margin-bottom:6px;">발신번호</div>' + _pbRenderObj(res.data));
+    }
+  } catch (e) { _pbError('pb-msg-info', _pbErrMsg(e)); }
+}
+
+async function pbMsgCharge() {
+  _pbLoading('pb-msg-info');
+  try {
+    const res = await _pbCallable('popbillMsgChargeInfo')({ messageType: 'SMS' });
+    _pbResultBox('pb-msg-info', '<div style="font-weight:600;margin-bottom:6px;">문자 단가(SMS)</div>' + _pbRenderObj(res.data));
+  } catch (e) { _pbError('pb-msg-info', _pbErrMsg(e)); }
+}
+
+async function pbSendSMS() {
+  const sender = (inp('pb-msg-sender').value || '').replace(/[^0-9]/g, '');
+  const receiver = (inp('pb-msg-receiver').value || '').replace(/[^0-9]/g, '');
+  const contents = (inp('pb-msg-content').value || '').trim();
+  if (!sender || !receiver || !contents) { _pbError('pb-msg-send-result', '발신·수신번호와 내용을 입력하세요.'); return; }
+  if (!confirm(`실제 문자를 전송합니다(과금).\n수신: ${receiver}\n내용: ${contents}\n\n발송하시겠습니까?`)) return;
+  _pbLoading('pb-msg-send-result');
+  try {
+    const res = await _pbCallable('popbillSendSMS')({ sender, receiver, contents });
+    _pbResultBox('pb-msg-send-result', '<div style="color:#2b8a3e;"><i class="ti ti-check"></i> 전송 요청됨</div><div style="font-size:12px;margin-top:4px;">접수번호: <code>' + esc((res.data && res.data.receiptNum) || '') + '</code></div>');
+  } catch (e) { _pbError('pb-msg-send-result', _pbErrMsg(e)); }
 }
 
 /* ── 조회 로그: Firestore popbill_logs 읽기(백엔드가 마스킹해 기록) ── */
