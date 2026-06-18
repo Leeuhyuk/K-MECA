@@ -11,6 +11,8 @@ MES Pro 프론트에서 호출하는 Popbill 연동 서버다. 비밀값(LinkID/
   - `popbillCheckBizState` — 사업자등록상태조회(휴폐업) · `ClosedownService.checkCorpNum`
   - `popbillCheckBizInfo` — 기업정보조회 · `BizInfoCheckService.checkBizInfo`
   - `popbillCheckAccount` — 예금주(성명)조회 · `AccountCheckService.checkAccountInfo`
+- 조회 로그: 모든 조회의 성공/실패를 **마스킹**해 Firestore `popbill_logs`에 기록(admin SDK, 규칙 우회).
+  앱의 "로그" 탭에서 보려면 Firestore 규칙에 `popbill_logs` **읽기 허용**이 필요(아래 보안 메모).
 
 > ⚠️ **비밀값은 본인이 직접 등록하세요.** 아래 명령의 `<...>` 자리에 실제 Popbill LinkID/SecretKey를
 > 넣어 **사용자가** 실행합니다. (보안상 대신 입력하지 않습니다.)
@@ -119,3 +121,11 @@ console.log(res.data);
 - 함수는 `request.auth` 로 로그인 사용자만 허용한다. 역할(RBAC)별 제한이 필요하면
   `request.auth.token` 클레임 또는 Firestore `users/{uid}.role` 검증을 추가한다.
 - 시크릿 접근은 Cloud Audit Logs로 추적된다.
+- 조회 로그는 백엔드(admin)가 기록하므로 Firestore 규칙을 우회한다. 앱에서 **읽기**만 허용하면 된다:
+  ```
+  match /popbill_logs/{docId} {
+    allow read: if request.auth != null;
+    allow write: if false;
+  }
+  ```
+- 로그에는 원문 대신 마스킹값만 저장한다(사업자번호 `123-**-***90`, 계좌 `****890`, 예금주명 `홍**`).

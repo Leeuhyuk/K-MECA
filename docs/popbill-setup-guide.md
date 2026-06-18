@@ -131,6 +131,26 @@ firebase deploy --only functions
 
 ---
 
+## 4-1단계. 로그 보기 권한 (Firestore 규칙) — 선택
+
+**로그 탭**에서 조회 이력을 보려면, 로그인한 사용자가 `popbill_logs`를 **읽을 수** 있도록 규칙을 추가해야
+합니다. (기록은 백엔드가 안전하게 하므로, 앱에서는 읽기만 허용하면 됩니다.)
+
+1. https://console.firebase.google.com/project/k-meca/firestore/rules 접속
+2. 기존 규칙은 **그대로 두고**, `match /databases/{database}/documents {` 안쪽에 아래 블록만 추가:
+
+   ```
+   match /popbill_logs/{docId} {
+     allow read: if request.auth != null;   // 로그인 사용자 읽기 허용
+     allow write: if false;                 // 쓰기는 백엔드(서버)만
+   }
+   ```
+3. **게시(Publish)** 클릭.
+
+> 이 단계를 건너뛰면 다른 기능은 정상 동작하고, 로그 탭에서만 "권한 없음" 메시지가 나옵니다.
+
+---
+
 ## 다 됐는지 확인하는 법
 
 1. 이 앱(MES Pro)을 브라우저에서 열고 **클라우드 로그인** 합니다.

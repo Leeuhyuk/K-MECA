@@ -11,7 +11,12 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret, defineString } = require("firebase-functions/params");
 const logger = require("firebase-functions/logger");
+const { initializeApp } = require("firebase-admin/app");
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const popbill = require("popbill");
+
+initializeApp();
+const db = getFirestore();
 
 /* ── 환경/파라미터 ──────────────────────────────────────────────
    비밀값은 Secret Manager(defineSecret), 비밀 아님 식별/플래그는 defineString.
@@ -91,19 +96,65 @@ function callPopbill(invoke) {
   });
 }
 
+/* ── 마스킹 ─────────────────────────────────────────────────
+   로그에는 원문 대신 마스킹값만 저장한다(개인정보/민감정보 보호). */
+function maskCorpNum(v) {
+  const d = String(v || "").replace(/[^0-9]/g, "");
+  if (d.length !== 10) return "***";
+  return d.slice(0, 3) + "-**-***" + d.slice(8); // 123-**-***90
+}
+function maskAccount(v) {
+  const d = String(v || "").replace(/[^0-9]/g, "");
+  if (d.length < 4) return "***";
+  return "****" + d.slice(-3); // ****890
+}
+function maskName(v) {
+  const s = String(v || "").trim();
+  if (s.length <= 1) return s || "-";
+  return s[0] + "*".repeat(s.length - 1); // 홍** 형태
+}
+
+/* ── 조회 로그 기록 (Firestore popbill_logs) ─────────────────
+   admin SDK로 기록하므로 Firestore 규칙을 우회한다(프론트는 읽기만).
+   실패해도 본 조회 응답에는 영향 주지 않는다. */
+async function writeLog(request, entry) {
+  try {
+    await db.collection("popbill_logs").add({
+      type: entry.type,
+      target: entry.target || "",   // 마스킹된 입력
+      summary: entry.summary || "", // 마스킹된 결과 요약
+      ok: !!entry.ok,
+      errorCode: entry.errorCode || "",
+      uid: (request.auth && request.auth.uid) || "",
+      email: (request.auth && request.auth.token && request.auth.token.email) || "",
+      isTest: POPBILL_IS_TEST.value() !== "false",
+      createdAt: FieldValue.serverTimestamp(),
+    });
+  } catch (e) {
+    logger.warn("popbill log write failed", { code: e && e.code });
+  }
+}
+
 /* ── 사업자등록상태조회(휴폐업) ─────────────────────────────── */
 exports.popbillCheckBizState = onCall(
   { region: REGION, secrets: [POPBILL_LINK_ID, POPBILL_SECRET_KEY] },
   async (request) => {
     requireAuth(request);
     const checkCorpNum = sanitizeCorpNum(request.data && request.data.corpNum);
+    const target = maskCorpNum(checkCorpNum);
     ensureConfigured();
     const svc = popbill.ClosedownService();
-    const res = await callPopbill((success, error) =>
-      svc.checkCorpNum(memberCorpNum(), checkCorpNum, success, error)
-    );
-    logger.info("popbillCheckBizState ok", { uid: request.auth.uid }); // 조회대상번호는 로그에 남기지 않음
-    return res;
+    try {
+      const res = await callPopbill((success, error) =>
+        svc.checkCorpNum(memberCorpNum(), checkCorpNum, success, error)
+      );
+      logger.info("popbillCheckBizState ok", { uid: request.auth.uid });
+      await writeLog(request, { type: "bizState", target, ok: true, summary: (res && res.stateString) || "" });
+      return res;
+    } catch (e) {
+      await writeLog(request, { type: "bizState", target, ok: false, errorCode: (e && e.details && e.details.code) || (e && e.code) || "" });
+      throw e;
+    }
   }
 );
 
@@ -113,13 +164,20 @@ exports.popbillCheckBizInfo = onCall(
   async (request) => {
     requireAuth(request);
     const checkCorpNum = sanitizeCorpNum(request.data && request.data.corpNum);
+    const target = maskCorpNum(checkCorpNum);
     ensureConfigured();
     const svc = popbill.BizInfoCheckService();
-    const res = await callPopbill((success, error) =>
-      svc.checkBizInfo(memberCorpNum(), checkCorpNum, success, error)
-    );
-    logger.info("popbillCheckBizInfo ok", { uid: request.auth.uid });
-    return res;
+    try {
+      const res = await callPopbill((success, error) =>
+        svc.checkBizInfo(memberCorpNum(), checkCorpNum, success, error)
+      );
+      logger.info("popbillCheckBizInfo ok", { uid: request.auth.uid });
+      await writeLog(request, { type: "bizInfo", target, ok: true, summary: (res && res.companyName) || "" });
+      return res;
+    } catch (e) {
+      await writeLog(request, { type: "bizInfo", target, ok: false, errorCode: (e && e.details && e.details.code) || (e && e.code) || "" });
+      throw e;
+    }
   }
 );
 
@@ -132,12 +190,19 @@ exports.popbillCheckAccount = onCall(
     const d = request.data || {};
     const bankCode = sanitizeBankCode(d.bankCode);
     const accountNumber = sanitizeAccountNumber(d.accountNumber);
+    const target = bankCode + " " + maskAccount(accountNumber);
     ensureConfigured();
     const svc = popbill.AccountCheckService();
-    const res = await callPopbill((success, error) =>
-      svc.checkAccountInfo(memberCorpNum(), bankCode, accountNumber, "", success, error)
-    );
-    logger.info("popbillCheckAccount ok", { uid: request.auth.uid }); // 계좌번호는 로그에 남기지 않음
-    return res;
+    try {
+      const res = await callPopbill((success, error) =>
+        svc.checkAccountInfo(memberCorpNum(), bankCode, accountNumber, "", success, error)
+      );
+      logger.info("popbillCheckAccount ok", { uid: request.auth.uid });
+      await writeLog(request, { type: "account", target, ok: true, summary: maskName(res && res.accountName) });
+      return res;
+    } catch (e) {
+      await writeLog(request, { type: "account", target, ok: false, errorCode: (e && e.details && e.details.code) || (e && e.code) || "" });
+      throw e;
+    }
   }
 );

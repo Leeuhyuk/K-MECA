@@ -24,6 +24,7 @@ function renderPopbill() {
     logs:      _pbLogs
   };
   body.innerHTML = (map[popbillTab] || _pbOverview)();
+  if (popbillTab === 'logs') pbLoadLogs();
 }
 
 /* 공통: 미연동 안내 배너 */
@@ -201,10 +202,61 @@ function _pbMessaging() {
   return _pbNotReady('카카오톡·문자·팩스는 기존 알림톡/API 설정과 중복 검토 후 연동합니다.');
 }
 
+/* ── 조회 로그: Firestore popbill_logs 읽기(백엔드가 마스킹해 기록) ── */
+const POPBILL_LOG_TYPE = { bizState: '사업자상태', bizInfo: '기업정보', account: '예금주' };
+
 function _pbLogs() {
-  return `<div class="empty" style="padding:24px;">
-    <i class="ti ti-history"></i>
-    <div style="margin-top:6px;">호출 로그가 없습니다.</div>
-    <div style="font-size:11px;color:var(--tx-s);margin-top:4px;">실제 연동 후 조회/전송 이력이 여기에 마스킹되어 표시됩니다.</div>
-  </div>`;
+  return `<div class="toolbar" style="margin-bottom:8px;">
+      <button class="btn btn-icon" onclick="pbLoadLogs()" title="새로고침"><i class="ti ti-refresh"></i></button>
+      <span style="font-size:12px;color:var(--tx-s);align-self:center;">최근 조회 이력 (민감정보는 마스킹되어 저장됩니다)</span>
+    </div>
+    <div id="pb-logs-body"><div class="empty" style="padding:24px;"><i class="ti ti-loader"></i> 불러오는 중…</div></div>`;
+}
+
+function _pbLogTime(ts) {
+  try {
+    const d = ts && ts.toDate ? ts.toDate() : (ts ? new Date(ts) : null);
+    if (!d) return '-';
+    const p = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  } catch (e) { return '-'; }
+}
+
+async function pbLoadLogs() {
+  const box = inp('pb-logs-body'); if (!box) return;
+  if (typeof _fbDb === 'undefined' || !_fbDb) {
+    box.innerHTML = '<div class="empty" style="padding:24px;"><i class="ti ti-cloud-off"></i> 클라우드 로그인 후 이용할 수 있습니다.</div>';
+    return;
+  }
+  try {
+    const snap = await _fbDb.collection('popbill_logs').orderBy('createdAt', 'desc').limit(50).get();
+    if (snap.empty) {
+      box.innerHTML = '<div class="empty" style="padding:24px;"><i class="ti ti-history"></i> 조회 이력이 없습니다.</div>';
+      return;
+    }
+    const rows = snap.docs.map(doc => {
+      const d = doc.data();
+      const ok = d.ok
+        ? '<span style="color:#2b8a3e;"><i class="ti ti-check"></i> 성공</span>'
+        : '<span style="color:#e03131;"><i class="ti ti-x"></i> 실패' + (d.errorCode ? ' (' + esc(d.errorCode) + ')' : '') + '</span>';
+      return `<tr>
+        <td style="padding:6px 10px;white-space:nowrap;">${esc(_pbLogTime(d.createdAt))}</td>
+        <td style="padding:6px 10px;">${esc(POPBILL_LOG_TYPE[d.type] || d.type)}${d.isTest ? ' <span class="nbadge" style="background:#868e96;">테스트</span>' : ''}</td>
+        <td style="padding:6px 10px;">${esc(d.target)}</td>
+        <td style="padding:6px 10px;">${esc(d.summary)}</td>
+        <td style="padding:6px 10px;">${ok}</td>
+        <td style="padding:6px 10px;color:var(--tx-s);">${esc(d.email)}</td>
+      </tr>`;
+    }).join('');
+    box.innerHTML = `<div class="card" style="overflow-x:auto;">
+      <table style="border-collapse:collapse;font-size:12px;width:100%;">
+        <thead><tr style="color:var(--tx-s);text-align:left;">
+          <th style="padding:6px 10px;">시각</th><th style="padding:6px 10px;">구분</th>
+          <th style="padding:6px 10px;">대상</th><th style="padding:6px 10px;">결과요약</th>
+          <th style="padding:6px 10px;">상태</th><th style="padding:6px 10px;">사용자</th>
+        </tr></thead><tbody>${rows}</tbody>
+      </table></div>`;
+  } catch (e) {
+    box.innerHTML = '<div class="empty" style="padding:24px;color:#e03131;"><i class="ti ti-alert-triangle"></i> 로그를 불러오지 못했습니다: ' + esc(e && e.message) + '</div>';
+  }
 }
