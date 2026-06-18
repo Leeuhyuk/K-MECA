@@ -190,8 +190,122 @@ async function pbRunAccount() {
   } catch (e) { _pbError('pb-acc-result', _pbErrMsg(e)); }
 }
 
+/* ── 홈택스 전자세금계산서 수집 (부서사용자 방식) ──
+   흐름: 부서사용자 상태 → (필요시)등록 → 수집요청(Job) → 상태확인 → 검색 */
+let pbHtJobID = '';
+
 function _pbHometax() {
-  return _pbNotReady('홈택스수집은 인증(부서사용자/공동인증서)과 수집 작업 흐름이 필요해 백엔드 연동 후 활성화됩니다.');
+  if (!_pbCloudReady()) {
+    return _pbNotReady('클라우드 로그인 후, 백엔드(Functions) 배포가 완료되면 사용할 수 있습니다.');
+  }
+  const today = new Date();
+  const ymd = d => `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+  const monthAgo = new Date(today.getTime()); monthAgo.setMonth(monthAgo.getMonth() - 1);
+  return `<div style="display:grid;gap:12px;max-width:680px;">
+    <div class="card">
+      <div style="font-weight:600;margin-bottom:8px;">1. 부서사용자 상태</div>
+      <button class="btn" onclick="pbHtCheckDeptUser()"><i class="ti ti-user-search"></i>상태 확인</button>
+      <button class="btn btn-icon" onclick="pbHtShowRegister()" title="부서사용자 등록"><i class="ti ti-user-plus"></i></button>
+      <div id="pb-ht-dept" style="margin-top:10px;"></div>
+    </div>
+    <div class="card">
+      <div style="font-weight:600;margin-bottom:8px;">2. 수집 요청</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;">
+        <div class="ff"><label>유형</label>
+          <select id="pb-ht-type" style="height:32px;"><option value="SELL">매출</option><option value="BUY">매입</option><option value="TRUSTEE">위수탁</option></select></div>
+        <div class="ff"><label>시작일</label><input id="pb-ht-sdate" type="text" maxlength="10" value="${ymd(monthAgo)}" style="height:32px;width:120px;"></div>
+        <div class="ff"><label>종료일</label><input id="pb-ht-edate" type="text" maxlength="10" value="${ymd(today)}" style="height:32px;width:120px;"></div>
+        <button class="btn btn-primary" onclick="pbHtRequestJob()"><i class="ti ti-download"></i>수집 요청</button>
+      </div>
+      <div style="font-size:11px;color:var(--tx-s);margin-top:6px;">YYYYMMDD · 최대 3개월 단위 · 작성일자 기준</div>
+      <div id="pb-ht-job" style="margin-top:10px;"></div>
+    </div>
+    <div class="card">
+      <div style="font-weight:600;margin-bottom:8px;">3. 상태 / 결과</div>
+      <button class="btn" onclick="pbHtJobState()"><i class="ti ti-refresh"></i>상태 확인</button>
+      <button class="btn btn-primary" onclick="pbHtSearch()"><i class="ti ti-list-search"></i>결과 검색</button>
+      <div id="pb-ht-result" style="margin-top:10px;"></div>
+    </div>
+  </div>`;
+}
+
+async function pbHtCheckDeptUser() {
+  _pbLoading('pb-ht-dept');
+  try {
+    const res = await _pbCallable('popbillHometaxDeptUserState')({});
+    _pbResultBox('pb-ht-dept', '<div style="color:#2b8a3e;"><i class="ti ti-check"></i> 등록·로그인 가능</div>' + _pbRenderObj(res.data));
+  } catch (e) {
+    _pbResultBox('pb-ht-dept', '<div style="color:#e03131;"><i class="ti ti-alert-triangle"></i> ' + esc(_pbErrMsg(e)) + '</div>' +
+      '<div style="font-size:11px;color:var(--tx-s);margin-top:4px;">부서사용자 미등록이면 아래에서 등록하세요.</div>');
+    pbHtShowRegister();
+  }
+}
+
+function pbHtShowRegister() {
+  _pbResultBox('pb-ht-dept', `<div class="ff" style="margin-bottom:8px;"><label>부서사용자 ID</label>
+      <input id="pb-ht-uid" type="text" autocomplete="off" style="width:100%;height:32px;"></div>
+    <div class="ff" style="margin-bottom:8px;"><label>부서사용자 비밀번호</label>
+      <input id="pb-ht-upw" type="password" autocomplete="new-password" style="width:100%;height:32px;"></div>
+    <button class="btn btn-primary" onclick="pbHtRegisterDeptUser()"><i class="ti ti-user-plus"></i>등록</button>
+    <div style="font-size:11px;color:var(--tx-s);margin-top:6px;">홈택스 조회 전용 부서사용자 계정입니다. 비밀번호는 저장되지 않고 등록에만 사용됩니다.</div>
+    <div id="pb-ht-reg-result" style="margin-top:8px;"></div>`);
+}
+
+async function pbHtRegisterDeptUser() {
+  const deptUserID = (inp('pb-ht-uid').value || '').trim();
+  const deptUserPWD = (inp('pb-ht-upw').value || '');
+  if (!deptUserID || !deptUserPWD) { _pbError('pb-ht-reg-result', '아이디와 비밀번호를 입력하세요.'); return; }
+  _pbLoading('pb-ht-reg-result');
+  try {
+    await _pbCallable('popbillHometaxRegisterDeptUser')({ deptUserID, deptUserPWD });
+    _pbResultBox('pb-ht-reg-result', '<div style="color:#2b8a3e;"><i class="ti ti-check"></i> 등록되었습니다. 상태 확인을 다시 눌러주세요.</div>');
+  } catch (e) { _pbError('pb-ht-reg-result', _pbErrMsg(e)); }
+}
+
+async function pbHtRequestJob() {
+  const queryType = inp('pb-ht-type').value;
+  const sDate = (inp('pb-ht-sdate').value || '').replace(/[^0-9]/g, '');
+  const eDate = (inp('pb-ht-edate').value || '').replace(/[^0-9]/g, '');
+  if (sDate.length !== 8 || eDate.length !== 8) { _pbError('pb-ht-job', '날짜를 YYYYMMDD로 입력하세요.'); return; }
+  _pbLoading('pb-ht-job');
+  try {
+    const res = await _pbCallable('popbillHometaxRequestJob')({ queryType, dType: 'W', sDate, eDate });
+    pbHtJobID = (res.data && res.data.jobID) || '';
+    _pbResultBox('pb-ht-job', '<div style="color:#2b8a3e;"><i class="ti ti-check"></i> 수집 요청됨</div>' +
+      '<div style="font-size:12px;margin-top:4px;">JobID: <code>' + esc(pbHtJobID) + '</code> (1시간 유효) — 잠시 후 상태 확인 → 결과 검색</div>');
+  } catch (e) { _pbError('pb-ht-job', _pbErrMsg(e)); }
+}
+
+async function pbHtJobState() {
+  if (!pbHtJobID) { _pbError('pb-ht-result', '먼저 수집 요청을 하세요.'); return; }
+  _pbLoading('pb-ht-result');
+  try {
+    const res = await _pbCallable('popbillHometaxJobState')({ jobID: pbHtJobID });
+    _pbResultBox('pb-ht-result', '<div style="font-weight:600;margin-bottom:6px;">작업 상태</div>' + _pbRenderObj(res.data) +
+      '<div style="font-size:11px;color:var(--tx-s);margin-top:6px;">jobState=3, errorCode=1 이면 검색 가능합니다.</div>');
+  } catch (e) { _pbError('pb-ht-result', _pbErrMsg(e)); }
+}
+
+async function pbHtSearch() {
+  if (!pbHtJobID) { _pbError('pb-ht-result', '먼저 수집 요청을 하세요.'); return; }
+  _pbLoading('pb-ht-result');
+  try {
+    const res = await _pbCallable('popbillHometaxSearch')({ jobID: pbHtJobID, page: 1, perPage: 50 });
+    _pbResultBox('pb-ht-result', _pbRenderHtList(res.data));
+  } catch (e) { _pbError('pb-ht-result', _pbErrMsg(e)); }
+}
+
+function _pbRenderHtList(data) {
+  const list = data && Array.isArray(data.list) ? data.list : null;
+  if (!list) return '<div style="font-weight:600;margin-bottom:6px;">검색 결과</div>' + _pbRenderObj(data);
+  if (!list.length) return '<div class="empty" style="padding:16px;"><i class="ti ti-inbox"></i> 결과가 없습니다.</div>';
+  const cols = Object.keys(list[0]).slice(0, 8);
+  const head = cols.map(c => `<th style="padding:5px 8px;text-align:left;color:var(--tx-s);white-space:nowrap;">${esc(c)}</th>`).join('');
+  const body = list.map(row =>
+    '<tr>' + cols.map(c => `<td style="padding:5px 8px;">${esc(row[c])}</td>`).join('') + '</tr>').join('');
+  return `<div style="font-weight:600;margin-bottom:6px;">검색 결과 (${list.length}건)</div>
+    <div style="overflow-x:auto;"><table style="border-collapse:collapse;font-size:12px;width:100%;">
+    <thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
 }
 
 function _pbDocument() {

@@ -206,3 +206,112 @@ exports.popbillCheckAccount = onCall(
     }
   }
 );
+
+/* ════════════════════════════════════════════════════════════════
+   홈택스 전자세금계산서 수집 (부서사용자 방식)
+   흐름: 부서사용자 상태확인 → (필요시) 등록 → 수집요청(Job) → 상태폴링 → 검색
+   - 부서사용자 ID/PW는 저장하지 않고 등록 호출에만 전달한다.
+   - RequestJob은 최대 3개월 단위, JobID는 1시간 유효. (Popbill 제약)
+   ════════════════════════════════════════════════════════════════ */
+const HT_QUERY_TYPES = ["SELL", "BUY", "TRUSTEE"]; // 매출/매입/위수탁
+const HT_DATE_TYPES = ["W", "I", "S"];             // 작성일자/발행일자/전송일자
+
+function sanitizeDate8(raw) {
+  const d = String(raw || "").replace(/[^0-9]/g, "");
+  if (d.length !== 8) throw new HttpsError("invalid-argument", "날짜는 YYYYMMDD 형식이어야 합니다.");
+  return d;
+}
+
+function htService() {
+  ensureConfigured();
+  return popbill.HTTaxinvoiceService();
+}
+
+// 부서사용자 등록/로그인 상태 확인
+exports.popbillHometaxDeptUserState = onCall(
+  { region: REGION, secrets: [POPBILL_LINK_ID, POPBILL_SECRET_KEY] },
+  async (request) => {
+    requireAuth(request);
+    const svc = htService();
+    return await callPopbill((ok, err) => svc.checkLoginDeptUser(memberCorpNum(), ok, err));
+  }
+);
+
+// 부서사용자 등록 (홈택스 조회 전용 계정 ID/PW를 Popbill에 등록)
+exports.popbillHometaxRegisterDeptUser = onCall(
+  { region: REGION, secrets: [POPBILL_LINK_ID, POPBILL_SECRET_KEY] },
+  async (request) => {
+    requireAuth(request);
+    const d = request.data || {};
+    const deptUserID = String(d.deptUserID || "").trim();
+    const deptUserPWD = String(d.deptUserPWD || "");
+    if (!deptUserID || !deptUserPWD) {
+      throw new HttpsError("invalid-argument", "부서사용자 ID/PW를 입력하세요.");
+    }
+    const svc = htService();
+    try {
+      const res = await callPopbill((ok, err) =>
+        svc.registDeptUser(memberCorpNum(), deptUserID, deptUserPWD, "", "", ok, err)
+      );
+      await writeLog(request, { type: "htDeptUser", target: maskName(deptUserID), ok: true });
+      return res;
+    } catch (e) {
+      await writeLog(request, { type: "htDeptUser", target: maskName(deptUserID), ok: false, errorCode: (e && e.details && e.details.code) || (e && e.code) || "" });
+      throw e;
+    }
+  }
+);
+
+// 수집 요청 → JobID 반환
+exports.popbillHometaxRequestJob = onCall(
+  { region: REGION, secrets: [POPBILL_LINK_ID, POPBILL_SECRET_KEY] },
+  async (request) => {
+    requireAuth(request);
+    const d = request.data || {};
+    const queryType = HT_QUERY_TYPES.includes(d.queryType) ? d.queryType : "SELL";
+    const dType = HT_DATE_TYPES.includes(d.dType) ? d.dType : "W";
+    const sDate = sanitizeDate8(d.sDate);
+    const eDate = sanitizeDate8(d.eDate);
+    const svc = htService();
+    try {
+      const jobID = await callPopbill((ok, err) =>
+        svc.requestJob(memberCorpNum(), queryType, dType, sDate, eDate, "", ok, err)
+      );
+      await writeLog(request, { type: "htJob", target: `${queryType} ${sDate}~${eDate}`, ok: true, summary: String(jobID || "") });
+      return { jobID: jobID };
+    } catch (e) {
+      await writeLog(request, { type: "htJob", target: `${queryType} ${sDate}~${eDate}`, ok: false, errorCode: (e && e.details && e.details.code) || (e && e.code) || "" });
+      throw e;
+    }
+  }
+);
+
+// 수집 작업 상태 (jobState/errorCode 등)
+exports.popbillHometaxJobState = onCall(
+  { region: REGION, secrets: [POPBILL_LINK_ID, POPBILL_SECRET_KEY] },
+  async (request) => {
+    requireAuth(request);
+    const jobID = String((request.data && request.data.jobID) || "").trim();
+    if (!jobID) throw new HttpsError("invalid-argument", "jobID가 필요합니다.");
+    const svc = htService();
+    return await callPopbill((ok, err) => svc.getJobState(memberCorpNum(), jobID, "", ok, err));
+  }
+);
+
+// 수집 결과 검색 (필터는 기본 전체)
+exports.popbillHometaxSearch = onCall(
+  { region: REGION, secrets: [POPBILL_LINK_ID, POPBILL_SECRET_KEY] },
+  async (request) => {
+    requireAuth(request);
+    const d = request.data || {};
+    const jobID = String(d.jobID || "").trim();
+    if (!jobID) throw new HttpsError("invalid-argument", "jobID가 필요합니다.");
+    const page = Number(d.page) > 0 ? Number(d.page) : 1;
+    const perPage = Math.min(Number(d.perPage) > 0 ? Number(d.perPage) : 20, 1000);
+    const svc = htService();
+    // Type/TaxType/PurposeType 빈 배열 = 전체. TaxRegID 미사용.
+    return await callPopbill((ok, err) =>
+      svc.search(memberCorpNum(), jobID, [], [], [], "", 0, "", page, perPage, "D", "", "", ok, err)
+    );
+  }
+);
