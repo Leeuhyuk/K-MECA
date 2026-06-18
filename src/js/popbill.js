@@ -308,8 +308,73 @@ function _pbRenderHtList(data) {
     <thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
 }
 
+/* ── 전자세금계산서 발행 (테스트 발행 전용 샌드박스) ── */
+let pbTxMgtKey = '';
+
 function _pbDocument() {
-  return _pbNotReady('전자세금계산서 등 문서 발행은 운영 영향이 커 테스트 샌드박스 연동 후 활성화됩니다.');
+  if (!_pbCloudReady()) {
+    return _pbNotReady('클라우드 로그인 후, 백엔드(Functions) 배포가 완료되면 사용할 수 있습니다.');
+  }
+  return `<div class="card" style="max-width:600px;border-left:3px solid #e8590c;">
+    <div style="font-weight:600;">전자세금계산서 — 테스트 발행</div>
+    <div style="font-size:11px;color:#e8590c;margin:4px 0 10px;"><i class="ti ti-alert-triangle"></i> 테스트 모드에서만 동작합니다(국세청 실제 전송 없음). 정발행·영수·과세 고정, 공급자=우리 회사.</div>
+    <div class="ff" style="margin-bottom:8px;"><label>공급받는자 사업자번호</label><input id="pb-tx-corpnum" type="text" inputmode="numeric" maxlength="12" placeholder="000-00-00000" style="width:100%;height:32px;"></div>
+    <div class="ff" style="margin-bottom:8px;"><label>공급받는자 상호</label><input id="pb-tx-corpname" type="text" style="width:100%;height:32px;"></div>
+    <div class="ff" style="margin-bottom:8px;"><label>품목명</label><input id="pb-tx-item" type="text" style="width:100%;height:32px;"></div>
+    <div style="display:flex;gap:8px;">
+      <div class="ff" style="flex:1;"><label>공급가액</label><input id="pb-tx-supply" type="text" inputmode="numeric" oninput="pbTxCalcTax()" placeholder="20000" style="width:100%;height:32px;"></div>
+      <div class="ff" style="flex:1;"><label>세액(자동 10%)</label><input id="pb-tx-tax" type="text" inputmode="numeric" placeholder="2000" style="width:100%;height:32px;"></div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:10px;" onclick="pbTxIssue()"><i class="ti ti-file-invoice"></i>테스트 발행</button>
+    <div id="pb-tx-result" style="margin-top:10px;"></div>
+  </div>`;
+}
+
+function pbTxCalcTax() {
+  const supply = (inp('pb-tx-supply').value || '').replace(/[^0-9]/g, '');
+  const taxEl = inp('pb-tx-tax');
+  if (supply && taxEl && !taxEl.dataset.touched) taxEl.value = Math.round(Number(supply) * 0.1);
+}
+
+async function pbTxIssue() {
+  const invoiceeCorpNum = (inp('pb-tx-corpnum').value || '').replace(/[^0-9]/g, '');
+  const invoiceeCorpName = (inp('pb-tx-corpname').value || '').trim();
+  const itemName = (inp('pb-tx-item').value || '').trim();
+  const supplyCost = (inp('pb-tx-supply').value || '').replace(/[^0-9]/g, '');
+  const tax = (inp('pb-tx-tax').value || '').replace(/[^0-9]/g, '');
+  if (invoiceeCorpNum.length !== 10) { _pbError('pb-tx-result', '공급받는자 사업자번호 10자리를 입력하세요.'); return; }
+  if (!supplyCost || Number(supplyCost) <= 0) { _pbError('pb-tx-result', '공급가액을 입력하세요.'); return; }
+  if (!confirm('테스트 세금계산서를 발행합니다(테스트 모드).\n공급받는자: ' + invoiceeCorpNum + '\n공급가액: ' + supplyCost + '\n\n발행하시겠습니까?')) return;
+  _pbLoading('pb-tx-result');
+  try {
+    const res = await _pbCallable('popbillIssueTaxinvoiceTest')({ invoiceeCorpNum, invoiceeCorpName, itemName, supplyCost, tax });
+    pbTxMgtKey = (res.data && res.data.mgtKey) || '';
+    _pbResultBox('pb-tx-result',
+      '<div style="color:#2b8a3e;"><i class="ti ti-check"></i> 발행 요청됨</div>' +
+      '<div style="font-size:12px;margin-top:4px;">문서관리번호: <code>' + esc(pbTxMgtKey) + '</code></div>' +
+      '<div style="margin-top:8px;display:flex;gap:8px;"><button class="btn" onclick="pbTxInfo()"><i class="ti ti-info-circle"></i>상태조회</button>' +
+      '<button class="btn" onclick="pbTxPopup()"><i class="ti ti-external-link"></i>문서 열기</button></div>' +
+      '<div id="pb-tx-info" style="margin-top:8px;"></div>');
+  } catch (e) { _pbError('pb-tx-result', _pbErrMsg(e)); }
+}
+
+async function pbTxInfo() {
+  if (!pbTxMgtKey) return;
+  _pbLoading('pb-tx-info');
+  try {
+    const res = await _pbCallable('popbillTaxinvoiceInfo')({ mgtKey: pbTxMgtKey });
+    _pbResultBox('pb-tx-info', _pbRenderObj(res.data));
+  } catch (e) { _pbError('pb-tx-info', _pbErrMsg(e)); }
+}
+
+async function pbTxPopup() {
+  if (!pbTxMgtKey) return;
+  try {
+    const res = await _pbCallable('popbillTaxinvoicePopupURL')({ mgtKey: pbTxMgtKey });
+    const url = res.data && res.data.url;
+    if (url) window.open(url, '_blank', 'noopener');
+    else _pbError('pb-tx-info', 'URL을 받지 못했습니다.');
+  } catch (e) { _pbError('pb-tx-info', _pbErrMsg(e)); }
 }
 
 /* ── 메시징(문자) — 읽기(발신번호·단가) + 테스트 발송 ── */

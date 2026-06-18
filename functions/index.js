@@ -378,3 +378,98 @@ exports.popbillSendSMS = onCall(
     }
   }
 );
+
+/* ════════════════════════════════════════════════════════════════
+   전자세금계산서 발행 — 4순위 (테스트 발행 전용 샌드박스)
+   - 운영영향이 크므로 IsTest=true(테스트 모드)에서만 발행 허용한다.
+   - 정발행/영수/과세 고정, 공급자=우리 회사, 최소 입력만 받아 나머지는 테스트 기본값.
+   ════════════════════════════════════════════════════════════════ */
+function txService() {
+  ensureConfigured();
+  return popbill.TaxinvoiceService();
+}
+function isTestMode() {
+  return POPBILL_IS_TEST.value() !== "false";
+}
+function toInt(v) {
+  const n = parseInt(String(v == null ? "" : v).replace(/[^0-9]/g, ""), 10);
+  return isNaN(n) ? 0 : n;
+}
+
+// 테스트 세금계산서 정발행
+exports.popbillIssueTaxinvoiceTest = onCall(
+  { region: REGION, secrets: [POPBILL_LINK_ID, POPBILL_SECRET_KEY] },
+  async (request) => {
+    requireAuth(request);
+    if (!isTestMode()) {
+      throw new HttpsError("failed-precondition", "테스트 발행은 테스트 모드에서만 허용됩니다(POPBILL_IS_TEST=true).");
+    }
+    const d = request.data || {};
+    const invoiceeCorpNum = sanitizeCorpNum(d.invoiceeCorpNum);
+    const invoiceeCorpName = String(d.invoiceeCorpName || "").trim() || "공급받는자";
+    const itemName = String(d.itemName || "").trim() || "품목";
+    const supplyCost = toInt(d.supplyCost);
+    if (supplyCost <= 0) throw new HttpsError("invalid-argument", "공급가액을 입력하세요.");
+    const tax = d.tax != null && String(d.tax) !== "" ? toInt(d.tax) : Math.round(supplyCost * 0.1);
+    const total = supplyCost + tax;
+
+    const now = new Date();
+    const writeDate = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+    const mgtKey = "T" + Date.now(); // 공급자 문서관리번호(고유)
+    const ourCorpNum = memberCorpNum();
+
+    const Taxinvoice = {
+      writeDate, chargeDirection: "정과금", issueType: "정발행", purposeType: "영수",
+      issueTiming: "직접발행", taxType: "과세",
+      invoicerCorpNum: ourCorpNum, invoicerMgtKey: mgtKey,
+      invoicerCorpName: String(d.invoicerCorpName || "테스트공급자"),
+      invoicerCEOName: String(d.invoicerCEOName || "대표자"),
+      invoicerAddr: "주소", invoicerBizClass: "업종", invoicerBizType: "업태",
+      invoicerContactName: "담당자", invoicerTEL: "070-0000-0000",
+      invoicerEmail: String(d.invoicerEmail || ""), invoicerSMSSendYN: false,
+      invoiceeType: "사업자", invoiceeCorpNum, invoiceeCorpName,
+      invoiceeCEOName: String(d.invoiceeCEOName || "대표자"),
+      invoiceeContactName1: "담당자", invoiceeEmail1: String(d.invoiceeEmail || ""),
+      invoiceeSMSSendYN: false,
+      supplyCostTotal: String(supplyCost), taxTotal: String(tax), totalAmount: String(total),
+      detailList: [{ serialNum: 1, itemName, qty: "1", unitCost: String(supplyCost), supplyCost: String(supplyCost), tax: String(tax) }],
+    };
+
+    const svc = txService();
+    try {
+      const res = await callPopbill((ok, err) =>
+        svc.registIssue(ourCorpNum, Taxinvoice, false, false, "테스트 발행", "", "", "", ok, err)
+      );
+      await writeLog(request, { type: "taxinvoice", target: maskCorpNum(invoiceeCorpNum), ok: true, summary: "발행 " + mgtKey });
+      return { mgtKey, result: res };
+    } catch (e) {
+      await writeLog(request, { type: "taxinvoice", target: maskCorpNum(invoiceeCorpNum), ok: false, errorCode: (e && e.details && e.details.code) || (e && e.code) || "" });
+      throw e;
+    }
+  }
+);
+
+// 발행 세금계산서 상태/요약 조회 (공급자 문서관리번호 기준)
+exports.popbillTaxinvoiceInfo = onCall(
+  { region: REGION, secrets: [POPBILL_LINK_ID, POPBILL_SECRET_KEY] },
+  async (request) => {
+    requireAuth(request);
+    const mgtKey = String((request.data && request.data.mgtKey) || "").trim();
+    if (!mgtKey) throw new HttpsError("invalid-argument", "문서관리번호가 필요합니다.");
+    const svc = txService();
+    return await callPopbill((ok, err) => svc.getInfo(memberCorpNum(), "SELL", mgtKey, "", ok, err));
+  }
+);
+
+// 발행 문서 팝빌 팝업 URL
+exports.popbillTaxinvoicePopupURL = onCall(
+  { region: REGION, secrets: [POPBILL_LINK_ID, POPBILL_SECRET_KEY] },
+  async (request) => {
+    requireAuth(request);
+    const mgtKey = String((request.data && request.data.mgtKey) || "").trim();
+    if (!mgtKey) throw new HttpsError("invalid-argument", "문서관리번호가 필요합니다.");
+    const svc = txService();
+    const url = await callPopbill((ok, err) => svc.getPopUpURL(memberCorpNum(), "SELL", mgtKey, "", ok, err));
+    return { url };
+  }
+);
