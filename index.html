@@ -982,6 +982,33 @@ textarea { height: auto; resize: vertical; }
   font-size: 13px;
   font-weight: 800;
 }
+.date-view-selected-mode {
+  background: var(--bg-i) !important;
+  border-color: var(--br-i) !important;
+  color: var(--tx-i);
+}
+.selection-action-bar,
+.date-view-selected-mode {
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.selection-action-bar {
+  padding: 9px 14px;
+  margin: 0 0 12px;
+  background: var(--bg-i);
+  border: 1px solid var(--br-i);
+  border-radius: var(--rm);
+}
+.date-view-selected-mode .date-view-selection-count,
+.selection-action-bar .date-view-selection-count {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--tx-i);
+}
+.date-view-clear-selection {
+  margin-left: auto;
+}
 
 .del-btn, .edit-btn, .restore-btn { padding: 3px 8px; font-size: 11px; height: 24px; border-radius: 4px; cursor: pointer; background: transparent; font-family: var(--f); display: inline-flex; align-items: center; gap: 4px; transition: all .15s; border: 1px solid; }
 .del-btn { border-color: var(--br-d); color: var(--tx-d); }
@@ -1596,6 +1623,19 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     flex: 1 1 100%;
     order: 11;
     overflow-x: auto;
+  }
+  .date-view-selected-mode,
+  .selection-action-bar {
+    align-items: stretch !important;
+  }
+  .date-view-selected-mode .btn,
+  .selection-action-bar .btn,
+  .date-view-selected-mode select,
+  .selection-action-bar select {
+    min-width: max-content;
+  }
+  .date-view-clear-selection {
+    margin-left: 0;
   }
   .toolbar > .drive-save-btn {
     display: inline-flex !important;
@@ -4158,6 +4198,8 @@ const dateViewState = (() => {
   catch(e) { return {}; }
 })();
 const dateViewRenderers = {};
+const dateViewSelectionState = {};
+const dateViewSelectionClearers = {};
 function _dateViewSave() {
   try { localStorage.setItem('mes_dateViewState', JSON.stringify(dateViewState)); } catch(e) {}
 }
@@ -4191,18 +4233,47 @@ function _dateViewLabel(mode, value) {
   if (mode === 'month') return p[0] + '년 ' + Number(p[1]) + '월';
   return p[0] + '년 ' + Number(p[1]) + '월 ' + Number(p[2]) + '일';
 }
-function ensureDateView(key, containerId, dates, renderer) {
-  const container = inp(containerId); if (!container || !container.parentNode) return;
-  dateViewRenderers[key] = renderer;
+function registerDateViewSelectionClearer(key, handler) {
+  if (!key || typeof handler !== 'function') return;
+  const list = dateViewSelectionClearers[key] || (dateViewSelectionClearers[key] = []);
+  if (!list.includes(handler)) list.push(handler);
+}
+function _dateViewSelectionActive(key) {
+  return !!(dateViewSelectionState[key] && dateViewSelectionState[key].html);
+}
+function setDateViewSelectionBar(key, html, active) {
+  if (!key) return false;
+  if (active && html) dateViewSelectionState[key] = { html };
+  else delete dateViewSelectionState[key];
+  const bar = inp('date-view-' + key);
+  if (bar) {
+    _renderDateViewBar(key, bar);
+    return true;
+  }
+  return false;
+}
+function clearDateViewSelection(key) {
+  if (!key) return;
+  const clearers = dateViewSelectionClearers[key] || [];
+  clearers.forEach(fn => { try { fn(); } catch(e) {} });
+  delete dateViewSelectionState[key];
+  const bar = inp('date-view-' + key);
+  if (bar) _renderDateViewBar(key, bar);
+}
+function _dateViewBeforeChange(key) {
+  if (_dateViewSelectionActive(key)) clearDateViewSelection(key);
+}
+function _renderDateViewBar(key, bar) {
+  if (!bar) return;
+  const selected = dateViewSelectionState[key];
+  if (selected && selected.html) {
+    bar.classList.add('date-view-selected-mode');
+    bar.innerHTML = selected.html;
+    return;
+  }
+  bar.classList.remove('date-view-selected-mode');
   const state = dateViewState[key] || (dateViewState[key] = { mode:'all', value:'', from:'', to:'' });
   if (state.mode === 'range' && (!state.from || !state.to)) Object.assign(state, _dateViewRangeDefault());
-  let bar = inp('date-view-' + key);
-  if (!bar) {
-    bar = document.createElement('div');
-    bar.id = 'date-view-' + key;
-    bar.style.cssText = 'display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:0 0 8px;padding:4px 8px;background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rm);';
-    container.parentNode.insertBefore(bar, container);
-  }
   const disabled = state.mode === 'all' || state.mode === 'range';
   const range = state.mode === 'range';
   bar.innerHTML = `
@@ -4230,19 +4301,35 @@ function ensureDateView(key, containerId, dates, renderer) {
     </div>
     <button class="btn btn-sm" style="height:28px;padding:0 9px;" onclick="dateViewReset('${key}')" title="전체 보기"><i class="ti ti-x"></i></button>`;
 }
+function ensureDateView(key, containerId, dates, renderer) {
+  const container = inp(containerId); if (!container || !container.parentNode) return;
+  dateViewRenderers[key] = renderer;
+  let bar = inp('date-view-' + key);
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'date-view-' + key;
+    bar.className = 'date-view-bar';
+    bar.style.cssText = 'display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:0 0 8px;padding:4px 8px;background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rm);';
+    container.parentNode.insertBefore(bar, container);
+  }
+  _renderDateViewBar(key, bar);
+}
 function dateViewModeChange(key, mode) {
+  _dateViewBeforeChange(key);
   const range = _dateViewRangeDefault();
   dateViewState[key] = { mode, value:_dateViewDefault(mode), from:range.from, to:range.to };
   _dateViewSave();
   if (dateViewRenderers[key]) dateViewRenderers[key]();
 }
 function dateViewValueChange(key, value) {
+  _dateViewBeforeChange(key);
   const state = dateViewState[key] || { mode:'all', value:'' };
   state.value = value; dateViewState[key] = state;
   _dateViewSave();
   if (dateViewRenderers[key]) dateViewRenderers[key]();
 }
 function dateViewRangeChange(key, field, value) {
+  _dateViewBeforeChange(key);
   const state = dateViewState[key] || { mode:'range', value:'', from:'', to:'' };
   state.mode = 'range';
   state[field] = _dateViewNormalize(value);
@@ -4254,6 +4341,7 @@ function dateViewRangeChange(key, field, value) {
   if (dateViewRenderers[key]) dateViewRenderers[key]();
 }
 function dateViewQuickRange(key, preset) {
+  _dateViewBeforeChange(key);
   const now = new Date();
   let from, to;
   const fmt = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
@@ -4272,11 +4360,13 @@ function dateViewQuickRange(key, preset) {
   if (dateViewRenderers[key]) dateViewRenderers[key]();
 }
 function dateViewReset(key) {
+  _dateViewBeforeChange(key);
   dateViewState[key] = { mode:'all', value:'', from:'', to:'' };
   _dateViewSave();
   if (dateViewRenderers[key]) dateViewRenderers[key]();
 }
 function dateViewMove(key, amount) {
+  _dateViewBeforeChange(key);
   const state = dateViewState[key]; if (!state || state.mode === 'all') return;
   let value = state.value || _dateViewDefault(state.mode);
   if (state.mode === 'year') {
@@ -4296,6 +4386,7 @@ function dateViewMove(key, amount) {
   if (dateViewRenderers[key]) dateViewRenderers[key]();
 }
 function dateViewToday(key) {
+  _dateViewBeforeChange(key);
   const state = dateViewState[key]; if (!state || state.mode === 'all') return;
   state.value = _dateViewDefault(state.mode);
   _dateViewSave();
@@ -11603,6 +11694,45 @@ const BULK_CFG = {
   bom:        {sel:'#bom-body',          del:'deleteBom',       edit:'openBomEdit',    clone:'cloneBom'}
 };
 const bulkSel = {};
+let _bulkDateViewClearersRegistered = false;
+function bulkDateViewKey(key) {
+  const map = {
+    claims: 'claims',
+    workers: 'workersHire',
+    as: 'asRecords'
+  };
+  return map[key] || key;
+}
+function bulkActionButtons(key) {
+  const c = BULK_CFG[key];
+  if (!c) return '';
+  let btns = '';
+  if(c.edit) btns+=`<button class="btn btn-sm" data-edit onclick="bulkRun('${key}','edit')"><i class="ti ti-edit"></i>수정</button>`;
+  if(c.clone) btns+=`<button class="btn btn-sm" data-clone onclick="bulkRun('${key}','clone')"><i class="ti ti-copy"></i>복제</button>`;
+  if(c.toPo) btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','toPo')"><i class="ti ti-file-invoice"></i>발주서 생성</button>`;
+  if(c.pdf)   btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','pdf')"><i class="ti ti-printer"></i>PDF 출력</button>`;
+  if(c.csv)   btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','csv')"><i class="ti ti-file-spreadsheet"></i>엑셀</button>`;
+  if(c.drive) btns+=`<button class="btn btn-sm drive-save-btn" data-act onclick="bulkRun('${key}','drive')"><i class="ti ti-cloud-upload"></i>Google Drive 저장</button>`;
+  if(c.email) btns+=`<button class="btn btn-sm" data-email data-act onclick="bulkRun('${key}','email')"><i class="ti ti-mail"></i>이메일</button>`;
+  btns+=`<button class="btn btn-sm btn-danger" data-act onclick="bulkRun('${key}','delete')"><i class="ti ti-trash"></i>삭제</button>`;
+  return btns;
+}
+function bulkSelectionBarHtml(key, count) {
+  return `<span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${count}건 선택됨</span>${bulkActionButtons(key)}<button class="btn btn-sm date-view-clear-selection" onclick="bulkToggleAll('${key}',false)"><i class="ti ti-x"></i>해제</button>`;
+}
+function registerBulkDateViewClearers() {
+  if (_bulkDateViewClearersRegistered || typeof registerDateViewSelectionClearer !== 'function') return;
+  _bulkDateViewClearersRegistered = true;
+  Object.keys(BULK_CFG).forEach(key => {
+    registerDateViewSelectionClearer(bulkDateViewKey(key), () => {
+      const c = BULK_CFG[key];
+      const cont = c && document.querySelector(c.sel);
+      bulkSel[key] = new Set();
+      if (cont) cont.querySelectorAll('tbody input[type=checkbox][data-bid]').forEach(cb => { cb.checked = false; });
+      updateBulkBar(key);
+    });
+  });
+}
 function _escRe(s){ return String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
 function enhanceBulk(key){
   const c=BULK_CFG[key]; if(!c) return;
@@ -11655,28 +11785,25 @@ function hideBulkActionColumn(table) {
 function ensureBulkBar(key, table, cont){
   if(document.getElementById('bulkbar-'+key)) return;
   const c=BULK_CFG[key]; const wrap=table.parentElement; if(!wrap||!wrap.parentNode) return;
-  let btns='';
-  if(c.edit) btns+=`<button class="btn btn-sm" data-edit onclick="bulkRun('${key}','edit')"><i class="ti ti-edit"></i>수정</button>`;
-  if(c.clone) btns+=`<button class="btn btn-sm" data-clone onclick="bulkRun('${key}','clone')"><i class="ti ti-copy"></i>복제</button>`;
-  if(c.toPo) btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','toPo')"><i class="ti ti-file-invoice"></i>발주서 생성</button>`;
-  if(c.pdf)   btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','pdf')"><i class="ti ti-printer"></i>PDF 출력</button>`;
-  if(c.csv)   btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','csv')"><i class="ti ti-file-spreadsheet"></i>엑셀</button>`;
-  if(c.drive) btns+=`<button class="btn btn-sm drive-save-btn" data-act onclick="bulkRun('${key}','drive')"><i class="ti ti-cloud-upload"></i>Google Drive 저장</button>`;
-  if(c.email) btns+=`<button class="btn btn-sm" data-email data-act onclick="bulkRun('${key}','email')"><i class="ti ti-mail"></i>이메일</button>`;
-  btns+=`<button class="btn btn-sm btn-danger" data-act onclick="bulkRun('${key}','delete')"><i class="ti ti-trash"></i>삭제</button>`;
   const bar=document.createElement('div'); bar.id='bulkbar-'+key;
+  bar.className='selection-action-bar';
   bar.style.cssText='display:none;align-items:center;gap:8px;margin:0 0 12px;padding:9px 14px;background:var(--bg-i);border:1px solid var(--br-i);border-radius:8px;flex-wrap:wrap;';
-  bar.innerHTML=`<span style="font-weight:700;font-size:12.5px;color:var(--tx-i);"><i class="ti ti-checkbox"></i> <span id="bulkcnt-${key}">0</span>건 선택됨</span>${btns}<button class="btn btn-sm" style="margin-left:auto;" onclick="bulkToggleAll('${key}',false)"><i class="ti ti-x"></i>해제</button>`;
+  bar.innerHTML=`<span style="font-weight:700;font-size:12.5px;color:var(--tx-i);"><i class="ti ti-checkbox"></i> <span id="bulkcnt-${key}">0</span>건 선택됨</span>${bulkActionButtons(key)}<button class="btn btn-sm" style="margin-left:auto;" onclick="bulkToggleAll('${key}',false)"><i class="ti ti-x"></i>해제</button>`;
   if(key==='products' || key==='bom') cont.parentNode.insertBefore(bar, cont);
   else wrap.parentNode.insertBefore(bar, wrap);
 }
 function updateBulkBar(key){
   const n=(bulkSel[key]||new Set()).size;
   const cnt=document.getElementById('bulkcnt-'+key); if(cnt) cnt.textContent=n;
-  const bar=document.getElementById('bulkbar-'+key); if(bar) bar.style.display = n>0 ? 'flex' : 'none';   // 선택 시에만 표시
-  const edit=bar&&bar.querySelector('[data-edit]'); if(edit) edit.style.display = n===1 ? '' : 'none';
-  const clone=bar&&bar.querySelector('[data-clone]'); if(clone) clone.style.display = n===1 ? '' : 'none';
-  const email=bar&&bar.querySelector('[data-email]'); if(email) email.style.display = n===1 ? '' : 'none';
+  const bar=document.getElementById('bulkbar-'+key);
+  const viewKey=bulkDateViewKey(key);
+  const slotted = typeof setDateViewSelectionBar === 'function' && setDateViewSelectionBar(viewKey, bulkSelectionBarHtml(key,n), n>0);
+  if(bar) bar.style.display = (!slotted && n>0) ? 'flex' : 'none';   // 선택 시에만 표시
+  [bar, document.getElementById('date-view-'+viewKey)].filter(Boolean).forEach(scope => {
+    const edit=scope.querySelector('[data-edit]'); if(edit) edit.style.display = n===1 ? '' : 'none';
+    const clone=scope.querySelector('[data-clone]'); if(clone) clone.style.display = n===1 ? '' : 'none';
+    const email=scope.querySelector('[data-email]'); if(email) email.style.display = n===1 ? '' : 'none';
+  });
 }
 function bulkToggle(key,id,on){ const s=bulkSel[key]=bulkSel[key]||new Set(); if(on)s.add(id);else s.delete(id); updateBulkBar(key); }
 function bulkToggleAll(key,on){ const s=bulkSel[key]=new Set(); const cont=document.querySelector(BULK_CFG[key].sel); if(cont) cont.querySelectorAll('tbody input[type=checkbox][data-bid]').forEach(cb=>{ cb.checked=on; if(on) s.add(cb.getAttribute('data-bid')); }); updateBulkBar(key); }
@@ -11744,6 +11871,7 @@ function watchBulk(){
 
 cloudBootstrap();   // 클라우드(Firebase) 연동 시작 — 설정 시 로그인 게이트 활성화
 initRole();         // 역할 기반 접근제어(RBAC) 적용 — 사이드바/페이지 권한
+registerBulkDateViewClearers();
 watchBulk();        // 일괄 선택/동작 활성화
 
 /* 탑바 시계 제거됨 (tick/setInterval 삭제) */
@@ -12649,11 +12777,31 @@ function poToggleAll(checked){
   document.querySelectorAll('#po-table .po-check').forEach(c=>c.checked=checked);
   poUpdateBulkBar();
 }
+function poSelectionBarHtml(count){
+  return `<span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${count}건 선택됨</span>
+    <button class="btn btn-sm" data-edit onclick="poBulkEdit()"><i class="ti ti-edit"></i>수정</button>
+    <button class="btn btn-sm" data-clone onclick="poBulkClone()"><i class="ti ti-copy"></i>복제</button>
+    <button class="btn btn-sm" onclick="poBulkPrint()"><i class="ti ti-printer"></i>PDF 출력</button>
+    <button class="btn btn-sm" onclick="poBulkExport()"><i class="ti ti-file-spreadsheet"></i>엑셀</button>
+    <button class="btn btn-sm drive-save-btn" onclick="poBulkDrive()"><i class="ti ti-cloud-upload"></i>Drive 저장</button>
+    <button class="btn btn-sm" onclick="poBulkEmail()"><i class="ti ti-mail"></i>이메일</button>
+    <button class="btn btn-sm btn-danger" onclick="poBulkDelete()"><i class="ti ti-trash"></i>삭제</button>
+    <button class="btn btn-sm date-view-clear-selection" onclick="poToggleAll(false)"><i class="ti ti-x"></i>해제</button>`;
+}
+function ensurePoDateSelectionClearer(){
+  if (ensurePoDateSelectionClearer.done || typeof registerDateViewSelectionClearer !== 'function') return;
+  ensurePoDateSelectionClearer.done = true;
+  registerDateViewSelectionClearer('po', function(){ poToggleAll(false); });
+}
 function poUpdateBulkBar(){
+  ensurePoDateSelectionClearer();
   const ids=poCheckedIds(), bar=inp('po-bulkbar');
-  if(bar){ bar.style.display = ids.length ? 'flex' : 'none'; const cnt=inp('po-sel-count'); if(cnt) cnt.textContent=ids.length; }
-  const edit=inp('po-edit-btn'); if(edit) edit.style.display=ids.length===1?'':'none';
-  const clone=inp('po-clone-btn'); if(clone) clone.style.display=ids.length===1?'':'none';
+  const slotted = typeof setDateViewSelectionBar === 'function' && setDateViewSelectionBar('po', poSelectionBarHtml(ids.length), ids.length > 0);
+  if(bar){ bar.style.display = (!slotted && ids.length) ? 'flex' : 'none'; const cnt=inp('po-sel-count'); if(cnt) cnt.textContent=ids.length; }
+  [bar, inp('date-view-po')].filter(Boolean).forEach(scope => {
+    const edit=scope.querySelector('[data-edit],#po-edit-btn'); if(edit) edit.style.display=ids.length===1?'':'none';
+    const clone=scope.querySelector('[data-clone],#po-clone-btn'); if(clone) clone.style.display=ids.length===1?'':'none';
+  });
   const all=inp('po-check-all');
   if(all){ const total=document.querySelectorAll('#po-table .po-check').length;
     all.checked = total>0 && ids.length===total; all.indeterminate = ids.length>0 && ids.length<total; }
@@ -14891,10 +15039,7 @@ function setAttQuickFilter(type, value) {
 function toggleAttQuickSelect(workerId, checked) {
   if (checked) attQuickSelected.add(workerId);
   else attQuickSelected.delete(workerId);
-  const bar = inp('att-quick-bulkbar');
-  if (bar) bar.style.display = attQuickSelected.size ? 'flex' : 'none';
-  const count = inp('att-quick-selected-count');
-  if (count) count.textContent = attQuickSelected.size;
+  renderAttendance();
 }
 function toggleAttQuickAll(checked) {
   document.querySelectorAll('.att-quick-check').forEach(box => {
@@ -14902,10 +15047,11 @@ function toggleAttQuickAll(checked) {
     if (checked) attQuickSelected.add(box.dataset.workerId);
     else attQuickSelected.delete(box.dataset.workerId);
   });
-  const bar = inp('att-quick-bulkbar');
-  if (bar) bar.style.display = attQuickSelected.size ? 'flex' : 'none';
-  const count = inp('att-quick-selected-count');
-  if (count) count.textContent = attQuickSelected.size;
+  renderAttendance();
+}
+function clearAttQuickSelection() {
+  attQuickSelected.clear();
+  renderAttendance();
 }
 
 function dateText(date) {
@@ -15205,13 +15351,15 @@ function _attQuickEditor() {
       </td>
     </tr>`;
   }).join('') : `<tr><td colspan="8">${empty('조건에 맞는 직원이 없습니다.')}</td></tr>`;
-
-  return `<div class="card att-quick-card">
-    <div class="card-hd att-quick-head">
-      <div>
-        <span class="card-ttl"><i class="ti ti-bolt"></i>하루 근태 간편 편집</span>
-        <div class="att-quick-help">${weekend?'휴일 기본값은 휴무입니다. 근무자만 휴일근무로 변경하세요.':'별도 입력이 없으면 전 직원 정상근무로 자동 처리됩니다.'}</div>
-      </div>
+  const quickControls = attQuickSelected.size ? `
+      <div class="selection-action-bar att-quick-selectionbar" style="display:flex;">
+        <span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${attQuickSelected.size}명 선택</span>
+        <select id="att-quick-bulk-status">
+          <option value="">상태 선택</option><option>지각</option><option>조퇴</option><option>외근</option><option>결근</option><option>연장근무</option><option>휴일근무</option><option value="정상복구">정상·휴무 복구</option>
+        </select>
+        <button class="btn btn-sm btn-primary" onclick="applyQuickAttendanceBulk()">일괄 적용</button>
+        <button class="btn btn-sm date-view-clear-selection" onclick="clearAttQuickSelection()"><i class="ti ti-x"></i>해제</button>
+      </div>` : `
       <div class="att-quick-filters">
         <button class="btn btn-sm btn-icon" onclick="moveAttQuickDate(-1)" title="이전 날짜"><i class="ti ti-chevron-left"></i></button>
         <input type="date" value="${attQuickDate}" onchange="setAttQuickDate(this.value)">
@@ -15219,14 +15367,15 @@ function _attQuickEditor() {
         <button class="btn btn-sm" onclick="setAttQuickDate(today())">오늘</button>
         <select onchange="setAttQuickFilter('dept',this.value)"><option value="">전체 부서</option>${depts.map(dept=>`<option${dept===attQuickDept?' selected':''}>${esc(dept)}</option>`).join('')}</select>
         <input type="search" value="${esc(attQuickQuery)}" placeholder="직원 검색" onchange="setAttQuickFilter('query',this.value)">
+      </div>`;
+
+  return `<div class="card att-quick-card">
+    <div class="card-hd att-quick-head">
+      <div>
+        <span class="card-ttl"><i class="ti ti-bolt"></i>하루 근태 간편 편집</span>
+        <div class="att-quick-help">${weekend?'휴일 기본값은 휴무입니다. 근무자만 휴일근무로 변경하세요.':'별도 입력이 없으면 전 직원 정상근무로 자동 처리됩니다.'}</div>
       </div>
-    </div>
-    <div id="att-quick-bulkbar" class="att-quick-bulkbar" style="display:${attQuickSelected.size?'flex':'none'};">
-      <b><i class="ti ti-checkbox"></i> <span id="att-quick-selected-count">${attQuickSelected.size}</span>명 선택</b>
-      <select id="att-quick-bulk-status">
-        <option value="">상태 선택</option><option>지각</option><option>조퇴</option><option>외근</option><option>결근</option><option>연장근무</option><option>휴일근무</option><option value="정상복구">정상·휴무 복구</option>
-      </select>
-      <button class="btn btn-sm btn-primary" onclick="applyQuickAttendanceBulk()">일괄 적용</button>
+      ${quickControls}
     </div>
     <div class="att-quick-table-wrap"><table class="att-quick-table">
       <thead><tr><th><input type="checkbox" onchange="toggleAttQuickAll(this.checked)"></th><th>직원</th><th>상태</th><th>출근</th><th>퇴근</th><th>추가시간</th><th>비고</th><th>관리</th></tr></thead>
@@ -15710,14 +15859,17 @@ function finSet(tab, key, value) {
   const state = finState(tab);
   state[key] = key === 'size' || key === 'page' ? Number(value) : value;
   if (key !== 'page') state.page = 1;
+  if (tab === 'labor' && key !== 'page') payrollSelected.clear();
   renderFinance();
 }
 function finInput(tab,key,value){
   const state=finState(tab);state[key]=value;state.page=1;
+  if (tab === 'labor') payrollSelected.clear();
   clearTimeout(finInputTimer);finInputTimer=setTimeout(renderFinance,250);
 }
 function finQuickRange(tab, preset) {
   const state = finState(tab), now = new Date();
+  if (tab === 'labor') payrollSelected.clear();
   const fmt = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
   if (preset === 'all') { state.from=''; state.to=''; }
   else if (preset === '7d') {
@@ -15788,6 +15940,14 @@ function finFilterBar(tab, options={}) {
     </select>
     <button class="btn btn-sm" onclick="exportFinanceViewXLS('${tab}')" title="현재 조회 결과 엑셀"><i class="ti ti-file-spreadsheet"></i></button>
     <button class="btn btn-sm" onclick="financeView['${tab}']=null;renderFinance()" title="조회 초기화"><i class="ti ti-refresh"></i></button>
+  </div>`;
+}
+function payrollSelectionBarHtml(closed) {
+  return `<div class="selection-action-bar" style="display:flex;">
+    <span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${payrollSelected.size}명 선택</span>
+    <button class="btn btn-sm" onclick="bulkConfirmPayroll(true)" ${closed?'disabled':''}><i class="ti ti-checks"></i>확정</button>
+    <button class="btn btn-sm drive-save-btn" onclick="bulkSavePayrollDrive()"><i class="ti ti-cloud-upload"></i>Drive 저장</button>
+    <button class="btn btn-sm date-view-clear-selection" onclick="clearPayrollSelection()"><i class="ti ti-x"></i>해제</button>
   </div>`;
 }
 function financeFilteredRows(tab) {
@@ -16171,7 +16331,7 @@ function _finLabor() {
     </tr>`;
   }).join('') : `<tr><td colspan="11">${empty('조회 조건에 해당하는 직원이 없습니다.')}</td></tr>`;
   return `
-    <div class="toolbar" style="margin-bottom:12px;">
+    ${payrollSelected.size ? payrollSelectionBarHtml(closed) : `<div class="toolbar" style="margin-bottom:12px;">
       <button class="btn btn-sm" onclick="payrollMonth=shiftMonth(payrollMonth,-1);renderFinance()"><i class="ti ti-chevron-left"></i></button>
       <input type="month" value="${payrollMonth}" onchange="payrollMonth=this.value;renderFinance()" style="width:130px;">
       <button class="btn btn-sm" onclick="payrollMonth=shiftMonth(payrollMonth,1);renderFinance()"><i class="ti ti-chevron-right"></i></button>
@@ -16179,14 +16339,8 @@ function _finLabor() {
       <button class="btn btn-sm" onclick="openPayrollSettings()"><i class="ti ti-settings"></i>계산 설정</button>
       <button class="btn btn-sm ${closed?'btn-danger':''}" onclick="toggleFinanceMonthClose('${payrollMonth}')"><i class="ti ${closed?'ti-lock':'ti-lock-open'}"></i>${closed?'마감됨':'월 마감'}</button>
       <button class="btn btn-sm" onclick="exportPayrollXLS()"><i class="ti ti-file-spreadsheet"></i>급여대장 XLSX</button>
-    </div>
+    </div>`}
     ${finFilterBar('labor',{noDate:true,placeholder:'사번·성명·부서 검색',statuses:['작성중','확정']})}
-    <div id="payroll-bulkbar" style="display:${payrollSelected.size?'flex':'none'};align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:10px;padding:9px 12px;background:var(--bg-i);border:1px solid var(--br-i);border-radius:var(--rm);">
-      <b><i class="ti ti-checkbox"></i> ${payrollSelected.size}명 선택</b>
-      <button class="btn btn-sm" onclick="bulkConfirmPayroll(true)" ${closed?'disabled':''}><i class="ti ti-checks"></i>확정</button>
-      <button class="btn btn-sm drive-save-btn" onclick="bulkSavePayrollDrive()"><i class="ti ti-cloud-upload"></i>Drive 저장</button>
-      <button class="btn btn-sm" onclick="clearPayrollSelection()"><i class="ti ti-x"></i>해제</button>
-    </div>
     <div class="metrics">
       <div class="mc"><div class="mc-lbl"><i class="ti ti-cash" style="color:var(--tx-i);"></i>${monthLabel(payrollMonth)} 지급총액</div><div class="mc-val" style="color:var(--tx-i);">${fmtW(payroll)}</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-minus" style="color:var(--tx-d);"></i>공제 합계</div><div class="mc-val" style="color:var(--tx-d);">${fmtW(tDed)}</div><div class="mc-sub">4대보험 + 원천징수</div></div>
@@ -17868,6 +18022,34 @@ let _todoChecklist = [];
 let _weeklyReportDraft = null;
 let _memoSelected = new Set();
 let _todoSelected = new Set();
+let _notesDateClearerRegistered = false;
+let _notesLastViewKey = '';
+
+function ensureNotesDateSelectionClearer() {
+  if (_notesDateClearerRegistered || typeof registerDateViewSelectionClearer !== 'function') return;
+  _notesDateClearerRegistered = true;
+  registerDateViewSelectionClearer('notes', function() {
+    _memoSelected.clear();
+    _todoSelected.clear();
+  });
+}
+function setNotesSelectionBar(html, active) {
+  if (typeof setDateViewSelectionBar === 'function') setDateViewSelectionBar('notes', html, active);
+}
+function memoSelectionBarHtml(count) {
+  return '<span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ' + count + '건 선택됨</span>' +
+    '<button class="btn btn-sm" onclick="editSelectedMemo()" ' + (count === 1 ? '' : 'style="display:none;"') + '><i class="ti ti-edit"></i>수정</button>' +
+    '<button class="btn btn-sm" onclick="markSelectedMemosImportant(true)"><i class="ti ti-star"></i>중요</button>' +
+    '<button class="btn btn-sm" onclick="moveSelectedMemosToTodos()"><i class="ti ti-arrow-right"></i>할 일로 이동</button>' +
+    '<button class="btn btn-sm btn-danger" onclick="deleteSelectedMemos()"><i class="ti ti-trash"></i>삭제</button>' +
+    '<button class="btn btn-sm date-view-clear-selection" onclick="clearMemoSelection()"><i class="ti ti-x"></i>해제</button>';
+}
+function todoSelectionBarHtml(count) {
+  return '<span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ' + count + '건 선택됨</span>' +
+    '<button class="btn btn-sm" onclick="editSelectedTodo()" ' + (count === 1 ? '' : 'style="display:none;"') + '><i class="ti ti-edit"></i>수정</button>' +
+    '<button class="btn btn-sm btn-danger" onclick="deleteSelectedTodos()"><i class="ti ti-trash"></i>삭제</button>' +
+    '<button class="btn btn-sm date-view-clear-selection" onclick="clearTodoSelection()"><i class="ti ti-x"></i>해제</button>';
+}
 
 function _memoEsc(value) {
   return String(value == null ? '' : value)
@@ -17918,6 +18100,14 @@ function updateTodoBadge() {
 function renderNotes() {
   var content = inp('memo-content');
   if (!content) return;
+  ensureNotesDateSelectionClearer();
+  var viewKey = [memoTab, v('memo-search'), v('memo-filter')].join('|');
+  if (_notesLastViewKey && _notesLastViewKey !== viewKey) {
+    _memoSelected.clear();
+    _todoSelected.clear();
+    setNotesSelectionBar('', false);
+  }
+  _notesLastViewKey = viewKey;
   var noteDates = memoTab === 'memos'
     ? memoList.map(function(m) { return m.updatedAt || m.createdAt; })
     : todoList.map(function(t) { return t.dueDate || t.startDate || t.createdAt; });
@@ -17931,8 +18121,8 @@ function renderNotes() {
     btn.classList.toggle('btn-primary', btn.dataset.memotab === memoTab);
   });
   if (memoTab === 'todos') renderTodoList();
-  else if (memoTab === 'board') renderTodoBoard();
-  else if (memoTab === 'report') renderWeeklyReportPanel();
+  else if (memoTab === 'board') { setNotesSelectionBar('', false); renderTodoBoard(); }
+  else if (memoTab === 'report') { setNotesSelectionBar('', false); renderWeeklyReportPanel(); }
   else renderMemoCards();
 }
 
@@ -17971,19 +18161,14 @@ function renderMemoCards() {
   var content = inp('memo-content');
   if (!list.length) {
     _memoSelected.clear();
+    setNotesSelectionBar('', false);
     content.innerHTML = '<div class="card"><div class="empty"><i class="ti ti-notes"></i>등록된 메모가 없습니다.</div></div>';
     return;
   }
   var validIds = new Set(memoList.map(function(m) { return m.id; }));
   _memoSelected.forEach(function(id) { if (!validIds.has(id)) _memoSelected.delete(id); });
-  var bulkBar = '<div id="memo-bulkbar" style="display:' + (_memoSelected.size ? 'flex' : 'none') + ';">' +
-    '<span><i class="ti ti-checkbox"></i> ' + _memoSelected.size + '건 선택됨</span>' +
-    '<button class="btn btn-sm" onclick="editSelectedMemo()" ' + (_memoSelected.size === 1 ? '' : 'style="display:none;"') + '><i class="ti ti-edit"></i>수정</button>' +
-    '<button class="btn btn-sm" onclick="markSelectedMemosImportant(true)"><i class="ti ti-star"></i>중요</button>' +
-    '<button class="btn btn-sm" onclick="moveSelectedMemosToTodos()"><i class="ti ti-arrow-right"></i>할 일로 이동</button>' +
-    '<button class="btn btn-sm btn-danger" onclick="deleteSelectedMemos()"><i class="ti ti-trash"></i>삭제</button>' +
-    '<button class="btn btn-sm" style="margin-left:auto;" onclick="clearMemoSelection()"><i class="ti ti-x"></i>해제</button></div>';
-  content.innerHTML = bulkBar + '<div class="memo-grid">' + list.map(function(m) {
+  setNotesSelectionBar(memoSelectionBarHtml(_memoSelected.size), _memoSelected.size > 0);
+  content.innerHTML = '<div class="memo-grid">' + list.map(function(m) {
     var tags = (m.tags || []).map(function(tag) { return '<span class="memo-tag">#' + _memoEsc(tag) + '</span>'; }).join('');
     var linked = m.entityType ? '<span><i class="ti ti-link"></i>' + _memoEsc(m.entityType + ' ' + (m.entityId || '')) + '</span>' : '';
     var attachmentCount = (m.attachments || []).length;
@@ -18121,18 +18306,15 @@ function renderTodoList() {
   _todoSelected.forEach(function(id) { if (!validIds.has(id)) _todoSelected.delete(id); });
   var content = inp('memo-content');
   if (!list.length) {
+    _todoSelected.clear();
+    setNotesSelectionBar('', false);
     content.innerHTML = '<div class="card"><div class="empty"><i class="ti ti-list-check"></i>등록된 할 일이 없습니다.</div></div>';
     return;
   }
   var visibleSelected = list.filter(function(t) { return _todoSelected.has(t.id); }).length;
   var allVisibleSelected = list.length > 0 && visibleSelected === list.length;
-  var bulkBar = '<div id="todo-bulkbar" style="display:' + (_todoSelected.size ? 'flex' : 'none') +
-    ';align-items:center;gap:14px;margin:0 0 12px;padding:12px 18px;border-radius:9px;flex-wrap:wrap;">' +
-    '<span style="font-weight:700;font-size:13px;"><i class="ti ti-checkbox"></i> ' +
-    _todoSelected.size + '건 선택됨</span>' +
-    '<button class="btn btn-sm" onclick="editSelectedTodo()" ' + (_todoSelected.size === 1 ? '' : 'style="display:none;"') + '><i class="ti ti-edit"></i>수정</button>' +
-    '<button class="btn btn-sm btn-danger" onclick="deleteSelectedTodos()"><i class="ti ti-trash"></i>삭제</button></div>';
-  content.innerHTML = bulkBar + '<div class="card" style="overflow-x:auto;"><table style="min-width:900px;"><thead><tr>' +
+  setNotesSelectionBar(todoSelectionBarHtml(_todoSelected.size), _todoSelected.size > 0);
+  content.innerHTML = '<div class="card" style="overflow-x:auto;"><table style="min-width:900px;"><thead><tr>' +
     '<th style="width:34px;text-align:center;"><input type="checkbox" id="todo-check-all" title="현재 목록 전체 선택" ' +
     (allVisibleSelected ? 'checked ' : '') + (visibleSelected && !allVisibleSelected ? 'data-indeterminate="1" ' : '') +
     'onchange="toggleAllVisibleTodos(this.checked)"></th>' +
