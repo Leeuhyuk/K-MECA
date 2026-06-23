@@ -3864,7 +3864,7 @@ const DATA_KEYS = [
   'checkRecords','alerts','inventory','deliveries','stages','trash','rfqList',
   'poList','partners','financeData','attendance','leaves','payrollRecords','statementList',
   'taxList','quoteList','orderList','inventoryLedger','alimtalkSettings','memoList','todoList','memoAttachmentData',
-  'docXlsxTemplates'
+  'asList','bomList','companyInfo','docXlsxTemplates'
 ];
 
 function buildDataBackupPayload() {
@@ -10984,11 +10984,55 @@ function cloudBootstrap(){
   } catch(e){ console.error('Firebase 초기화 오류', e); _cloudChip('error'); }
 }
 
+function cloudV2MapKeys(){
+  return ['financeData', 'companyInfo', 'docXlsxTemplates'];
+}
+function cloudV2StripMeta(value){
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  const out = Object.assign({}, value);
+  delete out._mes;
+  return out;
+}
+async function cloudLoadLegacyKey(key){
+  const doc = await _fbDb.collection('mes_state').doc(key).get();
+  if (!doc.exists) return false;
+  const d = doc.data();
+  if (!d || d.value === undefined) return false;
+  localStorage.setItem('mes_' + key, JSON.stringify(d.value));
+  return true;
+}
+async function cloudLoadV2Key(key){
+  const entityRef = _fbDb.collection('mes_v2').doc(key);
+  const metaSnap = await entityRef.get();
+  if (!metaSnap.exists) return false;
+  const meta = metaSnap.data() || {};
+  if (meta.sourceExists === false || meta.sourceType === 'missing') return false;
+  if (meta.sourceType === 'array' || !cloudV2MapKeys().includes(key)) {
+    const itemsSnap = await entityRef.collection('items').get();
+    const rows = itemsSnap.docs.map(doc => {
+      const data = doc.data() || {};
+      const idx = data._mes && Number.isFinite(data._mes.sourceIndex) ? data._mes.sourceIndex : Number.MAX_SAFE_INTEGER;
+      return { idx, id: doc.id, value: cloudV2StripMeta(data) };
+    }).sort((a, b) => (a.idx - b.idx) || a.id.localeCompare(b.id));
+    localStorage.setItem('mes_' + key, JSON.stringify(rows.map(row => row.value)));
+    return true;
+  }
+  const stateSnap = await entityRef.collection('state').doc('current').get();
+  if (!stateSnap.exists) return false;
+  localStorage.setItem('mes_' + key, JSON.stringify(cloudV2StripMeta(stateSnap.data() || {})));
+  return true;
+}
 async function cloudLoadAll(){
   await cloudLoadRole();   // 내 역할/권한 먼저 로드(승인 대기 판정 포함)
-  const snap = await _fbDb.collection('mes_state').get();
   let n=0;
-  snap.forEach(doc=>{ const d=doc.data(); if (d && d.value!==undefined){ localStorage.setItem('mes_'+doc.id, JSON.stringify(d.value)); n++; } });
+  await Promise.all(CLOUD_KEYS.map(async key => {
+    try {
+      const loaded = await cloudLoadV2Key(key) || await cloudLoadLegacyKey(key);
+      if (loaded) n++;
+    } catch(e) {
+      console.warn('MES 클라우드 문서 로드 실패:', key, e);
+    }
+  }));
   localStorage.setItem('mes__savedAt', new Date().toISOString());       // 임베드 데이터가 덮어쓰지 않도록 최신화
   return n;
 }
@@ -11001,6 +11045,109 @@ function cloudQueueSave(key){
     _cloudTimer = setTimeout(cloudFlush, 800);
   } catch(e){ /* 클라우드 모듈 초기화 이전 saveStorage 호출 — 무시 */ }
 }
+function cloudV2ServerTimestamp(){
+  return firebase.firestore.FieldValue.serverTimestamp();
+}
+function cloudV2SafeDocId(raw){
+  const s = String(raw || '').trim().replace(/[\\/#?[\]*]/g, '_').replace(/\s+/g, '_').slice(0, 120);
+  return s || null;
+}
+function cloudV2Hash(value){
+  const str = JSON.stringify(value == null ? '' : value);
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(16).padStart(8, '0');
+}
+function cloudV2StableRecordId(item, index){
+  const keys = ['id','code','no','number','docNo','quoteNo','orderNo','poNo','rfqNo','statementNo','taxNo','name'];
+  if (item && typeof item === 'object' && !Array.isArray(item)) {
+    for (const k of keys) {
+      const id = cloudV2SafeDocId(item[k]);
+      if (id) return id;
+    }
+  }
+  return 'idx_' + String(index).padStart(6, '0') + '_' + cloudV2Hash(item);
+}
+function cloudV2ItemPayload(item, key, index){
+  const meta = {
+    sourceCollection: 'mes_state',
+    sourceKey: key,
+    sourceIndex: index,
+    migratedAt: cloudV2ServerTimestamp(),
+    mode: 'dual-write'
+  };
+  if (item && typeof item === 'object' && !Array.isArray(item)) {
+    return Object.assign({}, item, { _mes: meta });
+  }
+  return { value: item, _mes: meta };
+}
+async function cloudV2CommitWrites(writes){
+  for (let i = 0; i < writes.length; i += 450) {
+    const batch = _fbDb.batch();
+    writes.slice(i, i + 450).forEach(w => {
+      if (w.delete) batch.delete(w.ref);
+      else batch.set(w.ref, w.data, { merge: true });
+    });
+    await batch.commit();
+  }
+}
+async function cloudMirrorV2Key(key){
+  if (!_fbDb || !CLOUD_KEYS.includes(key)) return;
+  const raw = localStorage.getItem('mes_' + key);
+  const value = raw ? JSON.parse(raw) : null;
+  const entityRef = _fbDb.collection('mes_v2').doc(key);
+  const type = Array.isArray(value) ? 'array' : (value && typeof value === 'object' ? 'map' : (value === null ? 'null' : typeof value));
+  const count = Array.isArray(value) ? value.length : (value && typeof value === 'object' ? Object.keys(value).length : 0);
+  const writes = [{
+    ref: entityRef,
+    data: {
+      key,
+      sourceCollection: 'mes_state',
+      sourceDocId: key,
+      sourceExists: raw != null,
+      sourceType: type,
+      sourceCount: count,
+      sourceUpdatedAt: cloudV2ServerTimestamp(),
+      schemaVersion: 1,
+      mode: 'dual-write',
+      migratedAt: cloudV2ServerTimestamp()
+    }
+  }];
+  if (Array.isArray(value)) {
+    const nextIds = new Set();
+    const used = {};
+    value.forEach((item, index) => {
+      let id = cloudV2StableRecordId(item, index);
+      used[id] = (used[id] || 0) + 1;
+      if (used[id] > 1) id += '_' + used[id];
+      nextIds.add(id);
+      writes.push({ ref: entityRef.collection('items').doc(id), data: cloudV2ItemPayload(item, key, index) });
+    });
+    const existing = await entityRef.collection('items').get();
+    existing.forEach(doc => {
+      if (!nextIds.has(doc.id)) writes.push({ ref: doc.ref, delete: true });
+    });
+  } else if (value && typeof value === 'object') {
+    writes.push({
+      ref: entityRef.collection('state').doc('current'),
+      data: Object.assign({}, value, {
+        _mes: {
+          sourceCollection: 'mes_state',
+          sourceKey: key,
+          migratedAt: cloudV2ServerTimestamp(),
+          mode: 'dual-write'
+        }
+      })
+    });
+  }
+  await cloudV2CommitWrites(writes);
+}
+async function cloudMirrorV2Keys(keys){
+  for (const key of keys) await cloudMirrorV2Key(key);
+}
 async function cloudFlush(){
   if (!_cloudActive || !_cloudQueue.size) return;
   const keys=[..._cloudQueue]; _cloudQueue.clear();
@@ -11009,7 +11156,10 @@ async function cloudFlush(){
     const batch=_fbDb.batch();
     keys.forEach(k=>{ const raw=localStorage.getItem('mes_'+k); const value=raw?JSON.parse(raw):null;
       batch.set(_fbDb.collection('mes_state').doc(k), { value, updatedAt:Date.now(), by:(_cloudUser&&_cloudUser.email)||'' }); });
-    await batch.commit(); _cloudChip('online');
+    await batch.commit();
+    try { await cloudMirrorV2Keys(keys); }
+    catch(e){ console.warn('MES v2 mirror save failed', e); keys.forEach(k=>_cloudQueue.add(k)); clearTimeout(_cloudTimer); _cloudTimer=setTimeout(cloudFlush, 5000); }
+    _cloudChip('online');
   } catch(e){
     console.warn('클라우드 저장 실패', e); _cloudChip('error');
     keys.forEach(k=>_cloudQueue.add(k));                       // 실패 키 재큐잉 후 재시도
@@ -11042,19 +11192,17 @@ function cloudResyncGlobals(){
   asList=L('asList',asList); bomList=L('bomList',bomList);
   memoList=L('memoList',memoList); todoList=L('todoList',todoList);
 }
-/* 다른 사용자의 변경을 실시간 수신 → localStorage 갱신 → 전역 반영 → 현재 화면 새로고침 */
-function cloudSubscribe(){
-  if (!_cloudActive || _cloudUnsub || !_fbDb) return;
-  _cloudUnsub = _fbDb.collection('mes_state').onSnapshot(snap=>{
-    let remote=false;
-    snap.docChanges().forEach(ch=>{
-      if (ch.type==='removed') return;
-      if (ch.doc.metadata.hasPendingWrites) return;     // 내가 쓴 변경(로컬 에코)은 무시
-      const d=ch.doc.data(); if(!d || d.value===undefined) return;
-      localStorage.setItem('mes_'+ch.doc.id, JSON.stringify(d.value));
-      remote=true;
-    });
-    if (!remote) return;
+let _cloudRemoteRefreshTimer = null;
+function cloudApplyRemoteMesDoc(doc, key) {
+  if (!doc || !doc.exists) return false;
+  const d = doc.data();
+  if (!d || d.value === undefined) return false;
+  localStorage.setItem('mes_' + key, JSON.stringify(d.value));
+  return true;
+}
+function cloudScheduleRemoteRefresh(){
+  clearTimeout(_cloudRemoteRefreshTimer);
+  _cloudRemoteRefreshTimer = setTimeout(() => {
     cloudResyncGlobals();
     // 입력 중 모달이 열려 있으면 화면 새로고침은 보류(데이터만 갱신)
     if (!document.querySelector('.overlay.open')) {
@@ -11062,7 +11210,31 @@ function cloudSubscribe(){
     }
     try { updateDlvBadge(); updateAsBadge(); updateTrashBadge(); updateTodoBadge(); } catch(e){}
     _cloudChip('synced'); setTimeout(()=>_cloudChip('online'), 1500);
-  }, err=>{ console.warn('실시간 동기화 구독 오류', err); });
+  }, 80);
+}
+/* 다른 사용자의 변경을 실시간 수신 → localStorage 갱신 → 전역 반영 → 현재 화면 새로고침 */
+function cloudSubscribe(){
+  if (!_cloudActive || _cloudUnsub || !_fbDb) return;
+  const v2Unsubs = CLOUD_KEYS.map(key => _fbDb.collection('mes_v2').doc(key).onSnapshot(doc=>{
+    if (doc.metadata.hasPendingWrites) return;     // 내가 쓴 변경(로컬 에코)은 무시
+    if (typeof cloudLoadV2Key !== 'function') return;
+    cloudLoadV2Key(key)
+      .then(loaded => { if (loaded) cloudScheduleRemoteRefresh(); })
+      .catch(err => { console.warn('MES v2 실시간 동기화 오류:', key, err); });
+  }, err=>{ console.warn('MES v2 문서 실시간 동기화 오류:', key, err); }));
+  const legacyUnsubs = CLOUD_KEYS.map(key => _fbDb.collection('mes_state').doc(key).onSnapshot(doc=>{
+    if (doc.metadata.hasPendingWrites) return;     // 내가 쓴 변경(로컬 에코)은 무시
+    if (cloudApplyRemoteMesDoc(doc, key)) {
+      if (typeof cloudMirrorV2Key === 'function') {
+        cloudMirrorV2Key(key).catch(err => console.warn('MES v2 보조 반영 오류:', key, err));
+      }
+      cloudScheduleRemoteRefresh();
+    }
+  }, err=>{ console.warn('MES 문서 실시간 동기화 오류:', key, err); }));
+  _cloudUnsub = () => {
+    v2Unsubs.concat(legacyUnsubs).forEach(unsub => { try { unsub(); } catch(e){} });
+    _cloudUnsub = null;
+  };
 
   // 권한 설정(roles: 페이지/컬럼/버튼) 실시간 반영 — 관리자가 바꾸면 모든 기기에 즉시 적용
   _fbDb.collection('roles').onSnapshot(snap=>{
