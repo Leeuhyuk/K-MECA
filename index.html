@@ -10731,11 +10731,14 @@ window.addEventListener('resize', () => {
           rules_version = '2';
           service cloud.firestore {
             match /databases/{db}/documents {
-              match /mes_state/{doc} {
-                allow read, write: if request.auth != null;
-              }
-            }
-          }
+             match /mes_state/{doc} {
+               allow read, write: if request.auth != null;
+             }
+             match /mes_v2/{doc=**} {
+               allow read, write: if request.auth != null;
+             }
+           }
+         }
      4) 프로젝트 설정(⚙) > '내 앱' > 웹앱(</>) 추가 > firebaseConfig 값 복사
      5) 아래 FIREBASE_CONFIG 에 붙여넣기 → 저장 후 새로고침
    ※ apiKey/projectId 가 비어 있으면 자동으로 '로컬 전용 모드'로 동작합니다.
@@ -10944,6 +10947,8 @@ async function cloudLoadRole(){
 function saveStorageLocalOnly(key,data){ localStorage.setItem('mes_'+key, JSON.stringify(data)); }
 
 function cloudConfigured(){ return !!(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId); }
+const CLOUD_LEGACY_MES_STATE_WRITE = false;
+const CLOUD_LEGACY_MES_STATE_SUBSCRIBE = false;
 
 function cloudBootstrap(){
   if (!cloudConfigured()){ _cloudChip('local'); return; }              // 미설정 → 로컬 전용
@@ -11153,12 +11158,13 @@ async function cloudFlush(){
   const keys=[..._cloudQueue]; _cloudQueue.clear();
   _cloudChip('saving');
   try {
-    const batch=_fbDb.batch();
-    keys.forEach(k=>{ const raw=localStorage.getItem('mes_'+k); const value=raw?JSON.parse(raw):null;
-      batch.set(_fbDb.collection('mes_state').doc(k), { value, updatedAt:Date.now(), by:(_cloudUser&&_cloudUser.email)||'' }); });
-    await batch.commit();
-    try { await cloudMirrorV2Keys(keys); }
-    catch(e){ console.warn('MES v2 mirror save failed', e); keys.forEach(k=>_cloudQueue.add(k)); clearTimeout(_cloudTimer); _cloudTimer=setTimeout(cloudFlush, 5000); }
+    await cloudMirrorV2Keys(keys);
+    if (CLOUD_LEGACY_MES_STATE_WRITE) {
+      const batch=_fbDb.batch();
+      keys.forEach(k=>{ const raw=localStorage.getItem('mes_'+k); const value=raw?JSON.parse(raw):null;
+        batch.set(_fbDb.collection('mes_state').doc(k), { value, updatedAt:Date.now(), by:(_cloudUser&&_cloudUser.email)||'' }); });
+      await batch.commit();
+    }
     _cloudChip('online');
   } catch(e){
     console.warn('클라우드 저장 실패', e); _cloudChip('error');
@@ -11222,15 +11228,20 @@ function cloudSubscribe(){
       .then(loaded => { if (loaded) cloudScheduleRemoteRefresh(); })
       .catch(err => { console.warn('MES v2 실시간 동기화 오류:', key, err); });
   }, err=>{ console.warn('MES v2 문서 실시간 동기화 오류:', key, err); }));
-  const legacyUnsubs = CLOUD_KEYS.map(key => _fbDb.collection('mes_state').doc(key).onSnapshot(doc=>{
-    if (doc.metadata.hasPendingWrites) return;     // 내가 쓴 변경(로컬 에코)은 무시
-    if (cloudApplyRemoteMesDoc(doc, key)) {
-      if (typeof cloudMirrorV2Key === 'function') {
-        cloudMirrorV2Key(key).catch(err => console.warn('MES v2 보조 반영 오류:', key, err));
+  const legacyUnsubs = [];
+  if (typeof CLOUD_LEGACY_MES_STATE_SUBSCRIBE !== 'undefined' && CLOUD_LEGACY_MES_STATE_SUBSCRIBE) {
+    CLOUD_KEYS.forEach(key => {
+      legacyUnsubs.push(_fbDb.collection('mes_state').doc(key).onSnapshot(doc=>{
+        if (doc.metadata.hasPendingWrites) return;     // 내가 쓴 변경(로컬 에코)은 무시
+        if (cloudApplyRemoteMesDoc(doc, key)) {
+          if (typeof cloudMirrorV2Key === 'function') {
+            cloudMirrorV2Key(key).catch(err => console.warn('MES v2 보조 반영 오류:', key, err));
+          }
+          cloudScheduleRemoteRefresh();
+        }
+      }, err=>{ console.warn('MES 문서 실시간 동기화 오류:', key, err); }));
+    });
       }
-      cloudScheduleRemoteRefresh();
-    }
-  }, err=>{ console.warn('MES 문서 실시간 동기화 오류:', key, err); }));
   _cloudUnsub = () => {
     v2Unsubs.concat(legacyUnsubs).forEach(unsub => { try { unsub(); } catch(e){} });
     _cloudUnsub = null;
