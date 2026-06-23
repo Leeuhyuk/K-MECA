@@ -1280,6 +1280,29 @@ textarea { height: auto; resize: vertical; }
 .system-workspace > .system-panel > .card, .system-workspace .system-panel > .card:first-child { border-radius: 14px; }
 .system-workspace .system-panel > .card:first-child,
 .system-workspace .system-panel > div > .card:first-child { margin-top: 0; }
+#system-panel-trash .trash-table-card,
+#pg-trash .trash-table-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+#system-panel-trash .trash-table-card {
+  max-height: min(560px, calc(100vh - 330px));
+}
+#pg-trash .trash-table-card {
+  max-height: min(680px, calc(100vh - 230px));
+}
+#system-panel-trash .trash-table-scroll,
+#pg-trash .trash-table-scroll {
+  flex: 1 1 auto;
+  min-height: 160px;
+  overflow: auto !important;
+}
+#system-panel-trash .trash-table-scroll table,
+#pg-trash .trash-table-scroll table {
+  min-width: 900px;
+  margin-bottom: 0;
+}
 .system-section-title { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; color: var(--tx); font-size: 14px; font-weight: 900; }
 .system-section-title i { color: var(--tx-i); font-size: 18px; }
 .system-hero { padding: 18px 28px 28px; border-color: var(--br-i); }
@@ -3346,7 +3369,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
         <input type="text" id="trash-q" placeholder="항목명 또는 식별 코드 검색..." style="min-width:220px;" oninput="renderTrash()">
         <button class="btn btn-danger" onclick="emptyTrash()"><i class="ti ti-trash-x"></i>휴지통 비우기</button>
       </div>
-      <div class="card"><div id="trash-table" style="overflow-x:auto;"></div></div>
+      <div class="card trash-table-card"><div id="trash-table" class="trash-table-scroll" style="overflow-x:auto;"></div></div>
     </div>
       </section>
     </div>
