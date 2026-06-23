@@ -3864,7 +3864,7 @@ const DATA_KEYS = [
   'checkRecords','alerts','inventory','deliveries','stages','trash','rfqList',
   'poList','partners','financeData','attendance','leaves','payrollRecords','statementList',
   'taxList','quoteList','orderList','inventoryLedger','alimtalkSettings','memoList','todoList','memoAttachmentData',
-  'asList','bomList','companyInfo','docXlsxTemplates'
+  'asList','bomList','companyInfo','docXlsxTemplates','googleDriveConfig'
 ];
 
 function buildDataBackupPayload() {
@@ -10731,9 +10731,6 @@ window.addEventListener('resize', () => {
           rules_version = '2';
           service cloud.firestore {
             match /databases/{db}/documents {
-             match /mes_state/{doc} {
-               allow read, write: if request.auth != null;
-             }
              match /mes_v2/{doc=**} {
                allow read, write: if request.auth != null;
              }
@@ -10759,7 +10756,7 @@ const FIREBASE_CONFIG = Object.assign(
   loadStorage('firebaseConfig', {})
 );
 /* 클라우드로 공유할 데이터 키(테마/관리자비번 등 기기·보안 로컬값은 제외) */
-const CLOUD_KEYS = ['clients','products','materials','workOrders','workers','defects','claims','checkRecords','alerts','inventory','inventoryLedger','deliveries','stages','trash','rfqList','poList','partners','statementList','taxList','quoteList','orderList','financeData','attendance','leaves','payrollRecords','asList','bomList','memoList','todoList','companyInfo','docXlsxTemplates'];
+const CLOUD_KEYS = ['clients','products','materials','workOrders','workers','defects','claims','checkRecords','alerts','inventory','inventoryLedger','deliveries','stages','trash','rfqList','poList','partners','statementList','taxList','quoteList','orderList','financeData','attendance','leaves','payrollRecords','asList','bomList','memoList','todoList','companyInfo','docXlsxTemplates','googleDriveConfig'];
 let _fbAuth=null, _fbDb=null, _cloudUser=null;   // _cloudActive는 앞쪽(전역 상태)에서 선언됨
 const _cloudQueue=new Set(); let _cloudTimer=null; let _cloudUnsub=null;
 
@@ -10947,8 +10944,6 @@ async function cloudLoadRole(){
 function saveStorageLocalOnly(key,data){ localStorage.setItem('mes_'+key, JSON.stringify(data)); }
 
 function cloudConfigured(){ return !!(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId); }
-const CLOUD_LEGACY_MES_STATE_WRITE = false;
-const CLOUD_LEGACY_MES_STATE_SUBSCRIBE = false;
 
 function cloudBootstrap(){
   if (!cloudConfigured()){ _cloudChip('local'); return; }              // 미설정 → 로컬 전용
@@ -10998,14 +10993,6 @@ function cloudV2StripMeta(value){
   delete out._mes;
   return out;
 }
-async function cloudLoadLegacyKey(key){
-  const doc = await _fbDb.collection('mes_state').doc(key).get();
-  if (!doc.exists) return false;
-  const d = doc.data();
-  if (!d || d.value === undefined) return false;
-  localStorage.setItem('mes_' + key, JSON.stringify(d.value));
-  return true;
-}
 async function cloudLoadV2Key(key){
   const entityRef = _fbDb.collection('mes_v2').doc(key);
   const metaSnap = await entityRef.get();
@@ -11032,8 +11019,7 @@ async function cloudLoadAll(){
   let n=0;
   await Promise.all(CLOUD_KEYS.map(async key => {
     try {
-      const loaded = await cloudLoadV2Key(key) || await cloudLoadLegacyKey(key);
-      if (loaded) n++;
+      if (await cloudLoadV2Key(key)) n++;
     } catch(e) {
       console.warn('MES 클라우드 문서 로드 실패:', key, e);
     }
@@ -11078,11 +11064,11 @@ function cloudV2StableRecordId(item, index){
 }
 function cloudV2ItemPayload(item, key, index){
   const meta = {
-    sourceCollection: 'mes_state',
+    sourceCollection: 'mes_v2',
     sourceKey: key,
     sourceIndex: index,
     migratedAt: cloudV2ServerTimestamp(),
-    mode: 'dual-write'
+    mode: 'v2'
   };
   if (item && typeof item === 'object' && !Array.isArray(item)) {
     return Object.assign({}, item, { _mes: meta });
@@ -11110,14 +11096,14 @@ async function cloudMirrorV2Key(key){
     ref: entityRef,
     data: {
       key,
-      sourceCollection: 'mes_state',
+      sourceCollection: 'mes_v2',
       sourceDocId: key,
       sourceExists: raw != null,
       sourceType: type,
       sourceCount: count,
       sourceUpdatedAt: cloudV2ServerTimestamp(),
       schemaVersion: 1,
-      mode: 'dual-write',
+      mode: 'v2',
       migratedAt: cloudV2ServerTimestamp()
     }
   }];
@@ -11140,10 +11126,10 @@ async function cloudMirrorV2Key(key){
       ref: entityRef.collection('state').doc('current'),
       data: Object.assign({}, value, {
         _mes: {
-          sourceCollection: 'mes_state',
+          sourceCollection: 'mes_v2',
           sourceKey: key,
           migratedAt: cloudV2ServerTimestamp(),
-          mode: 'dual-write'
+          mode: 'v2'
         }
       })
     });
@@ -11159,12 +11145,6 @@ async function cloudFlush(){
   _cloudChip('saving');
   try {
     await cloudMirrorV2Keys(keys);
-    if (CLOUD_LEGACY_MES_STATE_WRITE) {
-      const batch=_fbDb.batch();
-      keys.forEach(k=>{ const raw=localStorage.getItem('mes_'+k); const value=raw?JSON.parse(raw):null;
-        batch.set(_fbDb.collection('mes_state').doc(k), { value, updatedAt:Date.now(), by:(_cloudUser&&_cloudUser.email)||'' }); });
-      await batch.commit();
-    }
     _cloudChip('online');
   } catch(e){
     console.warn('클라우드 저장 실패', e); _cloudChip('error');
@@ -11199,13 +11179,6 @@ function cloudResyncGlobals(){
   memoList=L('memoList',memoList); todoList=L('todoList',todoList);
 }
 let _cloudRemoteRefreshTimer = null;
-function cloudApplyRemoteMesDoc(doc, key) {
-  if (!doc || !doc.exists) return false;
-  const d = doc.data();
-  if (!d || d.value === undefined) return false;
-  localStorage.setItem('mes_' + key, JSON.stringify(d.value));
-  return true;
-}
 function cloudScheduleRemoteRefresh(){
   clearTimeout(_cloudRemoteRefreshTimer);
   _cloudRemoteRefreshTimer = setTimeout(() => {
@@ -11228,22 +11201,8 @@ function cloudSubscribe(){
       .then(loaded => { if (loaded) cloudScheduleRemoteRefresh(); })
       .catch(err => { console.warn('MES v2 실시간 동기화 오류:', key, err); });
   }, err=>{ console.warn('MES v2 문서 실시간 동기화 오류:', key, err); }));
-  const legacyUnsubs = [];
-  if (typeof CLOUD_LEGACY_MES_STATE_SUBSCRIBE !== 'undefined' && CLOUD_LEGACY_MES_STATE_SUBSCRIBE) {
-    CLOUD_KEYS.forEach(key => {
-      legacyUnsubs.push(_fbDb.collection('mes_state').doc(key).onSnapshot(doc=>{
-        if (doc.metadata.hasPendingWrites) return;     // 내가 쓴 변경(로컬 에코)은 무시
-        if (cloudApplyRemoteMesDoc(doc, key)) {
-          if (typeof cloudMirrorV2Key === 'function') {
-            cloudMirrorV2Key(key).catch(err => console.warn('MES v2 보조 반영 오류:', key, err));
-          }
-          cloudScheduleRemoteRefresh();
-        }
-      }, err=>{ console.warn('MES 문서 실시간 동기화 오류:', key, err); }));
-    });
-      }
   _cloudUnsub = () => {
-    v2Unsubs.concat(legacyUnsubs).forEach(unsub => { try { unsub(); } catch(e){} });
+    v2Unsubs.forEach(unsub => { try { unsub(); } catch(e){} });
     _cloudUnsub = null;
   };
 
@@ -17482,7 +17441,17 @@ function getDriveConfig() {
 }
 
 function saveDriveConfig(config) {
-  localStorage.setItem('mes_googleDriveConfig', JSON.stringify(config || {}));
+  const nextConfig = config || {};
+  if (typeof saveStorage === 'function') saveStorage('googleDriveConfig', nextConfig);
+  else localStorage.setItem('mes_googleDriveConfig', JSON.stringify(nextConfig));
+}
+
+function getGoogleDriveConfig() {
+  return getDriveConfig();
+}
+
+function isDriveTokenActive(bufferMs = 60000) {
+  return !!(_driveAccessToken && Date.now() < _driveTokenExpiresAt - bufferMs);
 }
 
 function _driveEsc(value) {
@@ -17541,7 +17510,7 @@ async function requestDriveAccessToken(promptMode) {
   if (!_driveHostedOriginAvailable()) {
     throw new Error('Google Drive 연결은 HTTPS 주소 또는 localhost에서 실행해야 합니다. file://로 연 index.html에서는 OAuth 연결을 사용할 수 없습니다.');
   }
-  if (_driveAccessToken && Date.now() < _driveTokenExpiresAt - 60000) return _driveAccessToken;
+  if (isDriveTokenActive()) return _driveAccessToken;
   await loadGoogleIdentityServices();
   return new Promise((resolve, reject) => {
     _driveTokenClient = google.accounts.oauth2.initTokenClient({
@@ -17637,7 +17606,9 @@ async function uploadBlobToGoogleDrive(blob, fileName, folderName) {
 
 async function connectGoogleDrive() {
   try {
-    await requestDriveAccessToken('consent');
+    const config = getDriveConfig();
+    const promptMode = (config.connectedEmail || config.folderId) ? 'select_account' : 'consent';
+    await requestDriveAccessToken(promptMode);
     await ensureDriveBackupFolder();
     const connectedConfig = getDriveConfig();
     connectedConfig.autoConnectEnabled = true;
@@ -17660,9 +17631,10 @@ async function connectGoogleDrive() {
 
 async function autoConnectGoogleDriveAfterLogin() {
   if (_driveAutoConnectAttempted || _driveAccessToken) return;
-  _driveAutoConnectAttempted = true;
   const config = getDriveConfig();
-  if (!config.autoConnectEnabled || !config.clientId || !config.folderId || !_driveHostedOriginAvailable()) return;
+  if (!config.autoConnectEnabled || !config.clientId || !_driveHostedOriginAvailable()) return;
+  if (typeof cloudQueueSave === 'function') cloudQueueSave('googleDriveConfig');
+  _driveAutoConnectAttempted = true;
   try {
     await requestDriveAccessToken('');
     await ensureDriveBackupFolder();
@@ -17680,6 +17652,7 @@ function disconnectGoogleDrive() {
   _driveAccessToken = '';
   _driveTokenExpiresAt = 0;
   _driveBackups = [];
+  _driveAutoConnectAttempted = false;
   if (_driveAutoBackupTimer) clearInterval(_driveAutoBackupTimer);
   const config = getDriveConfig();
   config.folderId = '';
@@ -17698,9 +17671,13 @@ function saveGoogleDriveSettings() {
   config.autoBackupEnabled = !!(inp('drive-auto-enabled') && inp('drive-auto-enabled').checked);
   config.autoBackupHours = Math.max(1, Number(v('drive-auto-hours')) || 24);
   saveDriveConfig(config);
+  _driveAutoConnectAttempted = false;
   scheduleGoogleDriveAutoBackup();
   showToast('Google Drive OAuth 설정을 저장했습니다.', 'success');
   renderGoogleDriveSettings();
+  if (config.autoConnectEnabled && !_driveAccessToken) {
+    setTimeout(autoConnectGoogleDriveAfterLogin, 200);
+  }
 }
 
 function _driveBackupName() {
@@ -17786,7 +17763,7 @@ function _driveWithSingleDocument(type, id, callback) {
 function _driveDocumentConfig(type) {
   const map = {
     rfq:{label:'견적요청서',print:id=>openRfqPrint(id),xlsx:id=>exportRfqXLS(id)},
-    po:{label:'구매발주서',print:id=>openPoPrint(id),xlsx:id=>exportPoXLS(id)},
+    po:{label:'구매발주서',print:id=>openPoPrint(id, Array.isArray(id)),xlsx:id=>exportPoXLS(id)},
     statement:{label:'거래명세표',print:id=>openSalesDocPrint('statement',id),xlsx:id=>_driveWithSingleDocument('statement',id,()=>exportSalesDocCSV('statement'))},
     tax:{label:'세금계산서',print:id=>openSalesDocPrint('tax',id),xlsx:id=>_driveWithSingleDocument('tax',id,()=>exportSalesDocCSV('tax'))},
     quote:{label:'견적서',print:id=>openSODocPrint('quote',id),xlsx:id=>_driveWithSingleDocument('quote',id,()=>exportSODocCSV('quote'))},
@@ -17823,6 +17800,8 @@ async function createDocumentPdfBlobFromHtml(html) {
   if (typeof html2pdf === 'undefined') throw new Error('PDF 생성 라이브러리가 준비되지 않았습니다.');
   const parsed = new DOMParser().parseFromString(html, 'text/html');
   const printStyles = Array.from(parsed.head.querySelectorAll('style')).map(style => style.textContent || '').join('\n');
+  const capturedSheet = parsed.body.querySelector('.mes-print-sheet');
+  const printBodyHtml = capturedSheet ? capturedSheet.innerHTML : parsed.body.innerHTML;
   const frame = document.createElement('iframe');
   frame.setAttribute('aria-hidden', 'true');
   // html2canvas uses the rendered element coordinates. A large negative offset
@@ -17838,14 +17817,15 @@ async function createDocumentPdfBlobFromHtml(html) {
       <style>
         html,body{width:794px!important;min-width:794px!important;margin:0!important;padding:0!important;
           background:#fff!important;color:#111!important;overflow:visible!important;}
-        #mes-drive-pdf-root{width:794px!important;min-height:1123px;padding:20px 24px;margin:0;
-          box-sizing:border-box;background:#fff;color:#111;font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:12px;}
-        #mes-drive-pdf-root table{width:100%;max-width:100%;position:static!important;}
-        #mes-drive-pdf-root th,#mes-drive-pdf-root td{position:static!important;}
-      </style></head><body><div id="mes-drive-pdf-root">${parsed.body.innerHTML}</div></body></html>`);
+        .mes-print-sheet{width:794px!important;min-height:1123px!important;margin:0!important;
+          padding:20px 24px!important;box-sizing:border-box!important;background:#fff!important;color:#111!important;
+          box-shadow:none!important;font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:12px;}
+        .mes-print-sheet table{width:100%;max-width:100%;position:static!important;}
+        .mes-print-sheet th,.mes-print-sheet td{position:static!important;}
+      </style></head><body><main class="mes-print-sheet">${printBodyHtml}</main></body></html>`);
     frameDoc.close();
     if (frameDoc.fonts && frameDoc.fonts.ready) await frameDoc.fonts.ready;
-    const content = frameDoc.getElementById('mes-drive-pdf-root');
+    const content = frameDoc.querySelector('.mes-print-sheet');
     if (!content) throw new Error('PDF 문서 영역을 생성하지 못했습니다.');
     const pageElements = Array.from(content.children);
     const lastPage = pageElements[pageElements.length - 1];
@@ -17862,6 +17842,7 @@ async function createDocumentPdfBlobFromHtml(html) {
         logging:false,
         backgroundColor:'#ffffff',
         windowWidth:794,
+        windowHeight:Math.max(1123, content.scrollHeight || 1123),
         width:794,
         scrollX:0,
         scrollY:0
@@ -18158,11 +18139,13 @@ async function renderGoogleDriveSettings() {
   const config = getDriveConfig();
   const hosted = _driveHostedOriginAvailable();
   const currentOrigin = getDriveCurrentOrigin();
-  const connected = !!(_driveAccessToken && Date.now() < _driveTokenExpiresAt);
+  const connected = isDriveTokenActive(0);
+  const configured = !!(config.clientId && (config.folderId || config.folderUrl || config.connectedEmail));
+  const statusText = connected ? '연결됨' : (configured ? '자동 연결 대기' : '연결 필요');
   body.innerHTML =
     '<div class="card" style="margin-bottom:16px;">' +
       '<div class="card-hd"><span class="card-ttl"><i class="ti ti-brand-google-drive"></i>Google Drive 데이터 백업</span>' +
-        '<span class="bd ' + (connected ? 'bd-ok' : 'bd-neu') + '">' + (connected ? '연결됨' : '연결 필요') + '</span></div>' +
+        '<span class="bd ' + (connected ? 'bd-ok' : 'bd-neu') + '">' + statusText + '</span></div>' +
       '<div style="display:grid;gap:12px;max-width:820px;">' +
         (config.connectedEmail ? '<div style="font-size:12px;color:var(--tx-s);"><i class="ti ti-user-check"></i> 연결 계정: <b>' + _driveEsc(config.connectedEmail) + '</b></div>' : '') +
         (!hosted ? '<div class="al al-warn"><i class="ti ti-alert-triangle"></i><div><div class="al-t">웹 주소에서 실행해야 합니다.</div><div class="al-s">현재 file:// 실행 상태에서는 Google OAuth를 사용할 수 없습니다. Firebase Hosting의 HTTPS 주소 또는 localhost를 사용하세요.</div></div></div>' : '') +
@@ -18175,7 +18158,7 @@ async function renderGoogleDriveSettings() {
         '<div style="font-size:11px;color:var(--tx-t);line-height:1.7;">Google Cloud Console에서 Drive API를 활성화하고 OAuth 웹 클라이언트를 만든 뒤 현재 HTTPS 주소를 승인된 JavaScript 원본에 등록하세요. 권한은 앱이 만든 파일만 접근하는 drive.file을 사용합니다.</div>' +
         '<label style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;">' +
           '<input type="checkbox" id="drive-auto-connect" ' + (config.autoConnectEnabled !== false ? 'checked' : '') + '>시스템 로그인 후 Google Drive 자동 연결</label>' +
-        '<div style="font-size:10px;color:var(--tx-t);line-height:1.6;">최초 1회 Drive 연결과 권한 승인이 필요합니다. Google 로그인 세션 또는 브라우저 정책에 따라 연결 버튼을 다시 눌러야 할 수 있습니다.</div>' +
+        '<div style="font-size:10px;color:var(--tx-t);line-height:1.6;">최초 1회 Drive 연결과 권한 승인이 필요합니다. 이후에는 시스템 로그인 후 자동 연결을 시도하며, Google 로그인 세션 또는 브라우저 정책에 따라 연결 버튼을 다시 눌러야 할 수 있습니다.</div>' +
         '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px;border:1px solid var(--br);border-radius:var(--rm);">' +
           '<label style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;"><input type="checkbox" id="drive-auto-enabled" ' + (config.autoBackupEnabled ? 'checked' : '') + '>자동 백업</label>' +
           '<label style="font-size:11px;color:var(--tx-s);">주기 <input id="drive-auto-hours" type="number" min="1" value="' + (Number(config.autoBackupHours)||24) + '" style="width:70px;height:30px;text-align:right;"> 시간</label>' +
@@ -18183,7 +18166,7 @@ async function renderGoogleDriveSettings() {
         '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
           '<button class="btn" onclick="saveGoogleDriveSettings()"><i class="ti ti-device-floppy"></i>설정 저장</button>' +
           '<button class="btn btn-primary" onclick="connectGoogleDrive()" ' + (!hosted || !config.clientId ? 'disabled' : '') + '><i class="ti ti-plug-connected"></i>Drive 연결</button>' +
-          '<button class="btn" onclick="disconnectGoogleDrive()" ' + (!connected ? 'disabled' : '') + '><i class="ti ti-plug-off"></i>연결 해제</button>' +
+          '<button class="btn" onclick="disconnectGoogleDrive()" ' + (!connected && !configured ? 'disabled' : '') + '><i class="ti ti-plug-off"></i>연결 해제</button>' +
           (config.folderUrl ? '<a class="btn" href="' + _driveEsc(config.folderUrl) + '" target="_blank" rel="noopener"><i class="ti ti-folder-open"></i>MESPro 폴더 열기</a>' : '') +
         '</div>' +
       '</div>' +
