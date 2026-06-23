@@ -438,7 +438,11 @@ body { font-family: var(--f); font-size: calc(12px * var(--ui-font-scale)); back
 .att-quick-table .att-quick-worker strong { display: block; white-space: nowrap; }
 .att-quick-table .att-quick-worker span { display: block; margin-top: 2px; color: var(--tx-t); font-size: 9.5px; white-space: nowrap; }
 .att-quick-table .att-quick-status { min-width: 88px; }
-.att-quick-time { width: 88px; height: 28px; padding: 0 5px; font-size: 11px; }
+.att-quick-table th:nth-child(4),
+.att-quick-table th:nth-child(5),
+.att-quick-table td:nth-child(4),
+.att-quick-table td:nth-child(5) { min-width: 142px; }
+.att-quick-time { width: 132px; min-width: 132px; height: 28px; padding: 0 8px; font-size: 11px; }
 .att-quick-extra { width: 66px; height: 28px; padding: 0 5px; font-size: 11px; text-align: right; }
 .att-quick-note { min-width: 120px; width: 100%; height: 28px; padding: 0 7px; font-size: 11px; }
 .att-quick-actions { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
@@ -994,7 +998,8 @@ textarea { height: auto; resize: vertical; }
   flex-wrap: wrap;
 }
 .selection-action-bar {
-  padding: 9px 14px;
+  min-height: 32px;
+  padding: 0 10px;
   margin: 0 0 12px;
   background: var(--bg-i);
   border: 1px solid var(--br-i);
@@ -3068,15 +3073,15 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
   <!-- ══════ 재무 관리 ══════ -->
   <div class="content" id="pg-finance">
     <div class="toolbar" id="finance-tabs">
-      <button class="btn btn-primary" data-fintab="dashboard" onclick="switchFinTab('dashboard')"><i class="ti ti-chart-pie"></i>재무 현황</button>
+      <button class="btn btn-primary" data-fintab="dashboard" onclick="switchFinTab('dashboard')"><i class="ti ti-chart-pie"></i>요약</button>
+      <button class="btn" data-fintab="ar" onclick="switchFinTab('ar')"><i class="ti ti-receipt"></i>수금/지급</button>
       <button class="btn" data-fintab="revenue" onclick="switchFinTab('revenue')"><i class="ti ti-trending-up"></i>매출</button>
-      <button class="btn" data-fintab="purchase" onclick="switchFinTab('purchase')"><i class="ti ti-trending-down"></i>매입/지출</button>
-      <button class="btn" data-fintab="labor" onclick="switchFinTab('labor')"><i class="ti ti-cash"></i>급여 명세서</button>
-      <button class="btn" data-fintab="cost" onclick="switchFinTab('cost')"><i class="ti ti-calculator"></i>제품원가</button>
-      <button class="btn" data-fintab="pnl" onclick="switchFinTab('pnl')"><i class="ti ti-report-money"></i>손익(P&L)</button>
-      <button class="btn" data-fintab="ar" onclick="switchFinTab('ar')"><i class="ti ti-receipt"></i>미수금/미지급</button>
-      <button class="btn" data-fintab="etc" onclick="switchFinTab('etc')"><i class="ti ti-list-details"></i>기타 수입/비용</button>
-      <button class="btn btn-primary btn-icon" onclick="openFinanceAdd()" style="margin-left:auto;" title="기타 항목 등록"><i class="ti ti-plus"></i></button>
+      <button class="btn" data-fintab="purchase" onclick="switchFinTab('purchase')"><i class="ti ti-trending-down"></i>매입</button>
+      <button class="btn" data-fintab="labor" onclick="switchFinTab('labor')"><i class="ti ti-cash"></i>급여</button>
+      <button class="btn" data-fintab="cost" onclick="switchFinTab('cost')"><i class="ti ti-calculator"></i>원가</button>
+      <button class="btn" data-fintab="pnl" onclick="switchFinTab('pnl')"><i class="ti ti-report-money"></i>손익</button>
+      <button class="btn" data-fintab="etc" onclick="switchFinTab('etc')"><i class="ti ti-list-details"></i>기타</button>
+      <button class="btn btn-primary" id="finance-primary-action" onclick="openFinancePrimaryAction()" style="margin-left:auto;display:none;" title="기타 항목 등록"><i class="ti ti-plus"></i>기타 등록</button>
     </div>
     <div id="finance-body"></div>
   </div>
@@ -3665,7 +3670,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
         <i class="ti ti-calendar-event" style="color:var(--tx-i);"></i>납기 캘린더
       </span>
       <div style="display:flex;gap:5px;align-items:center;padding:4px 8px;background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rm);">
-        <span style="font-size:11px;font-weight:700;color:var(--tx-s);">날짜 보기</span>
         <select id="cal-view" onchange="calChangeView(this.value)" style="height:28px;min-width:96px;font-size:11px;">
           <option value="year">연</option>
           <option value="month" selected>월</option>
@@ -4300,7 +4304,6 @@ function _renderDateViewBar(key, bar) {
   const disabled = state.mode === 'all' || state.mode === 'range';
   const range = state.mode === 'range';
   bar.innerHTML = `
-    <span style="font-size:11px;font-weight:700;color:var(--tx-s);">날짜 보기</span>
     <select onchange="dateViewModeChange('${key}',this.value)" style="height:28px;min-width:96px;font-size:11px;">
       <option value="all"${state.mode==='all'?' selected':''}>전체</option>
       <option value="year"${state.mode==='year'?' selected':''}>연</option>
@@ -6399,6 +6402,8 @@ let editBomId = null;
 let bomMaterialImportRows = [];
 let bomViewTab = 'bom';
 let bomMaterialQuery = '';
+let finPnlDetailMonth = '';
+let finCostDetailProductId = '';
 function bomFor(pid){ return bomList.filter(b=>b.productId===pid); }
 /* 라인 단위원가: 반제품(subProductId)이면 하위 BOM 재료비를 롤업, 아니면 단가 */
 function bomLineUnitCost(b, seen){ return b.subProductId ? bomMaterialCost(b.subProductId, seen) : (Number(b.unitPrice)||0); }
@@ -6822,6 +6827,39 @@ function deleteBom(id){
 }
 
 /* ── 손익(P&L) ── */
+function toggleFinPnlDetail(ym) {
+  finPnlDetailMonth = finPnlDetailMonth === ym ? '' : ym;
+  renderFinance();
+}
+function finPnlDetailHtml(ym) {
+  if (!ym) return '';
+  const revRows = deliveries.filter(d=>(d.deliveredAt||'').slice(0,7)===ym);
+  const purRows = poList.filter(p=>(p.date||'').slice(0,7)===ym);
+  const etcRows = financeData.entries.filter(e=>(e.date||'').slice(0,7)===ym);
+  const smallRows = (rows, emptyText) => rows.length ? rows.slice(0,8).map(row => row).join('') : `<tr><td colspan="4">${empty(emptyText)}</td></tr>`;
+  return `
+    <div class="card" style="margin-top:16px;border-color:var(--br-i);">
+      <div class="card-hd"><span class="card-ttl"><i class="ti ti-list-search"></i>${ym} 상세 내역</span>
+        <span style="font-size:11px;color:var(--tx-t);">각 표는 최대 8건 미리보기</span></div>
+      <div class="row2" style="margin-bottom:12px;">
+        <div style="overflow-x:auto;">
+          <div style="font-size:12px;font-weight:800;margin-bottom:8px;color:var(--tx-i);">매출</div>
+          <table><thead><tr><th>일자</th><th>거래처</th><th>품목</th><th style="text-align:right;">금액</th></tr></thead>
+            <tbody>${smallRows(revRows.map(d=>`<tr><td>${d.deliveredAt||'—'}</td><td>${getClientName(d.clientId)}</td><td>${d.productName||getProductName(d.productId)}</td><td style="text-align:right;">${fmtW((d.price||0)*(d.qty||0))}</td></tr>`),'매출 내역이 없습니다.')}</tbody></table>
+        </div>
+        <div style="overflow-x:auto;">
+          <div style="font-size:12px;font-weight:800;margin-bottom:8px;color:#e8590c;">매입/지출</div>
+          <table><thead><tr><th>일자</th><th>공급처</th><th>품목</th><th style="text-align:right;">금액</th></tr></thead>
+            <tbody>${smallRows(purRows.map(p=>`<tr><td>${p.date||'—'}</td><td>${esc(p.supplier)||'—'}</td><td>${esc(p.itemName)||'—'}</td><td style="text-align:right;">${fmtW((p.unitPrice||0)*(p.qty||0))}</td></tr>`),'매입 내역이 없습니다.')}</tbody></table>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <div style="font-size:12px;font-weight:800;margin-bottom:8px;">기타 수입/비용</div>
+        <table><thead><tr><th>일자</th><th>구분</th><th>내용</th><th style="text-align:right;">금액</th></tr></thead>
+          <tbody>${smallRows(etcRows.map(e=>`<tr><td>${e.date||'—'}</td><td>${esc(e.type)}</td><td>${esc(e.title)}</td><td style="text-align:right;">${fmtW(e.amount)}</td></tr>`),'기타 수입/비용이 없습니다.')}</tbody></table>
+      </div>
+    </div>`;
+}
 function _finPnl() {
   const months = finMonthList(finPnlMonths);
   let tRev=0, tPur=0, tLab=0, tInc=0, tExp=0, tNet=0;
@@ -6832,7 +6870,7 @@ function _finPnl() {
     const net = rev - pur - payroll - exp + inc;
     tRev+=rev; tPur+=pur; tLab+=payroll; tInc+=inc; tExp+=exp; tNet+=net;
     return `
-      <tr>
+      <tr onclick="toggleFinPnlDetail('${m.ym}')" style="cursor:pointer;${finPnlDetailMonth===m.ym?'outline:2px solid var(--br-i);':''}">
         <td style="font-weight:700;">${m.ym}</td>
         <td class="amt-blue">${fmtW(rev)}</td>
         <td style="color:#e8590c;">${fmtW(pur)}</td>
@@ -6860,94 +6898,152 @@ function _finPnl() {
         </tr></tfoot>
       </table></div>
       <div style="font-size:11px;color:var(--tx-t);margin-top:8px;">※ 인건비는 각 월의 저장된 급여명세서와 자동 계산 결과를 반영합니다.</div>
-    </div>`;
+    </div>
+    ${finPnlDetailHtml(finPnlDetailMonth)}`;
 }
 
 /* ── 미수금 / 미지급 ── */
 function _finAR() {
   const state=finState('ar'), query=state.query.trim().toLowerCase();
-  let arList=deliveries.filter(d=>finMatchDate(d.deliveredAt,state) && finMatchAmount((d.price||0)*(d.qty||0),state) &&
-    (!state.status || (financeData.paidReceivable[d.id]?'완료':'미처리')===state.status) &&
-    (!query || [d.id,getClientName(d.clientId),d.productName,getProductName(d.productId)].join(' ').toLowerCase().includes(query)));
+  let arList=deliveries.filter(d=>{
+    const total=(d.price||0)*(d.qty||0), payment=finPaymentRecord('ar',d.id,total);
+    return finMatchDate(d.deliveredAt,state) && finMatchAmount(total,state) &&
+      (!state.status || payment.status===state.status) &&
+      (!query || [d.id,getClientName(d.clientId),d.productName,getProductName(d.productId)].join(' ').toLowerCase().includes(query));
+  });
   arList=finSort(arList,state,d=>d.deliveredAt,d=>(d.price||0)*(d.qty||0));
   let arUnpaid = 0;
-  arList.forEach(d=>{if(!financeData.paidReceivable[d.id])arUnpaid+=(d.price||0)*(d.qty||0);});
+  arList.forEach(d=>{const total=(d.price||0)*(d.qty||0); arUnpaid+=finPaymentRecord('ar',d.id,total).remaining;});
   const arPage=finPaged(arList,state);
   const arBody = arPage.rows.length ? arPage.rows.map(d => {
     const amt = (d.price||0)*(d.qty||0);
-    const paid = !!financeData.paidReceivable[d.id];
+    const payment = finPaymentRecord('ar', d.id, amt);
     return `
-      <tr style="${paid?'opacity:.55;':''}">
+      <tr style="${payment.done?'opacity:.65;':''}">
         <td>${d.deliveredAt||'—'}</td>
         <td>${getClientName(d.clientId)}</td>
         <td>${d.productName||getProductName(d.productId)}</td>
-        <td style="font-weight:700;">${fmtW(amt)}</td>
-        <td>${paid?'<span class="bd bd-ok">수금완료</span>':'<span class="bd bd-warn">미수금</span>'}</td>
-        <td><button class="btn btn-sm" onclick="toggleReceivable('${d.id}')">${paid?'미수금 처리':'수금 처리'}</button></td>
+        <td style="font-weight:700;text-align:right;">${fmtW(amt)}</td>
+        <td style="text-align:right;color:var(--tx-ok);">${fmtW(payment.amount)}</td>
+        <td style="text-align:right;color:${payment.remaining?'var(--tx-d)':'var(--tx-s)'};">${fmtW(payment.remaining)}</td>
+        <td>${finPaymentStatusBadge('ar',payment)}</td>
+        <td style="white-space:nowrap;">${payment.date ? esc(payment.date) : '—'}</td>
+        <td>${payment.method ? esc(payment.method) : '—'}</td>
+        <td><button class="btn btn-sm" onclick="openFinancePaymentModal('ar','${d.id}')"><i class="ti ti-cash-banknote"></i>${payment.amount?'수정':'수금 처리'}</button></td>
       </tr>`;
-  }).join('') : `<tr><td colspan="6">${empty('매출(납품) 내역이 없습니다.')}</td></tr>`;
+  }).join('') : `<tr><td colspan="10">${empty('매출(납품) 내역이 없습니다.')}</td></tr>`;
 
-  let apList=poList.filter(p=>finMatchDate(p.date,state) && finMatchAmount((p.unitPrice||0)*(p.qty||0),state) &&
-    (!state.status || (financeData.paidPayable[p.id]?'완료':'미처리')===state.status) &&
-    (!query || [p.id,p.supplier,p.itemName].join(' ').toLowerCase().includes(query)));
+  let apList=poList.filter(p=>{
+    const total=(p.unitPrice||0)*(p.qty||0), payment=finPaymentRecord('ap',p.id,total);
+    return finMatchDate(p.date,state) && finMatchAmount(total,state) &&
+      (!state.status || payment.status===state.status) &&
+      (!query || [p.id,p.supplier,p.itemName].join(' ').toLowerCase().includes(query));
+  });
   apList=finSort(apList,state,p=>p.date,p=>(p.unitPrice||0)*(p.qty||0));
   let apUnpaid = 0;
-  apList.forEach(p=>{if(!financeData.paidPayable[p.id])apUnpaid+=(p.unitPrice||0)*(p.qty||0);});
+  apList.forEach(p=>{const total=(p.unitPrice||0)*(p.qty||0); apUnpaid+=finPaymentRecord('ap',p.id,total).remaining;});
   const apPage=finPaged(apList,Object.assign({},state));
   const apBody = apPage.rows.length ? apPage.rows.map(p => {
     const amt = (p.unitPrice||0)*(p.qty||0);
-    const paid = !!financeData.paidPayable[p.id];
+    const payment = finPaymentRecord('ap', p.id, amt);
     return `
-      <tr style="${paid?'opacity:.55;':''}">
+      <tr style="${payment.done?'opacity:.65;':''}">
         <td>${esc(p.date)||'—'}</td>
         <td>${esc(p.supplier)||'—'}</td>
         <td>${esc(p.itemName)||'—'}</td>
-        <td style="font-weight:700;">${fmtW(amt)}</td>
-        <td>${paid?'<span class="bd bd-ok">지급완료</span>':'<span class="bd bd-warn">미지급</span>'}</td>
-        <td><button class="btn btn-sm" onclick="togglePayable('${p.id}')">${paid?'미지급 처리':'지급 처리'}</button></td>
+        <td style="font-weight:700;text-align:right;">${fmtW(amt)}</td>
+        <td style="text-align:right;color:var(--tx-ok);">${fmtW(payment.amount)}</td>
+        <td style="text-align:right;color:${payment.remaining?'var(--tx-d)':'var(--tx-s)'};">${fmtW(payment.remaining)}</td>
+        <td>${finPaymentStatusBadge('ap',payment)}</td>
+        <td style="white-space:nowrap;">${payment.date ? esc(payment.date) : '—'}</td>
+        <td>${payment.method ? esc(payment.method) : '—'}</td>
+        <td><button class="btn btn-sm" onclick="openFinancePaymentModal('ap','${p.id}')"><i class="ti ti-cash-banknote"></i>${payment.amount?'수정':'지급 처리'}</button></td>
       </tr>`;
-  }).join('') : `<tr><td colspan="6">${empty('매입(발주) 내역이 없습니다.')}</td></tr>`;
+  }).join('') : `<tr><td colspan="10">${empty('매입(발주) 내역이 없습니다.')}</td></tr>`;
 
   return `
-    ${finFilterBar('ar',{placeholder:'거래처·제품·품목·번호 검색',statuses:['미처리','완료']})}
+    ${finFilterBar('ar',{placeholder:'거래처·제품·품목·번호 검색',statuses:['미처리','부분','완료']})}
     <div class="metrics" style="grid-template-columns:repeat(2,1fr);">
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-receipt"></i>미수금 합계 (받을 돈)</div><div class="mc-val" style="color:var(--tx-i);">${fmtW(arUnpaid)}</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-receipt-off"></i>미지급금 합계 (줄 돈)</div><div class="mc-val" style="color:#e8590c;">${fmtW(apUnpaid)}</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-receipt"></i>미수 잔액 (받을 돈)</div><div class="mc-val" style="color:var(--tx-i);">${fmtW(arUnpaid)}</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-receipt-off"></i>미지급 잔액 (줄 돈)</div><div class="mc-val" style="color:#e8590c;">${fmtW(apUnpaid)}</div></div>
     </div>
     <div class="card" style="margin-bottom:16px;">
       <div class="card-hd"><span class="card-ttl"><i class="ti ti-receipt"></i>미수금 관리 (매출 채권)</span></div>
       <div style="overflow-x:auto;"><table>
-        <thead><tr><th>납품일</th><th>고객사</th><th>제품</th><th>금액</th><th>수금상태</th><th>처리</th></tr></thead>
+        <thead><tr><th>납품일</th><th>고객사</th><th>제품</th><th style="text-align:right;">총액</th><th style="text-align:right;">수금액</th><th style="text-align:right;">잔액</th><th>수금상태</th><th>수금일</th><th>방법</th><th>처리</th></tr></thead>
         <tbody>${arBody}</tbody>
       </table></div>${finPager('ar',arPage)}
     </div>
     <div class="card">
       <div class="card-hd"><span class="card-ttl"><i class="ti ti-receipt-off"></i>미지급금 관리 (매입 채무)</span></div>
       <div style="overflow-x:auto;"><table>
-        <thead><tr><th>발주일</th><th>공급처</th><th>품목</th><th>금액</th><th>지급상태</th><th>처리</th></tr></thead>
+        <thead><tr><th>발주일</th><th>공급처</th><th>품목</th><th style="text-align:right;">총액</th><th style="text-align:right;">지급액</th><th style="text-align:right;">잔액</th><th>지급상태</th><th>지급일</th><th>방법</th><th>처리</th></tr></thead>
         <tbody>${apBody}</tbody>
       </table></div>
     </div>`;
 }
 
-function toggleReceivable(id) {
+function openFinancePaymentModal(kind, id) {
   if (!checkAdminAction()) return;
-  const item=deliveries.find(x=>x.id===id); if(item&&!guardFinanceMonth(item.deliveredAt))return;
-  financeData.paidReceivable[id] = !financeData.paidReceivable[id];
-  if (!financeData.paidReceivable[id]) delete financeData.paidReceivable[id];
-  finAudit(financeData.paidReceivable[id]?'수금 완료':'수금 취소',id);
+  const isPayable = kind === 'ap';
+  const item = isPayable ? poList.find(x=>x.id===id) : deliveries.find(x=>x.id===id);
+  if (!item) return;
+  const sourceDate = isPayable ? item.date : item.deliveredAt;
+  if (!guardFinanceMonth(sourceDate)) return;
+  const total = isPayable ? (item.unitPrice||0)*(item.qty||0) : (item.price||0)*(item.qty||0);
+  const payment = finPaymentRecord(kind, id, total);
+  const targetName = isPayable ? `${item.supplier || '공급처'} · ${item.itemName || ''}` : `${getClientName(item.clientId)} · ${item.productName || getProductName(item.productId)}`;
+  inp('payment-kind').value = kind;
+  inp('payment-id').value = id;
+  inp('payment-modal-ttl').innerHTML = `<i class="ti ti-cash-banknote" style="color:var(--tx-i);"></i>${isPayable?'지급 처리':'수금 처리'}`;
+  inp('payment-source-summary').innerHTML = `
+    <div style="font-size:12px;font-weight:800;">${esc(targetName)}</div>
+    <div style="margin-top:5px;color:var(--tx-s);font-size:11px;">총액 ${fmtW(total)} · 처리액 ${fmtW(payment.amount)} · 잔액 <b style="color:${payment.remaining?'var(--tx-d)':'var(--tx-ok)'};">${fmtW(payment.remaining)}</b></div>`;
+  sv('payment-date', payment.date || today());
+  sv('payment-amount', payment.remaining ? payment.remaining : payment.amount || total);
+  sv('payment-method', payment.method || '계좌이체');
+  sv('payment-note', payment.note || '');
+  inp('payment-clear-btn').style.display = payment.amount ? '' : 'none';
+  inp('payment-modal').classList.add('open');
+}
+
+function saveFinancePayment() {
+  if (!checkAdminAction()) return;
+  const kind = v('payment-kind'), id = v('payment-id');
+  const isPayable = kind === 'ap';
+  const item = isPayable ? poList.find(x=>x.id===id) : deliveries.find(x=>x.id===id);
+  if (!item) return;
+  const sourceDate = isPayable ? item.date : item.deliveredAt;
+  if (!guardFinanceMonth(sourceDate)) return;
+  const total = isPayable ? (item.unitPrice||0)*(item.qty||0) : (item.price||0)*(item.qty||0);
+  const amount = Math.min(total, Math.max(0, Number(v('payment-amount')) || 0));
+  if (amount <= 0) { showToast('처리 금액을 입력하세요.', 'error'); return; }
+  finPaymentMap(kind)[id] = {
+    amount,
+    date:v('payment-date') || today(),
+    method:v('payment-method') || '계좌이체',
+    note:v('payment-note') || '',
+    updatedAt:new Date().toISOString()
+  };
+  finAudit((isPayable?'지급':'수금') + (amount >= total ? ' 완료' : ' 부분 처리'), `${id} · ${amount.toLocaleString()}원`);
   saveStorage('financeData', financeData);
+  closeModal('payment-modal');
   renderFinance();
 }
-function togglePayable(id) {
+
+function clearFinancePayment() {
   if (!checkAdminAction()) return;
-  const item=poList.find(x=>x.id===id); if(item&&!guardFinanceMonth(item.date))return;
-  financeData.paidPayable[id] = !financeData.paidPayable[id];
-  if (!financeData.paidPayable[id]) delete financeData.paidPayable[id];
-  finAudit(financeData.paidPayable[id]?'지급 완료':'지급 취소',id);
+  const kind = v('payment-kind'), id = v('payment-id');
+  const isPayable = kind === 'ap';
+  delete finPaymentMap(kind)[id];
+  finAudit(isPayable?'지급 취소':'수금 취소', id);
   saveStorage('financeData', financeData);
+  closeModal('payment-modal');
   renderFinance();
 }
+
+function toggleReceivable(id) { openFinancePaymentModal('ar', id); }
+function togglePayable(id) { openFinancePaymentModal('ap', id); }
 
 /* ── 기타 수입/비용 ── */
 function _finEtc() {
@@ -16013,6 +16109,7 @@ const payrollSelected = new Set();
 let finPnlMonths = 6;
 let finClosingMonth = today().slice(0,7);
 let finInputTimer = null;
+let finDashboardRange = 'month';
 
 function finState(tab) {
   if (!financeView[tab]) financeView[tab] = {
@@ -16045,6 +16142,126 @@ function finQuickRange(tab, preset) {
     state.from=fmt(new Date(now.getFullYear(),now.getMonth(),1)); state.to=fmt(now);
   }
   state.page=1; renderFinance();
+}
+const FIN_DATE_VIEW_TABS = new Set(['ar','revenue','purchase']);
+function finDateText(date) {
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+}
+function finDateDefault(mode) {
+  const value = today();
+  if (mode === 'year') return value.slice(0,4);
+  if (mode === 'month') return value.slice(0,7);
+  if (mode === 'day') return value;
+  return '';
+}
+function finDateMode(tab) {
+  const state = finState(tab);
+  if (!state.dateMode) state.dateMode = (state.from || state.to) ? 'range' : 'all';
+  return state.dateMode;
+}
+function finDateRange(mode, value) {
+  const val = value || finDateDefault(mode);
+  if (mode === 'year') return { from:`${val}-01-01`, to:`${val}-12-31` };
+  if (mode === 'month') {
+    const [year, month] = val.split('-').map(Number);
+    return { from:`${val}-01`, to:finDateText(new Date(year, month, 0)) };
+  }
+  if (mode === 'day') return { from:val, to:val };
+  return { from:'', to:'' };
+}
+function finApplyDateView(tab, mode, value='', from='', to='') {
+  const state = finState(tab);
+  state.dateMode = mode;
+  state.dateValue = value;
+  if (mode === 'range') {
+    state.from = from || state.from || today().slice(0,7) + '-01';
+    state.to = to || state.to || today();
+    if (state.from && state.to && state.from > state.to) {
+      const swap = state.from; state.from = state.to; state.to = swap;
+    }
+  } else if (mode === 'all') {
+    state.from = ''; state.to = ''; state.dateValue = '';
+  } else {
+    state.dateValue = value || finDateDefault(mode);
+    const range = finDateRange(mode, state.dateValue);
+    state.from = range.from; state.to = range.to;
+  }
+  state.page = 1;
+  renderFinance();
+}
+function finDateViewModeChange(tab, mode) {
+  const value = finDateDefault(mode);
+  const range = mode === 'range' ? { from:today().slice(0,7) + '-01', to:today() } : finDateRange(mode, value);
+  finApplyDateView(tab, mode, value, range.from, range.to);
+}
+function finDateViewMove(tab, amount) {
+  const state = finState(tab), mode = finDateMode(tab);
+  if (mode === 'all' || mode === 'range') return;
+  let value = state.dateValue || finDateDefault(mode);
+  if (mode === 'year') value = String((parseInt(value,10) || new Date().getFullYear()) + amount);
+  else if (mode === 'month') {
+    const parts = value.split('-');
+    const date = new Date(Number(parts[0]), (Number(parts[1]) || 1) - 1 + amount, 1);
+    value = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
+  } else if (mode === 'day') {
+    const parts = value.split('-');
+    const date = new Date(Number(parts[0]), (Number(parts[1]) || 1) - 1, Number(parts[2]) || 1);
+    date.setDate(date.getDate() + amount);
+    value = finDateText(date);
+  }
+  finApplyDateView(tab, mode, value);
+}
+function finDateViewToday(tab) {
+  const mode = finDateMode(tab);
+  if (mode === 'all' || mode === 'range') return;
+  finApplyDateView(tab, mode, finDateDefault(mode));
+}
+function finDateViewReset(tab) {
+  finApplyDateView(tab, 'all');
+}
+function finDateViewRangeChange(tab, field, value) {
+  const state = finState(tab);
+  state.dateMode = 'range';
+  state[field] = value;
+  if (state.from && state.to && state.from > state.to) {
+    const swap = state.from; state.from = state.to; state.to = swap;
+  }
+  state.page = 1;
+  renderFinance();
+}
+function finDateViewLabel(tab) {
+  const state = finState(tab), mode = finDateMode(tab), value = state.dateValue || finDateDefault(mode);
+  if (mode === 'all') return '전체 기간';
+  if (mode === 'range') return '기간 선택';
+  if (mode === 'year') return `${value}년`;
+  if (mode === 'month') {
+    const parts = value.split('-');
+    return `${parts[0]}년 ${Number(parts[1])}월`;
+  }
+  const parts = value.split('-');
+  return `${parts[0]}년 ${Number(parts[1])}월 ${Number(parts[2])}일`;
+}
+function finDateViewBar(tab) {
+  const state = finState(tab), mode = finDateMode(tab), range = mode === 'range', disabled = mode === 'all' || mode === 'range';
+  return `<div class="date-view-bar finance-date-view-bar" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px;padding:6px 10px;background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rm);">
+    <select onchange="finDateViewModeChange('${tab}',this.value)" style="height:28px;min-width:140px;font-size:11px;">
+      <option value="all"${mode==='all'?' selected':''}>전체</option>
+      <option value="year"${mode==='year'?' selected':''}>년</option>
+      <option value="month"${mode==='month'?' selected':''}>월</option>
+      <option value="day"${mode==='day'?' selected':''}>일</option>
+      <option value="range"${mode==='range'?' selected':''}>기간</option>
+    </select>
+    <div class="date-view-period"${range?'':' style="display:none;"'}>
+      <input type="date" value="${state.from||''}" onchange="finDateViewRangeChange('${tab}','from',this.value)" title="시작일">
+      <span>~</span>
+      <input type="date" value="${state.to||''}" onchange="finDateViewRangeChange('${tab}','to',this.value)" title="종료일">
+    </div>
+    <button class="btn btn-sm date-view-nav" onclick="finDateViewMove('${tab}',-1)" title="이전" ${disabled?'disabled':''}><i class="ti ti-chevron-left"></i></button>
+    <span class="date-view-label"${range?' style="display:none;"':''}>${finDateViewLabel(tab)}</span>
+    <button class="btn btn-sm date-view-nav" onclick="finDateViewMove('${tab}',1)" title="다음" ${disabled?'disabled':''}><i class="ti ti-chevron-right"></i></button>
+    <button class="btn btn-sm date-view-today" onclick="finDateViewToday('${tab}')" title="오늘" ${disabled?'disabled':''}>오늘</button>
+    <button class="btn btn-sm" style="height:28px;padding:0 9px;" onclick="finDateViewReset('${tab}')" title="전체 보기"><i class="ti ti-x"></i></button>
+  </div>`;
 }
 function finMatchDate(date, state) {
   const value = String(date || '').slice(0,10);
@@ -16084,8 +16301,10 @@ function finPager(tab, pageInfo) {
 function finFilterBar(tab, options={}) {
   const state=finState(tab);
   const statuses=options.statuses||[];
-  return `<div class="toolbar" style="margin-bottom:10px;">
-    ${options.noDate?'':`<input type="date" value="${state.from}" onchange="finSet('${tab}','from',this.value)" title="시작일">
+  const useDateView = !options.noDate && FIN_DATE_VIEW_TABS.has(tab);
+  return `${useDateView ? finDateViewBar(tab) : ''}
+    <div class="toolbar" style="margin-bottom:10px;">
+    ${options.noDate||useDateView?'':`<input type="date" value="${state.from}" onchange="finSet('${tab}','from',this.value)" title="시작일">
     <span style="color:var(--tx-t);">~</span><input type="date" value="${state.to}" onchange="finSet('${tab}','to',this.value)" title="종료일">
     <button class="btn btn-sm" onclick="finQuickRange('${tab}','7d')">최근 7일</button>
     <button class="btn btn-sm" onclick="finQuickRange('${tab}','month')">이번 달</button>
@@ -16108,12 +16327,102 @@ function finFilterBar(tab, options={}) {
   </div>`;
 }
 function payrollSelectionBarHtml(closed) {
-  return `<div class="selection-action-bar" style="display:flex;">
-    <span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${payrollSelected.size}명 선택</span>
-    <button class="btn btn-sm" onclick="bulkConfirmPayroll(true)" ${closed?'disabled':''}><i class="ti ti-checks"></i>확정</button>
-    <button class="btn btn-sm drive-save-btn" onclick="bulkSavePayrollDrive()"><i class="ti ti-cloud-upload"></i>Drive 저장</button>
-    <button class="btn btn-sm date-view-clear-selection" onclick="clearPayrollSelection()"><i class="ti ti-x"></i>해제</button>
+  const selectedCount = payrollSelected.size;
+  const single = payrollSelected.size === 1;
+  return `<div class="selection-action-bar" id="payroll-selection-bar" style="display:flex;flex-wrap:wrap;">
+    <span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${selectedCount}명 선택</span>
+    <button class="btn btn-sm" onclick="openSelectedPayrollEdit()" ${(!single||closed)?'disabled':''} title="${single?'선택한 직원 급여 수정':'한 명만 선택하면 수정할 수 있습니다.'}"><i class="ti ti-edit"></i>급여 수정</button>
+    <button class="btn btn-sm" onclick="printSelectedPayslip()" ${single?'':'disabled'} title="${single?'선택한 직원 명세서 출력':'한 명만 선택하면 출력할 수 있습니다.'}"><i class="ti ti-printer"></i>명세서 출력</button>
+    <button class="btn btn-sm" onclick="bulkConfirmPayroll(true)" ${(!selectedCount||closed)?'disabled':''}><i class="ti ti-checks"></i>확정</button>
+    <button class="btn btn-sm drive-save-btn" onclick="bulkSavePayrollDrive()" ${selectedCount?'':'disabled'}><i class="ti ti-cloud-upload"></i>Drive 저장</button>
+    <button class="btn btn-sm date-view-clear-selection" onclick="clearPayrollSelection()" ${selectedCount?'':'disabled'}><i class="ti ti-x"></i>해제</button>
   </div>`;
+}
+
+function selectedPayrollWorkerId() {
+  return [...payrollSelected][0] || '';
+}
+
+function openSelectedPayrollEdit() {
+  if (payrollSelected.size !== 1) { showToast('직원 한 명만 선택하세요.', 'info'); return; }
+  openPayrollEdit(selectedPayrollWorkerId());
+}
+
+function printSelectedPayslip() {
+  if (payrollSelected.size !== 1) { showToast('직원 한 명만 선택하세요.', 'info'); return; }
+  printPayslip(`${selectedPayrollWorkerId()}__${payrollMonth}`);
+}
+
+function payrollDateToolbarHtml(closed) {
+  return `<div class="toolbar" style="margin-bottom:12px;">
+    <button class="btn btn-sm" onclick="payrollMonth=shiftMonth(payrollMonth,-1);renderFinance()"><i class="ti ti-chevron-left"></i></button>
+    <input type="month" value="${payrollMonth}" onchange="payrollMonth=this.value;renderFinance()" style="width:130px;">
+    <button class="btn btn-sm" onclick="payrollMonth=shiftMonth(payrollMonth,1);renderFinance()"><i class="ti ti-chevron-right"></i></button>
+    <button class="btn btn-sm" onclick="payrollMonth=today().slice(0,7);renderFinance()">이번 달</button>
+    <button class="btn btn-sm" onclick="openPayrollSettings()"><i class="ti ti-settings"></i>계산 설정</button>
+    <button class="btn btn-sm ${closed?'btn-danger':''}" onclick="toggleFinanceMonthClose('${payrollMonth}')"><i class="ti ${closed?'ti-lock':'ti-lock-open'}"></i>${closed?'마감됨':'월 마감'}</button>
+    <button class="btn btn-sm" onclick="exportPayrollXLS()"><i class="ti ti-file-spreadsheet"></i>급여대장 XLSX</button>
+  </div>`;
+}
+
+function togglePayrollRow(id, event) {
+  if (event && event.target && event.target.closest('button,a,input,select,textarea,label')) return;
+  togglePayrollSelect(id, !payrollSelected.has(id));
+}
+
+function payrollPageWorkerIdsFromDom() {
+  const table = inp('finance-payroll-table');
+  if (!table) return [];
+  return Array.from(table.querySelectorAll('tbody tr[data-worker-id]')).map(row => row.dataset.workerId).filter(Boolean);
+}
+
+function refreshPayrollSelectionUi() {
+  const closed = isFinanceMonthClosed(payrollMonth);
+  const actionRow = inp('payroll-top-action-row');
+  if (actionRow) actionRow.innerHTML = payrollSelected.size ? payrollSelectionBarHtml(closed) : payrollDateToolbarHtml(closed);
+  const table = inp('finance-payroll-table');
+  if (!table) return;
+  const rows = Array.from(table.querySelectorAll('tbody tr[data-worker-id]'));
+  rows.forEach(row => {
+    const checked = payrollSelected.has(row.dataset.workerId);
+    row.classList.toggle('table-row-selected', checked);
+    const checkbox = row.querySelector('input[type="checkbox"]');
+    if (checkbox) checkbox.checked = checked;
+  });
+  const all = table.querySelector('thead input[type="checkbox"]');
+  if (all) {
+    const selectedRows = rows.filter(row => payrollSelected.has(row.dataset.workerId));
+    all.checked = rows.length > 0 && selectedRows.length === rows.length;
+    all.indeterminate = selectedRows.length > 0 && selectedRows.length < rows.length;
+  }
+}
+function finPaymentMap(kind) {
+  return kind === 'ap' ? financeData.paidPayable : financeData.paidReceivable;
+}
+function finPaymentRecord(kind, id, total) {
+  const raw = finPaymentMap(kind)[id];
+  const target = Math.max(0, Number(total) || 0);
+  if (!raw) return { amount:0, remaining:target, status:'미처리', done:false, date:'', method:'', note:'' };
+  if (raw === true) return { amount:target, remaining:0, status:'완료', done:true, date:'', method:'', note:'' };
+  if (typeof raw === 'number') {
+    const amount = Math.min(target, Math.max(0, raw));
+    return { amount, remaining:Math.max(0, target - amount), status:amount >= target ? '완료' : '부분', done:amount >= target, date:'', method:'', note:'' };
+  }
+  const amount = Math.min(target, Math.max(0, Number(raw.amount) || 0));
+  return {
+    amount,
+    remaining:Math.max(0, target - amount),
+    status:amount >= target ? '완료' : (amount > 0 ? '부분' : '미처리'),
+    done:amount >= target,
+    date:raw.date || '',
+    method:raw.method || '',
+    note:raw.note || ''
+  };
+}
+function finPaymentStatusBadge(kind, payment) {
+  if (payment.status === '완료') return `<span class="bd bd-ok">${kind === 'ap' ? '지급완료' : '수금완료'}</span>`;
+  if (payment.status === '부분') return `<span class="bd bd-warn">${kind === 'ap' ? '부분지급' : '부분수금'}</span>`;
+  return `<span class="bd bd-neu">${kind === 'ap' ? '미지급' : '미수금'}</span>`;
 }
 function financeFilteredRows(tab) {
   const s=finState(tab), q=s.query.trim().toLowerCase();
@@ -16128,11 +16437,21 @@ function exportFinanceViewXLS(tab){
   if(typeof XLSX==='undefined'){showToast('엑셀 생성 라이브러리가 준비되지 않았습니다.','error');return;}
   if(tab==='ar'){
     const s=finState('ar'),q=s.query.trim().toLowerCase(),rows=[];
-    deliveries.filter(d=>finMatchDate(d.deliveredAt,s)&&finMatchAmount((d.price||0)*(d.qty||0),s)&&(!s.status||(financeData.paidReceivable[d.id]?'완료':'미처리')===s.status)&&(!q||[d.id,getClientName(d.clientId),d.productName].join(' ').toLowerCase().includes(q)))
-      .forEach(d=>rows.push(['미수금',d.deliveredAt,getClientName(d.clientId),d.productName||getProductName(d.productId),(d.price||0)*(d.qty||0),financeData.paidReceivable[d.id]?'수금완료':'미수금']));
-    poList.filter(p=>finMatchDate(p.date,s)&&finMatchAmount((p.unitPrice||0)*(p.qty||0),s)&&(!s.status||(financeData.paidPayable[p.id]?'완료':'미처리')===s.status)&&(!q||[p.id,p.supplier,p.itemName].join(' ').toLowerCase().includes(q)))
-      .forEach(p=>rows.push(['미지급금',p.date,p.supplier,p.itemName,(p.unitPrice||0)*(p.qty||0),financeData.paidPayable[p.id]?'지급완료':'미지급']));
-    const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet([['구분','일자','거래처','품목','금액','상태'],...rows]);XLSX.utils.book_append_sheet(wb,ws,'채권채무');XLSX.writeFile(wb,`미수금_미지급금_${today()}.xlsx`);return;
+    deliveries.filter(d=>{
+      const total=(d.price||0)*(d.qty||0), pay=finPaymentRecord('ar',d.id,total);
+      return finMatchDate(d.deliveredAt,s)&&finMatchAmount(total,s)&&(!s.status||pay.status===s.status)&&(!q||[d.id,getClientName(d.clientId),d.productName].join(' ').toLowerCase().includes(q));
+    }).forEach(d=>{
+      const total=(d.price||0)*(d.qty||0), pay=finPaymentRecord('ar',d.id,total);
+      rows.push(['미수금',d.deliveredAt,getClientName(d.clientId),d.productName||getProductName(d.productId),total,pay.amount,pay.remaining,pay.status,pay.date,pay.method,pay.note]);
+    });
+    poList.filter(p=>{
+      const total=(p.unitPrice||0)*(p.qty||0), pay=finPaymentRecord('ap',p.id,total);
+      return finMatchDate(p.date,s)&&finMatchAmount(total,s)&&(!s.status||pay.status===s.status)&&(!q||[p.id,p.supplier,p.itemName].join(' ').toLowerCase().includes(q));
+    }).forEach(p=>{
+      const total=(p.unitPrice||0)*(p.qty||0), pay=finPaymentRecord('ap',p.id,total);
+      rows.push(['미지급금',p.date,p.supplier,p.itemName,total,pay.amount,pay.remaining,pay.status,pay.date,pay.method,pay.note]);
+    });
+    const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet([['구분','일자','거래처','품목','총액','처리액','잔액','상태','처리일','방법','메모'],...rows]);XLSX.utils.book_append_sheet(wb,ws,'채권채무');XLSX.writeFile(wb,`미수금_미지급금_${today()}.xlsx`);return;
   }
   const list=financeFilteredRows(tab); let header=[],rows=[];
   if(tab==='revenue'){header=['납품일','고객사','제품','수량','단가','매출액'];rows=list.map(d=>[d.deliveredAt,getClientName(d.clientId),d.productName||getProductName(d.productId),d.qty,d.price,(d.price||0)*(d.qty||0)]);}
@@ -16187,6 +16506,46 @@ function finMonthList(n) {
 function finRevenueMonth(ym)  { return deliveries.filter(d=>(d.deliveredAt||'').slice(0,7)===ym).reduce((s,d)=>s+(d.price||0)*(d.qty||0),0); }
 function finPurchaseMonth(ym) { return poList.filter(p=>(p.date||'').slice(0,7)===ym).reduce((s,p)=>s+(p.unitPrice||0)*(p.qty||0),0); }
 function finEntryMonth(ym,type){ return financeData.entries.filter(e=>e.type===type && (e.date||'').slice(0,7)===ym).reduce((s,e)=>s+(Number(e.amount)||0),0); }
+function finRangeInfo(range = finDashboardRange) {
+  const now = new Date(today());
+  const fmt = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+  if (range === 'prev') {
+    const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const last = new Date(now.getFullYear(), now.getMonth(), 0);
+    return { label:'지난달', from:fmt(first), to:fmt(last) };
+  }
+  if (range === 'year') return { label:'올해', from:`${now.getFullYear()}-01-01`, to:fmt(now) };
+  if (range === 'all') return { label:'전체', from:'', to:'' };
+  return { label:'이번 달', from:`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`, to:fmt(now) };
+}
+function finDateInRange(date, rangeInfo) {
+  const value = String(date || '').slice(0,10);
+  return (!rangeInfo.from || value >= rangeInfo.from) && (!rangeInfo.to || value <= rangeInfo.to);
+}
+function finMonthsBetween(from, to) {
+  const months = [];
+  if (!from || !to) return months;
+  const start = new Date(from.slice(0,7) + '-01');
+  const end = new Date(to.slice(0,7) + '-01');
+  for (let d = new Date(start); d <= end; d.setMonth(d.getMonth() + 1)) {
+    months.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  }
+  return months;
+}
+function finRangeMonths(rangeInfo) {
+  if (rangeInfo.from || rangeInfo.to) return finMonthsBetween(rangeInfo.from, rangeInfo.to);
+  const set = new Set();
+  deliveries.forEach(d => { if (d.deliveredAt) set.add(String(d.deliveredAt).slice(0,7)); });
+  poList.forEach(p => { if (p.date) set.add(String(p.date).slice(0,7)); });
+  financeData.entries.forEach(e => { if (e.date) set.add(String(e.date).slice(0,7)); });
+  payrollRecords.forEach(p => { if (p.month) set.add(p.month); });
+  if (!set.size) set.add(today().slice(0,7));
+  return [...set].sort();
+}
+function finRevenueRange(rangeInfo) { return deliveries.filter(d=>finDateInRange(d.deliveredAt, rangeInfo)).reduce((s,d)=>s+(d.price||0)*(d.qty||0),0); }
+function finPurchaseRange(rangeInfo) { return poList.filter(p=>finDateInRange(p.date, rangeInfo)).reduce((s,p)=>s+(p.unitPrice||0)*(p.qty||0),0); }
+function finEntryRange(rangeInfo,type) { return financeData.entries.filter(e=>e.type===type && finDateInRange(e.date, rangeInfo)).reduce((s,e)=>s+(Number(e.amount)||0),0); }
+function finPayrollRange(rangeInfo) { return finRangeMonths(rangeInfo).reduce((sum, ym)=>sum+finPayrollMonthly(ym),0); }
 
 /* ── 탭 전환 ── */
 function switchFinTab(tab) {
@@ -16195,10 +16554,27 @@ function switchFinTab(tab) {
   renderFinance();
 }
 
+function updateFinancePrimaryAction() {
+  const button = inp('finance-primary-action');
+  if (!button) return;
+  if (financeTab === 'etc') {
+    button.style.display = 'inline-flex';
+    button.title = '기타 수입/비용 등록';
+    button.innerHTML = '<i class="ti ti-plus"></i>기타 등록';
+  } else {
+    button.style.display = 'none';
+  }
+}
+
+function openFinancePrimaryAction() {
+  if (financeTab === 'etc') openFinanceAdd();
+}
+
 function renderFinance() {
   const body = inp('finance-body'); if (!body) return;
   document.querySelectorAll('#finance-tabs [data-fintab]').forEach(b =>
     b.classList.toggle('btn-primary', b.dataset.fintab === financeTab));
+  updateFinancePrimaryAction();
   const map = {
     dashboard: _finDashboard, revenue: _finRevenue, purchase: _finPurchase,
     cost: _finCost, labor: _finLabor, pnl: _finPnl, ar: _finAR, etc: _finEtc
@@ -16208,13 +16584,14 @@ function renderFinance() {
 
 /* ── 재무 현황 대시보드 ── */
 function _finDashboard() {
-  const rev = finRevenueTotal(), pur = finPurchaseTotal();
+  const rangeInfo = finRangeInfo();
+  const rev = finRevenueRange(rangeInfo), pur = finPurchaseRange(rangeInfo);
   const gross = rev - pur;
   const grossRate = rev > 0 ? Math.round(gross/rev*1000)/10 : 0;
-  const payroll = finPayrollMonthly();
+  const payroll = finPayrollRange(rangeInfo);
   const cm = today().slice(0,7);
-  const cmRev = finRevenueMonth(cm), cmPur = finPurchaseMonth(cm);
-  const cmInc = finEntryMonth(cm,'수입'), cmExp = finEntryMonth(cm,'비용');
+  const cmRev = finRevenueRange(rangeInfo), cmPur = finPurchaseRange(rangeInfo);
+  const cmInc = finEntryRange(rangeInfo,'수입'), cmExp = finEntryRange(rangeInfo,'비용');
   const cmNet = cmRev - cmPur - payroll - cmExp + cmInc;
   const months = finMonthList(6);
   const maxV = Math.max(1, ...months.map(m => Math.max(finRevenueMonth(m.ym), finPurchaseMonth(m.ym))));
@@ -16234,20 +16611,27 @@ function _finDashboard() {
 
   return `
     <div class="toolbar" style="margin-bottom:12px;">
+      <span style="font-size:11px;font-weight:700;color:var(--tx-s);">요약 기준</span>
+      ${[
+        ['month','이번 달'],['prev','지난달'],['year','올해'],['all','전체']
+      ].map(([key,label])=>`<button class="btn btn-sm ${finDashboardRange===key?'btn-primary':''}" onclick="finDashboardRange='${key}';renderFinance()">${label}</button>`).join('')}
+      <span style="font-size:10px;color:var(--tx-t);">${rangeInfo.from ? `${rangeInfo.from} ~ ${rangeInfo.to}` : '전체 기간'}</span>
+    </div>
+    <div class="toolbar" style="margin-bottom:12px;">
       <span style="font-size:11px;font-weight:700;color:var(--tx-s);">월 마감 관리</span>
       <input type="month" value="${finClosingMonth}" onchange="finClosingMonth=this.value;renderFinance()" style="width:130px;">
       <button class="btn btn-sm ${isFinanceMonthClosed(finClosingMonth)?'btn-danger':''}" onclick="toggleFinanceMonthClose('${finClosingMonth}')"><i class="ti ${isFinanceMonthClosed(finClosingMonth)?'ti-lock':'ti-lock-open'}"></i>${isFinanceMonthClosed(finClosingMonth)?'마감 해제':'월 마감'}</button>
       <span style="font-size:10px;color:var(--tx-t);">마감 월의 급여·수입·비용·수금/지급 처리가 잠깁니다.</span>
     </div>
     <div class="metrics">
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-trending-up"></i>누적 매출 (납품 기준)</div><div class="mc-val" style="color:var(--tx-i);">${fmtW(rev)}</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-trending-down"></i>누적 매입/지출 (발주 기준)</div><div class="mc-val" style="color:#e8590c;">${fmtW(pur)}</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-trending-up"></i>${rangeInfo.label} 매출 (납품 기준)</div><div class="mc-val" style="color:var(--tx-i);">${fmtW(rev)}</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-trending-down"></i>${rangeInfo.label} 매입/지출</div><div class="mc-val" style="color:#e8590c;">${fmtW(pur)}</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-report-money"></i>매출총이익</div><div class="mc-val" style="color:${gross>=0?'var(--tx-ok)':'var(--tx-err)'};">${fmtW(gross)}</div><div class="mc-sub">이익률 ${grossRate}%</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-cash"></i>월 인건비</div><div class="mc-val">${fmtW(payroll)}</div><div class="mc-sub">연 환산 ${fmtW(payroll*12)}</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-cash"></i>${rangeInfo.label} 인건비</div><div class="mc-val">${fmtW(payroll)}</div><div class="mc-sub">${finRangeMonths(rangeInfo).length}개월 반영</div></div>
     </div>
 
     <div class="card" style="margin-bottom:16px;">
-      <div class="card-hd"><span class="card-ttl"><i class="ti ti-calendar-stats"></i>이번 달(${cm}) 손익 요약</span></div>
+      <div class="card-hd"><span class="card-ttl"><i class="ti ti-calendar-stats"></i>${rangeInfo.label} 손익 요약</span></div>
       <div style="display:flex;flex-wrap:wrap;gap:24px;padding:6px 4px;font-size:13px;">
         <div>매출 <b style="color:var(--tx-i);">${fmtW(cmRev)}</b></div>
         <div>− 매입/지출 <b style="color:#e8590c;">${fmtW(cmPur)}</b></div>
@@ -16332,6 +16716,51 @@ function _finPurchase() {
 }
 
 /* ── 제품별 제조원가 ── */
+function toggleFinCostDetail(productId) {
+  finCostDetailProductId = finCostDetailProductId === productId ? '' : productId;
+  renderFinance();
+}
+
+function finCostDetailHtml(productId) {
+  if (!productId) return '';
+  const product = products.find(item => item.id === productId);
+  if (!product) return '';
+  const lines = typeof bomFor === 'function' ? bomFor(productId) : [];
+  const unitCost = prodUnitCost(product);
+  const price = Number(product.price) || 0;
+  const margin = price - unitCost;
+  const marginRate = price > 0 ? Math.round(margin / price * 1000) / 10 : 0;
+  const rows = lines.length ? lines.map(line => {
+    const qty = Number(line.qtyPer) || 0;
+    const unitPrice = Number(line.unitPrice) || 0;
+    const amount = qty * unitPrice;
+    const materialName = line.subProductId ? getProductName(line.subProductId) : (line.name || '-');
+    return `<tr>
+      <td style="font-weight:700;">${esc(materialName)}</td>
+      <td>${esc(line.spec || '-')}</td>
+      <td style="text-align:right;">${qty.toLocaleString('ko-KR')} ${esc(line.unit || 'EA')}</td>
+      <td style="text-align:right;">${fmtW(unitPrice)}</td>
+      <td style="text-align:right;font-weight:700;">${fmtW(amount)}</td>
+      <td>${esc(line.supplier || '-')}</td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="6">${empty('등록된 BOM 자재가 없습니다.')}</td></tr>`;
+  return `<div class="card" style="margin-top:16px;border-color:var(--br-i);">
+    <div class="card-hd">
+      <span class="card-ttl"><i class="ti ti-list-details"></i>${esc(product.name)} 원가 상세</span>
+      <span style="font-size:11px;color:var(--tx-t);">제품 행을 다시 누르면 접힙니다.</span>
+    </div>
+    <div class="metrics" style="margin-bottom:14px;">
+      <div class="mc"><div class="mc-lbl">제조원가</div><div class="mc-val" style="color:#e8590c;">${fmtW(unitCost)}</div></div>
+      <div class="mc"><div class="mc-lbl">수주단가</div><div class="mc-val" style="color:var(--tx-i);">${fmtW(price)}</div></div>
+      <div class="mc"><div class="mc-lbl">공헌이익</div><div class="mc-val" style="color:${margin>=0?'var(--tx-ok)':'var(--tx-err)'};">${fmtW(margin)}</div><div class="mc-sub">이익률 ${marginRate}%</div></div>
+    </div>
+    <div style="overflow-x:auto;"><table>
+      <thead><tr><th>자재명</th><th>규격</th><th style="text-align:right;">소요량</th><th style="text-align:right;">단가</th><th style="text-align:right;">금액</th><th>공급처</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+  </div>`;
+}
+
 function _finCost() {
   const state=finState('cost'), query=state.query.trim().toLowerCase();
   let list=products.filter(p=>finMatchAmount(prodUnitCost(p),state) && (!query || [p.id,p.name,getClientName(p.clientId)].join(' ').toLowerCase().includes(query)));
@@ -16346,7 +16775,7 @@ function _finCost() {
     const margin = price - unitCost;
     const rate = price>0 ? Math.round(unitCost/price*1000)/10 : 0;
     return `
-    <tr>
+    <tr data-product-id="${esc(p.id)}" onclick="toggleFinCostDetail(this.dataset.productId)" style="cursor:pointer;${finCostDetailProductId===p.id?'outline:2px solid var(--br-i);':''}">
       <td style="font-weight:700;">${esc(p.id)}</td>
       <td style="font-weight:700;">${esc(p.name)}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${esc(getClientName(p.clientId))}</span></td>
       <td style="text-align:right;">${fmtW(p.matCost||0)}</td>
@@ -16373,7 +16802,8 @@ function _finCost() {
         <thead><tr><th>코드</th><th>제품 / 고객사</th><th style="text-align:right;">재료비</th><th style="text-align:right;">노무비</th><th style="text-align:right;">경비</th><th style="text-align:right;">제조원가</th><th style="text-align:right;">수주단가</th><th style="text-align:right;">원가율</th><th style="text-align:right;">공헌이익</th></tr></thead>
         <tbody>${body}</tbody>
       </table></div>${finPager('cost',page)}
-    </div>`;
+    </div>
+    ${finCostDetailHtml(finCostDetailProductId)}`;
 }
 
 /* ── 급여 명세 (4대보험·원천징수·실지급액) ──
@@ -16470,15 +16900,15 @@ function _finLabor() {
   if (state.status) list=list.filter(w=>(calcPayroll(w,payrollMonth).confirmed?'확정':'작성중')===state.status);
   list=finSort(list,state,()=>'',w=>calcPayroll(w,payrollMonth).net);
   const allList=list, page=finPaged(list,state);
+  const pageAllSelected = page.rows.length > 0 && page.rows.every(w => payrollSelected.has(w.id));
   let payroll=0, tDed=0, tNet=0;
   allList.forEach(w=>{const p=calcPayroll(w,payrollMonth);payroll+=p.gross;tDed+=p.deduction;tNet+=p.net;});
   const body = page.rows.length ? page.rows.map(w => {
     const p = calcPayroll(w, payrollMonth);
     const att = payrollAttendance(w.id, payrollMonth);
-    const docKey = `${w.id}__${payrollMonth}`;
     return `
-    <tr>
-      <td><input type="checkbox" ${payrollSelected.has(w.id)?'checked':''} onchange="togglePayrollSelect('${w.id}',this.checked)"></td>
+    <tr class="${payrollSelected.has(w.id)?'table-row-selected':''}" data-worker-id="${esc(w.id)}" onclick="togglePayrollRow(this.dataset.workerId,event)" style="cursor:pointer;">
+      <td><input type="checkbox" ${payrollSelected.has(w.id)?'checked':''} onclick="event.stopPropagation()" onchange="togglePayrollSelect(this.closest('tr').dataset.workerId,this.checked)"></td>
       <td style="font-weight:700;">${esc(w.id)}</td>
       <td style="font-weight:700;">${esc(w.name)}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${esc(w.dept)||'—'} · ${esc(w.position)||'—'}</span></td>
       <td style="text-align:center;">${att.workDays}일<span style="font-size:9px;color:var(--tx-t);display:block;">연장 ${fmtHm(att.overtimeMinutes)} · 휴일 ${fmtHm(att.holidayMinutes)}</span></td>
@@ -16488,23 +16918,10 @@ function _finLabor() {
       <td style="text-align:right;font-weight:700;color:var(--tx-d);">${fmtW(p.deduction)}</td>
       <td style="text-align:right;font-weight:700;color:var(--tx-ok);">${fmtW(p.net)}</td>
       <td style="text-align:center;">${p.confirmed?'<span class="bd bd-ok">확정</span>':'<span class="bd bd-warn">작성중</span>'}</td>
-      <td style="text-align:center;white-space:nowrap;">
-        <button class="btn btn-sm" onclick="openPayrollEdit('${w.id}')" title="급여 수정" ${closed?'disabled':''}><i class="ti ti-edit"></i></button>
-        <button class="btn btn-sm" onclick="printPayslip('${docKey}')" title="급여명세서 출력"><i class="ti ti-printer"></i></button>
-        <button class="btn btn-sm drive-save-btn" onclick="saveDocumentBundleToGoogleDrive('payslip','${docKey}')" title="PDF/XLSX Drive 저장"><i class="ti ti-cloud-upload"></i></button>
-      </td>
     </tr>`;
-  }).join('') : `<tr><td colspan="11">${empty('조회 조건에 해당하는 직원이 없습니다.')}</td></tr>`;
+  }).join('') : `<tr><td colspan="10">${empty('조회 조건에 해당하는 직원이 없습니다.')}</td></tr>`;
   return `
-    ${payrollSelected.size ? payrollSelectionBarHtml(closed) : `<div class="toolbar" style="margin-bottom:12px;">
-      <button class="btn btn-sm" onclick="payrollMonth=shiftMonth(payrollMonth,-1);renderFinance()"><i class="ti ti-chevron-left"></i></button>
-      <input type="month" value="${payrollMonth}" onchange="payrollMonth=this.value;renderFinance()" style="width:130px;">
-      <button class="btn btn-sm" onclick="payrollMonth=shiftMonth(payrollMonth,1);renderFinance()"><i class="ti ti-chevron-right"></i></button>
-      <button class="btn btn-sm" onclick="payrollMonth=today().slice(0,7);renderFinance()">이번 달</button>
-      <button class="btn btn-sm" onclick="openPayrollSettings()"><i class="ti ti-settings"></i>계산 설정</button>
-      <button class="btn btn-sm ${closed?'btn-danger':''}" onclick="toggleFinanceMonthClose('${payrollMonth}')"><i class="ti ${closed?'ti-lock':'ti-lock-open'}"></i>${closed?'마감됨':'월 마감'}</button>
-      <button class="btn btn-sm" onclick="exportPayrollXLS()"><i class="ti ti-file-spreadsheet"></i>급여대장 XLSX</button>
-    </div>`}
+    <div id="payroll-top-action-row">${payrollSelected.size ? payrollSelectionBarHtml(closed) : payrollDateToolbarHtml(closed)}</div>
     ${finFilterBar('labor',{noDate:true,placeholder:'사번·성명·부서 검색',statuses:['작성중','확정']})}
     <div class="metrics">
       <div class="mc"><div class="mc-lbl"><i class="ti ti-cash" style="color:var(--tx-i);"></i>${monthLabel(payrollMonth)} 지급총액</div><div class="mc-val" style="color:var(--tx-i);">${fmtW(payroll)}</div></div>
@@ -16514,32 +16931,35 @@ function _finLabor() {
     <div class="card">
       <div class="card-hd"><span class="card-ttl"><i class="ti ti-cash"></i>${monthLabel(payrollMonth)} 급여대장</span>
         <span style="font-size:11px;color:var(--tx-t);">자동 계산값은 초깃값이며 실제 신고·공제액 확인 후 확정하세요.</span></div>
-      <div style="overflow-x:auto;"><table>
-        <thead><tr><th><input type="checkbox" onchange="togglePayrollPage(this.checked)"></th><th>사번</th><th>성명/소속</th><th style="text-align:center;">근태</th><th style="text-align:right;">기본급</th><th style="text-align:right;">수당·상여</th><th style="text-align:right;">지급계</th><th style="text-align:right;">공제계</th><th style="text-align:right;">실지급액</th><th style="text-align:center;">상태</th><th style="text-align:center;">관리</th></tr></thead>
+      <div style="overflow-x:auto;"><table id="finance-payroll-table">
+        <thead><tr><th><input type="checkbox" ${pageAllSelected?'checked':''} onchange="togglePayrollPage(this.checked)"></th><th>사번</th><th>성명/소속</th><th style="text-align:center;">근태</th><th style="text-align:right;">기본급</th><th style="text-align:right;">수당·상여</th><th style="text-align:right;">지급계</th><th style="text-align:right;">공제계</th><th style="text-align:right;">실지급액</th><th style="text-align:center;">상태</th></tr></thead>
         <tbody>${body}</tbody>
       </table></div>${finPager('labor',page)}
     </div>`;
 }
 
-function togglePayrollSelect(id,checked){ if(checked)payrollSelected.add(id);else payrollSelected.delete(id);renderFinance(); }
+function togglePayrollSelect(id,checked){ if(checked)payrollSelected.add(id);else payrollSelected.delete(id);refreshPayrollSelectionUi(); }
 function togglePayrollPage(checked){
-  const state=finState('labor'), query=state.query.trim().toLowerCase();
-  let list=workers.filter(w=>finMatchAmount(calcPayroll(w,payrollMonth).net,state) && (!query || [w.id,w.name,w.dept,w.position].join(' ').toLowerCase().includes(query)));
-  if(state.status)list=list.filter(w=>(calcPayroll(w,payrollMonth).confirmed?'확정':'작성중')===state.status);
-  finPaged(list,state).rows.forEach(w=>checked?payrollSelected.add(w.id):payrollSelected.delete(w.id)); renderFinance();
+  payrollPageWorkerIdsFromDom().forEach(id=>checked?payrollSelected.add(id):payrollSelected.delete(id));
+  refreshPayrollSelectionUi();
 }
-function clearPayrollSelection(){payrollSelected.clear();renderFinance();}
+function clearPayrollSelection(){payrollSelected.clear();refreshPayrollSelectionUi();}
 function bulkConfirmPayroll(confirmed){
   if(isFinanceMonthClosed(payrollMonth)){showToast('마감된 월은 변경할 수 없습니다.','error');return;}
-  payrollSelected.forEach(workerId=>{
-    const worker=workers.find(w=>w.id===workerId); if(!worker)return;
-    const calculated=calcPayroll(worker,payrollMonth), current=payrollRecord(workerId,payrollMonth)||{};
-    const record=Object.assign({},calculated,current,{workerId,month:payrollMonth,confirmed,updatedAt:new Date().toISOString()});
-    const index=payrollRecords.findIndex(x=>x.workerId===workerId&&x.month===payrollMonth);
-    if(index>=0)payrollRecords[index]=record;else payrollRecords.push(record);
-  });
-  finAudit('급여 일괄 확정',`${payrollMonth} · ${payrollSelected.size}명`);
-  saveStorage('payrollRecords',payrollRecords);saveStorage('financeData',financeData);renderFinance();
+  if(!payrollSelected.size){showToast('직원을 선택하세요.','info');return;}
+  const action = confirmed ? '확정' : '작성중 전환';
+  confirm_(`급여 일괄 ${action}`, `${monthLabel(payrollMonth)} 급여 ${payrollSelected.size}명을 ${action}하시겠습니까?<br><span style="font-size:11px;color:var(--tx-t);">선택된 직원의 현재 계산값과 수정값이 급여대장에 저장됩니다.</span>`, ()=>{
+    payrollSelected.forEach(workerId=>{
+      const worker=workers.find(w=>w.id===workerId); if(!worker)return;
+      const calculated=calcPayroll(worker,payrollMonth), current=payrollRecord(workerId,payrollMonth)||{};
+      const record=Object.assign({},calculated,current,{workerId,month:payrollMonth,confirmed,updatedAt:new Date().toISOString()});
+      const index=payrollRecords.findIndex(x=>x.workerId===workerId&&x.month===payrollMonth);
+      if(index>=0)payrollRecords[index]=record;else payrollRecords.push(record);
+    });
+    finAudit(`급여 일괄 ${action}`,`${payrollMonth} · ${payrollSelected.size}명`);
+    saveStorage('payrollRecords',payrollRecords);saveStorage('financeData',financeData);renderFinance();
+    showToast(`급여 ${payrollSelected.size}명을 ${action}했습니다.`,'success');
+  }, 'btn-primary', 'ti-checks');
 }
 function bulkSavePayrollDrive(){
   if(!payrollSelected.size){showToast('직원을 선택하세요.','info');return;}
@@ -20884,6 +21304,29 @@ window.addEventListener('resize', () => {
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('finance-modal')">취소</button>
       <button class="btn btn-primary" onclick="saveFinanceEntry()"><i class="ti ti-check"></i>저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 수금/지급 처리 모달 ══ -->
+<div class="overlay" id="payment-modal">
+  <div class="dlg" style="max-width:560px;width:96%;">
+    <div class="dlg-title" id="payment-modal-ttl"><i class="ti ti-cash-banknote" style="color:var(--tx-i);"></i>수금/지급 처리</div>
+    <input type="hidden" id="payment-kind">
+    <input type="hidden" id="payment-id">
+    <div id="payment-source-summary" class="card" style="padding:12px;margin-bottom:14px;background:var(--bg-s);"></div>
+    <div class="fg fg3" style="gap:10px;margin-bottom:14px;">
+      <div class="ff"><label>처리일 *</label><input id="payment-date" type="date"></div>
+      <div class="ff"><label>처리금액 *</label><input id="payment-amount" type="number" min="0" step="10" inputmode="numeric"></div>
+      <div class="ff"><label>처리방법</label>
+        <select id="payment-method"><option>계좌이체</option><option>현금</option><option>카드</option><option>어음</option><option>기타</option></select>
+      </div>
+      <div class="ff" style="grid-column:span 3;"><label>메모</label><input id="payment-note" maxlength="200" placeholder="입금자명, 지급 계좌, 부분 처리 사유 등"></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" id="payment-clear-btn" onclick="clearFinancePayment()"><i class="ti ti-rotate-clockwise"></i>미처리로 되돌리기</button>
+      <button class="btn" onclick="closeModal('payment-modal')">취소</button>
+      <button class="btn btn-primary" onclick="saveFinancePayment()"><i class="ti ti-check"></i>저장</button>
     </div>
   </div>
 </div>
