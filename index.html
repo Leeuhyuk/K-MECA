@@ -18287,6 +18287,7 @@ async function createDocumentPdfBlobFromHtml(html) {
       lastPage.style.pageBreakAfter = 'auto';
       lastPage.style.breakAfter = 'auto';
     }
+    inlineDocumentPdfStyles(content);
     return await html2pdf().from(content).set({
       margin:[0,0,0,0],
       image:{type:'jpeg',quality:.98},
@@ -18309,6 +18310,35 @@ async function createDocumentPdfBlobFromHtml(html) {
   } finally {
     frame.remove();
   }
+}
+
+function inlineDocumentPdfStyles(root) {
+  const win = root.ownerDocument && root.ownerDocument.defaultView;
+  if (!win || !win.getComputedStyle) return;
+  const props = [
+    'box-sizing','display','position','float','clear','width','min-width','max-width','height','min-height','max-height',
+    'margin','margin-top','margin-right','margin-bottom','margin-left',
+    'padding','padding-top','padding-right','padding-bottom','padding-left',
+    'border','border-top','border-right','border-bottom','border-left','border-collapse','border-spacing','border-radius',
+    'background','background-color','box-shadow','color',
+    'font','font-family','font-size','font-weight','font-style','line-height','letter-spacing',
+    'text-align','text-decoration','vertical-align','white-space','word-break','overflow','overflow-wrap',
+    'gap','column-gap','row-gap','justify-content','align-items','align-content','flex','flex-basis','flex-direction','flex-grow','flex-shrink','flex-wrap',
+    'table-layout','object-fit','opacity'
+  ];
+  const nodes = [root].concat(Array.from(root.querySelectorAll('*')));
+  const styles = nodes.map(node => {
+    const computed = win.getComputedStyle(node);
+    return {
+      node,
+      pairs:props.map(prop => [prop, computed.getPropertyValue(prop), computed.getPropertyPriority(prop)])
+    };
+  });
+  styles.forEach(({node, pairs}) => {
+    pairs.forEach(([prop, value, priority]) => {
+      if (value) node.style.setProperty(prop, value, priority || '');
+    });
+  });
 }
 
 function buildDocumentPdfPreviewHtml(html, title, options = {}) {
