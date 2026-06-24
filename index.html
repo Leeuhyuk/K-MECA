@@ -18284,13 +18284,51 @@ async function createDocumentPdfBlobFromHtml(html) {
     frameDoc.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
       <style>${printStyles}</style>
       <style>
+        :root,:root.dark{--tx:#111;--tx-s:#555;--tx-t:#777;--tx-i:#1a3a6e;--bg-p:#fff;--bg-s:#fff;--bg-t:#fff;--br:#ccc;--br-s:#bbb;}
         html,body{width:${pageWidth}px!important;min-width:${pageWidth}px!important;margin:0!important;padding:0!important;
           background:#fff!important;color:#111!important;overflow:visible!important;}
         .mes-print-sheet{width:${pageWidth}px!important;min-height:${pageHeight}px!important;margin:0!important;
-          padding:${pagePaddingY}px ${pagePaddingX}px!important;box-sizing:border-box!important;background:#fff!important;color:#111!important;
+          height:${pageHeight}px!important;padding:${pagePaddingY}px ${pagePaddingX}px!important;box-sizing:border-box!important;background:#fff!important;color:#111!important;
           box-shadow:none!important;font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:12px;}
         .mes-print-fit{transform-origin:top left;}
-        .mes-print-sheet table{max-width:100%;position:static!important;}
+        .mes-print-sheet .doc-header{display:flex!important;align-items:flex-end!important;justify-content:space-between!important;border-bottom:3px solid #1a3a6e!important;padding-bottom:12px!important;margin-bottom:20px!important;}
+        .mes-print-sheet .co-name{font-size:16px!important;font-weight:800!important;color:#1a3a6e!important;}
+        .mes-print-sheet .co-detail{font-size:9.5px!important;color:#777!important;margin-top:2px!important;}
+        .mes-print-sheet .doc-title{font-size:24px!important;font-weight:900!important;color:#1a3a6e!important;letter-spacing:.12em!important;text-align:right!important;}
+        .mes-print-sheet .doc-no{font-size:11px!important;color:#555!important;text-align:right!important;margin-top:4px!important;font-weight:600!important;}
+        .mes-print-sheet .approval-box{display:flex!important;border:1px solid #bbb!important;width:fit-content!important;margin-left:auto!important;margin-bottom:16px!important;}
+        .mes-print-sheet .apv-cell{width:60px!important;border-right:1px solid #bbb!important;text-align:center!important;}
+        .mes-print-sheet .apv-cell:last-child{border-right:none!important;}
+        .mes-print-sheet .apv-title{font-size:9px!important;font-weight:700!important;background:#fff!important;color:#555!important;padding:3px 0!important;border-bottom:1px solid #bbb!important;}
+        .mes-print-sheet .apv-sign{height:40px!important;}
+        .mes-print-sheet table{width:100%!important;max-width:100%!important;border-collapse:collapse!important;margin-bottom:14px!important;position:static!important;background:#fff!important;color:#111!important;}
+        .mes-print-sheet th,.mes-print-sheet td{border:1px solid #ccc!important;padding:6px 9px!important;vertical-align:middle!important;background:#fff!important;color:#111!important;}
+        .mes-print-sheet .info-tbl th{background:#fff!important;font-weight:700!important;color:#333!important;width:100px!important;text-align:left!important;font-size:11px!important;}
+        .mes-print-sheet .info-tbl td{font-size:12px!important;}
+        .mes-print-sheet .info-tbl .hl{font-weight:800!important;font-size:13px!important;color:#1a3a6e!important;}
+        .mes-print-sheet .sec-title{font-size:10px!important;font-weight:800!important;color:#1a3a6e!important;letter-spacing:.05em!important;background:#fff!important;border-left:4px solid #1a3a6e!important;padding:5px 9px!important;margin-bottom:0!important;}
+        .mes-print-sheet .items-tbl th{background:#fff!important;color:#1a3a6e!important;font-size:10px!important;font-weight:700!important;text-align:center!important;padding:7px 6px!important;}
+        .mes-print-sheet .items-tbl td{font-size:11px!important;padding:7px 6px!important;}
+        .mes-print-sheet .num{text-align:right!important;}
+        .mes-print-sheet .ctr{text-align:center!important;}
+        .mes-print-sheet .total-row td{background:#fff!important;font-weight:800!important;border-top:2px solid #1a3a6e!important;}
+        .mes-print-sheet .empty-row td{color:#ccc!important;font-size:10px!important;text-align:center!important;height:24px!important;}
+        .mes-print-sheet .sum-wrap{display:flex!important;justify-content:flex-end!important;margin-bottom:16px!important;}
+        .mes-print-sheet .sum-box{border:2px solid #1a3a6e!important;border-radius:5px!important;overflow:hidden!important;min-width:280px!important;}
+        .mes-print-sheet .sum-row{display:flex!important;border-bottom:1px solid #dde!important;font-size:11px!important;}
+        .mes-print-sheet .sum-row:last-child{border-bottom:none!important;}
+        .mes-print-sheet .sum-lbl{padding:7px 14px!important;background:#fff!important;font-weight:700!important;color:#555!important;flex:0 0 110px!important;}
+        .mes-print-sheet .sum-val{padding:7px 14px!important;font-weight:700!important;text-align:right!important;flex:1!important;color:#111!important;}
+        .mes-print-sheet .sum-final .sum-lbl{background:#fff!important;color:#1a3a6e!important;font-size:12px!important;}
+        .mes-print-sheet .sum-final .sum-val{font-size:14px!important;font-weight:900!important;color:#1a3a6e!important;}
+        .mes-print-sheet .remarks{border:1px solid #ccc!important;border-radius:4px!important;padding:10px 12px!important;font-size:10.5px!important;color:#444!important;line-height:1.8!important;margin-bottom:20px!important;background:#fff!important;}
+        .mes-print-sheet .remarks-title{font-weight:800!important;color:#1a3a6e!important;font-size:10px!important;margin-bottom:5px!important;letter-spacing:.04em!important;}
+        .mes-print-sheet .sign-area{display:flex!important;justify-content:space-between!important;align-items:flex-end!important;}
+        .mes-print-sheet .sign-left{font-size:10px!important;color:#777!important;line-height:1.8!important;}
+        .mes-print-sheet .sign-right{display:flex!important;gap:12px!important;}
+        .mes-print-sheet .sign-box{border:1px solid #bbb!important;border-radius:3px!important;text-align:center!important;padding:6px 0 0!important;min-width:82px!important;}
+        .mes-print-sheet .sign-title{font-size:9.5px!important;font-weight:700!important;color:#555!important;margin-bottom:3px!important;}
+        .mes-print-sheet .sign-content{height:46px!important;border-top:1px solid #ddd!important;display:flex!important;align-items:center!important;justify-content:center!important;font-size:9px!important;color:#ccc!important;}
         .mes-print-sheet th,.mes-print-sheet td{position:static!important;}
       </style></head><body><main class="mes-print-sheet"><div class="mes-print-fit">${printBodyHtml}</div></main></body></html>`);
     frameDoc.close();
@@ -18301,12 +18339,17 @@ async function createDocumentPdfBlobFromHtml(html) {
     if (fit) {
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       const availableWidth = pageWidth - (pagePaddingX * 2);
+      const availableHeight = pageHeight - (pagePaddingY * 2);
       const actualWidth = Math.max(availableWidth, fit.scrollWidth || 0, fit.getBoundingClientRect().width || 0);
-      const scale = actualWidth > availableWidth ? availableWidth / actualWidth : 1;
+      const actualHeight = Math.max(availableHeight, fit.scrollHeight || 0, fit.getBoundingClientRect().height || 0);
+      const scale = Math.min(1, availableWidth / actualWidth, availableHeight / actualHeight);
       fit.style.width = actualWidth + 'px';
+      fit.style.height = Math.ceil(actualHeight * scale) + 'px';
       fit.style.transform = 'scale(' + scale + ')';
       fit.style.margin = '0';
-      content.style.minHeight = Math.max(pageHeight, Math.ceil((fit.scrollHeight || pageHeight) * scale) + (pagePaddingY * 2)) + 'px';
+      content.style.height = pageHeight + 'px';
+      content.style.minHeight = pageHeight + 'px';
+      content.style.overflow = 'hidden';
     }
     const pageElements = Array.from((fit || content).children);
     const lastPage = pageElements[pageElements.length - 1];
