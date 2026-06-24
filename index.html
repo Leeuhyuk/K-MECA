@@ -3891,7 +3891,7 @@ const DATA_KEYS = [
   'checkRecords','alerts','inventory','deliveries','stages','trash','rfqList',
   'poList','partners','financeData','attendance','leaves','payrollRecords','statementList',
   'taxList','quoteList','orderList','inventoryLedger','alimtalkSettings','memoList','todoList','memoAttachmentData',
-  'asList','bomList','companyInfo','docXlsxTemplates','googleDriveConfig'
+  'asList','bomList','companyInfo','docXlsxTemplates','driveOAuthSettings'
 ];
 
 function buildDataBackupPayload() {
@@ -10875,7 +10875,7 @@ const FIREBASE_CONFIG = Object.assign(
   loadStorage('firebaseConfig', {})
 );
 /* 클라우드로 공유할 데이터 키(테마/관리자비번 등 기기·보안 로컬값은 제외) */
-const CLOUD_KEYS = ['clients','products','materials','workOrders','workers','defects','claims','checkRecords','alerts','inventory','inventoryLedger','deliveries','stages','trash','rfqList','poList','partners','statementList','taxList','quoteList','orderList','financeData','attendance','leaves','payrollRecords','asList','bomList','memoList','todoList','companyInfo','docXlsxTemplates','googleDriveConfig'];
+const CLOUD_KEYS = ['clients','products','materials','workOrders','workers','defects','claims','checkRecords','alerts','inventory','inventoryLedger','deliveries','stages','trash','rfqList','poList','partners','statementList','taxList','quoteList','orderList','financeData','attendance','leaves','payrollRecords','asList','bomList','memoList','todoList','companyInfo','docXlsxTemplates','driveOAuthSettings'];
 let _fbAuth=null, _fbDb=null, _cloudUser=null;   // _cloudActive는 앞쪽(전역 상태)에서 선언됨
 const _cloudQueue=new Set(); let _cloudTimer=null; let _cloudUnsub=null;
 
@@ -17862,6 +17862,7 @@ async function testGeminiApi(ev) {
 /* ════════ Google Drive 백업 연동 ════════ */
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const DRIVE_FOLDER_NAME = 'MESPro';
+const DRIVE_OAUTH_SETTINGS_KEY = 'driveOAuthSettings';
 let _driveTokenClient = null;
 let _driveAccessToken = '';
 let _driveTokenExpiresAt = 0;
@@ -17880,13 +17881,32 @@ function getDriveConfig() {
     autoBackupEnabled: false,
     autoBackupHours: 24
   };
-  return Object.assign({}, defaults, loadStorage('googleDriveConfig', defaults) || {});
+  const localConfig = loadStorage('googleDriveConfig', defaults) || {};
+  const sharedOAuth = loadStorage(DRIVE_OAUTH_SETTINGS_KEY, {}) || {};
+  return Object.assign({}, defaults, localConfig, {
+    clientId: localConfig.clientId || sharedOAuth.clientId || ''
+  });
 }
 
 function saveDriveConfig(config) {
   const nextConfig = config || {};
-  if (typeof saveStorage === 'function') saveStorage('googleDriveConfig', nextConfig);
-  else localStorage.setItem('mes_googleDriveConfig', JSON.stringify(nextConfig));
+  try {
+    localStorage.setItem('mes_googleDriveConfig', JSON.stringify(nextConfig));
+  } catch(e) {
+    if (typeof showToast === 'function') showToast('Google Drive 설정을 저장하지 못했습니다. 브라우저 저장 공간을 확인하세요.', 'error');
+    console.error('Google Drive 설정 저장 실패:', e);
+  }
+}
+
+function saveDriveOAuthSettings(config) {
+  const clientId = String(config && config.clientId || '').trim();
+  if (!clientId) return;
+  const shared = Object.assign({}, loadStorage(DRIVE_OAUTH_SETTINGS_KEY, {}) || {}, {
+    clientId,
+    updatedAt: new Date().toISOString()
+  });
+  if (typeof saveStorage === 'function') saveStorage(DRIVE_OAUTH_SETTINGS_KEY, shared);
+  else localStorage.setItem('mes_' + DRIVE_OAUTH_SETTINGS_KEY, JSON.stringify(shared));
 }
 
 function getGoogleDriveConfig() {
@@ -18050,6 +18070,7 @@ async function uploadBlobToGoogleDrive(blob, fileName, folderName) {
 async function connectGoogleDrive() {
   try {
     const config = getDriveConfig();
+    saveDriveOAuthSettings(config);
     const promptMode = (config.connectedEmail || config.folderId) ? 'select_account' : 'consent';
     await requestDriveAccessToken(promptMode);
     await ensureDriveBackupFolder();
@@ -18076,7 +18097,7 @@ async function autoConnectGoogleDriveAfterLogin() {
   if (_driveAutoConnectAttempted || _driveAccessToken) return;
   const config = getDriveConfig();
   if (!config.autoConnectEnabled || !config.clientId || !_driveHostedOriginAvailable()) return;
-  if (typeof cloudQueueSave === 'function') cloudQueueSave('googleDriveConfig');
+  saveDriveOAuthSettings(config);
   _driveAutoConnectAttempted = true;
   try {
     await requestDriveAccessToken('');
@@ -18114,6 +18135,7 @@ function saveGoogleDriveSettings() {
   config.autoBackupEnabled = !!(inp('drive-auto-enabled') && inp('drive-auto-enabled').checked);
   config.autoBackupHours = Math.max(1, Number(v('drive-auto-hours')) || 24);
   saveDriveConfig(config);
+  saveDriveOAuthSettings(config);
   _driveAutoConnectAttempted = false;
   scheduleGoogleDriveAutoBackup();
   showToast('Google Drive OAuth 설정을 저장했습니다.', 'success');
