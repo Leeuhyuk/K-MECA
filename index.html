@@ -18266,14 +18266,8 @@ function captureDocumentPrintHtml(callback) {
 
 async function createDocumentPdfBlobFromHtml(html) {
   if (typeof html2pdf === 'undefined') throw new Error('PDF 생성 라이브러리가 준비되지 않았습니다.');
-  const parsed = new DOMParser().parseFromString(html, 'text/html');
-  const printStyles = Array.from(parsed.head.querySelectorAll('style')).map(style => style.textContent || '').join('\n');
-  const capturedSheet = parsed.body.querySelector('.mes-print-sheet');
-  const printBodyHtml = capturedSheet ? capturedSheet.innerHTML : parsed.body.innerHTML;
   const pageWidth = 794;
   const pageHeight = 1123;
-  const pagePaddingX = 24;
-  const pagePaddingY = 20;
   const frame = document.createElement('iframe');
   frame.setAttribute('aria-hidden', 'true');
   frame.style.cssText = 'position:fixed;left:0;top:0;width:' + pageWidth + 'px;height:' + pageHeight + 'px;border:0;pointer-events:none;opacity:.01;z-index:0;';
@@ -18281,77 +18275,13 @@ async function createDocumentPdfBlobFromHtml(html) {
   try {
     const frameDoc = frame.contentDocument;
     frameDoc.open();
-    frameDoc.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
-      <style>${printStyles}</style>
-      <style>
-        :root,:root.dark{--tx:#111;--tx-s:#555;--tx-t:#777;--tx-i:#1a3a6e;--bg-p:#fff;--bg-s:#fff;--bg-t:#fff;--br:#ccc;--br-s:#bbb;}
-        html,body{width:${pageWidth}px!important;min-width:${pageWidth}px!important;margin:0!important;padding:0!important;
-          background:#fff!important;color:#111!important;overflow:visible!important;}
-        .mes-print-sheet{width:${pageWidth}px!important;min-height:${pageHeight}px!important;margin:0!important;
-          height:${pageHeight}px!important;padding:${pagePaddingY}px ${pagePaddingX}px!important;box-sizing:border-box!important;background:#fff!important;color:#111!important;
-          box-shadow:none!important;font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:12px;}
-        .mes-print-fit{transform-origin:top left;}
-        .mes-print-sheet .doc-header{display:flex!important;align-items:flex-end!important;justify-content:space-between!important;border-bottom:3px solid #1a3a6e!important;padding-bottom:12px!important;margin-bottom:20px!important;}
-        .mes-print-sheet .co-name{font-size:16px!important;font-weight:800!important;color:#1a3a6e!important;}
-        .mes-print-sheet .co-detail{font-size:9.5px!important;color:#777!important;margin-top:2px!important;}
-        .mes-print-sheet .doc-title{font-size:24px!important;font-weight:900!important;color:#1a3a6e!important;letter-spacing:.12em!important;text-align:right!important;}
-        .mes-print-sheet .doc-no{font-size:11px!important;color:#555!important;text-align:right!important;margin-top:4px!important;font-weight:600!important;}
-        .mes-print-sheet .approval-box{display:flex!important;border:1px solid #bbb!important;width:fit-content!important;margin-left:auto!important;margin-bottom:16px!important;}
-        .mes-print-sheet .apv-cell{width:60px!important;border-right:1px solid #bbb!important;text-align:center!important;}
-        .mes-print-sheet .apv-cell:last-child{border-right:none!important;}
-        .mes-print-sheet .apv-title{font-size:9px!important;font-weight:700!important;background:#fff!important;color:#555!important;padding:3px 0!important;border-bottom:1px solid #bbb!important;}
-        .mes-print-sheet .apv-sign{height:40px!important;}
-        .mes-print-sheet table{width:100%!important;max-width:100%!important;border-collapse:collapse!important;margin-bottom:14px!important;position:static!important;background:#fff!important;color:#111!important;}
-        .mes-print-sheet th,.mes-print-sheet td{border:1px solid #ccc!important;padding:6px 9px!important;vertical-align:middle!important;background:#fff!important;color:#111!important;}
-        .mes-print-sheet .info-tbl th{background:#fff!important;font-weight:700!important;color:#333!important;width:100px!important;text-align:left!important;font-size:11px!important;}
-        .mes-print-sheet .info-tbl td{font-size:12px!important;}
-        .mes-print-sheet .info-tbl .hl{font-weight:800!important;font-size:13px!important;color:#1a3a6e!important;}
-        .mes-print-sheet .sec-title{font-size:10px!important;font-weight:800!important;color:#1a3a6e!important;letter-spacing:.05em!important;background:#fff!important;border-left:4px solid #1a3a6e!important;padding:5px 9px!important;margin-bottom:0!important;}
-        .mes-print-sheet .items-tbl th{background:#fff!important;color:#1a3a6e!important;font-size:10px!important;font-weight:700!important;text-align:center!important;padding:7px 6px!important;}
-        .mes-print-sheet .items-tbl td{font-size:11px!important;padding:7px 6px!important;}
-        .mes-print-sheet .num{text-align:right!important;}
-        .mes-print-sheet .ctr{text-align:center!important;}
-        .mes-print-sheet .total-row td{background:#fff!important;font-weight:800!important;border-top:2px solid #1a3a6e!important;}
-        .mes-print-sheet .empty-row td{color:#ccc!important;font-size:10px!important;text-align:center!important;height:24px!important;}
-        .mes-print-sheet .sum-wrap{display:flex!important;justify-content:flex-end!important;margin-bottom:16px!important;}
-        .mes-print-sheet .sum-box{border:2px solid #1a3a6e!important;border-radius:5px!important;overflow:hidden!important;min-width:280px!important;}
-        .mes-print-sheet .sum-row{display:flex!important;border-bottom:1px solid #dde!important;font-size:11px!important;}
-        .mes-print-sheet .sum-row:last-child{border-bottom:none!important;}
-        .mes-print-sheet .sum-lbl{padding:7px 14px!important;background:#fff!important;font-weight:700!important;color:#555!important;flex:0 0 110px!important;}
-        .mes-print-sheet .sum-val{padding:7px 14px!important;font-weight:700!important;text-align:right!important;flex:1!important;color:#111!important;}
-        .mes-print-sheet .sum-final .sum-lbl{background:#fff!important;color:#1a3a6e!important;font-size:12px!important;}
-        .mes-print-sheet .sum-final .sum-val{font-size:14px!important;font-weight:900!important;color:#1a3a6e!important;}
-        .mes-print-sheet .remarks{border:1px solid #ccc!important;border-radius:4px!important;padding:10px 12px!important;font-size:10.5px!important;color:#444!important;line-height:1.8!important;margin-bottom:20px!important;background:#fff!important;}
-        .mes-print-sheet .remarks-title{font-weight:800!important;color:#1a3a6e!important;font-size:10px!important;margin-bottom:5px!important;letter-spacing:.04em!important;}
-        .mes-print-sheet .sign-area{display:flex!important;justify-content:space-between!important;align-items:flex-end!important;}
-        .mes-print-sheet .sign-left{font-size:10px!important;color:#777!important;line-height:1.8!important;}
-        .mes-print-sheet .sign-right{display:flex!important;gap:12px!important;}
-        .mes-print-sheet .sign-box{border:1px solid #bbb!important;border-radius:3px!important;text-align:center!important;padding:6px 0 0!important;min-width:82px!important;}
-        .mes-print-sheet .sign-title{font-size:9.5px!important;font-weight:700!important;color:#555!important;margin-bottom:3px!important;}
-        .mes-print-sheet .sign-content{height:46px!important;border-top:1px solid #ddd!important;display:flex!important;align-items:center!important;justify-content:center!important;font-size:9px!important;color:#ccc!important;}
-        .mes-print-sheet th,.mes-print-sheet td{position:static!important;}
-      </style></head><body><main class="mes-print-sheet"><div class="mes-print-fit">${printBodyHtml}</div></main></body></html>`);
+    frameDoc.write(buildDocumentPdfPreviewHtml(html, '', {exportMode:true}));
     frameDoc.close();
     if (frameDoc.fonts && frameDoc.fonts.ready) await frameDoc.fonts.ready;
     const content = frameDoc.querySelector('.mes-print-sheet');
-    const fit = frameDoc.querySelector('.mes-print-fit');
     if (!content) throw new Error('PDF 문서 영역을 생성하지 못했습니다.');
-    if (fit) {
-      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      const availableWidth = pageWidth - (pagePaddingX * 2);
-      const availableHeight = pageHeight - (pagePaddingY * 2);
-      const actualWidth = Math.max(availableWidth, fit.scrollWidth || 0, fit.getBoundingClientRect().width || 0);
-      const actualHeight = Math.max(availableHeight, fit.scrollHeight || 0, fit.getBoundingClientRect().height || 0);
-      const scale = Math.min(1, availableWidth / actualWidth, availableHeight / actualHeight);
-      fit.style.width = actualWidth + 'px';
-      fit.style.height = Math.ceil(actualHeight * scale) + 'px';
-      fit.style.transform = 'scale(' + scale + ')';
-      fit.style.margin = '0';
-      content.style.height = pageHeight + 'px';
-      content.style.minHeight = pageHeight + 'px';
-      content.style.overflow = 'hidden';
-    }
-    const pageElements = Array.from((fit || content).children);
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const pageElements = Array.from(content.children);
     const lastPage = pageElements[pageElements.length - 1];
     if (lastPage) {
       lastPage.style.pageBreakAfter = 'auto';
@@ -18366,7 +18296,7 @@ async function createDocumentPdfBlobFromHtml(html) {
         logging:false,
         backgroundColor:'#ffffff',
         windowWidth:pageWidth,
-        windowHeight:Math.max(pageHeight, content.scrollHeight || pageHeight),
+        windowHeight:Math.max(pageHeight, content.scrollHeight || content.offsetHeight || pageHeight),
         width:pageWidth,
         x:0,
         y:0,
@@ -18379,6 +18309,51 @@ async function createDocumentPdfBlobFromHtml(html) {
   } finally {
     frame.remove();
   }
+}
+
+function buildDocumentPdfPreviewHtml(html, title, options = {}) {
+  const parsed = new DOMParser().parseFromString(html, 'text/html');
+  const head = parsed.head.innerHTML;
+  const body = parsed.body.innerHTML;
+  const exportMode = !!options.exportMode;
+  const showToolbar = !exportMode;
+  const safeTitle = _driveEsc(title || '인쇄 미리보기');
+  return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+    <title>${safeTitle}</title>${head}
+    <style>
+      html{background:#292b2f;}
+      body{margin:0!important;padding:76px 24px 36px!important;background:#292b2f!important;color:#111;}
+      body.mes-print-export{width:794px!important;min-width:794px!important;margin:0!important;padding:0!important;background:#fff!important;overflow:visible!important;}
+      .mes-print-toolbar{position:fixed;z-index:100;left:0;right:0;top:0;height:56px;padding:0 22px;
+        display:flex;align-items:center;justify-content:space-between;background:#202226;color:#fff;
+        box-shadow:0 2px 12px rgba(0,0,0,.35);font:13px 'Malgun Gothic',sans-serif;}
+      .mes-print-actions{display:flex;gap:8px;}
+      .mes-print-actions button{height:34px;padding:0 14px;border:1px solid #59606b;border-radius:6px;
+        background:#343941;color:#fff;font:inherit;font-weight:700;cursor:pointer;}
+      .mes-print-actions button.primary{background:#2878d0;border-color:#2878d0;}
+      .mes-print-sheet{width:794px;min-height:1123px;margin:0 auto;padding:20px 24px;box-sizing:border-box;
+        background:#fff;color:#111;box-shadow:0 8px 30px rgba(0,0,0,.45);}
+      body.mes-print-export .mes-print-sheet{margin:0!important;box-shadow:none!important;}
+      @media(max-width:850px){
+        body{padding-left:8px!important;padding-right:8px!important;}
+        .mes-print-sheet{transform-origin:top left;}
+      }
+      @media print{
+        html,body{background:#fff!important;}
+        body{padding:20px 24px!important;}
+        .mes-print-toolbar{display:none!important;}
+        .mes-print-sheet{width:auto;min-height:0;margin:0;padding:0;box-shadow:none;}
+      }
+    </style></head><body${exportMode ? ' class="mes-print-export"' : ''}>
+      ${showToolbar ? `<div class="mes-print-toolbar">
+        <strong>${safeTitle} · A4 출력 기준</strong>
+        <div class="mes-print-actions">
+          <button onclick="window.close()">닫기</button>
+          <button class="primary" onclick="window.print()">인쇄 / PDF 저장</button>
+        </div>
+      </div>` : ''}
+      <main class="mes-print-sheet">${body}</main>
+    </body></html>`;
 }
 
 async function documentPdfBlob(type, id) {
@@ -18398,43 +18373,7 @@ function openDocumentPdfPreview(html, title) {
     showToast('PDF 미리보기 창을 열 수 없습니다. 팝업 차단을 해제해 주세요.', 'error');
     return;
   }
-  const parsed = new DOMParser().parseFromString(html, 'text/html');
-  const head = parsed.head.innerHTML;
-  const body = parsed.body.innerHTML;
-  preview.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
-    <title>${_driveEsc(title || '인쇄 미리보기')}</title>${head}
-    <style>
-      html{background:#292b2f;}
-      body{margin:0!important;padding:76px 24px 36px!important;background:#292b2f!important;color:#111;}
-      .mes-print-toolbar{position:fixed;z-index:100;left:0;right:0;top:0;height:56px;padding:0 22px;
-        display:flex;align-items:center;justify-content:space-between;background:#202226;color:#fff;
-        box-shadow:0 2px 12px rgba(0,0,0,.35);font:13px 'Malgun Gothic',sans-serif;}
-      .mes-print-actions{display:flex;gap:8px;}
-      .mes-print-actions button{height:34px;padding:0 14px;border:1px solid #59606b;border-radius:6px;
-        background:#343941;color:#fff;font:inherit;font-weight:700;cursor:pointer;}
-      .mes-print-actions button.primary{background:#2878d0;border-color:#2878d0;}
-      .mes-print-sheet{width:794px;min-height:1123px;margin:0 auto;padding:20px 24px;box-sizing:border-box;
-        background:#fff;color:#111;box-shadow:0 8px 30px rgba(0,0,0,.45);}
-      @media(max-width:850px){
-        body{padding-left:8px!important;padding-right:8px!important;}
-        .mes-print-sheet{transform-origin:top left;}
-      }
-      @media print{
-        html,body{background:#fff!important;}
-        body{padding:20px 24px!important;}
-        .mes-print-toolbar{display:none!important;}
-        .mes-print-sheet{width:auto;min-height:0;margin:0;padding:0;box-shadow:none;}
-      }
-    </style></head><body>
-      <div class="mes-print-toolbar">
-        <strong>${_driveEsc(title || '인쇄 미리보기')} · A4 출력 기준</strong>
-        <div class="mes-print-actions">
-          <button onclick="window.close()">닫기</button>
-          <button class="primary" onclick="window.print()">인쇄 / PDF 저장</button>
-        </div>
-      </div>
-      <main class="mes-print-sheet">${body}</main>
-    </body></html>`);
+  preview.document.write(buildDocumentPdfPreviewHtml(html, title));
   preview.document.close();
 }
 
