@@ -18268,6 +18268,7 @@ async function createDocumentPdfBlobFromHtml(html) {
   if (typeof html2pdf === 'undefined') throw new Error('PDF 생성 라이브러리가 준비되지 않았습니다.');
   const pageWidth = 794;
   const pageHeight = 1123;
+  const canvasHeight = pageHeight - 12;
   const frame = document.createElement('iframe');
   frame.setAttribute('aria-hidden', 'true');
   frame.style.cssText = 'position:fixed;left:0;top:0;width:' + pageWidth + 'px;height:' + pageHeight + 'px;border:0;pointer-events:none;opacity:.01;z-index:0;';
@@ -18287,25 +18288,36 @@ async function createDocumentPdfBlobFromHtml(html) {
       lastPage.style.pageBreakAfter = 'auto';
       lastPage.style.breakAfter = 'auto';
     }
-    fitDocumentPdfPages(content, pageWidth, pageHeight);
+    const outputHeight = fitDocumentPdfPages(content, pageWidth, canvasHeight) || canvasHeight;
     inlineDocumentPdfStyles(content);
+    const canvasOptions = {
+      scale:2,
+      useCORS:true,
+      logging:false,
+      backgroundColor:'#ffffff',
+      windowWidth:pageWidth,
+      windowHeight:outputHeight,
+      width:pageWidth,
+      height:outputHeight,
+      x:0,
+      y:0,
+      scrollX:0,
+      scrollY:0
+    };
+    const JsPdf = window.jspdf && window.jspdf.jsPDF;
+    if (typeof html2canvas !== 'undefined' && JsPdf) {
+      const canvas = await html2canvas(content, canvasOptions);
+      const pdf = new JsPdf({unit:'mm',format:'a4',orientation:'portrait'});
+      const pdfWidth = 210;
+      const pdfHeight = Math.min(297, (canvas.height * pdfWidth) / canvas.width);
+      pdf.addImage(canvas.toDataURL('image/jpeg', .98), 'JPEG', 0, 0, pdfWidth, pdfHeight);
+      return pdf.output('blob');
+    }
     return await html2pdf().from(content).set({
       margin:[0,0,0,0],
       image:{type:'jpeg',quality:.98},
-      html2canvas:{
-        scale:2,
-        useCORS:true,
-        logging:false,
-        backgroundColor:'#ffffff',
-        windowWidth:pageWidth,
-        windowHeight:Math.max(pageHeight, content.scrollHeight || content.offsetHeight || pageHeight),
-        width:pageWidth,
-        x:0,
-        y:0,
-        scrollX:0,
-        scrollY:0
-      },
-      pagebreak:{mode:['avoid-all','css','legacy']},
+      html2canvas:canvasOptions,
+      pagebreak:{mode:['css','legacy']},
       jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
     }).outputPdf('blob');
   } finally {
@@ -18316,7 +18328,7 @@ async function createDocumentPdfBlobFromHtml(html) {
 function fitDocumentPdfPages(content, pageWidth, pageHeight) {
   const doc = content.ownerDocument;
   const win = doc && doc.defaultView;
-  if (!win || !win.getComputedStyle) return;
+  if (!win || !win.getComputedStyle) return 0;
   const contentStyle = win.getComputedStyle(content);
   const paddingX =
     (parseFloat(contentStyle.paddingLeft) || 0) +
@@ -18327,7 +18339,8 @@ function fitDocumentPdfPages(content, pageWidth, pageHeight) {
   const availableWidth = pageWidth - paddingX;
   const availableHeight = pageHeight - paddingY;
   const pages = Array.from(content.children).filter(node => node && node.nodeType === 1);
-  if (!pages.length) return;
+  if (!pages.length) return 0;
+  let totalInnerHeight = 0;
   pages.forEach((page, index) => {
     page.style.pageBreakAfter = 'auto';
     page.style.breakAfter = 'auto';
@@ -18336,10 +18349,11 @@ function fitDocumentPdfPages(content, pageWidth, pageHeight) {
     const naturalWidth = Math.max(1, rect.width || page.scrollWidth || availableWidth);
     const naturalHeight = Math.max(1, rect.height || page.scrollHeight || availableHeight);
     const scale = Math.min(1, availableWidth / naturalWidth, availableHeight / naturalHeight);
+    const fittedHeight = Math.ceil(naturalHeight * scale);
     const wrapper = doc.createElement('div');
     wrapper.className = 'mes-print-page-fit';
     wrapper.style.width = availableWidth + 'px';
-    wrapper.style.height = Math.ceil(naturalHeight * scale) + 'px';
+    wrapper.style.height = fittedHeight + 'px';
     wrapper.style.overflow = 'hidden';
     wrapper.style.position = 'relative';
     wrapper.style.background = '#fff';
@@ -18352,14 +18366,21 @@ function fitDocumentPdfPages(content, pageWidth, pageHeight) {
     page.style.width = naturalWidth + 'px';
     page.style.transformOrigin = 'top left';
     page.style.transform = 'scale(' + scale + ')';
+    totalInnerHeight += fittedHeight;
   });
+  const totalHeight = pages.length === 1
+    ? pageHeight
+    : Math.max(pageHeight, totalInnerHeight + paddingY);
   content.style.width = pageWidth + 'px';
-  content.style.minHeight = pageHeight + 'px';
+  content.style.minHeight = totalHeight + 'px';
+  content.style.height = totalHeight + 'px';
+  content.style.maxHeight = totalHeight + 'px';
+  content.style.overflow = 'hidden';
   if (pages.length === 1) {
-    content.style.height = pageHeight + 'px';
-    content.style.maxHeight = pageHeight + 'px';
-    content.style.overflow = 'hidden';
+    content.style.pageBreakAfter = 'auto';
+    content.style.breakAfter = 'auto';
   }
+  return totalHeight;
 }
 
 function inlineDocumentPdfStyles(root) {
