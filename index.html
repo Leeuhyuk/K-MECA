@@ -938,7 +938,10 @@ body.mega-menu-open { overflow: hidden; }
 
 /* 폼 컨트롤 */
 input, select, textarea { font-size: 12px; padding: 6px 10px; height: 32px; font-family: var(--f); background: var(--bg-p); color: var(--tx); border: 1px solid var(--br-s); border-radius: var(--rm); outline: none; transition: border-color .15s, box-shadow .15s; }
-input:focus, select:focus, textarea:focus { border-color: var(--tx-i); box-shadow: 0 0 0 3px rgba(24, 95, 165, 0.15); }
+input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:focus { border-color: var(--tx-i); box-shadow: 0 0 0 3px rgba(24, 95, 165, 0.15); }
+input[type="checkbox"], input[type="radio"] { width: 16px; height: 16px; min-width: 16px; flex: 0 0 16px; margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; accent-color: var(--tx-i); cursor: pointer; vertical-align: middle; transition: none; }
+input[type="checkbox"]:active, input[type="radio"]:active { transform: none; }
+input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { outline: 2px solid var(--tx-i); outline-offset: 2px; }
 input[readonly] { background: var(--bg-s); color: var(--tx-t); cursor: not-allowed; }
 textarea { height: auto; resize: vertical; }
 
@@ -18267,12 +18270,13 @@ async function createDocumentPdfBlobFromHtml(html) {
   const printStyles = Array.from(parsed.head.querySelectorAll('style')).map(style => style.textContent || '').join('\n');
   const capturedSheet = parsed.body.querySelector('.mes-print-sheet');
   const printBodyHtml = capturedSheet ? capturedSheet.innerHTML : parsed.body.innerHTML;
+  const pageWidth = 794;
+  const pageHeight = 1123;
+  const pagePaddingX = 24;
+  const pagePaddingY = 20;
   const frame = document.createElement('iframe');
   frame.setAttribute('aria-hidden', 'true');
-  // html2canvas uses the rendered element coordinates. A large negative offset
-  // clips the left side of the captured page, so keep the frame at page origin
-  // and place it behind the application instead.
-  frame.style.cssText = 'position:fixed;left:0;top:0;width:794px;height:1123px;border:0;pointer-events:none;z-index:-2147483647;';
+  frame.style.cssText = 'position:fixed;left:0;top:0;width:' + pageWidth + 'px;height:' + pageHeight + 'px;border:0;pointer-events:none;opacity:.01;z-index:0;';
   document.body.appendChild(frame);
   try {
     const frameDoc = frame.contentDocument;
@@ -18280,19 +18284,31 @@ async function createDocumentPdfBlobFromHtml(html) {
     frameDoc.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
       <style>${printStyles}</style>
       <style>
-        html,body{width:794px!important;min-width:794px!important;margin:0!important;padding:0!important;
+        html,body{width:${pageWidth}px!important;min-width:${pageWidth}px!important;margin:0!important;padding:0!important;
           background:#fff!important;color:#111!important;overflow:visible!important;}
-        .mes-print-sheet{width:794px!important;min-height:1123px!important;margin:0!important;
-          padding:20px 24px!important;box-sizing:border-box!important;background:#fff!important;color:#111!important;
+        .mes-print-sheet{width:${pageWidth}px!important;min-height:${pageHeight}px!important;margin:0!important;
+          padding:${pagePaddingY}px ${pagePaddingX}px!important;box-sizing:border-box!important;background:#fff!important;color:#111!important;
           box-shadow:none!important;font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:12px;}
-        .mes-print-sheet table{width:100%;max-width:100%;position:static!important;}
+        .mes-print-fit{transform-origin:top left;}
+        .mes-print-sheet table{max-width:100%;position:static!important;}
         .mes-print-sheet th,.mes-print-sheet td{position:static!important;}
-      </style></head><body><main class="mes-print-sheet">${printBodyHtml}</main></body></html>`);
+      </style></head><body><main class="mes-print-sheet"><div class="mes-print-fit">${printBodyHtml}</div></main></body></html>`);
     frameDoc.close();
     if (frameDoc.fonts && frameDoc.fonts.ready) await frameDoc.fonts.ready;
     const content = frameDoc.querySelector('.mes-print-sheet');
+    const fit = frameDoc.querySelector('.mes-print-fit');
     if (!content) throw new Error('PDF 문서 영역을 생성하지 못했습니다.');
-    const pageElements = Array.from(content.children);
+    if (fit) {
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const availableWidth = pageWidth - (pagePaddingX * 2);
+      const actualWidth = Math.max(availableWidth, fit.scrollWidth || 0, fit.getBoundingClientRect().width || 0);
+      const scale = actualWidth > availableWidth ? availableWidth / actualWidth : 1;
+      fit.style.width = actualWidth + 'px';
+      fit.style.transform = 'scale(' + scale + ')';
+      fit.style.margin = '0';
+      content.style.minHeight = Math.max(pageHeight, Math.ceil((fit.scrollHeight || pageHeight) * scale) + (pagePaddingY * 2)) + 'px';
+    }
+    const pageElements = Array.from((fit || content).children);
     const lastPage = pageElements[pageElements.length - 1];
     if (lastPage) {
       lastPage.style.pageBreakAfter = 'auto';
@@ -18306,9 +18322,11 @@ async function createDocumentPdfBlobFromHtml(html) {
         useCORS:true,
         logging:false,
         backgroundColor:'#ffffff',
-        windowWidth:794,
-        windowHeight:Math.max(1123, content.scrollHeight || 1123),
-        width:794,
+        windowWidth:pageWidth,
+        windowHeight:Math.max(pageHeight, content.scrollHeight || pageHeight),
+        width:pageWidth,
+        x:0,
+        y:0,
         scrollX:0,
         scrollY:0
       },
