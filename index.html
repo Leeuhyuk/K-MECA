@@ -18313,16 +18313,30 @@ async function createDocumentPdfBlobFromHtml(html) {
       pdf.addImage(canvas.toDataURL('image/jpeg', .98), 'JPEG', 0, 0, pdfWidth, pdfHeight);
       return pdf.output('blob');
     }
-    return await html2pdf().from(content).set({
+    return await createSinglePagePdfWithHtml2Pdf(content, {
       margin:[0,0,0,0],
       image:{type:'jpeg',quality:.98},
       html2canvas:canvasOptions,
       pagebreak:{mode:['css','legacy']},
       jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
-    }).outputPdf('blob');
+    });
   } finally {
     frame.remove();
   }
+}
+
+async function createSinglePagePdfWithHtml2Pdf(content, options) {
+  const worker = html2pdf().from(content).set(options).toPdf();
+  const pdf = await worker.get('pdf');
+  const pageCount = () => {
+    if (typeof pdf.getNumberOfPages === 'function') return pdf.getNumberOfPages();
+    if (pdf.internal && typeof pdf.internal.getNumberOfPages === 'function') return pdf.internal.getNumberOfPages();
+    return 1;
+  };
+  while (pageCount() > 1 && typeof pdf.deletePage === 'function') {
+    pdf.deletePage(pageCount());
+  }
+  return pdf.output('blob');
 }
 
 function fitDocumentPdfPages(content, pageWidth, pageHeight) {
