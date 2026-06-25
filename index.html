@@ -1122,15 +1122,43 @@ textarea { height: auto; resize: vertical; }
 .dlg-msg { font-size: 12.5px; color: var(--tx-s); margin-bottom: 20px; line-height: 1.6; }
 .dlg-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
-.doc-item-grid {
+.entry-mode-switch {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  margin: 0 0 12px;
+  border: 1px solid var(--br);
+  border-radius: var(--rm);
+  background: var(--bg);
+}
+.entry-mode-switch button {
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: calc(var(--rm) - 3px);
+  background: transparent;
+  color: var(--tx-s);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.entry-mode-switch button.active {
+  background: var(--bg-i);
+  color: var(--tx-i);
+}
+
+.doc-item-grid,
+.batch-entry-grid {
   grid-column: span 4;
   border: 1px solid var(--br);
   border-radius: var(--rm);
   overflow-x: auto;
   overflow-y: hidden;
   background: var(--bg-p);
+  margin-bottom: 14px;
 }
-.doc-item-grid-label {
+.doc-item-grid-label,
+.batch-entry-label {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1140,14 +1168,17 @@ textarea { height: auto; resize: vertical; }
   font-size: 12px;
   font-weight: 700;
 }
-.doc-item-grid table {
+.doc-item-grid table,
+.batch-entry-grid table {
   width: 100%;
   min-width: 820px;
   border-collapse: collapse;
   margin: 0;
   table-layout: fixed;
 }
-.doc-item-grid th {
+.batch-entry-grid table { min-width: 960px; }
+.doc-item-grid th,
+.batch-entry-grid th {
   height: 30px;
   padding: 6px 8px;
   border: 0;
@@ -1159,16 +1190,22 @@ textarea { height: auto; resize: vertical; }
   font-weight: 700;
   text-align: left;
 }
-.doc-item-grid th:last-child { border-right: 0; }
-.doc-item-grid td {
+.doc-item-grid th:last-child,
+.batch-entry-grid th:last-child { border-right: 0; }
+.doc-item-grid td,
+.batch-entry-grid td {
   padding: 0;
   border: 0;
   border-right: 1px solid var(--br);
   border-bottom: 1px solid var(--br);
 }
-.doc-item-grid td:last-child { border-right: 0; }
-.doc-item-grid tbody tr:last-child td { border-bottom: 0; }
-.doc-item-grid input {
+.doc-item-grid td:last-child,
+.batch-entry-grid td:last-child { border-right: 0; }
+.doc-item-grid tbody tr:last-child td,
+.batch-entry-grid tbody tr:last-child td { border-bottom: 0; }
+.doc-item-grid input,
+.batch-entry-grid input,
+.batch-entry-grid select {
   width: 100%;
   height: 32px;
   border: 0;
@@ -1178,7 +1215,10 @@ textarea { height: auto; resize: vertical; }
   padding: 0 8px;
   font-size: 12.5px;
 }
-.doc-item-grid input:focus {
+.batch-entry-grid select { appearance: auto; }
+.doc-item-grid input:focus,
+.batch-entry-grid input:focus,
+.batch-entry-grid select:focus {
   outline: 2px solid var(--br-i);
   outline-offset: -2px;
   background: var(--bg);
@@ -1190,7 +1230,8 @@ textarea { height: auto; resize: vertical; }
 .doc-item-qty input,
 .doc-item-price input { text-align: right; }
 .doc-item-action { width: 44px; text-align: center; }
-.doc-item-add {
+.doc-item-add,
+.doc-add-row {
   width: 28px;
   height: 28px;
   min-width: 28px;
@@ -1204,9 +1245,15 @@ textarea { height: auto; resize: vertical; }
   align-items: center;
   justify-content: center;
 }
-.doc-item-add i {
+.doc-item-add i,
+.doc-add-row i {
   font-size: 17px;
   line-height: 1;
+}
+.batch-entry-actions {
+  width: 44px;
+  text-align: center;
+  vertical-align: middle;
 }
 .doc-item-add:hover {
   border-color: var(--tx-i);
@@ -5752,6 +5799,162 @@ function refreshPage(id) {
   if (typeof watchBulk === 'function') watchBulk();   // 일괄 선택 체크박스 부착
 }
 
+/* Excel-like batch entry tables for operational records. */
+const BULK_ENTRY_TABLES = {};
+
+function registerBulkEntryTable(key, config) {
+  BULK_ENTRY_TABLES[key] = config;
+}
+
+function _bulkFieldDefault(field) {
+  return typeof field.default === 'function' ? field.default() : (field.default ?? '');
+}
+
+function _bulkOptions(field) {
+  const opts = typeof field.options === 'function' ? field.options() : (field.options || []);
+  return opts.map(opt => typeof opt === 'string' ? { value: opt, label: opt } : opt);
+}
+
+function _bulkOptionsHtml(field, selected) {
+  const value = String(selected ?? '');
+  return _bulkOptions(field).map(opt => {
+    const optValue = String(opt.value ?? '');
+    const optLabel = String(opt.label ?? optValue);
+    return `<option value="${esc(optValue)}"${optValue === value ? ' selected' : ''}>${esc(optLabel)}</option>`;
+  }).join('');
+}
+
+function bulkProductOptions(clientId) {
+  const list = clientId ? products.filter(p => p.clientId === clientId) : products;
+  return [{ value: '', label: '-- 품목 선택 --' }].concat(list.map(p => ({ value: p.id, label: p.name })));
+}
+
+function bulkWorkerOptions() {
+  return [{ value: '', label: '— 작업원 선택 —' }].concat(
+    workers.map(w => ({ value: w.name, label: `${w.name} (라인${w.line}·${w.role})` }))
+  );
+}
+
+function _bulkInputHtml(field, value) {
+  const type = field.type || 'text';
+  const attrs = [
+    `data-name="${esc(field.name)}"`,
+    field.placeholder ? `placeholder="${esc(field.placeholder)}"` : '',
+    field.min != null ? `min="${esc(field.min)}"` : '',
+    field.step != null ? `step="${esc(field.step)}"` : ''
+  ].filter(Boolean).join(' ');
+  if (type === 'select') {
+    return `<select ${attrs}>${_bulkOptionsHtml(field, value)}</select>`;
+  }
+  return `<input type="${esc(type)}" value="${esc(value ?? '')}" ${attrs}>`;
+}
+
+function addBulkEntryRow(key, values = {}) {
+  const config = BULK_ENTRY_TABLES[key];
+  const body = config && inp(config.body);
+  if (!body) return;
+  const tr = document.createElement('tr');
+  tr.innerHTML = config.fields.map(field => {
+    const value = values[field.name] ?? _bulkFieldDefault(field);
+    const style = field.width ? ` style="width:${esc(field.width)}"` : '';
+    return `<td${style}>${_bulkInputHtml(field, value)}</td>`;
+  }).join('') +
+    `<td class="batch-entry-actions"><button type="button" class="doc-add-row" title="행 추가" onclick="addBulkEntryRow('${esc(key)}')"><i class="ti ti-plus"></i></button></td>`;
+  body.appendChild(tr);
+}
+
+function initBulkEntryTable(key, rows) {
+  const config = BULK_ENTRY_TABLES[key];
+  const body = config && inp(config.body);
+  if (!body) return;
+  body.innerHTML = '';
+  const seed = Array.isArray(rows) && rows.length ? rows : Array.from({ length: config.minRows || 3 }, () => ({}));
+  seed.forEach(row => addBulkEntryRow(key, row));
+}
+
+function readBulkEntryTable(key, options = {}) {
+  const config = BULK_ENTRY_TABLES[key];
+  const body = config && inp(config.body);
+  if (!body) return [];
+  const rows = Array.from(body.querySelectorAll('tr')).map(tr => {
+    const row = {};
+    config.fields.forEach(field => {
+      const el = tr.querySelector(`[data-name="${field.name}"]`);
+      row[field.name] = el ? el.value.trim() : '';
+    });
+    return row;
+  });
+  if (options.keepEmpty) return rows;
+  return rows.filter(row => config.fields.some(field => String(row[field.name] || '').trim() !== ''));
+}
+
+function refreshBulkEntryTable(key) {
+  initBulkEntryTable(key, readBulkEntryTable(key, { keepEmpty: true }));
+}
+
+function setBulkEntryMode(prefix, bulk) {
+  const single = inp(`${prefix}-single-fields`);
+  const panel = inp(`${prefix}-bulk-panel`);
+  const singleBtn = inp(`${prefix}-mode-single`);
+  const bulkBtn = inp(`${prefix}-mode-bulk`);
+  if (single) single.style.display = bulk ? 'none' : '';
+  if (panel) panel.style.display = bulk ? '' : 'none';
+  if (singleBtn) singleBtn.classList.toggle('active', !bulk);
+  if (bulkBtn) bulkBtn.classList.toggle('active', bulk);
+}
+
+function isBulkEntryMode(prefix) {
+  const panel = inp(`${prefix}-bulk-panel`);
+  return !!panel && panel.style.display !== 'none';
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Enter' || e.shiftKey || e.isComposing) return;
+  const body = e.target.closest && e.target.closest('[data-bulk-key]');
+  if (!body || !e.target.matches('input, select')) return;
+  const key = body.dataset.bulkKey;
+  const row = e.target.closest('tr');
+  if (!row) return;
+  const controls = Array.from(row.querySelectorAll('input, select'));
+  const idx = controls.indexOf(e.target);
+  if (idx < 0) return;
+  e.preventDefault();
+  if (idx < controls.length - 1) {
+    controls[idx + 1].focus();
+    return;
+  }
+  const rows = Array.from(body.querySelectorAll('tr'));
+  const next = row.nextElementSibling;
+  if (row === rows[rows.length - 1]) addBulkEntryRow(key);
+  (next || row.nextElementSibling)?.querySelector('input, select')?.focus();
+});
+
+document.addEventListener('paste', function(e) {
+  const body = e.target.closest && e.target.closest('[data-bulk-key]');
+  if (!body || !e.target.matches('input')) return;
+  const text = e.clipboardData?.getData('text');
+  if (!text || (!text.includes('\t') && !text.includes('\n'))) return;
+  const key = body.dataset.bulkKey;
+  const row = e.target.closest('tr');
+  const config = BULK_ENTRY_TABLES[key];
+  if (!row || !config) return;
+  e.preventDefault();
+  const startRows = Array.from(body.querySelectorAll('tr'));
+  const startRow = startRows.indexOf(row);
+  const startControls = Array.from(row.querySelectorAll('input, select'));
+  const startCol = startControls.indexOf(e.target);
+  const pasted = text.replace(/\r/g, '').split('\n').filter(line => line.length).map(line => line.split('\t'));
+  while (body.querySelectorAll('tr').length < startRow + pasted.length) addBulkEntryRow(key);
+  pasted.forEach((cells, rIdx) => {
+    const tr = body.querySelectorAll('tr')[startRow + rIdx];
+    const controls = Array.from(tr.querySelectorAll('input, select'));
+    cells.forEach((cell, cIdx) => {
+      const el = controls[startCol + cIdx];
+      if (el) el.value = cell.trim();
+    });
+  });
+});
+
 /* ════════ 대시보드 탭 제어 ════════ */
 let currentDashTab = 'overview';
 
@@ -7802,6 +8005,27 @@ function onAddMatClientChange() {
   const sel = inp('ma-product');
   if (sel) sel.innerHTML = '<option value="">-- 품목 선택 --</option>' + products.filter(p=>!cid||p.clientId===cid).map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('');
 }
+registerBulkEntryTable('mat', {
+  body: 'mat-bulk-body',
+  minRows: 3,
+  fields: [
+    { name: 'name', type: 'text', placeholder: '자재명', width: '170px' },
+    { name: 'spec', type: 'text', placeholder: '규격/사양', width: '120px' },
+    { name: 'supplier', type: 'text', placeholder: '공급처', width: '140px' },
+    { name: 'qty', type: 'number', min: 0, step: '0.01', default: '1', width: '82px' },
+    { name: 'unit', type: 'select', default: 'EA', options: ['EA','대','SET','kg','M','L','BOX','ton'], width: '78px' },
+    { name: 'unitPrice', type: 'number', min: 0, step: 1, placeholder: '0', width: '104px' },
+    { name: 'expectedDate', type: 'date', width: '126px' },
+    { name: 'status', type: 'select', default: '발주전', options: ['발주전','발주중','입고완료','지연'], width: '96px' },
+    { name: 'note', type: 'text', placeholder: '비고', width: '160px' }
+  ]
+});
+function setMaterialEntryMode(mode) {
+  const bulk = mode === 'bulk';
+  setBulkEntryMode('mat', bulk);
+  const saveBtn = inp('mat-save-btn');
+  if (saveBtn && !editMatId) saveBtn.innerHTML = bulk ? '<i class="ti ti-check"></i>일괄 등록' : '<i class="ti ti-check"></i>등록';
+}
 function renderMaterials() {
   ensureDateView('materials', 'mat-table', materials.map(m=>m.orderDate), renderMaterials);
   const before = materials.filter(m=>m.status==='발주전').length;
@@ -7882,7 +8106,7 @@ function renderMaterials() {
         '<td>'+esc(m.id)+'</td>' +
         '<td>'+esc(cname)+'</td>' +
         '<td style="font-weight:600;font-size:11px;">'+esc(getProductName(m.productId))+'</td>' +
-        '<td style="font-weight:700;">'+esc(m.name)+'</td>' +
+        '<td style="font-weight:700;">'+esc(m.name)+(m.spec?'<div style="font-size:10.5px;color:var(--tx-t);font-weight:500;">'+esc(m.spec)+'</div>':'')+'</td>' +
         '<td>'+(esc(m.supplier)||'—')+'</td>' +
         '<td style="font-weight:600;">'+fmtW(m.unitPrice)+'</td>' +
         '<td>'+esc(m.qty)+' '+esc(m.unit)+'</td>' +
@@ -7907,24 +8131,30 @@ function openMatAdd() {
   sv('ma-client', v('mat-fc') || clients[0]?.id || '');
   onAddMatClientChange();
   if (v('mat-fp')) sv('ma-product', v('mat-fp'));
-  ['ma-name','ma-supplier','ma-price','ma-qty','ma-note'].forEach(x=>sv(x,''));
+  ['ma-name','ma-spec','ma-supplier','ma-price','ma-qty','ma-note'].forEach(x=>sv(x,''));
   sv('ma-unit','EA'); sv('ma-status','발주전'); sv('ma-odate', today()); sv('ma-edate','');
+  initBulkEntryTable('mat');
+  setMaterialEntryMode('bulk');
+  const mode = inp('mat-mode-switch'); if (mode) mode.style.display = '';
   inp('mat-modal').classList.add('open');
 }
 function openMatEdit(id) {
   const m = materials.find(x=>x.id===id); if (!m) return;
   editMatId = id;
   inp('mat-modal-ttl').innerHTML = '<i class="ti ti-edit" style="color:var(--tx-w);"></i>자재 발주 수정';
+  const saveBtn = inp('mat-save-btn'); if (saveBtn) saveBtn.innerHTML = '<i class="ti ti-device-floppy"></i>수정';
   sv('ma-id', m.id);
   const prod = getProductById(m.productId);
   fillClientSelect('ma-client', false);
   sv('ma-client', prod?prod.clientId:'');
   onAddMatClientChange();
   sv('ma-product', m.productId);
-  sv('ma-name', m.name); sv('ma-supplier', m.supplier||'');
+  sv('ma-name', m.name); sv('ma-spec', m.spec||''); sv('ma-supplier', m.supplier||'');
   sv('ma-price', m.unitPrice||0); sv('ma-qty', m.qty||0);
   sv('ma-unit', m.unit||'EA'); sv('ma-status', m.status);
   sv('ma-odate', m.orderDate||''); sv('ma-edate', m.expectedDate||''); sv('ma-note', m.note||'');
+  setMaterialEntryMode('single');
+  const mode = inp('mat-mode-switch'); if (mode) mode.style.display = 'none';
   inp('mat-modal').classList.add('open');
 }
 function cloneMat(id) {
@@ -7938,19 +8168,51 @@ function cloneMat(id) {
   sv('ma-client', prod?prod.clientId:'');
   onAddMatClientChange();
   sv('ma-product', m.productId);
-  sv('ma-name', m.name); sv('ma-supplier', m.supplier||'');
+  sv('ma-name', m.name); sv('ma-spec', m.spec||''); sv('ma-supplier', m.supplier||'');
   sv('ma-price', m.unitPrice||0); sv('ma-qty', m.qty||0);
   sv('ma-unit', m.unit||'EA'); sv('ma-status', '발주전');
   sv('ma-odate', today()); sv('ma-edate', m.expectedDate||''); sv('ma-note', m.note||'');
+  setMaterialEntryMode('single');
+  const mode = inp('mat-mode-switch'); if (mode) mode.style.display = '';
   inp('mat-modal').classList.add('open');
 }
 function saveMaterialForm() {
   if (!checkAdminAction()) return;
+  if (!editMatId && isBulkEntryMode('mat')) {
+    const productId = v('ma-product');
+    if (!productId) { showToast('해당 품목 제품을 선택해주세요.', 'error'); return; }
+    const rows = readBulkEntryTable('mat');
+    if (!rows.length) { showToast('등록할 자재 행을 입력해주세요.', 'error'); return; }
+    const invalid = rows.find(r => !r.name.trim() || (parseFloat(r.qty) || 0) <= 0);
+    if (invalid) { showToast('자재명과 수량은 각 행에 필요합니다.', 'error'); return; }
+    rows.slice().reverse().forEach(r => {
+      materials.unshift({
+        id: nextCode('MT', materials),
+        productId,
+        name: r.name.trim(),
+        spec: r.spec.trim(),
+        supplier: r.supplier.trim(),
+        unitPrice: parseInt(r.unitPrice) || 0,
+        qty: parseFloat(r.qty) || 0,
+        unit: r.unit || 'EA',
+        orderDate: v('ma-odate'),
+        expectedDate: r.expectedDate,
+        status: r.status || '발주전',
+        note: r.note.trim()
+      });
+    });
+    saveStorage('materials', materials);
+    closeModal('mat-modal');
+    renderMaterials();
+    if (typeof scanAndGenerateAlerts === 'function') scanAndGenerateAlerts();
+    showToast(`자재 발주 ${rows.length}건이 등록되었습니다.`);
+    return;
+  }
   const name = v('ma-name').trim();
   if (!name) { showToast('자재명은 필수입니다.', 'error'); return; }
   const obj = {
     id: editMatId || v('ma-id') || nextCode('MT', materials),
-    productId: v('ma-product'), name, supplier: v('ma-supplier'),
+    productId: v('ma-product'), name, spec: v('ma-spec').trim(), supplier: v('ma-supplier'),
     unitPrice: parseInt(v('ma-price'))||0, qty: parseInt(v('ma-qty'))||0,
     unit: v('ma-unit')||'EA', orderDate: v('ma-odate'), expectedDate: v('ma-edate'),
     status: v('ma-status'), note: v('ma-note')
@@ -7997,8 +8259,8 @@ function deleteMat(id) {
 function exportMatCSV() {
   if (typeof XLSX === 'undefined') { showToast('SheetJS 로딩 중...', 'error'); return; }
   const wb = XLSX.utils.book_new();
-  const h = ['자재코드','제품','자재명','공급처','단가','수량','총액','주문일','입고예정','상태','비고'];
-  const rows = materials.map(m=>[m.id, getProductName(m.productId), m.name, m.supplier||'', m.unitPrice||0, m.qty, getMatAmt(m), m.orderDate||'', m.expectedDate||'', m.status, m.note||'']);
+  const h = ['자재코드','제품','자재명','규격','공급처','단가','수량','총액','주문일','입고예정','상태','비고'];
+  const rows = materials.map(m=>[m.id, getProductName(m.productId), m.name, m.spec||'', m.supplier||'', m.unitPrice||0, m.qty, getMatAmt(m), m.orderDate||'', m.expectedDate||'', m.status, m.note||'']);
   const ws = XLSX.utils.aoa_to_sheet([h, ...rows]);
   XLSX.utils.book_append_sheet(wb, ws, '자재발주');
   XLSX.writeFile(wb, '자재발주_' + today() + '.xlsx');
@@ -8406,6 +8668,28 @@ function appendOrderNote(text) {
   updateNoteCount();
 }
 
+registerBulkEntryTable('order', {
+  body: 'order-bulk-body',
+  minRows: 3,
+  fields: [
+    { name: 'productId', type: 'select', options: () => bulkProductOptions(v('oa-client')), width: '190px' },
+    { name: 'line', type: 'select', default: '라인 A', options: ['라인 A','라인 B','라인 C'], width: '92px' },
+    { name: 'qty', type: 'number', min: 1, step: 1, default: '1', width: '86px' },
+    { name: 'start', type: 'date', default: today, width: '126px' },
+    { name: 'due', type: 'date', width: '126px' },
+    { name: 'status', type: 'select', default: '대기', options: ['대기','진행중','완료','지연'], width: '92px' },
+    { name: 'manager', type: 'select', options: bulkWorkerOptions, width: '150px' },
+    { name: 'note', type: 'text', placeholder: '작업 지시 사항', width: '180px' }
+  ]
+});
+
+function setOrderEntryMode(mode) {
+  const bulk = mode === 'bulk';
+  setBulkEntryMode('order', bulk);
+  const saveBtn = inp('order-save-btn');
+  if (saveBtn && !editOrderId) saveBtn.innerHTML = bulk ? '<i class="ti ti-check"></i>일괄 발행' : '<i class="ti ti-check"></i>발행 완료';
+}
+
 function openOrderAdd() {
   if (!checkAdminAction()) return;
   editOrderId = null;
@@ -8420,6 +8704,9 @@ function openOrderAdd() {
   sv('oa-start', today());
   ['oa-due','oa-qty','oa-done','oa-note'].forEach(id => sv(id, ''));
   sv('oa-mgr', ''); sv('oa-status', '대기');
+  initBulkEntryTable('order');
+  setOrderEntryMode('bulk');
+  const mode = inp('order-mode-switch'); if (mode) mode.style.display = '';
   inp('order-modal').classList.add('open');
 }
 
@@ -8440,6 +8727,8 @@ function openOrderEdit(id) {
   sv('oa-status', o.status);
   fillWorkerSelect('oa-mgr', o.manager);
   sv('oa-note', o.note || '');
+  setOrderEntryMode('single');
+  const mode = inp('order-mode-switch'); if (mode) mode.style.display = 'none';
   inp('order-modal').classList.add('open');
 }
 
@@ -8456,14 +8745,26 @@ function cloneOrder(id) {
   sv('oa-line', o.line); sv('oa-qty', o.qty); sv('oa-done', 0);
   sv('oa-start', today()); sv('oa-due', o.due||''); sv('oa-status', '대기');
   fillWorkerSelect('oa-mgr', o.manager); sv('oa-note', o.note||'');
+  setOrderEntryMode('single');
+  const mode = inp('order-mode-switch'); if (mode) mode.style.display = '';
   inp('order-modal').classList.add('open');
 }
 
-function onAddOrderClientChange() { fillProductSelect('oa-product', v('oa-client')); }
-function onQcClientChange() { fillProductSelect('df-product', v('df-client')); }
+function onAddOrderClientChange() {
+  fillProductSelect('oa-product', v('oa-client'));
+  if (isBulkEntryMode('order')) refreshBulkEntryTable('order');
+}
+function onQcClientChange() {
+  fillProductSelect('df-product', v('df-client'));
+  if (isBulkEntryMode('df')) refreshBulkEntryTable('df');
+}
 
 function openOrderModal() {
   if (!checkAdminAction()) return;
+  editOrderId = null;
+  inp('order-modal-ttl').innerHTML = '<i class="ti ti-clipboard-plus"></i>현장 생산 지시서 신규 발행';
+  const saveBtn = inp('order-save-btn');
+  if (saveBtn) saveBtn.innerHTML = '<i class="ti ti-check"></i>발행 완료';
   inp('oa-id').value = nextCode('WO', workOrders);
   fillClientSelect('oa-client', false);
   sv('oa-client', clients[0]?.id || '');
@@ -8475,11 +8776,50 @@ function openOrderModal() {
   sv('oa-due', '');
   sv('oa-status', '대기');
   sv('oa-note', '');
+  fillWorkerSelect('oa-mgr');
+  initBulkEntryTable('order');
+  setOrderEntryMode('bulk');
+  const mode = inp('order-mode-switch'); if (mode) mode.style.display = '';
   inp('order-modal').classList.add('open');
 }
 
 function saveOrderForm() {
   if (!checkAdminAction()) return;
+  if (!editOrderId && isBulkEntryMode('order')) {
+    const rows = readBulkEntryTable('order');
+    if (!rows.length) { showToast('발행할 생산 지시 행을 입력해주세요.', 'error'); return; }
+    const invalid = rows.find(r => !r.productId || (parseInt(r.qty) || 0) <= 0);
+    if (invalid) { showToast('제품과 목표량은 각 행에 필요합니다.', 'error'); return; }
+    const touchedProducts = new Set();
+    rows.slice().reverse().forEach(r => {
+      workOrders.unshift({
+        id: nextCode('WO', workOrders),
+        clientId: v('oa-client'),
+        productId: r.productId,
+        line: r.line || '라인 A',
+        qty: parseInt(r.qty) || 0,
+        done: 0,
+        defect: 0,
+        start: r.start || today(),
+        due: r.due,
+        status: r.status || '대기',
+        manager: r.manager,
+        note: r.note
+      });
+      if (r.status === '진행중') touchedProducts.add(r.productId);
+    });
+    touchedProducts.forEach(productId => {
+      const p = products.find(x => x.id === productId);
+      if (p && p.status !== '완료' && p.status !== '납품') p.status = '생산중';
+    });
+    if (touchedProducts.size) saveStorage('products', products);
+    saveStorage('workOrders', workOrders);
+    editOrderId = null;
+    closeModal('order-modal');
+    renderOrders();
+    showToast(`생산 지시 ${rows.length}건이 발행되었습니다.`);
+    return;
+  }
   const productId = v('oa-product'); if (!productId) { showToast('제조 가동할 품목 모델을 선택해주십시오.', 'error'); return; }
   const qty = parseInt(v('oa-qty')) || 0;
   if (qty <= 0) { showToast('목표 지시 수량은 최소 1개 이상이어야 합니다.', 'error'); return; }
@@ -9413,6 +9753,88 @@ function openClaimDetail(id) {
   inp('claim-detail-modal').classList.add('open');
 }
 
+registerBulkEntryTable('df', {
+  body: 'df-bulk-body',
+  minRows: 3,
+  fields: [
+    { name: 'productId', type: 'select', options: () => bulkProductOptions(v('df-client')), width: '190px' },
+    { name: 'stage', type: 'select', default: () => processStages[0] || '', options: () => processStages, width: '130px' },
+    { name: 'type', type: 'text', placeholder: '불량 유형', width: '160px' },
+    { name: 'qty', type: 'number', min: 1, step: 1, default: '1', width: '82px' },
+    { name: 'cause', type: 'text', placeholder: '원인', width: '150px' },
+    { name: 'action', type: 'text', placeholder: '조치', width: '150px' },
+    { name: 'status', type: 'select', default: '조치중', options: ['조치중','완료','보류'], width: '90px' },
+    { name: 'note', type: 'text', placeholder: '비고', width: '150px' }
+  ]
+});
+
+registerBulkEntryTable('cl', {
+  body: 'cl-bulk-body',
+  minRows: 3,
+  fields: [
+    { name: 'kind', type: 'select', default: '클레임', options: ['클레임','AS','기타'], width: '96px' },
+    { name: 'spec', type: 'text', placeholder: '사양', width: '180px' },
+    { name: 'content', type: 'text', placeholder: '불만/요청 내용', width: '320px' },
+    { name: 'response', type: 'text', placeholder: '조치 방안', width: '260px' },
+    { name: 'status', type: 'select', default: '접수', options: ['접수','처리중','완료'], width: '96px' }
+  ]
+});
+
+registerBulkEntryTable('ck', {
+  body: 'ck-bulk-body',
+  minRows: 3,
+  fields: [
+    { name: 'productId', type: 'select', options: () => bulkProductOptions(v('ck-client')), width: '220px' },
+    { name: 'visual', type: 'select', default: '합격', options: ['합격','불합격','조건부합격'], width: '110px' },
+    { name: 'dim', type: 'select', default: '합격', options: ['합격','불합격','조건부합격'], width: '110px' },
+    { name: 'func', type: 'select', default: '합격', options: ['합격','불합격','조건부합격'], width: '110px' },
+    { name: 'result', type: 'select', default: '합격', options: ['합격','불합격','조건부합격'], width: '120px' },
+    { name: 'note', type: 'text', placeholder: '특이 사항', width: '260px' }
+  ]
+});
+
+function setDefectEntryMode(mode) {
+  const bulk = mode === 'bulk';
+  setBulkEntryMode('df', bulk);
+  const saveBtn = inp('df-save-btn');
+  if (saveBtn && !editDefectId) saveBtn.innerHTML = bulk ? '<i class="ti ti-check"></i>일괄 저장' : '<i class="ti ti-check"></i>저장 완료';
+}
+
+function setClaimEntryMode(mode) {
+  const bulk = mode === 'bulk';
+  setBulkEntryMode('cl', bulk);
+  const saveBtn = inp('cl-save-btn');
+  if (saveBtn && !editClaimId) saveBtn.innerHTML = bulk ? '<i class="ti ti-check"></i>일괄 접수' : '<i class="ti ti-check"></i>기록 접수';
+}
+
+function setCheckEntryMode(mode) {
+  const bulk = mode === 'bulk';
+  setBulkEntryMode('ck', bulk);
+  const saveBtn = inp('ck-save-btn');
+  if (saveBtn && !editCheckId) saveBtn.innerHTML = bulk ? '<i class="ti ti-check"></i>일괄 저장' : '<i class="ti ti-check"></i>저장 완료';
+}
+
+function onClaimClientChange() {
+  fillProductSelect('cl-product', v('cl-client'));
+}
+
+function onCheckClientChange() {
+  fillProductSelect('ck-product', v('ck-client'));
+  if (isBulkEntryMode('ck')) refreshBulkEntryTable('ck');
+}
+
+function syncDefectOrderCounts(productIds) {
+  let changed = false;
+  [...new Set(productIds.filter(Boolean))].forEach(productId => {
+    const relOrder = workOrders.find(o => o.productId === productId && o.status !== '완료');
+    if (relOrder) {
+      relOrder.defect = defects.filter(d => d.productId === productId).reduce((s, d) => s + d.qty, 0);
+      changed = true;
+    }
+  });
+  if (changed) saveStorage('workOrders', workOrders);
+}
+
 function openDefectAdd() {
   editDefectId = null;
   inp('defect-modal-ttl').innerHTML = '<i class="ti ti-plus"></i>제조 과정 불량 상세 리포트';
@@ -9428,6 +9850,9 @@ function openDefectAdd() {
   sv('df-action', '');
   sv('df-status', '조치중');
   sv('df-note', '');
+  initBulkEntryTable('df');
+  setDefectEntryMode('bulk');
+  const mode = inp('df-mode-switch'); if (mode) mode.style.display = '';
   inp('defect-modal').classList.add('open');
 }
 
@@ -9450,12 +9875,44 @@ function openDefectEdit(id) {
   sv('df-action', d.action || '');
   sv('df-status', d.status);
   sv('df-note', d.note || '');
+  setDefectEntryMode('single');
+  const mode = inp('df-mode-switch'); if (mode) mode.style.display = 'none';
   
   inp('defect-modal').classList.add('open');
 }
 
 function addDefect() {
   if (!checkAdminAction()) return;
+  if (!editDefectId && isBulkEntryMode('df')) {
+    const rows = readBulkEntryTable('df');
+    if (!rows.length) { showToast('등록할 불량 행을 입력해주세요.', 'error'); return; }
+    const invalid = rows.find(r => !r.productId || !r.type.trim() || (parseInt(r.qty) || 0) <= 0);
+    if (invalid) { showToast('제품, 불량 유형, 수량은 각 행에 필요합니다.', 'error'); return; }
+    const records = [];
+    rows.slice().reverse().forEach(r => {
+      const rec = {
+        id: nextCode('DF', defects),
+        productId: r.productId,
+        date: v('df-date'),
+        stage: r.stage || processStages[0],
+        type: r.type.trim(),
+        qty: parseInt(r.qty) || 0,
+        cause: r.cause,
+        action: r.action,
+        status: r.status || '조치중',
+        note: r.note
+      };
+      defects.unshift(rec);
+      records.push(rec);
+    });
+    saveStorage('defects', defects);
+    closeModal('defect-modal');
+    syncDefectOrderCounts(records.map(r => r.productId));
+    generateAlert('warn', `[불량 일괄 등록] ${rows.length}건`, `발생일자: ${v('df-date')}`);
+    renderQuality();
+    showToast(`불량 리포트 ${rows.length}건이 저장되었습니다.`);
+    return;
+  }
   const type = v('df-type').trim();
   const qty = parseInt(v('df-qty'));
   if (!type || isNaN(qty) || qty <= 0) { showToast('불량 원인 유형 및 정확한 불량 수량을 명시해주세요.', 'error'); return; }
@@ -9528,6 +9985,9 @@ function openClaimAdd() {
   sv('cl-content', '');
   sv('cl-status', '접수');
   sv('cl-response', '');
+  initBulkEntryTable('cl');
+  setClaimEntryMode('bulk');
+  const mode = inp('cl-mode-switch'); if (mode) mode.style.display = '';
   inp('claim-modal').classList.add('open');
 }
 
@@ -9548,11 +10008,43 @@ function openClaimEdit(id) {
   sv('cl-content', c.content);
   sv('cl-status', c.status);
   sv('cl-response', c.response || '');
+  setClaimEntryMode('single');
+  const mode = inp('cl-mode-switch'); if (mode) mode.style.display = 'none';
   inp('claim-modal').classList.add('open');
 }
 
 function addClaim() {
   if (!checkAdminAction()) return;
+  if (!editClaimId && isBulkEntryMode('cl')) {
+    const clientId = v('cl-client');
+    const clientName = v('cl-client-text').trim();
+    if (!clientId && !clientName) { showToast('고객사를 선택하거나 직접 입력하세요.', 'error'); return; }
+    const rows = readBulkEntryTable('cl');
+    if (!rows.length) { showToast('접수할 클레임 행을 입력해주세요.', 'error'); return; }
+    const invalid = rows.find(r => !r.content.trim());
+    if (invalid) { showToast('불만/요청 내용은 각 행에 필요합니다.', 'error'); return; }
+    rows.slice().reverse().forEach(r => {
+      claims.unshift({
+        id: nextCode('CLM', claims),
+        date: v('cl-date'),
+        kind: r.kind || '클레임',
+        clientId,
+        clientName,
+        productId: v('cl-product'),
+        productName: v('cl-product-text').trim(),
+        spec: r.spec.trim(),
+        content: r.content.trim(),
+        status: r.status || '접수',
+        response: r.response
+      });
+    });
+    saveStorage('claims', claims);
+    editClaimId = null;
+    closeModal('claim-modal');
+    renderQuality();
+    showToast(`클레임 / AS ${rows.length}건이 접수되었습니다.`);
+    return;
+  }
   const content = v('cl-content').trim();
   if (!content) { showToast('접수 내용을 구체적으로 기록해야 합니다.', 'error'); return; }
   const clientId = v('cl-client');
@@ -9607,6 +10099,9 @@ function openCheckAdd() {
   sv('ck-func', '합격');
   sv('ck-result', '합격');
   sv('ck-note', '');
+  initBulkEntryTable('ck');
+  setCheckEntryMode('bulk');
+  const mode = inp('ck-mode-switch'); if (mode) mode.style.display = '';
   inp('check-modal').classList.add('open');
 }
 
@@ -9626,6 +10121,8 @@ function openCheckEdit(id) {
   sv('ck-func', r.func);
   sv('ck-result', r.result);
   sv('ck-note', r.note || '');
+  setCheckEntryMode('single');
+  const mode = inp('ck-mode-switch'); if (mode) mode.style.display = 'none';
   
   inp('check-modal').classList.add('open');
 }
@@ -9634,6 +10131,32 @@ function addCheckRecord() {
   if (!checkAdminAction()) return;
   const inspector = v('ck-inspector').trim();
   if (!inspector) { showToast('검사 실무자의 성함(사인)이 필요합니다.', 'error'); return; }
+  if (!editCheckId && isBulkEntryMode('ck')) {
+    const rows = readBulkEntryTable('ck');
+    if (!rows.length) { showToast('등록할 검사 행을 입력해주세요.', 'error'); return; }
+    const invalid = rows.find(r => !r.productId);
+    if (invalid) { showToast('검사 제품은 각 행에 필요합니다.', 'error'); return; }
+    rows.slice().reverse().forEach(r => {
+      checkRecords.unshift({
+        id: nextCode('CHK', checkRecords),
+        date: v('ck-date'),
+        clientId: v('ck-client'),
+        productId: r.productId,
+        inspector,
+        visual: r.visual || '합격',
+        dim: r.dim || '합격',
+        func: r.func || '합격',
+        result: r.result || '합격',
+        note: r.note
+      });
+    });
+    saveStorage('checkRecords', checkRecords);
+    editCheckId = null;
+    closeModal('check-modal');
+    renderQuality();
+    showToast(`검사 기록 ${rows.length}건이 저장되었습니다.`);
+    return;
+  }
   
   if (editCheckId) {
     const r = checkRecords.find(x => x.id === editCheckId); if (!r) return;
@@ -10443,6 +10966,29 @@ function emptyTrash() {
   });
 }
 
+function trashRowChecks() {
+  return Array.from(document.querySelectorAll('#trash-table .trash-row-check'));
+}
+
+function trashUpdateSelection() {
+  const checks = trashRowChecks();
+  const selected = checks.filter(chk => chk.checked);
+  const all = inp('trash-check-all');
+  if (all) {
+    all.checked = checks.length > 0 && selected.length === checks.length;
+    all.indeterminate = selected.length > 0 && selected.length < checks.length;
+  }
+  checks.forEach(chk => {
+    const row = chk.closest('tr');
+    if (row) row.classList.toggle('table-row-selected', chk.checked);
+  });
+}
+
+function trashToggleAll(checked) {
+  trashRowChecks().forEach(chk => { chk.checked = checked; });
+  trashUpdateSelection();
+}
+
 function renderTrash() {
   const filterType = v('trash-filter-type');
   const searchQ = v('trash-q').toLowerCase();
@@ -10475,6 +11021,7 @@ function renderTrash() {
     <table>
       <thead>
         <tr>
+          <th style="width:40px;text-align:center;"><input type="checkbox" id="trash-check-all" class="table-check-all" title="현재 휴지통 목록 전체 선택" onchange="trashToggleAll(this.checked)"></th>
           <th>휴지통 코드</th>
           <th>원래 데이터 분류</th>
           <th>원래 고유 코드</th>
@@ -10496,6 +11043,7 @@ function renderTrash() {
           }
           return `
             <tr>
+              <td style="text-align:center;"><input type="checkbox" class="trash-row-check table-row-select" value="${esc(i.id)}" title="행 선택" onchange="trashUpdateSelection()"></td>
               <td>${esc(i.id)}</td>
               <td><span class="bd bd-neu">${esc(typeLabels[i.type] || i.type)}</span></td>
               <td style="font-family: monospace; font-weight:700;">${esc(i.originalId)}</td>
@@ -10510,6 +11058,7 @@ function renderTrash() {
         }).join('')}
       </tbody>
     </table>`;
+  setTimeout(trashUpdateSelection, 0);
 }
 
 /* ════════ 키보드 ESC 종료 및 엔터 승인 단축기 ════════ */
@@ -21548,13 +22097,21 @@ window.addEventListener('resize', () => {
 
 <!-- ══ 자재 발주 등록 모달 ══ -->
 <div class="overlay" id="mat-modal">
-  <div class="dlg" style="max-width:720px;width:96%;">
+  <div class="dlg" style="max-width:1040px;width:96%;">
     <div class="dlg-title" id="mat-modal-ttl"><i class="ti ti-package-import" style="color:var(--tx-i);"></i>자재 수급/발주 등록</div>
-    <div class="fg fg4" style="gap:10px;margin-bottom:14px;">
+    <div class="entry-mode-switch" id="mat-mode-switch">
+      <button type="button" id="mat-mode-single" onclick="setMaterialEntryMode('single')">단건 입력</button>
+      <button type="button" id="mat-mode-bulk" onclick="setMaterialEntryMode('bulk')">일괄 입력</button>
+    </div>
+    <div class="fg fg4" style="gap:10px;margin-bottom:10px;">
       <div class="ff"><label>자재 코드</label><input id="ma-id" readonly></div>
       <div class="ff"><label>연결 고객사 *</label><select id="ma-client" onchange="onAddMatClientChange()"></select></div>
       <div class="ff" style="grid-column:span 2;"><label>해당 품목 제품 *</label><select id="ma-product"></select></div>
+      <div class="ff"><label>발주 일자</label><input id="ma-odate" type="date"></div>
+    </div>
+    <div class="fg fg4" id="mat-single-fields" style="gap:10px;margin-bottom:14px;">
       <div class="ff" style="grid-column:span 2;"><label>자재명 *</label><input id="ma-name" placeholder="예: 서보모터용 하우징"></div>
+      <div class="ff"><label>규격</label><input id="ma-spec" placeholder="예: SFU1605"></div>
       <div class="ff" style="grid-column:span 2;"><label>구매 공급처 *</label>
         <div style="display:flex;gap:4px;">
           <input id="ma-supplier" placeholder="공급 협력사명" style="flex:1;">
@@ -21569,9 +22126,15 @@ window.addEventListener('resize', () => {
       <div class="ff"><label>입고 상황</label>
         <select id="ma-status"><option>발주전</option><option>발주중</option><option>입고완료</option><option>지연</option></select>
       </div>
-      <div class="ff"><label>발주 일자</label><input id="ma-odate" type="date"></div>
       <div class="ff"><label>입고 예정일</label><input id="ma-edate" type="date"></div>
       <div class="ff" style="grid-column:span 2;"><label>참고사항</label><input id="ma-note" placeholder="가공 도면 유무 등"></div>
+    </div>
+    <div class="batch-entry-grid" id="mat-bulk-panel" style="display:none;">
+      <div class="batch-entry-label"><i class="ti ti-table"></i>자재 발주 일괄 입력</div>
+      <table>
+        <thead><tr><th>자재명 *</th><th>규격</th><th>공급처</th><th>수량 *</th><th>단위</th><th>단가</th><th>입고예정일</th><th>상태</th><th>참고</th><th></th></tr></thead>
+        <tbody id="mat-bulk-body" data-bulk-key="mat"></tbody>
+      </table>
     </div>
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('mat-modal')">취소</button>
@@ -21610,11 +22173,17 @@ window.addEventListener('resize', () => {
 
 <!-- ══ 생산 지시 등록 모달 ══ -->
 <div class="overlay" id="order-modal">
-  <div class="dlg" style="max-width:680px;width:96%;">
+  <div class="dlg" style="max-width:1040px;width:96%;">
     <div class="dlg-title" id="order-modal-ttl"><i class="ti ti-clipboard-plus" style="color:var(--tx-i);"></i>생산 지시 등록</div>
-    <div class="fg fg4" style="gap:10px;margin-bottom:14px;">
+    <div class="entry-mode-switch" id="order-mode-switch">
+      <button type="button" id="order-mode-single" onclick="setOrderEntryMode('single')">단건 입력</button>
+      <button type="button" id="order-mode-bulk" onclick="setOrderEntryMode('bulk')">일괄 입력</button>
+    </div>
+    <div class="fg fg4" style="gap:10px;margin-bottom:10px;">
       <div class="ff"><label>지시 번호</label><input id="oa-id" readonly></div>
       <div class="ff"><label>연결 고객사</label><select id="oa-client" onchange="onAddOrderClientChange()"></select></div>
+    </div>
+    <div class="fg fg4" id="order-single-fields" style="gap:10px;margin-bottom:14px;">
       <div class="ff" style="grid-column:span 2;"><label>생산 대상 제품</label><select id="oa-product"></select></div>
       <div class="ff"><label>투입 설비 라인</label>
         <select id="oa-line"><option>라인 A</option><option>라인 B</option><option>라인 C</option></select>
@@ -21629,6 +22198,13 @@ window.addEventListener('resize', () => {
       <div class="ff"><label>담당 감독자</label><select id="oa-mgr"></select></div>
       <div class="ff" style="grid-column:span 2;"><label>지시 메모</label><input id="oa-note" placeholder="작업 지시 사항"></div>
     </div>
+    <div class="batch-entry-grid" id="order-bulk-panel" style="display:none;">
+      <div class="batch-entry-label"><i class="ti ti-table"></i>생산 지시 일괄 입력</div>
+      <table>
+        <thead><tr><th>제품 *</th><th>라인</th><th>목표량 *</th><th>개시일</th><th>납기일</th><th>상태</th><th>담당자</th><th>메모</th><th></th></tr></thead>
+        <tbody id="order-bulk-body" data-bulk-key="order"></tbody>
+      </table>
+    </div>
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('order-modal')">취소</button>
       <button class="btn btn-primary" id="order-save-btn" onclick="saveOrderForm()"><i class="ti ti-check"></i>지시 등록</button>
@@ -21638,12 +22214,18 @@ window.addEventListener('resize', () => {
 
 <!-- ══ 불량 등록 모달 ══ -->
 <div class="overlay" id="defect-modal">
-  <div class="dlg" style="max-width:640px;width:96%;">
+  <div class="dlg" style="max-width:1040px;width:96%;">
     <div class="dlg-title" id="defect-modal-ttl"><i class="ti ti-alert-triangle" style="color:var(--tx-d);"></i>불량 리포트 등록</div>
-    <div class="fg fg3" style="gap:10px;margin-bottom:14px;">
+    <div class="entry-mode-switch" id="df-mode-switch">
+      <button type="button" id="df-mode-single" onclick="setDefectEntryMode('single')">단건 입력</button>
+      <button type="button" id="df-mode-bulk" onclick="setDefectEntryMode('bulk')">일괄 입력</button>
+    </div>
+    <div class="fg fg3" style="gap:10px;margin-bottom:10px;">
       <div class="ff"><label>식별 코드</label><input id="df-id" readonly></div>
       <div class="ff"><label>발생일자</label><input id="df-date" type="date"></div>
       <div class="ff"><label>고객사</label><select id="df-client" onchange="onQcClientChange()"></select></div>
+    </div>
+    <div class="fg fg3" id="df-single-fields" style="gap:10px;margin-bottom:14px;">
       <div class="ff"><label>발생 제품</label><select id="df-product"></select></div>
       <div class="ff"><label>발생 공정</label><select id="df-stage"></select></div>
       <div class="ff"><label>불량 유형 *</label><input id="df-type" placeholder="예: 조립 결합 유격"></div>
@@ -21655,6 +22237,13 @@ window.addEventListener('resize', () => {
       </div>
       <div class="ff" style="grid-column:span 2;"><label>비고</label><input id="df-note" placeholder="추가 메모"></div>
     </div>
+    <div class="batch-entry-grid" id="df-bulk-panel" style="display:none;">
+      <div class="batch-entry-label"><i class="ti ti-table"></i>불량 리포트 일괄 입력</div>
+      <table>
+        <thead><tr><th>제품 *</th><th>공정</th><th>불량 유형 *</th><th>수량 *</th><th>귀책 원인</th><th>처리 방안</th><th>상태</th><th>비고</th><th></th></tr></thead>
+        <tbody id="df-bulk-body" data-bulk-key="df"></tbody>
+      </table>
+    </div>
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('defect-modal')">취소</button>
       <button class="btn btn-primary" id="df-save-btn" onclick="addDefect()"><i class="ti ti-check"></i>저장</button>
@@ -21664,24 +22253,37 @@ window.addEventListener('resize', () => {
 
 <!-- ══ 클레임 등록 모달 ══ -->
 <div class="overlay" id="claim-modal">
-  <div class="dlg" style="max-width:580px;width:96%;">
+  <div class="dlg" style="max-width:1040px;width:96%;">
     <div class="dlg-title" id="claim-modal-ttl"><i class="ti ti-message-report" style="color:var(--tx-w);"></i>고객 클레임 등록</div>
-    <div class="fg fg3" style="gap:10px;margin-bottom:14px;">
+    <div class="entry-mode-switch" id="cl-mode-switch">
+      <button type="button" id="cl-mode-single" onclick="setClaimEntryMode('single')">단건 입력</button>
+      <button type="button" id="cl-mode-bulk" onclick="setClaimEntryMode('bulk')">일괄 입력</button>
+    </div>
+    <div class="fg fg3" style="gap:10px;margin-bottom:10px;">
       <div class="ff"><label>클레임 코드</label><input id="cl-id" readonly></div>
       <div class="ff"><label>접수일</label><input id="cl-date" type="date"></div>
-      <div class="ff"><label>유형</label>
-        <select id="cl-kind"><option>클레임</option><option>AS</option><option>기타</option></select>
-      </div>
-      <div class="ff"><label>제기처(고객사)</label><select id="cl-client" onchange="fillProductSelect('cl-product', this.value)"></select></div>
+      <div class="ff"><label>제기처(고객사)</label><select id="cl-client" onchange="onClaimClientChange()"></select></div>
       <div class="ff" style="grid-column:span 2;"><label>미등록 고객사 직접입력</label><input id="cl-client-text" placeholder="목록에 없으면 업체명 직접 입력"></div>
       <div class="ff"><label>대상 제품</label><select id="cl-product"></select></div>
       <div class="ff" style="grid-column:span 2;"><label>미등록 제품 직접입력</label><input id="cl-product-text" placeholder="목록에 없으면 제품·품목명 직접 입력"></div>
+    </div>
+    <div class="fg fg3" id="cl-single-fields" style="gap:10px;margin-bottom:14px;">
+      <div class="ff"><label>유형</label>
+        <select id="cl-kind"><option>클레임</option><option>AS</option><option>기타</option></select>
+      </div>
       <div class="ff"><label>처리 상태</label>
         <select id="cl-status"><option>접수</option><option>처리중</option><option>완료</option></select>
       </div>
       <div class="ff" style="grid-column:span 2;"><label>클레임 사양</label><input id="cl-spec" placeholder="예: AC 220V 모터 유격 또는 상세 사양 기재"></div>
       <div class="ff" style="grid-column:span 3;"><label>불만/요청 내용 *</label><textarea id="cl-content" rows="4" placeholder="클레임/AS 요청 내용을 구체적으로 기재" style="width:100%; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx); padding:8px; font-size:12px; font-family:inherit; resize:vertical;"></textarea></div>
       <div class="ff" style="grid-column:span 3;"><label>조치 방안</label><textarea id="cl-response" rows="4" placeholder="검토 조치 피드백" style="width:100%; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx); padding:8px; font-size:12px; font-family:inherit; resize:vertical;"></textarea></div>
+    </div>
+    <div class="batch-entry-grid" id="cl-bulk-panel" style="display:none;">
+      <div class="batch-entry-label"><i class="ti ti-table"></i>클레임 / AS 일괄 입력</div>
+      <table>
+        <thead><tr><th>유형</th><th>사양</th><th>불만/요청 내용 *</th><th>조치 방안</th><th>상태</th><th></th></tr></thead>
+        <tbody id="cl-bulk-body" data-bulk-key="cl"></tbody>
+      </table>
     </div>
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('claim-modal')">취소</button>
@@ -21704,14 +22306,20 @@ window.addEventListener('resize', () => {
 
 <!-- ══ 검사 기록 모달 ══ -->
 <div class="overlay" id="check-modal">
-  <div class="dlg" style="max-width:580px;width:96%;">
+  <div class="dlg" style="max-width:1040px;width:96%;">
     <div class="dlg-title" id="check-modal-ttl"><i class="ti ti-clipboard-check" style="color:var(--tx-ok);"></i>납품 검사 기록</div>
-    <div class="fg fg3" style="gap:10px;margin-bottom:14px;">
+    <div class="entry-mode-switch" id="ck-mode-switch">
+      <button type="button" id="ck-mode-single" onclick="setCheckEntryMode('single')">단건 입력</button>
+      <button type="button" id="ck-mode-bulk" onclick="setCheckEntryMode('bulk')">일괄 입력</button>
+    </div>
+    <div class="fg fg3" style="gap:10px;margin-bottom:10px;">
       <div class="ff"><label>검사 코드</label><input id="ck-id" readonly></div>
       <div class="ff"><label>검사 일자</label><input id="ck-date" type="date"></div>
-      <div class="ff"><label>고객사</label><select id="ck-client" onchange="fillProductSelect('ck-product', this.value)"></select></div>
-      <div class="ff" style="grid-column:span 2;"><label>검사 제품</label><select id="ck-product"></select></div>
+      <div class="ff"><label>고객사</label><select id="ck-client" onchange="onCheckClientChange()"></select></div>
       <div class="ff"><label>검사원 *</label><input id="ck-inspector" placeholder="검사 담당자"></div>
+    </div>
+    <div class="fg fg3" id="ck-single-fields" style="gap:10px;margin-bottom:14px;">
+      <div class="ff" style="grid-column:span 2;"><label>검사 제품</label><select id="ck-product"></select></div>
       <div class="ff"><label>외관 검사</label>
         <select id="ck-visual"><option>합격</option><option>불합격</option><option>조건부합격</option></select>
       </div>
@@ -21725,6 +22333,13 @@ window.addEventListener('resize', () => {
         <select id="ck-result"><option>합격</option><option>불합격</option><option>조건부합격</option></select>
       </div>
       <div class="ff" style="grid-column:span 2;"><label>검사 비고</label><input id="ck-note" placeholder="특이 사항"></div>
+    </div>
+    <div class="batch-entry-grid" id="ck-bulk-panel" style="display:none;">
+      <div class="batch-entry-label"><i class="ti ti-table"></i>검사 기록 일괄 입력</div>
+      <table>
+        <thead><tr><th>제품 *</th><th>외관</th><th>치수</th><th>기능</th><th>판정</th><th>비고</th><th></th></tr></thead>
+        <tbody id="ck-bulk-body" data-bulk-key="ck"></tbody>
+      </table>
     </div>
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('check-modal')">취소</button>
