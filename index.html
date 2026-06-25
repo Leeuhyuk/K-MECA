@@ -1122,6 +1122,98 @@ textarea { height: auto; resize: vertical; }
 .dlg-msg { font-size: 12.5px; color: var(--tx-s); margin-bottom: 20px; line-height: 1.6; }
 .dlg-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
+.doc-item-grid {
+  grid-column: span 4;
+  border: 1px solid var(--br);
+  border-radius: var(--rm);
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: var(--bg-p);
+}
+.doc-item-grid-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--br);
+  color: var(--tx-s);
+  font-size: 12px;
+  font-weight: 700;
+}
+.doc-item-grid table {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: collapse;
+  margin: 0;
+  table-layout: fixed;
+}
+.doc-item-grid th {
+  height: 30px;
+  padding: 6px 8px;
+  border: 0;
+  border-right: 1px solid var(--br);
+  border-bottom: 1px solid var(--br);
+  background: var(--bg-s);
+  color: var(--tx-s);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: left;
+}
+.doc-item-grid th:last-child { border-right: 0; }
+.doc-item-grid td {
+  padding: 0;
+  border: 0;
+  border-right: 1px solid var(--br);
+  border-bottom: 1px solid var(--br);
+}
+.doc-item-grid td:last-child { border-right: 0; }
+.doc-item-grid tbody tr:last-child td { border-bottom: 0; }
+.doc-item-grid input {
+  width: 100%;
+  height: 32px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--tx);
+  padding: 0 8px;
+  font-size: 12.5px;
+}
+.doc-item-grid input:focus {
+  outline: 2px solid var(--br-i);
+  outline-offset: -2px;
+  background: var(--bg);
+}
+.doc-item-spec { width: 150px; }
+.doc-item-qty { width: 72px; }
+.doc-item-unit { width: 74px; }
+.doc-item-price { width: 104px; }
+.doc-item-qty input,
+.doc-item-price input { text-align: right; }
+.doc-item-action { width: 44px; text-align: center; }
+.doc-item-add {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  padding: 0;
+  margin: 2px 6px;
+  border-radius: 50%;
+  border-color: var(--br-i);
+  background: var(--bg-i);
+  color: var(--tx-i);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.doc-item-add i {
+  font-size: 17px;
+  line-height: 1;
+}
+.doc-item-add:hover {
+  border-color: var(--tx-i);
+  background: var(--tx-i);
+  color: #fff;
+}
+
 /* 커스텀 설정 모달 */
 .custom-modal { max-width: 500px !important; }
 
@@ -10084,8 +10176,8 @@ function renderAlerts() {
   });
 
   inp('alerts-list').innerHTML = finalFil.length ? finalFil.map((a, i) => {
-    // 본래 alertsList 상의 실제 인덱스를 구해서 delAlert 파라미터로 넘깁니다.
-    const realIdx = alertsList.indexOf(a);
+    // 인덱스 대신 알림 고유 식별자(title)를 넘겨 stale-index 삭제를 방지합니다.
+    const ref = encodeURIComponent(a.title);
     return `
     <div class="al al-${a.type}">
       <i class="ti ${im[a.type]||'ti-info-circle'}"></i>
@@ -10093,7 +10185,7 @@ function renderAlerts() {
         <div class="al-t">${esc(a.title)}</div>
         <div class="al-s">${esc(a.sub)}${a.createdAt ? ` · ${esc(a.createdAt)}` : ''}</div>
       </div>
-      <button class="del-btn" onclick="delAlert(${realIdx})"><i class="ti ti-x" style="font-size:12px;"></i>확인</button>
+      <button class="del-btn" onclick="delAlert('${ref}')"><i class="ti ti-x" style="font-size:12px;"></i>확인</button>
     </div>`;
   }).join('') : empty('수신 및 보존된 알림 내역이 비어있습니다.');
 
@@ -10129,19 +10221,19 @@ function renderTopbarAlerts(scan) {
   }
 
   listEl.innerHTML = activeAlerts.length ? activeAlerts.map(a => {
-    const realIdx = alertsList.indexOf(a);
+    const ref = encodeURIComponent(a.title);
     return `<div class="topbar-alert-item ${a.type || 'info'}">
       <i class="ti ${icons[a.type] || icons.info}"></i>
       <div>
         <div class="topbar-alert-item-title">${esc(a.title)}</div>
         <div class="topbar-alert-item-sub">${esc(a.sub)}${a.createdAt ? ` · ${esc(a.createdAt)}` : ''}</div>
       </div>
-      <button type="button" class="topbar-alert-confirm" onclick="confirmTopbarAlert(event,${realIdx})">확인</button>
+      <button type="button" class="topbar-alert-confirm" onclick="confirmTopbarAlert(event,'${ref}')">확인</button>
     </div>`;
   }).join('') : '<div class="topbar-alert-empty"><i class="ti ti-bell-off"></i><br>새로운 알림이 없습니다.</div>';
 }
 
-function confirmTopbarAlert(event, index) {
+function confirmTopbarAlert(event, token) {
   if (event) {
     event.preventDefault();
     event.stopPropagation();
@@ -10149,7 +10241,7 @@ function confirmTopbarAlert(event, index) {
   const wrap = inp('topbar-alert');
   const list = inp('topbar-alert-list');
   const scrollTop = list ? list.scrollTop : 0;
-  delAlert(index);
+  delAlert(token);
   if (wrap) wrap.classList.add('open');
   const button = inp('topbar-alert-btn');
   if (button) button.setAttribute('aria-expanded', 'true');
@@ -10171,20 +10263,23 @@ function filterAlerts(type) {
   renderAlerts();
 }
 
-function delAlert(i) {
-  if (i >= 0 && i < alertsList.length) {
-    const a = alertsList[i];
-    // 만약 자동 알림(auto: true)이면 dismissedAlerts 리스트에 제목을 기록하여 재발 방지
-    if (a.auto !== false) {
-      if (!dismissedAlerts.includes(a.title)) {
-        dismissedAlerts.push(a.title);
-        saveStorage('dismissedAlerts', dismissedAlerts);
-      }
+function delAlert(token) {
+  // 렌더 시점 인덱스 대신 알림 고유 식별자(title)로 삭제 — 팝업이 열린 채 목록이
+  // 갱신돼도 엉뚱한 알림이 지워지지 않도록 한다. (title은 generateAlert의 중복 판정 키)
+  const title = decodeURIComponent(String(token));
+  const i = alertsList.findIndex(a => a.title === title);
+  if (i < 0) return;
+  const a = alertsList[i];
+  // 만약 자동 알림(auto: true)이면 dismissedAlerts 리스트에 제목을 기록하여 재발 방지
+  if (a.auto !== false) {
+    if (!dismissedAlerts.includes(a.title)) {
+      dismissedAlerts.push(a.title);
+      saveStorage('dismissedAlerts', dismissedAlerts);
     }
-    alertsList.splice(i, 1);
-    saveStorage('alerts', alertsList);
-    renderAlerts();
   }
+  alertsList.splice(i, 1);
+  saveStorage('alerts', alertsList);
+  renderAlerts();
 }
 
 /* ════════ 9. 휴지통 백업 및 복구 로직 ════════ */
@@ -11115,12 +11210,17 @@ function cloudV2StripMeta(value){
   delete out._mes;
   return out;
 }
+const _cloudKeyApplied = {};   // key -> 마지막으로 로컬에 반영한 sourceUpdatedAt(ms). 비순차 원격 읽기 거부용
 async function cloudLoadV2Key(key){
   const entityRef = _fbDb.collection('mes_v2').doc(key);
   const metaSnap = await entityRef.get();
   if (!metaSnap.exists) return false;
   const meta = metaSnap.data() || {};
   if (meta.sourceExists === false || meta.sourceType === 'missing') return false;
+  // 키별 버전 게이팅: 이미 더 최신 버전을 반영했다면 늦게 도착한 오래된 읽기는 건너뛴다
+  // (비동기 .get()이 스냅샷 발생 순서와 다르게 완료돼 최신 데이터를 되돌리는 것을 방지)
+  const ver = (meta.sourceUpdatedAt && typeof meta.sourceUpdatedAt.toMillis === 'function') ? meta.sourceUpdatedAt.toMillis() : 0;
+  if (ver && _cloudKeyApplied[key] && ver < _cloudKeyApplied[key]) return false;
   if (meta.sourceType === 'array' || !cloudV2MapKeys().includes(key)) {
     const itemsSnap = await entityRef.collection('items').get();
     const rows = itemsSnap.docs.map(doc => {
@@ -11129,11 +11229,13 @@ async function cloudLoadV2Key(key){
       return { idx, id: doc.id, value: cloudV2StripMeta(data) };
     }).sort((a, b) => (a.idx - b.idx) || a.id.localeCompare(b.id));
     localStorage.setItem('mes_' + key, JSON.stringify(rows.map(row => row.value)));
+    if (ver) _cloudKeyApplied[key] = ver;
     return true;
   }
   const stateSnap = await entityRef.collection('state').doc('current').get();
   if (!stateSnap.exists) return false;
   localStorage.setItem('mes_' + key, JSON.stringify(cloudV2StripMeta(stateSnap.data() || {})));
+  if (ver) _cloudKeyApplied[key] = ver;
   return true;
 }
 async function cloudLoadAll(){
@@ -11202,6 +11304,7 @@ async function cloudV2CommitWrites(writes){
     const batch = _fbDb.batch();
     writes.slice(i, i + 450).forEach(w => {
       if (w.delete) batch.delete(w.ref);
+      else if (w.replace) batch.set(w.ref, w.data);   // 문서 전체 교체(중첩 키 삭제 전파)
       else batch.set(w.ref, w.data, { merge: true });
     });
     await batch.commit();
@@ -11210,7 +11313,14 @@ async function cloudV2CommitWrites(writes){
 async function cloudMirrorV2Key(key){
   if (!_fbDb || !CLOUD_KEYS.includes(key)) return;
   const raw = localStorage.getItem('mes_' + key);
-  const value = raw ? JSON.parse(raw) : null;
+  let value;
+  try {
+    value = raw ? JSON.parse(raw) : null;
+  } catch(e){
+    // 손상된 로컬 값은 재시도해도 영원히 실패하므로 건너뛴다(전체 동기화 루프 방지)
+    console.warn('클라우드 동기화 건너뜀(로컬 JSON 손상):', key, e);
+    return;
+  }
   const entityRef = _fbDb.collection('mes_v2').doc(key);
   const type = Array.isArray(value) ? 'array' : (value && typeof value === 'object' ? 'map' : (value === null ? 'null' : typeof value));
   const count = Array.isArray(value) ? value.length : (value && typeof value === 'object' ? Object.keys(value).length : 0);
@@ -11246,6 +11356,7 @@ async function cloudMirrorV2Key(key){
   } else if (value && typeof value === 'object') {
     writes.push({
       ref: entityRef.collection('state').doc('current'),
+      replace: true,   // map 전체를 교체해 삭제된 중첩 키(예: 결제 취소)가 서버에서도 제거되도록 함
       data: Object.assign({}, value, {
         _mes: {
           sourceCollection: 'mes_v2',
@@ -11259,21 +11370,28 @@ async function cloudMirrorV2Key(key){
   await cloudV2CommitWrites(writes);
 }
 async function cloudMirrorV2Keys(keys){
-  for (const key of keys) await cloudMirrorV2Key(key);
+  // 키별로 격리: 한 키 실패가 나머지 키 동기화를 막지 않도록 하고, 실패한 키 목록을 반환
+  const failed = [];
+  for (const key of keys) {
+    try {
+      await cloudMirrorV2Key(key);
+    } catch(e){
+      console.warn('클라우드 키 저장 실패:', key, e);
+      failed.push(key);
+    }
+  }
+  return failed;
 }
 async function cloudFlush(){
   if (!_cloudActive || !_cloudQueue.size) return;
   const keys=[..._cloudQueue]; _cloudQueue.clear();
   _cloudChip('saving');
-  try {
-    await cloudMirrorV2Keys(keys);
-    _cloudChip('online');
-  } catch(e){
-    console.warn('클라우드 저장 실패', e); _cloudChip('error');
-    keys.forEach(k=>_cloudQueue.add(k));                       // 실패 키 재큐잉 후 재시도
-    clearTimeout(_cloudTimer); _cloudTimer=setTimeout(cloudFlush, 5000);
-    showToast('클라우드 저장에 실패했습니다. 잠시 후 자동 재시도합니다.', 'error');
-  }
+  const failed = await cloudMirrorV2Keys(keys);
+  if (!failed.length) { _cloudChip('online'); return; }
+  _cloudChip('error');
+  failed.forEach(k=>_cloudQueue.add(k));                       // 실제 실패한 키만 재큐잉 후 재시도
+  clearTimeout(_cloudTimer); _cloudTimer=setTimeout(cloudFlush, 5000);
+  showToast('일부 항목 클라우드 저장에 실패했습니다. 잠시 후 자동 재시도합니다.', 'error');
 }
 
 /* 클라우드에서 수동으로 최신 데이터 다시 불러오기 */
@@ -11294,6 +11412,7 @@ function cloudResyncGlobals(){
   taxList=L('taxList',taxList); quoteList=L('quoteList',quoteList); orderList=L('orderList',orderList);
   financeData=L('financeData',financeData); attendance=L('attendance',attendance); leaves=L('leaves',leaves); payrollRecords=L('payrollRecords',payrollRecords);
   if (typeof repairWorkerTimeValues === 'function') repairWorkerTimeValues();
+  if(!financeData || typeof financeData!=='object' || Array.isArray(financeData)) financeData={};   // null/배열 방어
   if(!financeData.entries) financeData.entries=[]; if(!financeData.paidReceivable) financeData.paidReceivable={};
   if(!financeData.paidPayable) financeData.paidPayable={}; if(!financeData.closedMonths) financeData.closedMonths=[];
   if(!financeData.auditLog) financeData.auditLog=[]; if(!financeData.payrollSettings) financeData.payrollSettings={};
@@ -11304,11 +11423,14 @@ let _cloudRemoteRefreshTimer = null;
 function cloudScheduleRemoteRefresh(){
   clearTimeout(_cloudRemoteRefreshTimer);
   _cloudRemoteRefreshTimer = setTimeout(() => {
-    cloudResyncGlobals();
-    // 입력 중 모달이 열려 있으면 화면 새로고침은 보류(데이터만 갱신)
-    if (!document.querySelector('.overlay.open')) {
-      try { refreshPage(currentPage); } catch(e){}
+    // 입력 중 모달이 열려 있으면 데이터 덮어쓰기/새로고침을 모두 보류하고 잠시 후 재시도.
+    // (메모리 전역까지 교체하면 편집 중인 내용이 유실되므로 cloudResyncGlobals 자체를 미룬다)
+    if (document.querySelector('.overlay.open')) {
+      _cloudRemoteRefreshTimer = setTimeout(cloudScheduleRemoteRefresh, 1000);
+      return;
     }
+    cloudResyncGlobals();
+    try { refreshPage(currentPage); } catch(e){}
     try { updateDlvBadge(); updateAsBadge(); updateTrashBadge(); updateTodoBadge(); } catch(e){}
     _cloudChip('synced'); setTimeout(()=>_cloudChip('online'), 1500);
   }, 80);
@@ -11318,6 +11440,9 @@ function cloudSubscribe(){
   if (!_cloudActive || _cloudUnsub || !_fbDb) return;
   const v2Unsubs = CLOUD_KEYS.map(key => _fbDb.collection('mes_v2').doc(key).onSnapshot(doc=>{
     if (doc.metadata.hasPendingWrites) return;     // 내가 쓴 변경(로컬 에코)은 무시
+    // 아직 서버로 보내지 않은 로컬 편집이 대기 중인 키는 원격값으로 덮어쓰지 않음
+    // (비순차 원격 읽기가 최신 로컬 데이터를 되돌리는 것을 방지 — 편집 중 키는 로컬 우선)
+    if (typeof _cloudQueue !== 'undefined' && _cloudQueue && _cloudQueue.has(key)) return;
     if (typeof cloudLoadV2Key !== 'function') return;
     cloudLoadV2Key(key)
       .then(loaded => { if (loaded) cloudScheduleRemoteRefresh(); })
@@ -12217,10 +12342,12 @@ function generatePdfBase64(docObj, docType) {
         const r = docObj;
         const client = getClientName(r.clientId) || '—';
         const prod = r.productId ? getProductName(r.productId) : '—';
-        const tgt = r.targetPrice;
-        const amt = tgt ? Number(tgt * r.qty).toLocaleString('ko-KR') : '—';
-        const vat = tgt ? Number(Math.round(tgt * r.qty * 0.1)).toLocaleString('ko-KR') : '—';
-        const tot = tgt ? Number(Math.round(tgt * r.qty * 1.1)).toLocaleString('ko-KR') : '—';
+        const lines = _docLines(r, 'rfq');
+        const total = _docAmount(r, 'rfq');
+        const amt = total ? Number(total).toLocaleString('ko-KR') : '—';
+        const vatVal = Math.round(total * 0.1);
+        const vat = total ? Number(vatVal).toLocaleString('ko-KR') : '—';
+        const tot = total ? Number(total + vatVal).toLocaleString('ko-KR') : '—';
         
         bodyHtml = `
           <div style="padding: 20px 24px; color:#111; font-size:12px; background:#fff; width:794px; min-height:1123px; box-sizing:border-box;">
@@ -12249,10 +12376,7 @@ function generatePdfBase64(docObj, docType) {
               <th style="width:46px;">수량</th><th style="width:40px;">단위</th>
               <th style="width:100px;">희망 단가</th><th style="width:110px;">희망 금액</th><th>비 고</th></tr></thead>
               <tbody>
-                <tr><td class="ctr">1</td><td><strong>${r.itemName}</strong></td><td class="ctr">${r.spec||'—'}</td>
-                <td class="ctr">${r.qty}</td><td class="ctr">${r.unit}</td>
-                <td class="num">${tgt?Number(tgt).toLocaleString('ko-KR'):'—'}</td>
-                <td class="num">${amt}</td><td style="font-size:10px;">${r.note||''}</td></tr>
+                ${_docItemRowsHtml(lines, 'rfq')}
                 <tr class="empty-row"><td colspan="8">—</td></tr>
                 <tr class="empty-row"><td colspan="8">—</td></tr>
                 <tr class="total-row"><td colspan="6" style="text-align:right;">합 계</td>
@@ -12279,11 +12403,12 @@ function generatePdfBase64(docObj, docType) {
               </div>
             </div>
           </div>`;
-      } else if (docType === 'statement' || docType === 'tax') {
+      } else if (docType === 'statement' || docType === 'tax' || docType === 'quote' || docType === 'order') {
         bodyHtml = _salesDocBodyHtml(docObj, docType, ci);
       } else {
         const p = docObj;
-        const total = (p.unitPrice || 0) * p.qty;
+        const lines = _docLines(p, 'po');
+        const total = _docAmount(p, 'po');
         const vat = Math.round(total * 0.1);
         const grandTotal = total + vat;
         const client = getClientName(p.clientId) || '—';
@@ -12317,13 +12442,7 @@ function generatePdfBase64(docObj, docType) {
               <th style="width:46px;">수량</th><th style="width:40px;">단위</th>
               <th style="width:100px;">단 가 (원)</th><th style="width:110px;">금 액 (원)</th><th>비 고</th></tr></thead>
               <tbody>
-                <tr>
-                  <td class="ctr">1</td><td><strong>${p.itemName}</strong></td><td class="ctr">${p.spec||'—'}</td>
-                  <td class="ctr">${p.qty}</td><td class="ctr">${p.unit}</td>
-                  <td class="num">${p.unitPrice?Number(p.unitPrice).toLocaleString('ko-KR'):'—'}</td>
-                  <td class="num">${p.unitPrice?Number(p.unitPrice*p.qty).toLocaleString('ko-KR'):'—'}</td>
-                  <td style="font-size:10px;">${p.note||''}</td>
-                </tr>
+                ${_docItemRowsHtml(lines, 'po')}
                 <tr class="empty-row"><td colspan="8">—</td></tr>
                 <tr class="total-row"><td colspan="5" style="text-align:right;">공급가액 합계</td>
                 <td></td><td class="num">${total.toLocaleString('ko-KR')}</td><td></td></tr>
@@ -12385,7 +12504,7 @@ function openEmailModal(docObj, docType) {
   _emailDocRef = { docObj, docType, pdfBase64: null };
   const ci = getCompanyInfo();
   const LABELS = { rfq:'견적요청', po:'구매발주', statement:'거래명세표', tax:'세금계산서', quote:'견적서', order:'수주확인서' };
-  const subject = `[${LABELS[docType]||'문서'}] ${docObj.id} — ${docObj.itemName||''}`;
+  const subject = `[${LABELS[docType]||'문서'}] ${docObj.id} — ${typeof _docItemSummary === 'function' ? _docItemSummary(docObj) : (docObj.itemName||'')}`;
   let body;
   if (docType === 'rfq')      body = buildRfqEmailBody(docObj, ci);
   else if (docType === 'po')  body = buildPoEmailBody(docObj, ci);
@@ -12424,6 +12543,10 @@ function openEmailModal(docObj, docType) {
 function buildRfqEmailBody(r, ci) {
   const client = getClientName(r.clientId) || '—';
   const prod   = r.productId ? getProductName(r.productId) : '—';
+  const lines = _docLines(r, 'rfq');
+  const itemLines = lines.map((line, idx) =>
+    `${idx + 1}. ${line.itemName}${line.spec ? ' (' + line.spec + ')' : ''} / ${line.qty} ${line.unit}${line.rowNote ? ' / ' + line.rowNote : ''}`
+  ).join('\n');
   return `안녕하세요, ${r.supplier} 담당자님.
 
 ${ci.name} ${ci.dept}입니다.
@@ -12435,9 +12558,8 @@ ${ci.name} ${ci.dept}입니다.
 요청일자: ${r.date}
 관련 프로젝트: ${client} — ${prod}
 ─────────────────────────────
-품목명: ${r.itemName}
-규격/사양: ${r.spec || '—'}
-수량: ${r.qty} ${r.unit}
+품목:
+${itemLines}
 희망 단가: ${r.targetPrice ? '₩' + Number(r.targetPrice).toLocaleString('ko-KR') : '미기재'}
 ─────────────────────────────
 
@@ -12452,7 +12574,10 @@ TEL: ${ci.tel}`;
 function buildPoEmailBody(p, ci) {
   const client = getClientName(p.clientId) || '—';
   const prod   = p.productId ? getProductName(p.productId) : '—';
-  const amt    = p.unitPrice ? '₩' + Number(p.unitPrice * p.qty).toLocaleString('ko-KR') : '미기재';
+  const amt    = _docAmount(p, 'po') ? '₩' + Number(_docAmount(p, 'po')).toLocaleString('ko-KR') : '미기재';
+  const itemLines = _docLines(p, 'po').map((line, idx) =>
+    `${idx + 1}. ${line.itemName}${line.spec ? ' (' + line.spec + ')' : ''} / ${line.qty} ${line.unit}${line.rowNote ? ' / ' + line.rowNote : ''}`
+  ).join('\n');
   return `안녕하세요, ${p.supplier} 담당자님.
 
 ${ci.name} ${ci.dept}입니다.
@@ -12464,9 +12589,8 @@ ${ci.name} ${ci.dept}입니다.
 발행일자: ${p.date}
 관련 프로젝트: ${client} — ${prod}
 ─────────────────────────────
-품목명: ${p.itemName}
-규격/사양: ${p.spec || '—'}
-수량: ${p.qty} ${p.unit}
+품목:
+${itemLines}
 단가: ${p.unitPrice ? '₩' + Number(p.unitPrice).toLocaleString('ko-KR') : '미기재'}
 금액: ${amt}
 결제조건: ${p.payMethod || '현금'}
@@ -12582,6 +12706,205 @@ function _docPrintStyle() {
   </style>`;
 }
 
+/* 문서 품목 테이블(엑셀형 입력) 공통 */
+const DOC_ITEM_TABLES = {
+  rq:  { body:'rq-items-body',  item:'rq-item',  spec:'rq-spec',  qty:'rq-qty',  unit:'rq-unit',  price:'rq-target', note:'rq-note',  defaultUnit:'EA', minRows:3 },
+  po:  { body:'po-items-body',  item:'po-item',  spec:'po-spec',  qty:'po-qty',  unit:'po-unit',  price:'po-price',  note:'po-note',  defaultUnit:'EA', minRows:3 },
+  sd:  { body:'sd-items-body',  item:'sd-item',  spec:'sd-spec',  qty:'sd-qty',  unit:'sd-unit',  price:'sd-price',  note:'sd-note',  defaultUnit:'EA', minRows:3 },
+  so2: { body:'so2-items-body', item:'so2-item', spec:'so2-spec', qty:'so2-qty', unit:'so2-unit', price:'so2-price', note:'so2-note', defaultUnit:'대', minRows:3 }
+};
+
+function _docNumOrNull(value) {
+  const text = String(value ?? '').replace(/[,₩\s원]/g, '').trim();
+  if (!text) return null;
+  const n = Number(text);
+  return Number.isFinite(n) ? n : null;
+}
+
+function _docItemClean(row, defaults = {}) {
+  return {
+    itemName: String(row?.itemName ?? row?.name ?? '').trim(),
+    spec: String(row?.spec ?? defaults.spec ?? '').trim(),
+    qty: Number(row?.qty) || 1,
+    unit: String(row?.unit ?? defaults.unit ?? '').trim(),
+    price: _docNumOrNull(row?.price ?? row?.targetPrice ?? row?.unitPrice ?? defaults.price),
+    note: String(row?.note ?? '').trim()
+  };
+}
+
+function _docItems(doc) {
+  const defaults = {
+    spec: doc?.spec || '',
+    unit: doc?.unit || '',
+    price: _docNumOrNull(doc?.targetPrice ?? doc?.unitPrice)
+  };
+  const fromRows = Array.isArray(doc?.items) ? doc.items.map(row => _docItemClean(row, defaults)).filter(x => x.itemName) : [];
+  if (fromRows.length) return fromRows;
+  const fallback = _docItemClean({ itemName: doc?.itemName, qty: doc?.qty, note: doc?.note }, defaults);
+  return fallback.itemName ? [fallback] : [];
+}
+
+function _docItemSummary(doc) {
+  const items = _docItems(doc);
+  if (!items.length) return '—';
+  return items.length > 1 ? `${items[0].itemName} 외 ${items.length - 1}건` : items[0].itemName;
+}
+
+function _docItemsSearchText(doc) {
+  return _docItems(doc).map(x => `${x.itemName} ${x.spec} ${x.unit} ${x.note}`).join(' ').toLowerCase();
+}
+
+function _docQtySummary(doc) {
+  const items = _docItems(doc);
+  if (!items.length) return '—';
+  if (items.length === 1) return `${items[0].qty} ${items[0].unit || doc?.unit || ''}`.trim();
+  const units = [...new Set(items.map(item => item.unit || doc?.unit || '').filter(Boolean))];
+  if (units.length > 1) return `${items.length}개 품목`;
+  const unit = units[0] || '';
+  const totalQty = items.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+  return `총 ${totalQty} ${unit}`.trim();
+}
+
+function _docLinePrice(type, doc) {
+  return Number(type === 'rfq' ? doc?.targetPrice : doc?.unitPrice) || 0;
+}
+
+function _docAmount(doc, type) {
+  return _docLines(doc, type).reduce((sum, line) => sum + line.amount, 0);
+}
+
+function _docLines(docs, type) {
+  return (Array.isArray(docs) ? docs : [docs]).flatMap(doc => {
+    return _docItems(doc).map((item, index) => ({
+      ...item,
+      spec: item.spec || doc?.spec || '',
+      unit: item.unit || doc?.unit || (type === 'quote' || type === 'order' ? '대' : 'EA'),
+      price: item.price ?? _docLinePrice(type, doc),
+      amount: (item.price ?? _docLinePrice(type, doc)) * (Number(item.qty) || 0),
+      doc,
+      docId: doc?.id || '',
+      rowNote: item.note || (!doc?.commonNote && index === 0 ? doc?.note || '' : '')
+    }));
+  });
+}
+
+function _syncDocItemLegacy(prefix) {
+  const cfg = DOC_ITEM_TABLES[prefix];
+  if (!cfg) return;
+  const rows = _readDocItemTable(prefix);
+  const first = rows[0] || { itemName:'', spec:'', qty:1, unit:cfg.defaultUnit || '', price:null, note:'' };
+  sv(cfg.item, first.itemName);
+  sv(cfg.spec, first.spec || '');
+  sv(cfg.qty, first.qty || 1);
+  sv(cfg.unit, first.unit || cfg.defaultUnit || '');
+  sv(cfg.price, first.price ?? '');
+  sv(cfg.note, first.note || '');
+}
+
+function _addDocItemRow(prefix, data = {}, afterRow = null, focusField = 'itemName') {
+  const cfg = DOC_ITEM_TABLES[prefix], body = cfg && inp(cfg.body);
+  if (!body) return null;
+  const row = _docItemClean(data, { unit:cfg.defaultUnit || '' });
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input data-doc-item-field="itemName" value="${esc(row.itemName)}" placeholder="품목명"></td>
+    <td class="doc-item-spec"><input data-doc-item-field="spec" value="${esc(row.spec)}" placeholder="규격/사양"></td>
+    <td class="doc-item-qty"><input data-doc-item-field="qty" type="number" min="0" step="any" value="${row.qty || 1}"></td>
+    <td class="doc-item-unit"><input data-doc-item-field="unit" value="${esc(row.unit || cfg.defaultUnit || '')}" placeholder="EA"></td>
+    <td class="doc-item-price"><input data-doc-item-field="price" type="number" step="any" value="${row.price ?? ''}" placeholder="0"></td>
+    <td><input data-doc-item-field="note" value="${esc(row.note)}" placeholder="비고"></td>
+    <td class="doc-item-action"><button type="button" class="btn btn-sm doc-item-add" title="행 추가" onclick="_insertDocItemRowAfter('${prefix}', this)"><i class="ti ti-plus"></i></button></td>`;
+  tr.querySelectorAll('input').forEach(input => {
+    input.addEventListener('keydown', e => _docItemKeydown(prefix, e));
+    input.addEventListener('input', () => _syncDocItemLegacy(prefix));
+    input.addEventListener('paste', e => _docItemPaste(prefix, e));
+  });
+  if (afterRow && afterRow.parentNode === body) body.insertBefore(tr, afterRow.nextSibling);
+  else body.appendChild(tr);
+  if (focusField) setTimeout(() => tr.querySelector(`[data-doc-item-field="${focusField}"]`)?.focus(), 0);
+  _syncDocItemLegacy(prefix);
+  return tr;
+}
+
+function _insertDocItemRowAfter(prefix, btn) {
+  const row = btn?.closest('tr');
+  _addDocItemRow(prefix, {}, row, 'itemName');
+}
+
+function _initDocItemTable(prefix, items = []) {
+  const cfg = DOC_ITEM_TABLES[prefix], body = cfg && inp(cfg.body);
+  if (!body) return;
+  body.innerHTML = '';
+  const rows = (items || []).map(row => _docItemClean(row, { unit:cfg.defaultUnit || '' })).filter(x => x.itemName);
+  rows.forEach(item => _addDocItemRow(prefix, item, null, null));
+  const minRows = Math.max(cfg.minRows || 1, rows.length || 0);
+  while (body.children.length < minRows) _addDocItemRow(prefix, {}, null, null);
+  _syncDocItemLegacy(prefix);
+}
+
+function _readDocItemTable(prefix) {
+  const cfg = DOC_ITEM_TABLES[prefix], body = cfg && inp(cfg.body);
+  if (!body) return [];
+  return [...body.querySelectorAll('tr')].map(tr => {
+    const get = field => tr.querySelector(`[data-doc-item-field="${field}"]`)?.value || '';
+    return _docItemClean({ itemName:get('itemName'), spec:get('spec'), qty:get('qty'), unit:get('unit'), price:get('price'), note:get('note') });
+  }).filter(item => item.itemName);
+}
+
+function _docItemKeydown(prefix, event) {
+  if (event.key !== 'Enter') return;
+  event.preventDefault();
+  const input = event.target;
+  const row = input.closest('tr');
+  const body = row?.parentNode;
+  const field = input.dataset.docItemField;
+  const order = ['itemName', 'spec', 'qty', 'unit', 'price', 'note'];
+  const nextField = order[order.indexOf(field) + 1];
+  if (nextField) {
+    row.querySelector(`[data-doc-item-field="${nextField}"]`)?.focus();
+    return;
+  }
+  const nextRow = row.nextElementSibling;
+  if (nextRow) nextRow.querySelector('[data-doc-item-field="itemName"]')?.focus();
+  else _addDocItemRow(prefix, {}, row, 'itemName');
+  if (body) _syncDocItemLegacy(prefix);
+}
+
+function _docItemPaste(prefix, event) {
+  const text = event.clipboardData?.getData('text/plain') || '';
+  if (!text.includes('\t') && !text.includes('\n')) return;
+  event.preventDefault();
+  const startRow = event.target.closest('tr');
+  const body = startRow?.parentNode;
+  if (!body) return;
+  const rows = text.trimEnd().split(/\r?\n/).map(line => line.split('\t'));
+  let row = startRow;
+  rows.forEach((cols, idx) => {
+    if (!row) row = _addDocItemRow(prefix, {}, null, null);
+    const values = cols.length <= 3
+      ? { itemName: cols[0] || '', qty: cols[1] || '1', note: cols[2] || '' }
+      : { itemName: cols[0] || '', spec: cols[1] || '', qty: cols[2] || '1', unit: cols[3] || '', price: cols[4] || '', note: cols.slice(5).join(' ') };
+    Object.entries(values).forEach(([field, value]) => {
+      const el = row.querySelector(`[data-doc-item-field="${field}"]`);
+      if (el) el.value = value;
+    });
+    row = row.nextElementSibling;
+    if (!row && idx < rows.length - 1) row = _addDocItemRow(prefix, {}, null, null);
+  });
+  _syncDocItemLegacy(prefix);
+}
+
+function _docItemRowsHtml(lines, type, includeSpec = true) {
+  return lines.map((line, i) => `<tr>
+    <td class="ctr">${i + 1}</td><td><strong>${esc(line.itemName)}</strong></td>
+    ${includeSpec ? `<td class="ctr">${line.spec ? esc(line.spec) : '—'}</td>` : ''}
+    <td class="ctr">${line.qty}</td><td class="ctr">${esc(line.unit || '')}</td>
+    <td class="num">${line.price ? Number(line.price).toLocaleString('ko-KR') : '—'}</td>
+    <td class="num">${line.price ? Number(line.amount).toLocaleString('ko-KR') : '—'}</td>
+    <td style="font-size:10px;">${esc(line.rowNote || line.note || '')}</td>
+  </tr>`).join('');
+}
+
 /* ╦╦╦╦╦╦╦╦ 견적요청서 (RFQ) ╦╦╦╦╦╦╦╦ */
 function renderRfq() {
   ensureDateView('rfq', 'rfq-table', rfqList.map(r=>r.date), renderRfq);
@@ -12610,7 +12933,7 @@ function renderRfq() {
     if (!dateViewMatch('rfq', r.date)) return false;
     if (fc && r.clientId !== fc) return false;
     if (fs && r.status !== fs)   return false;
-    if (q && !r.itemName.toLowerCase().includes(q) && !r.supplier.toLowerCase().includes(q)) return false;
+    if (q && !_docItemsSearchText(r).includes(q) && !r.supplier.toLowerCase().includes(q)) return false;
     return true;
   });
 
@@ -12620,6 +12943,8 @@ function renderRfq() {
       let va, vb;
       if (k === 'client') { va = getClientName(a.clientId); vb = getClientName(b.clientId); }
       else if (k === 'product') { va = getProductName(a.productId); vb = getProductName(b.productId); }
+      else if (k === 'itemName') { va = _docItemSummary(a); vb = _docItemSummary(b); }
+      else if (k === 'qty') { va = _docItems(a).reduce((s, x) => s + (Number(x.qty) || 0), 0); vb = _docItems(b).reduce((s, x) => s + (Number(x.qty) || 0), 0); }
       else { va = a[k] == null ? '' : a[k]; vb = b[k] == null ? '' : b[k]; }
       if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * asc;
       return String(va).localeCompare(String(vb), 'ko-KR') * asc;
@@ -12645,9 +12970,9 @@ function renderRfq() {
         <td>${getClientName(r.clientId)||'—'}</td>
         <td style="font-size:11px;">${r.productId?getProductName(r.productId):'—'}</td>
         <td style="font-weight:600;">${r.supplier}${r.supplierEmail?`<br><span style="font-size:10px;color:var(--tx-t);">${r.supplierEmail}</span>`:''}</td>
-        <td style="font-weight:700;">${r.itemName}</td>
+        <td style="font-weight:700;">${esc(_docItemSummary(r))}</td>
         <td style="font-size:11px;color:var(--tx-t);">${r.spec||'—'}</td>
-        <td>${r.qty} ${r.unit}</td>
+        <td>${_docQtySummary(r)}</td>
         <td>${r.targetPrice?'₩'+Number(r.targetPrice).toLocaleString('ko-KR'):'—'}</td>
         <td><select class="stat-sel" onchange="changeRfqStatus('${r.id}',this.value)" style="color:${rfqStatusColor(r.status)}">
           ${['요청전','요청중','회신완료','채택','미채택'].map(s=>`<option${s===r.status?' selected':''}>${s}</option>`).join('')}
@@ -12681,8 +13006,9 @@ function openRfqAdd() {
       inp('rq-status').value = '요청전';
       _syncRfqClientDropdown('');
       inp('rq-product').innerHTML = '<option value="">-- 선택 --</option>';
-      ['rq-supplier','rq-semail','rq-item','rq-spec','rq-note'].forEach(id => { if(inp(id)) inp(id).value = ''; });
-      inp('rq-qty').value = '1'; inp('rq-unit').value = 'EA';
+      ['rq-supplier','rq-semail','rq-spec'].forEach(id => { if(inp(id)) inp(id).value = ''; });
+      _initDocItemTable('rq');
+      inp('rq-unit').value = 'EA';
       if(inp('rq-target')) inp('rq-target').value = '';
       inp('rfq-save-btn').onclick = saveRfqForm;
       modal.classList.add('open');
@@ -12708,8 +13034,9 @@ function saveRfqForm() {
   if (!checkAdminAction()) return;
   const modal = inp('rfq-modal');
   const editId = modal.dataset.editId;
+  const items = _readDocItemTable('rq');
   if (!v('rq-supplier')) { showToast('공급처를 입력하세요.', 'error'); return; }
-  if (!v('rq-item'))     { showToast('품목명을 입력하세요.', 'error'); return; }
+  if (!items.length)     { showToast('품목명을 입력하세요.', 'error'); return; }
   if (editId) {
     const idx = rfqList.findIndex(r => r.id === editId);
     if (idx !== -1) rfqList[idx] = { ...rfqList[idx], ...buildRfqObj(editId) };
@@ -12724,14 +13051,17 @@ function saveRfqForm() {
 }
 
 function buildRfqObj(id) {
+  const items = _readDocItemTable('rq');
+  const first = items[0] || { itemName:'', spec:'', qty:1, unit:'EA', price:null, note:'' };
   return {
     id, date: v('rq-date')||today(),
     clientId: v('rq-client'), productId: v('rq-product'),
     supplier: v('rq-supplier'), supplierEmail: v('rq-semail')||'',
-    itemName: v('rq-item'), spec: v('rq-spec'),
-    qty: Number(v('rq-qty'))||1, unit: v('rq-unit')||'EA',
-    targetPrice: Number(v('rq-target'))||0,
-    status: v('rq-status')||'요청전', note: v('rq-note')
+    itemName: first.itemName, spec: first.spec || '',
+    qty: Number(first.qty)||1, unit: first.unit || 'EA',
+    targetPrice: Number(first.price)||0,
+    status: v('rq-status')||'요청전', note: first.note || '',
+    items
   };
 }
 
@@ -12747,10 +13077,10 @@ function openRfqEdit(id) {
   inp('rq-client').value = r.clientId; onRfqClientChange();
   inp('rq-product').value = r.productId||'';
   inp('rq-supplier').value = r.supplier; inp('rq-semail').value = r.supplierEmail||'';
-  inp('rq-item').value = r.itemName; inp('rq-spec').value = r.spec||'';
-  inp('rq-qty').value = r.qty; inp('rq-unit').value = r.unit;
+  _initDocItemTable('rq', _docItems(r));
+  inp('rq-spec').value = r.spec||'';
+  inp('rq-unit').value = r.unit;
   if(inp('rq-target')) inp('rq-target').value = r.targetPrice||'';
-  inp('rq-note').value = r.note||'';
   modal.classList.add('open');
 }
 
@@ -12767,10 +13097,10 @@ function cloneRfq(id) {
   inp('rq-client').value = r.clientId; onRfqClientChange();
   inp('rq-product').value = r.productId||'';
   inp('rq-supplier').value = r.supplier||''; inp('rq-semail').value = r.supplierEmail||'';
-  inp('rq-item').value = r.itemName||''; inp('rq-spec').value = r.spec||'';
-  inp('rq-qty').value = r.qty||1; inp('rq-unit').value = r.unit||'EA';
+  _initDocItemTable('rq', _docItems(r));
+  inp('rq-spec').value = r.spec||'';
+  inp('rq-unit').value = r.unit||'EA';
   if (inp('rq-target')) inp('rq-target').value = r.targetPrice||'';
-  inp('rq-note').value = r.note||'';
   inp('rfq-save-btn').onclick = saveRfqForm;
   modal.classList.add('open');
 }
@@ -12818,6 +13148,7 @@ function convertRfqToPo(ids) {
       dlvMethod: '직납',
       status: '작성중',
       note: `견적요청서 ${r.id}에서 생성${r.note ? ' - ' + r.note : ''}`,
+      items: _docItems(r),
       sourceRfqId: r.id
     });
     if (r.status !== '미채택') r.status = '채택';
@@ -12846,10 +13177,12 @@ function openRfqPrint(id) {
   const pages = targets.map(r => {
     const client = getClientName(r.clientId)||'—';
     const prod   = r.productId ? getProductName(r.productId) : '—';
-    const tgt    = r.targetPrice;
-    const amt    = tgt ? Number(tgt*r.qty).toLocaleString('ko-KR') : '—';
-    const vat    = tgt ? Number(Math.round(tgt*r.qty*0.1)).toLocaleString('ko-KR') : '—';
-    const tot    = tgt ? Number(Math.round(tgt*r.qty*1.1)).toLocaleString('ko-KR') : '—';
+    const lines  = _docLines(r, 'rfq');
+    const total  = _docAmount(r, 'rfq');
+    const amt    = total ? Number(total).toLocaleString('ko-KR') : '—';
+    const vatVal = Math.round(total * 0.1);
+    const vat    = total ? Number(vatVal).toLocaleString('ko-KR') : '—';
+    const tot    = total ? Number(total + vatVal).toLocaleString('ko-KR') : '—';
     return `
     <div style="page-break-after:always;">
       <div class="approval-box">
@@ -12877,10 +13210,7 @@ function openRfqPrint(id) {
         <th style="width:46px;">수량</th><th style="width:40px;">단위</th>
         <th style="width:100px;">희망 단가</th><th style="width:110px;">희망 금액</th><th>비 고</th></tr></thead>
         <tbody>
-          <tr><td class="ctr">1</td><td><strong>${r.itemName}</strong></td><td class="ctr">${r.spec||'—'}</td>
-          <td class="ctr">${r.qty}</td><td class="ctr">${r.unit}</td>
-          <td class="num">${tgt?Number(tgt).toLocaleString('ko-KR'):'—'}</td>
-          <td class="num">${amt}</td><td style="font-size:10px;">${r.note||''}</td></tr>
+          ${_docItemRowsHtml(lines, 'rfq')}
           <tr class="empty-row"><td colspan="8">—</td></tr>
           <tr class="empty-row"><td colspan="8">—</td></tr>
           <tr class="total-row"><td colspan="6" style="text-align:right;">합 계</td>
@@ -12921,11 +13251,11 @@ function exportRfqXLS(id = null) {
   const ci = getCompanyInfo();
   const wb = XLSX.utils.book_new();
   const hdr = ['문서번호','요청일','고객사','연결제품','공급처','공급처이메일','품목명','규격/사양','수량','단위','희망단가','희망금액','상태','비고'];
-  const rows = targets.map(r => [
+  const rows = targets.flatMap(r => _docLines(r, 'rfq').map(line => [
     r.id, r.date, getClientName(r.clientId)||'', r.productId?getProductName(r.productId):'',
-    r.supplier, r.supplierEmail||'', r.itemName, r.spec||'', r.qty, r.unit,
-    r.targetPrice||0, (r.targetPrice||0)*r.qty, r.status, r.note||''
-  ]);
+    r.supplier, r.supplierEmail||'', line.itemName, line.spec||'', line.qty, line.unit,
+    line.price||0, line.amount, r.status, line.rowNote || ''
+  ]));
   const titleText = id ? `${ci.name} — 견적요청서 (${id})` : `${ci.name} — 견적요청서 목록`;
   const ws = XLSX.utils.aoa_to_sheet([
     [titleText],
@@ -12948,7 +13278,7 @@ function renderPo() {
   const total  = poList.length;
   const sent   = poList.filter(p => p.status === '발송완료').length;
   const done   = poList.filter(p => p.status === '입고완료').length;
-  const amt    = poList.reduce((s, p) => s + (p.unitPrice||0)*p.qty, 0);
+  const amt    = poList.reduce((s, p) => s + _docAmount(p, 'po'), 0);
   inp('po-kpi-total').textContent = total + '건';
   inp('po-kpi-sent').textContent  = sent  + '건';
   inp('po-kpi-done').textContent  = done  + '건';
@@ -12973,7 +13303,7 @@ function renderPo() {
     if (!dateViewMatch('po', p.date)) return false;
     if (fc && p.clientId !== fc) return false;
     if (fs && p.status !== fs)   return false;
-    if (q && !p.itemName.toLowerCase().includes(q) && !p.supplier.toLowerCase().includes(q)) return false;
+    if (q && !_docItemsSearchText(p).includes(q) && !p.supplier.toLowerCase().includes(q)) return false;
     return true;
   });
 
@@ -12983,7 +13313,9 @@ function renderPo() {
       let va, vb;
       if (k === 'client') { va = getClientName(a.clientId); vb = getClientName(b.clientId); }
       else if (k === 'product') { va = getProductName(a.productId); vb = getProductName(b.productId); }
-      else if (k === 'totalAmt') { va = (Number(a.unitPrice)||0)*(Number(a.qty)||0); vb = (Number(b.unitPrice)||0)*(Number(b.qty)||0); }
+      else if (k === 'itemName') { va = _docItemSummary(a); vb = _docItemSummary(b); }
+      else if (k === 'qty') { va = _docItems(a).reduce((s, x) => s + (Number(x.qty) || 0), 0); vb = _docItems(b).reduce((s, x) => s + (Number(x.qty) || 0), 0); }
+      else if (k === 'totalAmt') { va = _docAmount(a, 'po'); vb = _docAmount(b, 'po'); }
       else { va = a[k] == null ? '' : a[k]; vb = b[k] == null ? '' : b[k]; }
       if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * asc;
       return String(va).localeCompare(String(vb), 'ko-KR') * asc;
@@ -13012,11 +13344,11 @@ function renderPo() {
         <td>${getClientName(p.clientId)||'—'}</td>
         <td style="font-size:11px;">${p.productId?getProductName(p.productId):'—'}</td>
         <td style="font-weight:600;">${p.supplier}${p.supplierEmail?`<br><span style="font-size:10px;color:var(--tx-t);">${p.supplierEmail}</span>`:''}</td>
-        <td style="font-weight:700;">${p.itemName}</td>
+        <td style="font-weight:700;">${esc(_docItemSummary(p))}</td>
         <td style="font-size:11px;color:var(--tx-t);">${p.spec||'—'}</td>
-        <td>${p.qty} ${p.unit}</td>
+        <td>${_docQtySummary(p)}</td>
         <td>${p.unitPrice?'₩'+Number(p.unitPrice).toLocaleString('ko-KR'):'—'}</td>
-        <td style="font-weight:700;color:var(--tx-i);">${p.unitPrice?'₩'+Number(p.unitPrice*p.qty).toLocaleString('ko-KR'):'—'}</td>
+        <td style="font-weight:700;color:var(--tx-i);">${_docAmount(p, 'po')?'₩'+Number(_docAmount(p, 'po')).toLocaleString('ko-KR'):'—'}</td>
         <td><span class="bd bd-neu">${p.payMethod||'현금'}</span></td>
         <td><span class="bd bd-info">${p.dlvMethod||'직납'}</span></td>
         <td><select class="stat-sel" onclick="event.stopPropagation()" onchange="changePoStatus('${p.id}',this.value)" style="color:${poStatusColor(p.status)}">
@@ -13099,8 +13431,9 @@ function openPoAdd() {
       inp('po-date').value = today(); inp('po-status').value = '작성중';
       _syncPoClientDropdown('');
       inp('po-product-sel').innerHTML = '<option value="">-- 선택 --</option>';
-      ['po-supplier','po-semail','po-item','po-spec','po-note'].forEach(id => { if(inp(id)) inp(id).value = ''; });
-      inp('po-qty').value = '1'; inp('po-unit').value = 'EA';
+      ['po-supplier','po-semail','po-spec','po-note-common'].forEach(id => { if(inp(id)) inp(id).value = ''; });
+      _initDocItemTable('po');
+      inp('po-unit').value = 'EA';
       if(inp('po-price')) inp('po-price').value = '';
       inp('po-pay').value = '현금'; inp('po-dlv').value = '직납';
       inp('po-save-btn').onclick = savePoForm;
@@ -13127,8 +13460,9 @@ function savePoForm() {
   if (!checkAdminAction()) return;
   const modal = inp('po-modal');
   const editId = modal.dataset.editId;
+  const items = _readDocItemTable('po');
   if (!v('po-supplier')) { showToast('공급처를 입력하세요.', 'error'); return; }
-  if (!v('po-item'))     { showToast('품목명을 입력하세요.', 'error'); return; }
+  if (!items.length)     { showToast('품목명을 입력하세요.', 'error'); return; }
   if (editId) {
     const idx = poList.findIndex(p => p.id === editId);
     if (idx !== -1) poList[idx] = { ...poList[idx], ...buildPoObj(editId) };
@@ -13141,15 +13475,19 @@ function savePoForm() {
 }
 
 function buildPoObj(id) {
+  const items = _readDocItemTable('po');
+  const first = items[0] || { itemName:'', spec:'', qty:1, unit:'EA', price:null, note:'' };
   return {
     id, date: v('po-date')||today(),
     clientId: v('po-client-sel'), productId: v('po-product-sel'),
     supplier: v('po-supplier'), supplierEmail: v('po-semail')||'',
-    itemName: v('po-item'), spec: v('po-spec'),
-    qty: Number(v('po-qty'))||1, unit: v('po-unit')||'EA',
-    unitPrice: Number(v('po-price'))||0,
+    itemName: first.itemName, spec: first.spec || '',
+    qty: Number(first.qty)||1, unit: first.unit || 'EA',
+    unitPrice: Number(first.price)||0,
     payMethod: v('po-pay')||'현금', dlvMethod: v('po-dlv')||'직납',
-    status: v('po-status')||'작성중', note: v('po-note')
+    status: v('po-status')||'작성중', note: v('po-note-common') || first.note || '',
+    commonNote: v('po-note-common') || '',
+    items
   };
 }
 
@@ -13165,11 +13503,12 @@ function openPoEdit(id) {
   inp('po-client-sel').value = p.clientId; onPoClientChange();
   inp('po-product-sel').value = p.productId||'';
   inp('po-supplier').value = p.supplier; inp('po-semail').value = p.supplierEmail||'';
-  inp('po-item').value = p.itemName; inp('po-spec').value = p.spec||'';
-  inp('po-qty').value = p.qty; inp('po-unit').value = p.unit;
+  _initDocItemTable('po', _docItems(p));
+  inp('po-spec').value = p.spec||'';
+  inp('po-unit').value = p.unit;
   if(inp('po-price')) inp('po-price').value = p.unitPrice||'';
   inp('po-pay').value = p.payMethod||'현금'; inp('po-dlv').value = p.dlvMethod||'직납';
-  inp('po-note').value = p.note||'';
+  if (inp('po-note-common')) inp('po-note-common').value = p.commonNote || p.note || '';
   modal.classList.add('open');
 }
 
@@ -13185,11 +13524,12 @@ function clonePo(id) {
   inp('po-client-sel').value = p.clientId; onPoClientChange();
   inp('po-product-sel').value = p.productId||'';
   inp('po-supplier').value = p.supplier||''; inp('po-semail').value = p.supplierEmail||'';
-  inp('po-item').value = p.itemName||''; inp('po-spec').value = p.spec||'';
-  inp('po-qty').value = p.qty||1; inp('po-unit').value = p.unit||'EA';
+  _initDocItemTable('po', _docItems(p));
+  inp('po-spec').value = p.spec||'';
+  inp('po-unit').value = p.unit||'EA';
   if (inp('po-price')) inp('po-price').value = p.unitPrice||'';
   inp('po-pay').value = p.payMethod||'현금'; inp('po-dlv').value = p.dlvMethod||'직납';
-  inp('po-note').value = p.note||'';
+  if (inp('po-note-common')) inp('po-note-common').value = p.commonNote || p.note || '';
   inp('po-save-btn').onclick = savePoForm;
   modal.classList.add('open');
 }
@@ -13218,11 +13558,13 @@ function openPoPrint(id, individual=false) {
   // individual=true: 건별 개별 페이지 / false: 공급처별로 묶음
   targetList.forEach(p => { const gkey = individual ? p.id : p.supplier; (grouped[gkey] = grouped[gkey] || []).push(p); });
   const pages = Object.entries(grouped).map(([supplier, items]) => {
-    const total   = items.reduce((s, p) => s + (p.unitPrice||0)*p.qty, 0);
+    const lines   = _docLines(items, 'po');
+    const total   = lines.reduce((s, line) => s + line.amount, 0);
     const vat     = Math.round(total * 0.1);
     const grandTotal = total + vat;
     const refDate = items[0].date;
     const poNums  = [...new Set(items.map(p => p.id))].join(', ');
+    const groupNotes = items.map(p => p.commonNote || '').filter(Boolean).join('<br>');
     return `
     <div style="page-break-after:always;">
       <div class="approval-box">
@@ -13251,13 +13593,7 @@ function openPoPrint(id, individual=false) {
         <th style="width:46px;">수량</th><th style="width:40px;">단위</th>
         <th style="width:100px;">단 가 (원)</th><th style="width:110px;">금 액 (원)</th><th>비 고</th></tr></thead>
         <tbody>
-          ${items.map((p,i) => `<tr>
-            <td class="ctr">${i+1}</td><td><strong>${p.itemName}</strong></td><td class="ctr">${p.spec||'—'}</td>
-            <td class="ctr">${p.qty}</td><td class="ctr">${p.unit}</td>
-            <td class="num">${p.unitPrice?Number(p.unitPrice).toLocaleString('ko-KR'):'—'}</td>
-            <td class="num">${p.unitPrice?Number(p.unitPrice*p.qty).toLocaleString('ko-KR'):'—'}</td>
-            <td style="font-size:10px;">${p.note||''}</td>
-          </tr>`).join('')}
+          ${_docItemRowsHtml(lines, 'po')}
           <tr class="empty-row"><td colspan="8">—</td></tr>
           <tr class="total-row"><td colspan="5" style="text-align:right;">공급가액 합계</td>
           <td></td><td class="num">${total.toLocaleString('ko-KR')}</td><td></td></tr>
@@ -13270,6 +13606,7 @@ function openPoPrint(id, individual=false) {
       </div></div>
       <div class="remarks">
         <div class="remarks-title">◆ 특기사항 및 거래조건</div>
+        ${groupNotes ? groupNotes + '<br>' : ''}
         1. 상기 품목에 대하여 발주하오니 납기일에 맞추어 납품하여 주시기 바랍니다.<br>
         2. 납품 시 반드시 거래명세표를 동봉하여 주시기 바랍니다.<br>
         3. 세금계산서는 납품 완료 후 익일 발행 바랍니다.
@@ -13298,11 +13635,11 @@ function exportPoXLS(id = null) {
   const ci = getCompanyInfo();
   const wb = XLSX.utils.book_new();
   const hdr = ['발주번호','발행일','고객사','연결제품','공급처','공급처이메일','품목명','규격/사양','수량','단위','단가','금액','결제조건','납품방법','상태','비고'];
-  const rows = targets.map(p => [
+  const rows = targets.flatMap(p => _docLines(p, 'po').map(line => [
     p.id, p.date, getClientName(p.clientId)||'', p.productId?getProductName(p.productId):'',
-    p.supplier, p.supplierEmail||'', p.itemName, p.spec||'', p.qty, p.unit,
-    p.unitPrice||0, (p.unitPrice||0)*p.qty, p.payMethod||'현금', p.dlvMethod||'직납', p.status, p.note||''
-  ]);
+    p.supplier, p.supplierEmail||'', line.itemName, line.spec||'', line.qty, line.unit,
+    line.price||0, line.amount, p.payMethod||'현금', p.dlvMethod||'직납', p.status, line.rowNote || ''
+  ]));
   const titleText = id ? `${ci.name} — 구매발주서 (${id})` : `${ci.name} — 구매발주서 목록`;
   const ws = XLSX.utils.aoa_to_sheet([
     [titleText],
@@ -13374,9 +13711,18 @@ function _importDocsXLS(cfg) {
         supplier, supplierEmail: get(row, '공급처이메일'),
         itemName, spec: get(row, '규격/사양'),
         qty: Number(get(row, '수량')) || 1, unit: get(row, '단위') || 'EA',
-        status: get(row, '상태') || cfg.defaultStatus, note: get(row, '비고')
+        status: get(row, '상태') || cfg.defaultStatus, note: get(row, '비고'),
+        items: []
       };
       cfg.extra(obj, row, get);
+      obj.items = [{
+        itemName,
+        spec: obj.spec || '',
+        qty: obj.qty || 1,
+        unit: obj.unit || 'EA',
+        price: obj.targetPrice || obj.unitPrice || 0,
+        note: obj.note || ''
+      }];
       list.unshift(obj);
       added++;
     }
@@ -14053,10 +14399,8 @@ function _docTemplateGroups(type, id) {
 function _docTemplateValues(type, items) {
   const ci = getCompanyInfo();
   const first = items[0];
-  const amount = items.reduce((sum, item) => {
-    const price = type === 'rfq' ? item.targetPrice : item.unitPrice;
-    return sum + (Number(price) || 0) * (Number(item.qty) || 0);
-  }, 0);
+  const lines = _docLines(items, type);
+  const amount = lines.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
   const vat = Math.round(amount * 0.1);
   const values = {
     회사명:ci.name || '', 회사주소:ci.address || '', 회사전화:ci.tel || '',
@@ -14085,8 +14429,8 @@ function _docTemplateValues(type, items) {
     공급받는자이메일:first.clientEmail || bp.email || ''
   });
   for (let i = 1; i <= 20; i++) {
-    const item = items[i - 1];
-    const price = item ? Number(type === 'rfq' ? item.targetPrice : item.unitPrice) || 0 : '';
+    const item = lines[i - 1];
+    const price = item ? Number(item.price) || 0 : '';
     values['번호' + i] = item ? i : '';
     values['품목명' + i] = item ? item.itemName || '' : '';
     values['규격' + i] = item ? item.spec || '' : '';
@@ -14094,8 +14438,8 @@ function _docTemplateValues(type, items) {
     values['단위' + i] = item ? item.unit || '' : '';
     values['단가' + i] = item ? price : '';
     values['금액' + i] = item ? price * (Number(item.qty) || 0) : '';
-    values['품목비고' + i] = item ? item.note || '' : '';
-    const dateParts = item && item.date ? item.date.split('-') : [];
+    values['품목비고' + i] = item ? item.rowNote || item.note || '' : '';
+    const dateParts = item && item.doc && item.doc.date ? item.doc.date.split('-') : [];
     values['월' + i] = item ? (dateParts[1] || '') : '';
     values['일' + i] = item ? (dateParts[2] || '') : '';
     values['세액' + i] = item ? Math.round(price * (Number(item.qty) || 0) * 0.1) : '';
@@ -14181,7 +14525,7 @@ function salesStatusColor(type, s) {
 function renderSalesDoc(type) {
   const cfg = SALES[type], idp = cfg.idp, list = salesList(type);
   ensureDateView(type, idp+'-table', list.map(d=>d.date), ()=>renderSalesDoc(type));
-  const amtOf = d => (d.unitPrice||0) * (d.qty||0);
+  const amtOf = d => _docAmount(d, type);
   const total = list.length;
   const sent  = list.filter(d => d.status === cfg.statuses[1]).length;
   const done  = list.filter(d => d.status === cfg.statuses[2]).length;
@@ -14203,7 +14547,7 @@ function renderSalesDoc(type) {
     if (!dateViewMatch(type, d.date)) return false;
     if (fc && d.clientId !== fc) return false;
     if (fs && d.status !== fs)   return false;
-    if (q && !(d.itemName||'').toLowerCase().includes(q) && !getClientName(d.clientId).toLowerCase().includes(q)) return false;
+    if (q && !_docItemsSearchText(d).includes(q) && !getClientName(d.clientId).toLowerCase().includes(q)) return false;
     return true;
   }).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
 
@@ -14219,16 +14563,16 @@ function renderSalesDoc(type) {
       <th>품목명</th><th>규격</th><th>수량</th><th>단가</th><th>공급가액</th><th>부가세</th><th>합계</th><th>상태</th><th>관리</th>
     </tr></thead>
     <tbody>${rows.map(d => {
-      const sup = (d.unitPrice||0)*(d.qty||0), vat = Math.round(sup*0.1), grand = sup+vat;
+      const sup = _docAmount(d, type), vat = Math.round(sup*0.1), grand = sup+vat;
       return `
       <tr>
         <td style="font-weight:700;color:var(--tx-i);">${d.id}</td>
         <td>${d.date}</td>
         <td>${getClientName(d.clientId)||'—'}${d.clientEmail?`<br><span style="font-size:10px;color:var(--tx-t);">${d.clientEmail}</span>`:''}</td>
         <td style="font-size:11px;">${d.productId?getProductName(d.productId):'—'}</td>
-        <td style="font-weight:700;">${d.itemName}</td>
+        <td style="font-weight:700;">${esc(_docItemSummary(d))}</td>
         <td style="font-size:11px;color:var(--tx-t);">${d.spec||'—'}</td>
-        <td>${d.qty} ${d.unit}</td>
+        <td>${_docQtySummary(d)}</td>
         <td>${d.unitPrice?'₩'+Number(d.unitPrice).toLocaleString('ko-KR'):'—'}</td>
         <td>₩${sup.toLocaleString('ko-KR')}</td>
         <td style="color:var(--tx-t);">₩${vat.toLocaleString('ko-KR')}</td>
@@ -14268,8 +14612,8 @@ function openSalesDocAdd(type) {
   sv('sd-status', cfg.statuses[0]);
   inp('sd-client').innerHTML = '<option value="">-- 선택 --</option>' + clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
   inp('sd-product').innerHTML = '<option value="">-- 선택 --</option>';
-  ['sd-email','sd-item','sd-spec','sd-note'].forEach(id=>sv(id,''));
-  sv('sd-qty','1'); sv('sd-unit','EA'); sv('sd-price','');
+  ['sd-email','sd-note-common'].forEach(id=>sv(id,''));
+  _initDocItemTable('sd');
   modal.classList.add('open');
 }
 
@@ -14288,12 +14632,8 @@ function openSalesDocEdit(type, id) {
   inp('sd-client').innerHTML = '<option value="">-- 선택 --</option>' + clients.map(c=>`<option value="${c.id}"${c.id===d.clientId?' selected':''}>${c.name}</option>`).join('');
   fillProductSelect('sd-product', d.clientId, d.productId);
   sv('sd-email', d.clientEmail||'');
-  sv('sd-item', d.itemName||'');
-  sv('sd-spec', d.spec||'');
-  sv('sd-qty', d.qty||1);
-  sv('sd-unit', d.unit||'EA');
-  sv('sd-price', d.unitPrice||'');
-  sv('sd-note', d.note||'');
+  _initDocItemTable('sd', _docItems(d));
+  sv('sd-note-common', d.commonNote || d.note||'');
   sv('sd-status', d.status || cfg.statuses[0]);
   modal.classList.add('open');
 }
@@ -14312,9 +14652,9 @@ function cloneSalesDoc(type, id) {
   sv('sd-date', today());
   inp('sd-client').innerHTML = '<option value="">-- 선택 --</option>' + clients.map(c=>`<option value="${c.id}"${c.id===d.clientId?' selected':''}>${c.name}</option>`).join('');
   fillProductSelect('sd-product', d.clientId, d.productId);
-  sv('sd-email', d.clientEmail||''); sv('sd-item', d.itemName||''); sv('sd-spec', d.spec||'');
-  sv('sd-qty', d.qty||1); sv('sd-unit', d.unit||'EA'); sv('sd-price', d.unitPrice||'');
-  sv('sd-note', d.note||''); sv('sd-status', cfg.statuses[0]);
+  sv('sd-email', d.clientEmail||'');
+  _initDocItemTable('sd', _docItems(d));
+  sv('sd-note-common', d.commonNote || d.note||''); sv('sd-status', cfg.statuses[0]);
   modal.classList.add('open');
 }
 
@@ -14323,19 +14663,23 @@ function saveSalesDoc() {
   const modal = inp('salesdoc-modal');
   const type = modal.dataset.type || 'statement';
   const cfg = SALES[type];
+  const items = _readDocItemTable('sd');
   if (!v('sd-client')) { showToast('공급받는 고객사를 선택하세요.', 'error'); return; }
-  if (!v('sd-item').trim()) { showToast('품목명을 입력하세요.', 'error'); return; }
+  if (!items.length) { showToast('품목명을 입력하세요.', 'error'); return; }
+  const first = items[0] || { itemName:'', spec:'', qty:1, unit:'EA', price:null, note:'' };
   const data = {
     date: v('sd-date') || today(),
     clientId: v('sd-client'),
     productId: v('sd-product'),
     clientEmail: v('sd-email') || '',
-    itemName: v('sd-item').trim(),
-    spec: v('sd-spec'),
-    qty: Number(v('sd-qty')) || 1,
-    unit: v('sd-unit') || 'EA',
-    unitPrice: Number(v('sd-price')) || 0,
-    note: v('sd-note'),
+    itemName: first.itemName,
+    spec: first.spec || '',
+    qty: Number(first.qty) || 1,
+    unit: first.unit || 'EA',
+    unitPrice: Number(first.price) || 0,
+    note: v('sd-note-common') || first.note || '',
+    commonNote: v('sd-note-common') || '',
+    items,
     status: v('sd-status') || cfg.statuses[0]
   };
   const list = salesList(type);
@@ -14364,7 +14708,7 @@ function deleteSalesDoc(type, id) {
   if (!checkAdminAction()) return;
   const cfg = SALES[type];
   const d = salesList(type).find(x => x.id === id); if (!d) return;
-  confirm_(`${cfg.title} 삭제`, `<strong>${d.id}</strong> (${d.itemName}) 문서를 삭제하시겠습니까?`, () => {
+  confirm_(`${cfg.title} 삭제`, `<strong>${d.id}</strong> (${_docItemSummary(d)}) 문서를 삭제하시겠습니까?`, () => {
     setSalesList(type, salesList(type).filter(x => x.id !== id));
     saveStorage(cfg.key, salesList(type));
     renderSalesDoc(type);
@@ -14378,11 +14722,11 @@ function exportSalesDocCSV(type) {
   if (!list.length) { showToast('내보낼 데이터가 없습니다.', 'error'); return; }
   const wb = XLSX.utils.book_new();
   const hdr = ['문서번호','발행일','고객사','고객이메일','연결제품','품목명','규격','수량','단위','단가','공급가액','부가세','합계','상태','비고'];
-  const rows = list.map(d => {
-    const sup = (d.unitPrice||0)*(d.qty||0), vat = Math.round(sup*0.1);
+  const rows = list.flatMap(d => _docLines(d, type).map(line => {
+    const vat = Math.round(line.amount * 0.1);
     return [d.id, d.date, getClientName(d.clientId)||'', d.clientEmail||'', d.productId?getProductName(d.productId):'',
-      d.itemName, d.spec||'', d.qty, d.unit, d.unitPrice||0, sup, vat, sup+vat, d.status, d.note||''];
-  });
+      line.itemName, line.spec||'', line.qty, line.unit, line.price||0, line.amount, vat, line.amount+vat, d.status, line.rowNote || ''];
+  }));
   const ws = XLSX.utils.aoa_to_sheet([hdr, ...rows]);
   ws['!cols'] = hdr.map(h => ({ wch: Math.max(h.length+2, 12) }));
   XLSX.utils.book_append_sheet(wb, ws, cfg.title);
@@ -14392,7 +14736,8 @@ function exportSalesDocCSV(type) {
 
 /* 표준 전자세금계산서 1부 (공급자/공급받는자 좌우 배치) */
 function _taxInvoiceHtml(d, ci, copyLabel) {
-  const total = (d.unitPrice||0)*(d.qty||0), vat = Math.round(total*0.1), grand = total+vat;
+  const lines = _docLines(d, 'tax');
+  const total = _docAmount(d, 'tax'), vat = Math.round(total*0.1), grand = total+vat;
   const cn = getClientName(d.clientId) || '';
   const bp = partners.find(p => p.name === cn) || {};
   const num = n => Number(n||0).toLocaleString('ko-KR');
@@ -14433,7 +14778,19 @@ function _taxInvoiceHtml(d, ci, copyLabel) {
     </table>`;
   const supplier = { reg:ci.bizNo, company:ci.name, ceo:ci.ceo, address:ci.address, bizType:ci.bizType, bizItem:ci.bizItem, email:ci.email };
   const buyer = { reg:bp.bizNo||'', company:cn, ceo:'', address:bp.address||'', bizType:'', bizItem:'', email:d.clientEmail||bp.email||'' };
-  const empties = [0,1].map(()=>`<tr style="height:17px;">${('<td style="border:'+b+';"></td>').repeat(9)}</tr>`).join('');
+  const itemRows = lines.map(line => {
+    const parts = line.doc && line.doc.date ? line.doc.date.split('-') : dt;
+    const lineVat = Math.round((Number(line.amount) || 0) * 0.1);
+    return `<tr style="height:22px;">
+      <td style="border:${b};text-align:center;">${parts[1]||''}</td><td style="border:${b};text-align:center;">${parts[2]||''}</td>
+      <td style="border:${b};padding:2px 6px;">${esc(line.itemName||'')}</td><td style="border:${b};text-align:center;">${esc(line.spec||'')}</td>
+      <td style="border:${b};text-align:center;">${line.qty||''}</td><td style="border:${b};text-align:right;padding:2px 6px;">${line.price?num(line.price):''}</td>
+      <td style="border:${b};text-align:right;padding:2px 6px;">${num(line.amount)}</td><td style="border:${b};text-align:right;padding:2px 6px;">${num(lineVat)}</td>
+      <td style="border:${b};padding:2px 4px;">${esc(line.rowNote || '')}</td>
+    </tr>`;
+  }).join('');
+  const emptyCount = Math.max(0, 3 - lines.length);
+  const empties = Array.from({length:emptyCount}).map(()=>`<tr style="height:17px;">${('<td style="border:'+b+';"></td>').repeat(9)}</tr>`).join('');
   return `
   <div style="border:2px solid #555;">
     <table style="width:100%;border-collapse:collapse;font-size:11px;margin:0;">
@@ -14470,12 +14827,7 @@ function _taxInvoiceHtml(d, ci, copyLabel) {
         <td style="border:${b};width:88px;">공급가액</td><td style="border:${b};width:78px;">세액</td><td style="border:${b};width:54px;">비고</td>
       </tr></thead>
       <tbody>
-        <tr style="height:22px;">
-          <td style="border:${b};text-align:center;">${dt[1]||''}</td><td style="border:${b};text-align:center;">${dt[2]||''}</td>
-          <td style="border:${b};padding:2px 6px;">${d.itemName||''}</td><td style="border:${b};text-align:center;">${d.spec||''}</td>
-          <td style="border:${b};text-align:center;">${d.qty||''}</td><td style="border:${b};text-align:right;padding:2px 6px;">${d.unitPrice?num(d.unitPrice):''}</td>
-          <td style="border:${b};text-align:right;padding:2px 6px;">${num(total)}</td><td style="border:${b};text-align:right;padding:2px 6px;">${num(vat)}</td><td style="border:${b};"></td>
-        </tr>
+        ${itemRows}
         ${empties}
       </tbody>
     </table>
@@ -14506,7 +14858,8 @@ function _taxInvoiceA4(d, ci) {
 function _salesDocBodyHtml(d, type, ci) {
   if (type === 'tax') return _taxInvoiceA4(d, ci);
   const isTax = type === 'tax';
-  const total = (d.unitPrice||0) * (d.qty||0);
+  const lines = _docLines(d, type);
+  const total = _docAmount(d, type);
   const vat = Math.round(total * 0.1);
   const grand = total + vat;
   const client = (d.clientName || getClientName(d.clientId)) || '—';
@@ -14542,11 +14895,11 @@ function _salesDocBodyHtml(d, type, ci) {
         <th style="width:46px;">수량</th><th style="width:40px;">단위</th>
         <th style="width:100px;">단 가</th><th style="width:100px;">공급가액</th><th style="width:90px;">세 액</th></tr></thead>
         <tbody>
-          <tr><td class="ctr">1</td><td><strong>${d.itemName}</strong></td><td class="ctr">${d.spec||'—'}</td>
-          <td class="ctr">${d.qty}</td><td class="ctr">${d.unit}</td>
-          <td class="num">${d.unitPrice?Number(d.unitPrice).toLocaleString('ko-KR'):'—'}</td>
-          <td class="num">${total.toLocaleString('ko-KR')}</td>
-          <td class="num">${vat.toLocaleString('ko-KR')}</td></tr>
+          ${lines.map((line, i) => `<tr><td class="ctr">${i + 1}</td><td><strong>${esc(line.itemName)}</strong></td><td class="ctr">${line.spec ? esc(line.spec) : '—'}</td>
+          <td class="ctr">${line.qty}</td><td class="ctr">${esc(line.unit || '')}</td>
+          <td class="num">${line.price?Number(line.price).toLocaleString('ko-KR'):'—'}</td>
+          <td class="num">${Number(line.amount).toLocaleString('ko-KR')}</td>
+          <td class="num">${Math.round(line.amount * 0.1).toLocaleString('ko-KR')}</td></tr>`).join('')}
           <tr class="empty-row"><td colspan="8">—</td></tr>
           <tr class="total-row"><td colspan="6" style="text-align:right;">합 계</td>
           <td class="num">${total.toLocaleString('ko-KR')}</td><td class="num">${vat.toLocaleString('ko-KR')}</td></tr>
@@ -14587,7 +14940,11 @@ function openSalesDocPrint(type, id) {
 
 function buildSalesEmailBody(d, ci, label) {
   const client = getClientName(d.clientId) || '—';
-  const total = (d.unitPrice||0)*(d.qty||0), vat = Math.round(total*0.1), grand = total+vat;
+  const total = _docAmount(d, label === '견적서' ? 'quote' : label === '수주확인서' ? 'order' : 'statement');
+  const vat = Math.round(total*0.1), grand = total+vat;
+  const itemLines = _docLines(d, label === '견적서' ? 'quote' : label === '수주확인서' ? 'order' : 'statement')
+    .map((line, idx) => `${idx + 1}. ${line.itemName}${line.spec ? ' (' + line.spec + ')' : ''} / ${line.qty} ${line.unit}${line.rowNote ? ' / ' + line.rowNote : ''}`)
+    .join('\n');
   return `안녕하세요, ${client} 담당자님.
 
 ${ci.name} ${ci.dept}입니다.
@@ -14597,8 +14954,8 @@ ${label}를 첨부와 같이 송부드립니다.
 ─────────────────────────────
 문서번호: ${d.id}
 발행일자: ${d.date}
-품목: ${d.itemName}${d.spec?' ('+d.spec+')':''}
-수량: ${d.qty} ${d.unit}
+품목:
+${itemLines}
 공급가액: ₩${total.toLocaleString('ko-KR')}
 부가세(10%): ₩${vat.toLocaleString('ko-KR')}
 합계금액: ₩${grand.toLocaleString('ko-KR')}
@@ -14644,7 +15001,7 @@ function updateOrderBadge() {
 function renderSODoc(type) {
   const cfg = SODOCS[type], idp = cfg.idp, list = soDocList(type);
   ensureDateView(type, idp+'-table', list.map(d=>d.date), ()=>renderSODoc(type));
-  const amtOf = d => (d.unitPrice||0)*(d.qty||0);
+  const amtOf = d => _docAmount(d, type);
   const total = list.length;
   const sumAmt = list.reduce((s,d)=>s+Math.round(amtOf(d)*1.1),0);
   let kSent, kDone;
@@ -14664,7 +15021,7 @@ function renderSODoc(type) {
     if (!dateViewMatch(type, d.date)) return false;
     if (fc && d.clientId !== fc) return false;
     if (fs && d.status !== fs) return false;
-    if (q && !(d.itemName||'').toLowerCase().includes(q) && !soDocLabel(d).toLowerCase().includes(q)) return false;
+    if (q && !_docItemsSearchText(d).includes(q) && !soDocLabel(d).toLowerCase().includes(q)) return false;
     return true;
   }).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
 
@@ -14681,7 +15038,7 @@ function renderSODoc(type) {
       <th>품목명</th><th>규격</th><th>수량</th><th>단가</th><th>공급가액</th>${headExtra}<th>상태</th><th>관리</th>
     </tr></thead>
     <tbody>${rows.map(d => {
-      const sup = (d.unitPrice||0)*(d.qty||0);
+      const sup = _docAmount(d, type);
       let extraCell;
       if (type === 'quote') extraCell = `<td>${d.deliveryDate||'—'}</td>`;
       else {
@@ -14693,9 +15050,9 @@ function renderSODoc(type) {
         <td style="font-weight:700;color:var(--tx-i);">${d.id}</td>
         <td>${d.date}</td>
         <td>${soDocLabel(d)}${d.clientName && !d.clientId?'<br><span style="font-size:9px;color:var(--tx-t);">미등록</span>':''}</td>
-        <td style="font-weight:700;">${d.itemName}</td>
+        <td style="font-weight:700;">${esc(_docItemSummary(d))}</td>
         <td style="font-size:11px;color:var(--tx-t);">${d.spec||'—'}</td>
-        <td>${d.qty} ${d.unit}</td>
+        <td>${_docQtySummary(d)}</td>
         <td>${d.unitPrice?'₩'+Number(d.unitPrice).toLocaleString('ko-KR'):'—'}</td>
         <td style="font-weight:700;color:var(--tx-i);">₩${sup.toLocaleString('ko-KR')}</td>
         ${extraCell}
@@ -14735,8 +15092,9 @@ function openSODocAdd(type) {
   sv('so2-date', today());
   sv('so2-status', cfg.statuses[0]);
   inp('so2-client').innerHTML = '<option value="">-- 선택 (미등록 시 비움) --</option>' + clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-  ['so2-client-text','so2-email','so2-item','so2-spec','so2-note','so2-due'].forEach(id=>sv(id,''));
-  sv('so2-qty','1'); sv('so2-unit','대'); sv('so2-price','');
+  ['so2-client-text','so2-email','so2-spec','so2-note-common','so2-due'].forEach(id=>sv(id,''));
+  _initDocItemTable('so2');
+  sv('so2-unit','대'); sv('so2-price','');
   modal.classList.add('open');
 }
 
@@ -14755,13 +15113,12 @@ function openSODocEdit(type, id) {
   inp('so2-client').innerHTML = '<option value="">-- 선택 (미등록 시 비움) --</option>' + clients.map(c=>`<option value="${c.id}"${c.id===d.clientId?' selected':''}>${c.name}</option>`).join('');
   sv('so2-client-text', d.clientName||'');
   sv('so2-email', d.clientEmail||'');
-  sv('so2-item', d.itemName||'');
+  _initDocItemTable('so2', _docItems(d));
   sv('so2-spec', d.spec||'');
-  sv('so2-qty', d.qty||1);
   sv('so2-unit', d.unit||'대');
   sv('so2-price', d.unitPrice||'');
   sv('so2-due', d.deliveryDate||'');
-  sv('so2-note', d.note||'');
+  sv('so2-note-common', d.commonNote || d.note||'');
   sv('so2-status', d.status || cfg.statuses[0]);
   modal.classList.add('open');
 }
@@ -14780,9 +15137,10 @@ function cloneSODoc(type, id) {
   sv('so2-date', today());
   inp('so2-client').innerHTML = '<option value="">-- 선택 (미등록 시 비움) --</option>' + clients.map(c=>`<option value="${c.id}"${c.id===d.clientId?' selected':''}>${c.name}</option>`).join('');
   sv('so2-client-text', d.clientName||''); sv('so2-email', d.clientEmail||'');
-  sv('so2-item', d.itemName||''); sv('so2-spec', d.spec||'');
-  sv('so2-qty', d.qty||1); sv('so2-unit', d.unit||'대'); sv('so2-price', d.unitPrice||'');
-  sv('so2-due', d.deliveryDate||''); sv('so2-note', d.note||''); sv('so2-status', cfg.statuses[0]);
+  _initDocItemTable('so2', _docItems(d));
+  sv('so2-spec', d.spec||'');
+  sv('so2-unit', d.unit||'대'); sv('so2-price', d.unitPrice||'');
+  sv('so2-due', d.deliveryDate||''); sv('so2-note-common', d.commonNote || d.note||''); sv('so2-status', cfg.statuses[0]);
   modal.classList.add('open');
 }
 
@@ -14791,20 +15149,24 @@ function saveSODoc() {
   const modal = inp('sodoc-modal');
   const type = modal.dataset.type || 'quote';
   const cfg = SODOCS[type];
+  const items = _readDocItemTable('so2');
   if (!v('so2-client') && !v('so2-client-text').trim()) { showToast('고객사를 선택하거나 직접 입력하세요.', 'error'); return; }
-  if (!v('so2-item').trim()) { showToast('품목명을 입력하세요.', 'error'); return; }
+  if (!items.length) { showToast('품목명을 입력하세요.', 'error'); return; }
+  const first = items[0] || { itemName:'', spec:'', qty:1, unit:'대', price:null, note:'' };
   const data = {
     date: v('so2-date') || today(),
     clientId: v('so2-client'),
     clientName: v('so2-client-text').trim(),
     clientEmail: v('so2-email') || '',
-    itemName: v('so2-item').trim(),
-    spec: v('so2-spec'),
-    qty: Number(v('so2-qty')) || 1,
-    unit: v('so2-unit') || '대',
-    unitPrice: Number(v('so2-price')) || 0,
+    itemName: first.itemName,
+    spec: first.spec || '',
+    qty: Number(first.qty) || 1,
+    unit: first.unit || '대',
+    unitPrice: Number(first.price) || 0,
     deliveryDate: v('so2-due') || '',
-    note: v('so2-note'),
+    note: v('so2-note-common') || first.note || '',
+    commonNote: v('so2-note-common') || '',
+    items,
     status: v('so2-status') || cfg.statuses[0]
   };
   const list = soDocList(type);
@@ -14833,7 +15195,7 @@ function deleteSODoc(type, id) {
   if (!checkAdminAction()) return;
   const cfg = SODOCS[type];
   const d = soDocList(type).find(x=>x.id===id); if (!d) return;
-  confirm_(`${cfg.title} 삭제`, `<strong>${d.id}</strong> (${d.itemName}) 문서를 삭제하시겠습니까?`, () => {
+  confirm_(`${cfg.title} 삭제`, `<strong>${d.id}</strong> (${_docItemSummary(d)}) 문서를 삭제하시겠습니까?`, () => {
     setSoDocList(type, soDocList(type).filter(x=>x.id!==id));
     saveStorage(cfg.key, soDocList(type));
     renderSODoc(type);
@@ -14847,10 +15209,10 @@ function exportSODocCSV(type) {
   if (!list.length) { showToast('내보낼 데이터가 없습니다.', 'error'); return; }
   const wb = XLSX.utils.book_new();
   const hdr = ['문서번호','일자','고객사','고객이메일','품목명','규격','수량','단위','단가','공급가액','부가세','합계','납기','상태','비고'];
-  const rows = list.map(d => {
-    const sup = (d.unitPrice||0)*(d.qty||0), vat = Math.round(sup*0.1);
-    return [d.id, d.date, soDocLabel(d), d.clientEmail||'', d.itemName, d.spec||'', d.qty, d.unit, d.unitPrice||0, sup, vat, sup+vat, d.deliveryDate||'', d.status, d.note||''];
-  });
+  const rows = list.flatMap(d => _docLines(d, type).map(line => {
+    const vat = Math.round(line.amount * 0.1);
+    return [d.id, d.date, soDocLabel(d), d.clientEmail||'', line.itemName, line.spec||'', line.qty, line.unit, line.price||0, line.amount, vat, line.amount+vat, d.deliveryDate||'', d.status, line.rowNote || ''];
+  }));
   const ws = XLSX.utils.aoa_to_sheet([hdr, ...rows]);
   ws['!cols'] = hdr.map(h=>({wch:Math.max(h.length+2,12)}));
   XLSX.utils.book_append_sheet(wb, ws, cfg.title);
@@ -14878,7 +15240,9 @@ function convertQuoteToOrder(id) {
   if (!checkAdminAction()) return;
   const q = quoteList.find(x=>x.id===id); if (!q) return;
   if (q.status === '수주전환') { showToast('이미 수주 전환된 견적입니다.', 'info'); return; }
-  confirm_('수주 전환', `<strong>${q.id}</strong> (${q.itemName}) 견적을 수주로 전환합니다.<br>제품이 자동 생성되어 공정 관리 '설계/도면' 단계로 투입됩니다. 진행할까요?`, () => {
+  const itemSummary = _docItemSummary(q);
+  const totalQty = _docItems(q).reduce((sum, item) => sum + (Number(item.qty) || 0), 0) || q.qty || 1;
+  confirm_('수주 전환', `<strong>${q.id}</strong> (${itemSummary}) 견적을 수주로 전환합니다.<br>제품이 자동 생성되어 공정 관리 '설계/도면' 단계로 투입됩니다. 진행할까요?`, () => {
     // 1) 고객사 확보 (미등록·존재하지 않는 clientId면 이름으로 찾거나 자동 등록)
     let clientId = q.clientId;
     const valid = clientId && clients.some(c => c.id === clientId);
@@ -14896,8 +15260,8 @@ function convertQuoteToOrder(id) {
     const firstStage = processStages[0] || '설계/도면';
     const productId = nextCode('PR', products);
     products.push({
-      id: productId, clientId, name: q.itemName, spec: q.spec||'',
-      qty: q.qty||1, unit: q.unit||'대', price: q.unitPrice||0,
+      id: productId, clientId, name: itemSummary, spec: q.spec||'',
+      qty: totalQty, unit: q.unit||'대', price: q.unitPrice||0,
       deliveryDate: q.deliveryDate||'', processStage: firstStage,
       status: stageToStatus(firstStage), processMemo: `견적 ${q.id} 수주 전환 자동 생성`, note: q.note||''
     });
@@ -14907,7 +15271,8 @@ function convertQuoteToOrder(id) {
     orderList.unshift({
       id: orderId, date: today(), clientId, clientName: q.clientName||'', clientEmail: q.clientEmail||'',
       itemName: q.itemName, spec: q.spec||'', qty: q.qty||1, unit: q.unit||'대', unitPrice: q.unitPrice||0,
-      deliveryDate: q.deliveryDate||'', note: q.note||'', status: '수주확정', productId, quoteId: q.id
+      deliveryDate: q.deliveryDate||'', note: q.note||'', commonNote: q.commonNote || '', items: _docItems(q),
+      status: '수주확정', productId, quoteId: q.id
     });
     saveStorage('orderList', orderList);
     // 4) 견적 상태 갱신
@@ -15300,10 +15665,41 @@ function setAttQuickFilter(type, value) {
   else attQuickDept = value || '';
   renderAttendance();
 }
+// 선택 액션바(선택바 ↔ 필터바)만 만들어 반환 — 체크박스 토글 시 테이블 전체를 다시 그리지 않기 위함
+function attQuickControlsHtml() {
+  const depts = [...new Set(workers.map(worker => worker.dept).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko-KR'));
+  return attQuickSelected.size ? `
+      <div class="selection-action-bar att-quick-selectionbar" style="display:flex;">
+        <span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${attQuickSelected.size}명 선택</span>
+        <select id="att-quick-bulk-status">
+          <option value="">상태 선택</option><option>지각</option><option>조퇴</option><option>외근</option><option>결근</option><option>연장근무</option><option>휴일근무</option><option value="정상복구">정상·휴무 복구</option>
+        </select>
+        <button class="btn btn-sm btn-primary" onclick="applyQuickAttendanceBulk()">일괄 적용</button>
+        <button class="btn btn-sm date-view-clear-selection" onclick="clearAttQuickSelection()"><i class="ti ti-x"></i>해제</button>
+      </div>` : `
+      <div class="att-quick-filters">
+        <button class="btn btn-sm btn-icon" onclick="moveAttQuickDate(-1)" title="이전 날짜"><i class="ti ti-chevron-left"></i></button>
+        <input type="date" value="${attQuickDate}" onchange="setAttQuickDate(this.value)">
+        <button class="btn btn-sm btn-icon" onclick="moveAttQuickDate(1)" title="다음 날짜"><i class="ti ti-chevron-right"></i></button>
+        <button class="btn btn-sm" onclick="setAttQuickDate(today())">오늘</button>
+        <select onchange="setAttQuickFilter('dept',this.value)"><option value="">전체 부서</option>${depts.map(dept=>`<option${dept===attQuickDept?' selected':''}>${esc(dept)}</option>`).join('')}</select>
+        <input type="search" value="${esc(attQuickQuery)}" placeholder="직원 검색" onchange="setAttQuickFilter('query',this.value)">
+      </div>`;
+}
+// 선택 상태만 부분 갱신(테이블 재구성 없음). 컨테이너가 없으면(다른 화면) 전체 재렌더로 폴백.
+function refreshAttQuickSelectionUi() {
+  const box = inp('att-quick-controls');
+  if (!box) { renderAttendance(); return; }   // 근태 화면이 아니면 전체 재렌더로 폴백
+  box.innerHTML = attQuickControlsHtml();
+  // 테이블을 다시 그리지 않으므로 체크박스 표시를 선택 집합과 동기화(전체 해제 시 체크 해제 등)
+  document.querySelectorAll('.att-quick-check').forEach(cb => {
+    cb.checked = attQuickSelected.has(cb.dataset.workerId);
+  });
+}
 function toggleAttQuickSelect(workerId, checked) {
   if (checked) attQuickSelected.add(workerId);
   else attQuickSelected.delete(workerId);
-  renderAttendance();
+  refreshAttQuickSelectionUi();
 }
 function toggleAttQuickAll(checked) {
   document.querySelectorAll('.att-quick-check').forEach(box => {
@@ -15311,11 +15707,11 @@ function toggleAttQuickAll(checked) {
     if (checked) attQuickSelected.add(box.dataset.workerId);
     else attQuickSelected.delete(box.dataset.workerId);
   });
-  renderAttendance();
+  refreshAttQuickSelectionUi();
 }
 function clearAttQuickSelection() {
   attQuickSelected.clear();
-  renderAttendance();
+  refreshAttQuickSelectionUi();
 }
 
 function dateText(date) {
@@ -15338,6 +15734,7 @@ function attendanceDateRange(key='attendance', month='') {
   return [`${ym}-01`, today()];
 }
 function eachAttendanceDate(from, to, callback) {
+  if (from && to && from > to) { const t = from; from = to; to = t; }   // 시작일이 종료일보다 늦으면 교정(0일 처리 방지)
   const cursor = new Date(from + 'T00:00:00'), end = new Date(to + 'T00:00:00');
   let guard = 0;
   while (!isNaN(cursor) && cursor <= end && guard++ < 370) {
@@ -15358,7 +15755,10 @@ function attendanceExtraMinutes(row) {
   if (Number(row.extraMinutes) >= 0 && row.extraMinutes !== '') return Number(row.extraMinutes) || 0;
   const minutes = workMinutes(row.checkIn, row.checkOut);
   if (row.status === '휴일근무') return minutes;
-  if (row.status === '연장근무') return Math.max(0, minutes - 8 * 60);
+  if (row.status === '연장근무') {
+    const dh = (typeof payrollSettings === 'function' && Number(payrollSettings().dailyHours)) || 8;
+    return Math.max(0, minutes - dh * 60);
+  }
   return 0;
 }
 function attendanceDefaultFor(worker, date) {
@@ -15586,7 +15986,6 @@ function openAttendanceLeaveDetail(workerId) {
 }
 function _attQuickEditor() {
   const query = attQuickQuery.trim().toLowerCase();
-  const depts = [...new Set(workers.map(worker => worker.dept).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko-KR'));
   const list = workers.filter(worker => workerActiveOn(worker, attQuickDate)
     && (!attQuickDept || worker.dept === attQuickDept)
     && (!query || [worker.name,worker.id,worker.dept,worker.position].join(' ').toLowerCase().includes(query)));
@@ -15615,31 +16014,13 @@ function _attQuickEditor() {
       </td>
     </tr>`;
   }).join('') : `<tr><td colspan="8">${empty('조건에 맞는 직원이 없습니다.')}</td></tr>`;
-  const quickControls = attQuickSelected.size ? `
-      <div class="selection-action-bar att-quick-selectionbar" style="display:flex;">
-        <span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${attQuickSelected.size}명 선택</span>
-        <select id="att-quick-bulk-status">
-          <option value="">상태 선택</option><option>지각</option><option>조퇴</option><option>외근</option><option>결근</option><option>연장근무</option><option>휴일근무</option><option value="정상복구">정상·휴무 복구</option>
-        </select>
-        <button class="btn btn-sm btn-primary" onclick="applyQuickAttendanceBulk()">일괄 적용</button>
-        <button class="btn btn-sm date-view-clear-selection" onclick="clearAttQuickSelection()"><i class="ti ti-x"></i>해제</button>
-      </div>` : `
-      <div class="att-quick-filters">
-        <button class="btn btn-sm btn-icon" onclick="moveAttQuickDate(-1)" title="이전 날짜"><i class="ti ti-chevron-left"></i></button>
-        <input type="date" value="${attQuickDate}" onchange="setAttQuickDate(this.value)">
-        <button class="btn btn-sm btn-icon" onclick="moveAttQuickDate(1)" title="다음 날짜"><i class="ti ti-chevron-right"></i></button>
-        <button class="btn btn-sm" onclick="setAttQuickDate(today())">오늘</button>
-        <select onchange="setAttQuickFilter('dept',this.value)"><option value="">전체 부서</option>${depts.map(dept=>`<option${dept===attQuickDept?' selected':''}>${esc(dept)}</option>`).join('')}</select>
-        <input type="search" value="${esc(attQuickQuery)}" placeholder="직원 검색" onchange="setAttQuickFilter('query',this.value)">
-      </div>`;
-
   return `<div class="card att-quick-card">
     <div class="card-hd att-quick-head">
       <div>
         <span class="card-ttl"><i class="ti ti-bolt"></i>하루 근태 간편 편집</span>
         <div class="att-quick-help">${weekend?'휴일 기본값은 휴무입니다. 근무자만 휴일근무로 변경하세요.':'별도 입력이 없으면 전 직원 정상근무로 자동 처리됩니다.'}</div>
       </div>
-      ${quickControls}
+      <div id="att-quick-controls">${attQuickControlsHtml()}</div>
     </div>
     <div class="att-quick-table-wrap"><table class="att-quick-table">
       <thead><tr><th><input type="checkbox" onchange="toggleAttQuickAll(this.checked)"></th><th>직원</th><th>상태</th><th>출근</th><th>퇴근</th><th>추가시간</th><th>비고</th><th>관리</th></tr></thead>
@@ -15656,11 +16037,12 @@ function _attList() {
   const cnt = s => recs.filter(r => r.status === s).length;
   const normal = allRows.filter(r => r.status === '정상').length, late = cnt('지각'), early = cnt('조퇴');
   const ot = cnt('연장근무'), holiday = cnt('휴일근무'), absent = cnt('결근');
+  const dhStats = (typeof payrollSettings === 'function' && Number(payrollSettings().dailyHours)) || 8;
   const dayMins = allRows.reduce((sum,row) => {
     if (['결근','휴가'].includes(row.status)) return sum;
     if (row.status === '휴일근무') return sum + attendanceExtraMinutes(row);
-    if (row.status === '반차') return sum + 4 * 60;
-    return sum + 8 * 60 + (row.status === '연장근무' ? attendanceExtraMinutes(row) : 0);
+    if (row.status === '반차') return sum + (dhStats / 2) * 60;
+    return sum + dhStats * 60 + (row.status === '연장근무' ? attendanceExtraMinutes(row) : 0);
   }, 0);
 
   const rows = recs.length ? recs.map(r => `
@@ -15721,11 +16103,12 @@ function _attCalendar() {
   });
 
   // 직원별 월 근무시간 요약
+  const dhSummary = (typeof payrollSettings === 'function' && Number(payrollSettings().dailyHours)) || 8;
   const summary = workers.map(w => {
-    const data = attendanceSummary(w.id, attMonth);
+    const data = attendanceSummary(w.id, attMonth, dhSummary);
     const recs = data.rows;
     const days = data.workDays;
-    const mins = days * 8 * 60 + data.overtimeMinutes + data.holidayMinutes;
+    const mins = days * data.dailyHours * 60 + data.overtimeMinutes + data.holidayMinutes;
     const late = recs.filter(r => r.status === '지각').length;
     return { w, days, mins, late, absent:data.absentDays, overtime:data.overtimeMinutes, holiday:data.holidayMinutes };
   }).filter(s => s.days || s.mins || s.late || s.absent);
@@ -16135,7 +16518,7 @@ function finInput(tab,key,value){
 function finQuickRange(tab, preset) {
   const state = finState(tab), now = new Date();
   if (tab === 'labor') payrollSelected.clear();
-  const fmt = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+  const fmt = dateText;   // 공통 'YYYY-MM-DD' 포매터 재사용
   if (preset === 'all') { state.from=''; state.to=''; }
   else if (preset === '7d') {
     state.from = fmt(new Date(now.getFullYear(),now.getMonth(),now.getDate()-6)); state.to=fmt(now);
@@ -16148,7 +16531,7 @@ function finQuickRange(tab, preset) {
 }
 const FIN_DATE_VIEW_TABS = new Set(['ar','revenue','purchase']);
 function finDateText(date) {
-  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+  return dateText(date);   // 공통 포매터로 위임(중복 제거)
 }
 function finDateDefault(mode) {
   const value = today();
@@ -16427,10 +16810,13 @@ function finPaymentStatusBadge(kind, payment) {
   if (payment.status === '부분') return `<span class="bd bd-warn">${kind === 'ap' ? '부분지급' : '부분수금'}</span>`;
   return `<span class="bd bd-neu">${kind === 'ap' ? '미지급' : '미수금'}</span>`;
 }
+function finPoAmount(p) { return typeof _docAmount === 'function' ? _docAmount(p, 'po') : (p.unitPrice||0)*(p.qty||0); }
+function finPoItemSummary(p) { return typeof _docItemSummary === 'function' ? _docItemSummary(p) : (p.itemName || ''); }
+function finPoItemSearchText(p) { return typeof _docItemsSearchText === 'function' ? _docItemsSearchText(p) : (p.itemName || '').toLowerCase(); }
 function financeFilteredRows(tab) {
   const s=finState(tab), q=s.query.trim().toLowerCase();
   if(tab==='revenue')return deliveries.filter(d=>finMatchDate(d.deliveredAt,s)&&finMatchAmount((d.price||0)*(d.qty||0),s)&&(!q||[d.id,getClientName(d.clientId),d.productName,getProductName(d.productId)].join(' ').toLowerCase().includes(q)));
-  if(tab==='purchase')return poList.filter(p=>finMatchDate(p.date,s)&&finMatchAmount((p.unitPrice||0)*(p.qty||0),s)&&(!s.status||(p.status||'작성중')===s.status)&&(!q||[p.id,p.supplier,p.itemName].join(' ').toLowerCase().includes(q)));
+  if(tab==='purchase')return poList.filter(p=>finMatchDate(p.date,s)&&finMatchAmount(finPoAmount(p),s)&&(!s.status||(p.status||'작성중')===s.status)&&(!q||[p.id,p.supplier,finPoItemSearchText(p)].join(' ').toLowerCase().includes(q)));
   if(tab==='cost')return products.filter(p=>finMatchAmount(prodUnitCost(p),s)&&(!q||[p.id,p.name,getClientName(p.clientId)].join(' ').toLowerCase().includes(q)));
   if(tab==='labor')return workers.filter(w=>finMatchAmount(calcPayroll(w,payrollMonth).net,s)&&(!s.status||(calcPayroll(w,payrollMonth).confirmed?'확정':'작성중')===s.status)&&(!q||[w.id,w.name,w.dept,w.position].join(' ').toLowerCase().includes(q)));
   if(tab==='etc')return financeData.entries.filter(e=>finMatchDate(e.date,s)&&finMatchAmount(e.amount,s)&&(!s.status||e.type===s.status)&&(!q||[e.id,e.category,e.title,e.note].join(' ').toLowerCase().includes(q)));
@@ -16448,17 +16834,17 @@ function exportFinanceViewXLS(tab){
       rows.push(['미수금',d.deliveredAt,getClientName(d.clientId),d.productName||getProductName(d.productId),total,pay.amount,pay.remaining,pay.status,pay.date,pay.method,pay.note]);
     });
     poList.filter(p=>{
-      const total=(p.unitPrice||0)*(p.qty||0), pay=finPaymentRecord('ap',p.id,total);
-      return finMatchDate(p.date,s)&&finMatchAmount(total,s)&&(!s.status||pay.status===s.status)&&(!q||[p.id,p.supplier,p.itemName].join(' ').toLowerCase().includes(q));
+      const total=finPoAmount(p), pay=finPaymentRecord('ap',p.id,total);
+      return finMatchDate(p.date,s)&&finMatchAmount(total,s)&&(!s.status||pay.status===s.status)&&(!q||[p.id,p.supplier,finPoItemSearchText(p)].join(' ').toLowerCase().includes(q));
     }).forEach(p=>{
-      const total=(p.unitPrice||0)*(p.qty||0), pay=finPaymentRecord('ap',p.id,total);
-      rows.push(['미지급금',p.date,p.supplier,p.itemName,total,pay.amount,pay.remaining,pay.status,pay.date,pay.method,pay.note]);
+      const total=finPoAmount(p), pay=finPaymentRecord('ap',p.id,total);
+      rows.push(['미지급금',p.date,p.supplier,finPoItemSummary(p),total,pay.amount,pay.remaining,pay.status,pay.date,pay.method,pay.note]);
     });
     const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet([['구분','일자','거래처','품목','총액','처리액','잔액','상태','처리일','방법','메모'],...rows]);XLSX.utils.book_append_sheet(wb,ws,'채권채무');XLSX.writeFile(wb,`미수금_미지급금_${today()}.xlsx`);return;
   }
   const list=financeFilteredRows(tab); let header=[],rows=[];
   if(tab==='revenue'){header=['납품일','고객사','제품','수량','단가','매출액'];rows=list.map(d=>[d.deliveredAt,getClientName(d.clientId),d.productName||getProductName(d.productId),d.qty,d.price,(d.price||0)*(d.qty||0)]);}
-  else if(tab==='purchase'){header=['발주일','공급처','품목','수량','단가','매입액','상태'];rows=list.map(p=>[p.date,p.supplier,p.itemName,p.qty,p.unitPrice,(p.unitPrice||0)*(p.qty||0),p.status]);}
+  else if(tab==='purchase'){header=['발주일','공급처','품목','수량','단가','매입액','상태'];rows=list.map(p=>[p.date,p.supplier,finPoItemSummary(p),typeof _docQtySummary==='function'?_docQtySummary(p):p.qty,p.unitPrice,finPoAmount(p),p.status]);}
   else if(tab==='cost'){header=['코드','제품','고객사','재료비','노무비','경비','제조원가','수주단가'];rows=list.map(p=>[p.id,p.name,getClientName(p.clientId),p.matCost,p.laborCost,p.ovhCost,prodUnitCost(p),p.price]);}
   else if(tab==='labor'){exportPayrollXLS();return;}
   else if(tab==='etc'){header=['일자','구분','분류','내용','금액','비고'];rows=list.map(e=>[e.date,e.type,e.category,e.title,e.amount,e.note]);}
@@ -16493,8 +16879,16 @@ function guardFinanceMonth(date) {
 
 /* ── 집계 헬퍼 ── */
 function finRevenueTotal()  { return deliveries.reduce((s,d)=>s+(d.price||0)*(d.qty||0),0); }
-function finPurchaseTotal() { return poList.reduce((s,p)=>s+(p.unitPrice||0)*(p.qty||0),0); }
-function finPayrollMonthly(ym=today().slice(0,7)){ return workers.reduce((s,w)=>s+calcPayroll(w,ym).gross,0); }
+function finPurchaseTotal() { return poList.reduce((s,p)=>s+finPoAmount(p),0); }
+function finPayrollMonthly(ym=today().slice(0,7)){
+  // 입사일 이후의 달만 인건비에 반영(입사 전 달을 현재 급여로 과대 계상하지 않도록).
+  // 단, 해당 달에 저장된 급여기록이 있으면 입사일과 무관하게 그대로 반영.
+  return workers.reduce((s,w)=>{
+    const hired = !w.hireDate || String(w.hireDate).slice(0,7) <= ym;
+    if (!hired && !payrollRecord(w.id, ym)) return s;
+    return s + calcPayroll(w,ym).gross;
+  },0);
+}
 function finEntriesSum(type){ return financeData.entries.filter(e=>e.type===type).reduce((s,e)=>s+(Number(e.amount)||0),0); }
 
 function finMonthList(n) {
@@ -16507,11 +16901,11 @@ function finMonthList(n) {
   return arr;
 }
 function finRevenueMonth(ym)  { return deliveries.filter(d=>(d.deliveredAt||'').slice(0,7)===ym).reduce((s,d)=>s+(d.price||0)*(d.qty||0),0); }
-function finPurchaseMonth(ym) { return poList.filter(p=>(p.date||'').slice(0,7)===ym).reduce((s,p)=>s+(p.unitPrice||0)*(p.qty||0),0); }
+function finPurchaseMonth(ym) { return poList.filter(p=>(p.date||'').slice(0,7)===ym).reduce((s,p)=>s+finPoAmount(p),0); }
 function finEntryMonth(ym,type){ return financeData.entries.filter(e=>e.type===type && (e.date||'').slice(0,7)===ym).reduce((s,e)=>s+(Number(e.amount)||0),0); }
 function finRangeInfo(range = finDashboardRange) {
   const now = new Date(today());
-  const fmt = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+  const fmt = dateText;   // 공통 'YYYY-MM-DD' 포매터 재사용
   if (range === 'prev') {
     const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const last = new Date(now.getFullYear(), now.getMonth(), 0);
@@ -16546,7 +16940,7 @@ function finRangeMonths(rangeInfo) {
   return [...set].sort();
 }
 function finRevenueRange(rangeInfo) { return deliveries.filter(d=>finDateInRange(d.deliveredAt, rangeInfo)).reduce((s,d)=>s+(d.price||0)*(d.qty||0),0); }
-function finPurchaseRange(rangeInfo) { return poList.filter(p=>finDateInRange(p.date, rangeInfo)).reduce((s,p)=>s+(p.unitPrice||0)*(p.qty||0),0); }
+function finPurchaseRange(rangeInfo) { return poList.filter(p=>finDateInRange(p.date, rangeInfo)).reduce((s,p)=>s+finPoAmount(p),0); }
 function finEntryRange(rangeInfo,type) { return financeData.entries.filter(e=>e.type===type && finDateInRange(e.date, rangeInfo)).reduce((s,e)=>s+(Number(e.amount)||0),0); }
 function finPayrollRange(rangeInfo) { return finRangeMonths(rangeInfo).reduce((sum, ym)=>sum+finPayrollMonthly(ym),0); }
 
@@ -16592,10 +16986,8 @@ function _finDashboard() {
   const gross = rev - pur;
   const grossRate = rev > 0 ? Math.round(gross/rev*1000)/10 : 0;
   const payroll = finPayrollRange(rangeInfo);
-  const cm = today().slice(0,7);
-  const cmRev = finRevenueRange(rangeInfo), cmPur = finPurchaseRange(rangeInfo);
-  const cmInc = finEntryRange(rangeInfo,'수입'), cmExp = finEntryRange(rangeInfo,'비용');
-  const cmNet = cmRev - cmPur - payroll - cmExp + cmInc;
+  const inc = finEntryRange(rangeInfo,'수입'), exp = finEntryRange(rangeInfo,'비용');
+  const net = rev - pur - payroll - exp + inc;
   const months = finMonthList(6);
   const maxV = Math.max(1, ...months.map(m => Math.max(finRevenueMonth(m.ym), finPurchaseMonth(m.ym))));
 
@@ -16636,12 +17028,12 @@ function _finDashboard() {
     <div class="card" style="margin-bottom:16px;">
       <div class="card-hd"><span class="card-ttl"><i class="ti ti-calendar-stats"></i>${rangeInfo.label} 손익 요약</span></div>
       <div style="display:flex;flex-wrap:wrap;gap:24px;padding:6px 4px;font-size:13px;">
-        <div>매출 <b style="color:var(--tx-i);">${fmtW(cmRev)}</b></div>
-        <div>− 매입/지출 <b style="color:#e8590c;">${fmtW(cmPur)}</b></div>
+        <div>매출 <b style="color:var(--tx-i);">${fmtW(rev)}</b></div>
+        <div>− 매입/지출 <b style="color:#e8590c;">${fmtW(pur)}</b></div>
         <div>− 인건비 <b>${fmtW(payroll)}</b></div>
-        <div>− 기타비용 <b>${fmtW(cmExp)}</b></div>
-        <div>+ 기타수입 <b>${fmtW(cmInc)}</b></div>
-        <div style="border-left:2px solid var(--br);padding-left:24px;">순이익 <b style="color:${cmNet>=0?'var(--tx-ok)':'var(--tx-err)'};font-size:15px;">${fmtW(cmNet)}</b></div>
+        <div>− 기타비용 <b>${fmtW(exp)}</b></div>
+        <div>+ 기타수입 <b>${fmtW(inc)}</b></div>
+        <div style="border-left:2px solid var(--br);padding-left:24px;">순이익 <b style="color:${net>=0?'var(--tx-ok)':'var(--tx-err)'};font-size:15px;">${fmtW(net)}</b></div>
       </div>
     </div>
 
@@ -16692,18 +17084,18 @@ function _finRevenue() {
 /* ── 매입/지출 ── */
 function _finPurchase() {
   const state=finState('purchase'), query=state.query.trim().toLowerCase();
-  let list=poList.filter(p=>finMatchDate(p.date,state) && finMatchAmount((p.unitPrice||0)*(p.qty||0),state) && (!state.status || (p.status||'작성중')===state.status) &&
-    (!query || [p.id,p.supplier,p.itemName].join(' ').toLowerCase().includes(query)));
-  list=finSort(list,state,p=>p.date,p=>(p.unitPrice||0)*(p.qty||0));
-  const total=list.reduce((sum,p)=>sum+(p.unitPrice||0)*(p.qty||0),0), page=finPaged(list,state);
+  let list=poList.filter(p=>finMatchDate(p.date,state) && finMatchAmount(finPoAmount(p),state) && (!state.status || (p.status||'작성중')===state.status) &&
+    (!query || [p.id,p.supplier,finPoItemSearchText(p)].join(' ').toLowerCase().includes(query)));
+  list=finSort(list,state,p=>p.date,p=>finPoAmount(p));
+  const total=list.reduce((sum,p)=>sum+finPoAmount(p),0), page=finPaged(list,state);
   const body = page.rows.length ? page.rows.map(p => `
     <tr>
       <td>${esc(p.date)||'—'}</td>
       <td>${esc(p.supplier)||'—'}</td>
-      <td>${esc(p.itemName)||'—'}</td>
-      <td>${esc(p.qty)}${esc(p.unit)||''}</td>
+      <td>${esc(finPoItemSummary(p))||'—'}</td>
+      <td>${esc(typeof _docQtySummary==='function'?_docQtySummary(p):p.qty)}${typeof _docQtySummary==='function'?'':(esc(p.unit)||'')}</td>
       <td>${fmtW(p.unitPrice||0)}</td>
-      <td style="font-weight:700;color:#e8590c;">${fmtW((p.unitPrice||0)*(p.qty||0))}</td>
+      <td style="font-weight:700;color:#e8590c;">${fmtW(finPoAmount(p))}</td>
       <td>${statusBadge(p.status||'작성중')}</td>
     </tr>`).join('') : `<tr><td colspan="7">${empty('구매발주(매입) 내역이 없습니다.')}</td></tr>`;
   return `
@@ -20876,7 +21268,7 @@ window.addEventListener('resize', () => {
 
 <!-- ══ 견적요청서 등록/수정 팝업 모달 ══ -->
 <div class="overlay" id="rfq-modal">
-  <div class="dlg" style="max-width:680px; width:96%;">
+  <div class="dlg" style="max-width:960px; width:96%;">
     <div class="dlg-title" id="rfq-modal-ttl"><i class="ti ti-file-description" style="color:var(--tx-i);"></i>견적요청서 등록</div>
     <div class="fg fg4" style="gap:10px; margin-bottom:14px;">
       <div class="ff"><label>문서번호</label><input id="rq-id" readonly></div>
@@ -20893,14 +21285,14 @@ window.addEventListener('resize', () => {
         </div>
       </div>
       <div class="ff" style="grid-column:span 2;"><label>공급처 이메일</label><input id="rq-semail" type="email" placeholder="supplier@example.com"></div>
-      <div class="ff" style="grid-column:span 2;"><label>품목명 *</label><input id="rq-item" placeholder="예: 서보모터 200W"></div>
-      <div class="ff" style="grid-column:span 2;"><label>규격/사양</label><input id="rq-spec" placeholder="예: 220V, ISO규격 등"></div>
-      <div class="ff"><label>수량</label><input id="rq-qty" type="number" placeholder="1" min="0" value="1"></div>
-      <div class="ff"><label>단위</label>
-        <select id="rq-unit"><option>EA</option><option>대</option><option>SET</option><option>kg</option><option>M</option><option>L</option><option>BOX</option></select>
+      <div class="doc-item-grid">
+        <div class="doc-item-grid-label"><i class="ti ti-table"></i>품목 입력 *</div>
+        <table>
+          <thead><tr><th>품목명</th><th class="doc-item-spec">규격/사양</th><th class="doc-item-qty">수량</th><th class="doc-item-unit">단위</th><th class="doc-item-price">희망단가</th><th>비고</th><th class="doc-item-action"></th></tr></thead>
+          <tbody id="rq-items-body"></tbody>
+        </table>
       </div>
-      <div class="ff"><label>희망 단가 (원)</label><input id="rq-target" type="number" placeholder="0" min="0"></div>
-      <div class="ff"><label>비고</label><input id="rq-note" placeholder="특이사항, 도면 첨부 여부 등"></div>
+      <input id="rq-item" type="hidden"><input id="rq-spec" type="hidden"><input id="rq-qty" type="hidden" value="1"><input id="rq-unit" type="hidden" value="EA"><input id="rq-target" type="hidden"><input id="rq-note" type="hidden">
     </div>
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('rfq-modal')">취소</button>
@@ -20911,7 +21303,7 @@ window.addEventListener('resize', () => {
 
 <!-- ══ 구매발주서 등록/수정 팝업 모달 ══ -->
 <div class="overlay" id="po-modal">
-  <div class="dlg" style="max-width:700px; width:96%;">
+  <div class="dlg" style="max-width:960px; width:96%;">
     <div class="dlg-title" id="po-modal-ttl"><i class="ti ti-file-invoice" style="color:var(--tx-i);"></i>구매발주서 등록</div>
     <div class="fg fg4" style="gap:10px; margin-bottom:14px;">
       <div class="ff"><label>발주번호</label><input id="po-id" readonly></div>
@@ -20928,20 +21320,21 @@ window.addEventListener('resize', () => {
         </div>
       </div>
       <div class="ff" style="grid-column:span 2;"><label>공급처 이메일</label><input id="po-semail" type="email" placeholder="supplier@example.com"></div>
-      <div class="ff" style="grid-column:span 2;"><label>품목명 *</label><input id="po-item" placeholder="예: 볼스크류 SFU1605"></div>
-      <div class="ff" style="grid-column:span 2;"><label>규격/사양</label><input id="po-spec" placeholder="예: 치수, 재질 등"></div>
-      <div class="ff"><label>수량</label><input id="po-qty" type="number" placeholder="1" min="0" value="1"></div>
-      <div class="ff"><label>단위</label>
-        <select id="po-unit"><option>EA</option><option>대</option><option>SET</option><option>kg</option><option>M</option><option>L</option><option>BOX</option></select>
+      <div class="doc-item-grid">
+        <div class="doc-item-grid-label"><i class="ti ti-table"></i>품목 입력 *</div>
+        <table>
+          <thead><tr><th>품목명</th><th class="doc-item-spec">규격/사양</th><th class="doc-item-qty">수량</th><th class="doc-item-unit">단위</th><th class="doc-item-price">단가</th><th>비고</th><th class="doc-item-action"></th></tr></thead>
+          <tbody id="po-items-body"></tbody>
+        </table>
       </div>
-      <div class="ff"><label>단가 (원)</label><input id="po-price" type="number" placeholder="0" min="0"></div>
+      <input id="po-item" type="hidden"><input id="po-spec" type="hidden"><input id="po-qty" type="hidden" value="1"><input id="po-unit" type="hidden" value="EA"><input id="po-price" type="hidden"><input id="po-note" type="hidden">
       <div class="ff"><label>결제 조건</label>
         <select id="po-pay"><option>현금</option><option>T/T</option><option>어음</option><option>카드</option><option>외상</option></select>
       </div>
       <div class="ff"><label>납품 방법</label>
         <select id="po-dlv"><option>직납</option><option>택배</option><option>지입</option><option>화물</option><option>방문수령</option></select>
       </div>
-      <div class="ff"><label>비고</label><input id="po-note" placeholder="특이사항 등"></div>
+      <div class="ff" style="grid-column:span 2;"><label>공통 메모</label><input id="po-note-common" placeholder="문서 전체 특이사항"></div>
     </div>
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('po-modal')">취소</button>
@@ -20952,7 +21345,7 @@ window.addEventListener('resize', () => {
 
 <!-- ══ 거래명세표 / 세금계산서 공용 모달 ══ -->
 <div class="overlay" id="salesdoc-modal">
-  <div class="dlg" style="max-width:700px; width:96%;">
+  <div class="dlg" style="max-width:960px; width:96%;">
     <div class="dlg-title" id="sd-modal-ttl"><i class="ti ti-receipt" style="color:var(--tx-i);"></i>문서 등록</div>
     <div class="fg fg4" style="gap:10px; margin-bottom:14px;">
       <div class="ff"><label>문서번호</label><input id="sd-id" readonly></div>
@@ -20966,14 +21359,15 @@ window.addEventListener('resize', () => {
       </div>
       <div class="ff"><label>연결 제품</label><select id="sd-product"><option value="">-- 선택 --</option></select></div>
       <div class="ff" style="grid-column:span 3;"><label>고객 이메일</label><input id="sd-email" type="email" placeholder="client@example.com"></div>
-      <div class="ff" style="grid-column:span 2;"><label>품목명 *</label><input id="sd-item" placeholder="예: 내구성 시험기"></div>
-      <div class="ff" style="grid-column:span 2;"><label>규격/사양</label><input id="sd-spec" placeholder="예: AC 220V"></div>
-      <div class="ff"><label>수량</label><input id="sd-qty" type="number" min="0" value="1"></div>
-      <div class="ff"><label>단위</label>
-        <select id="sd-unit"><option>EA</option><option>대</option><option>SET</option><option>kg</option><option>M</option><option>L</option><option>BOX</option></select>
+      <div class="doc-item-grid">
+        <div class="doc-item-grid-label"><i class="ti ti-table"></i>품목 입력 *</div>
+        <table>
+          <thead><tr><th>품목명</th><th class="doc-item-spec">규격/사양</th><th class="doc-item-qty">수량</th><th class="doc-item-unit">단위</th><th class="doc-item-price">단가</th><th>비고</th><th class="doc-item-action"></th></tr></thead>
+          <tbody id="sd-items-body"></tbody>
+        </table>
       </div>
-      <div class="ff"><label>단가 (원)</label><input id="sd-price" type="number" min="0" placeholder="0"></div>
-      <div class="ff"><label>비고</label><input id="sd-note" placeholder="특이사항"></div>
+      <input id="sd-item" type="hidden"><input id="sd-spec" type="hidden"><input id="sd-qty" type="hidden" value="1"><input id="sd-unit" type="hidden" value="EA"><input id="sd-price" type="hidden"><input id="sd-note" type="hidden">
+      <div class="ff" style="grid-column:span 4;"><label>공통 메모</label><input id="sd-note-common" placeholder="문서 전체 특이사항"></div>
     </div>
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('salesdoc-modal')">취소</button>
@@ -20984,7 +21378,7 @@ window.addEventListener('resize', () => {
 
 <!-- ══ 견적서 / 수주 공용 모달 ══ -->
 <div class="overlay" id="sodoc-modal">
-  <div class="dlg" style="max-width:700px; width:96%;">
+  <div class="dlg" style="max-width:960px; width:96%;">
     <div class="dlg-title" id="so2-modal-ttl"><i class="ti ti-file-text" style="color:var(--tx-i);"></i>견적서 등록</div>
     <div class="fg fg4" style="gap:10px; margin-bottom:14px;">
       <div class="ff"><label>문서번호</label><input id="so2-id" readonly></div>
@@ -20993,15 +21387,16 @@ window.addEventListener('resize', () => {
       <div class="ff"><label>고객사 *</label><select id="so2-client" onchange="onSODocClientChange()"><option value="">-- 선택 --</option></select></div>
       <div class="ff" style="grid-column:span 2;"><label>미등록 고객사 직접입력</label><input id="so2-client-text" placeholder="목록에 없으면 업체명 직접 입력"></div>
       <div class="ff"><label>고객 이메일</label><input id="so2-email" type="email" placeholder="client@example.com"></div>
-      <div class="ff" style="grid-column:span 2;"><label>품목명 *</label><input id="so2-item" placeholder="예: 내구성 시험기"></div>
-      <div class="ff" style="grid-column:span 2;"><label>규격/사양</label><input id="so2-spec" placeholder="예: ISO 7173"></div>
-      <div class="ff"><label>수량</label><input id="so2-qty" type="number" min="0" value="1"></div>
-      <div class="ff"><label>단위</label>
-        <select id="so2-unit"><option>대</option><option>EA</option><option>SET</option><option>kg</option><option>M</option><option>L</option><option>BOX</option></select>
+      <div class="doc-item-grid">
+        <div class="doc-item-grid-label"><i class="ti ti-table"></i>품목 입력 *</div>
+        <table>
+          <thead><tr><th>품목명</th><th class="doc-item-spec">규격/사양</th><th class="doc-item-qty">수량</th><th class="doc-item-unit">단위</th><th class="doc-item-price">단가</th><th>비고</th><th class="doc-item-action"></th></tr></thead>
+          <tbody id="so2-items-body"></tbody>
+        </table>
       </div>
-      <div class="ff"><label>단가 (원)</label><input id="so2-price" type="number" min="0" placeholder="0"></div>
+      <input id="so2-item" type="hidden"><input id="so2-spec" type="hidden"><input id="so2-qty" type="hidden" value="1"><input id="so2-unit" type="hidden" value="대"><input id="so2-price" type="hidden"><input id="so2-note" type="hidden">
       <div class="ff"><label>납기 희망일</label><input id="so2-due" type="date"></div>
-      <div class="ff" style="grid-column:span 4;"><label>비고</label><input id="so2-note" placeholder="특이사항"></div>
+      <div class="ff" style="grid-column:span 4;"><label>공통 메모</label><input id="so2-note-common" placeholder="문서 전체 특이사항"></div>
     </div>
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('sodoc-modal')">취소</button>
