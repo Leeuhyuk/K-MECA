@@ -111,10 +111,41 @@ function setAttQuickFilter(type, value) {
   else attQuickDept = value || '';
   renderAttendance();
 }
+// 선택 액션바(선택바 ↔ 필터바)만 만들어 반환 — 체크박스 토글 시 테이블 전체를 다시 그리지 않기 위함
+function attQuickControlsHtml() {
+  const depts = [...new Set(workers.map(worker => worker.dept).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko-KR'));
+  return attQuickSelected.size ? `
+      <div class="selection-action-bar att-quick-selectionbar" style="display:flex;">
+        <span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${attQuickSelected.size}명 선택</span>
+        <select id="att-quick-bulk-status">
+          <option value="">상태 선택</option><option>지각</option><option>조퇴</option><option>외근</option><option>결근</option><option>연장근무</option><option>휴일근무</option><option value="정상복구">정상·휴무 복구</option>
+        </select>
+        <button class="btn btn-sm btn-primary" onclick="applyQuickAttendanceBulk()">일괄 적용</button>
+        <button class="btn btn-sm date-view-clear-selection" onclick="clearAttQuickSelection()"><i class="ti ti-x"></i>해제</button>
+      </div>` : `
+      <div class="att-quick-filters">
+        <button class="btn btn-sm btn-icon" onclick="moveAttQuickDate(-1)" title="이전 날짜"><i class="ti ti-chevron-left"></i></button>
+        <input type="date" value="${attQuickDate}" onchange="setAttQuickDate(this.value)">
+        <button class="btn btn-sm btn-icon" onclick="moveAttQuickDate(1)" title="다음 날짜"><i class="ti ti-chevron-right"></i></button>
+        <button class="btn btn-sm" onclick="setAttQuickDate(today())">오늘</button>
+        <select onchange="setAttQuickFilter('dept',this.value)"><option value="">전체 부서</option>${depts.map(dept=>`<option${dept===attQuickDept?' selected':''}>${esc(dept)}</option>`).join('')}</select>
+        <input type="search" value="${esc(attQuickQuery)}" placeholder="직원 검색" onchange="setAttQuickFilter('query',this.value)">
+      </div>`;
+}
+// 선택 상태만 부분 갱신(테이블 재구성 없음). 컨테이너가 없으면(다른 화면) 전체 재렌더로 폴백.
+function refreshAttQuickSelectionUi() {
+  const box = inp('att-quick-controls');
+  if (!box) { renderAttendance(); return; }   // 근태 화면이 아니면 전체 재렌더로 폴백
+  box.innerHTML = attQuickControlsHtml();
+  // 테이블을 다시 그리지 않으므로 체크박스 표시를 선택 집합과 동기화(전체 해제 시 체크 해제 등)
+  document.querySelectorAll('.att-quick-check').forEach(cb => {
+    cb.checked = attQuickSelected.has(cb.dataset.workerId);
+  });
+}
 function toggleAttQuickSelect(workerId, checked) {
   if (checked) attQuickSelected.add(workerId);
   else attQuickSelected.delete(workerId);
-  renderAttendance();
+  refreshAttQuickSelectionUi();
 }
 function toggleAttQuickAll(checked) {
   document.querySelectorAll('.att-quick-check').forEach(box => {
@@ -122,11 +153,11 @@ function toggleAttQuickAll(checked) {
     if (checked) attQuickSelected.add(box.dataset.workerId);
     else attQuickSelected.delete(box.dataset.workerId);
   });
-  renderAttendance();
+  refreshAttQuickSelectionUi();
 }
 function clearAttQuickSelection() {
   attQuickSelected.clear();
-  renderAttendance();
+  refreshAttQuickSelectionUi();
 }
 
 function dateText(date) {
@@ -401,7 +432,6 @@ function openAttendanceLeaveDetail(workerId) {
 }
 function _attQuickEditor() {
   const query = attQuickQuery.trim().toLowerCase();
-  const depts = [...new Set(workers.map(worker => worker.dept).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko-KR'));
   const list = workers.filter(worker => workerActiveOn(worker, attQuickDate)
     && (!attQuickDept || worker.dept === attQuickDept)
     && (!query || [worker.name,worker.id,worker.dept,worker.position].join(' ').toLowerCase().includes(query)));
@@ -430,31 +460,13 @@ function _attQuickEditor() {
       </td>
     </tr>`;
   }).join('') : `<tr><td colspan="8">${empty('조건에 맞는 직원이 없습니다.')}</td></tr>`;
-  const quickControls = attQuickSelected.size ? `
-      <div class="selection-action-bar att-quick-selectionbar" style="display:flex;">
-        <span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${attQuickSelected.size}명 선택</span>
-        <select id="att-quick-bulk-status">
-          <option value="">상태 선택</option><option>지각</option><option>조퇴</option><option>외근</option><option>결근</option><option>연장근무</option><option>휴일근무</option><option value="정상복구">정상·휴무 복구</option>
-        </select>
-        <button class="btn btn-sm btn-primary" onclick="applyQuickAttendanceBulk()">일괄 적용</button>
-        <button class="btn btn-sm date-view-clear-selection" onclick="clearAttQuickSelection()"><i class="ti ti-x"></i>해제</button>
-      </div>` : `
-      <div class="att-quick-filters">
-        <button class="btn btn-sm btn-icon" onclick="moveAttQuickDate(-1)" title="이전 날짜"><i class="ti ti-chevron-left"></i></button>
-        <input type="date" value="${attQuickDate}" onchange="setAttQuickDate(this.value)">
-        <button class="btn btn-sm btn-icon" onclick="moveAttQuickDate(1)" title="다음 날짜"><i class="ti ti-chevron-right"></i></button>
-        <button class="btn btn-sm" onclick="setAttQuickDate(today())">오늘</button>
-        <select onchange="setAttQuickFilter('dept',this.value)"><option value="">전체 부서</option>${depts.map(dept=>`<option${dept===attQuickDept?' selected':''}>${esc(dept)}</option>`).join('')}</select>
-        <input type="search" value="${esc(attQuickQuery)}" placeholder="직원 검색" onchange="setAttQuickFilter('query',this.value)">
-      </div>`;
-
   return `<div class="card att-quick-card">
     <div class="card-hd att-quick-head">
       <div>
         <span class="card-ttl"><i class="ti ti-bolt"></i>하루 근태 간편 편집</span>
         <div class="att-quick-help">${weekend?'휴일 기본값은 휴무입니다. 근무자만 휴일근무로 변경하세요.':'별도 입력이 없으면 전 직원 정상근무로 자동 처리됩니다.'}</div>
       </div>
-      ${quickControls}
+      <div id="att-quick-controls">${attQuickControlsHtml()}</div>
     </div>
     <div class="att-quick-table-wrap"><table class="att-quick-table">
       <thead><tr><th><input type="checkbox" onchange="toggleAttQuickAll(this.checked)"></th><th>직원</th><th>상태</th><th>출근</th><th>퇴근</th><th>추가시간</th><th>비고</th><th>관리</th></tr></thead>

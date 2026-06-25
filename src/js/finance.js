@@ -28,7 +28,7 @@ function finInput(tab,key,value){
 function finQuickRange(tab, preset) {
   const state = finState(tab), now = new Date();
   if (tab === 'labor') payrollSelected.clear();
-  const fmt = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+  const fmt = dateText;   // 공통 'YYYY-MM-DD' 포매터 재사용
   if (preset === 'all') { state.from=''; state.to=''; }
   else if (preset === '7d') {
     state.from = fmt(new Date(now.getFullYear(),now.getMonth(),now.getDate()-6)); state.to=fmt(now);
@@ -41,7 +41,7 @@ function finQuickRange(tab, preset) {
 }
 const FIN_DATE_VIEW_TABS = new Set(['ar','revenue','purchase']);
 function finDateText(date) {
-  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+  return dateText(date);   // 공통 포매터로 위임(중복 제거)
 }
 function finDateDefault(mode) {
   const value = today();
@@ -412,7 +412,7 @@ function finPurchaseMonth(ym) { return poList.filter(p=>(p.date||'').slice(0,7)=
 function finEntryMonth(ym,type){ return financeData.entries.filter(e=>e.type===type && (e.date||'').slice(0,7)===ym).reduce((s,e)=>s+(Number(e.amount)||0),0); }
 function finRangeInfo(range = finDashboardRange) {
   const now = new Date(today());
-  const fmt = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+  const fmt = dateText;   // 공통 'YYYY-MM-DD' 포매터 재사용
   if (range === 'prev') {
     const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const last = new Date(now.getFullYear(), now.getMonth(), 0);

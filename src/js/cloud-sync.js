@@ -38,6 +38,9 @@ function cloudSubscribe(){
   if (!_cloudActive || _cloudUnsub || !_fbDb) return;
   const v2Unsubs = CLOUD_KEYS.map(key => _fbDb.collection('mes_v2').doc(key).onSnapshot(doc=>{
     if (doc.metadata.hasPendingWrites) return;     // 내가 쓴 변경(로컬 에코)은 무시
+    // 아직 서버로 보내지 않은 로컬 편집이 대기 중인 키는 원격값으로 덮어쓰지 않음
+    // (비순차 원격 읽기가 최신 로컬 데이터를 되돌리는 것을 방지 — 편집 중 키는 로컬 우선)
+    if (typeof _cloudQueue !== 'undefined' && _cloudQueue && _cloudQueue.has(key)) return;
     if (typeof cloudLoadV2Key !== 'function') return;
     cloudLoadV2Key(key)
       .then(loaded => { if (loaded) cloudScheduleRemoteRefresh(); })
