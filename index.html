@@ -11118,12 +11118,17 @@ function cloudV2StripMeta(value){
   delete out._mes;
   return out;
 }
+const _cloudKeyApplied = {};   // key -> 마지막으로 로컬에 반영한 sourceUpdatedAt(ms). 비순차 원격 읽기 거부용
 async function cloudLoadV2Key(key){
   const entityRef = _fbDb.collection('mes_v2').doc(key);
   const metaSnap = await entityRef.get();
   if (!metaSnap.exists) return false;
   const meta = metaSnap.data() || {};
   if (meta.sourceExists === false || meta.sourceType === 'missing') return false;
+  // 키별 버전 게이팅: 이미 더 최신 버전을 반영했다면 늦게 도착한 오래된 읽기는 건너뛴다
+  // (비동기 .get()이 스냅샷 발생 순서와 다르게 완료돼 최신 데이터를 되돌리는 것을 방지)
+  const ver = (meta.sourceUpdatedAt && typeof meta.sourceUpdatedAt.toMillis === 'function') ? meta.sourceUpdatedAt.toMillis() : 0;
+  if (ver && _cloudKeyApplied[key] && ver < _cloudKeyApplied[key]) return false;
   if (meta.sourceType === 'array' || !cloudV2MapKeys().includes(key)) {
     const itemsSnap = await entityRef.collection('items').get();
     const rows = itemsSnap.docs.map(doc => {
@@ -11132,11 +11137,13 @@ async function cloudLoadV2Key(key){
       return { idx, id: doc.id, value: cloudV2StripMeta(data) };
     }).sort((a, b) => (a.idx - b.idx) || a.id.localeCompare(b.id));
     localStorage.setItem('mes_' + key, JSON.stringify(rows.map(row => row.value)));
+    if (ver) _cloudKeyApplied[key] = ver;
     return true;
   }
   const stateSnap = await entityRef.collection('state').doc('current').get();
   if (!stateSnap.exists) return false;
   localStorage.setItem('mes_' + key, JSON.stringify(cloudV2StripMeta(stateSnap.data() || {})));
+  if (ver) _cloudKeyApplied[key] = ver;
   return true;
 }
 async function cloudLoadAll(){
