@@ -938,6 +938,26 @@ body.mega-menu-open { overflow: hidden; }
 
 /* 폼 컨트롤 */
 input, select, textarea { font-size: 12px; padding: 6px 10px; height: 32px; font-family: var(--f); background: var(--bg-p); color: var(--tx); border: 1px solid var(--br-s); border-radius: var(--rm); outline: none; transition: border-color .15s, box-shadow .15s; }
+select { color-scheme: light; }
+:root.dark select { color-scheme: dark; }
+select option,
+select optgroup {
+  background: var(--bg-p);
+  color: var(--tx);
+}
+select option:checked {
+  background: var(--bg-i);
+  color: var(--tx-i);
+}
+:root.dark select option,
+:root.dark select optgroup {
+  background: #1a1a1e;
+  color: #f1f3f5;
+}
+:root.dark select option:checked {
+  background: #062b4e;
+  color: #ffffff;
+}
 input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:focus { border-color: var(--tx-i); box-shadow: 0 0 0 3px rgba(24, 95, 165, 0.15); }
 input[type="checkbox"], input[type="radio"] { width: 16px; height: 16px; min-width: 16px; flex: 0 0 16px; margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; accent-color: var(--tx-i); cursor: pointer; vertical-align: middle; transition: none; }
 input[type="checkbox"]:active, input[type="radio"]:active { transform: none; }
@@ -1121,6 +1141,69 @@ textarea { height: auto; resize: vertical; }
 .dlg-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
 .dlg-msg { font-size: 12.5px; color: var(--tx-s); margin-bottom: 20px; line-height: 1.6; }
 .dlg-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+.field-search { position: relative; }
+.field-search input { padding-right: 36px; }
+.field-search-btn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: var(--rs);
+  background: transparent;
+  color: var(--tx-t);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.field-search-btn:hover {
+  background: var(--bg-i);
+  color: var(--tx-i);
+}
+.inline-search-results {
+  display: none;
+  position: absolute;
+  z-index: 10020;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  max-height: 210px;
+  overflow-y: auto;
+  border: 1px solid var(--br);
+  border-radius: var(--rm);
+  background: var(--bg-p);
+  box-shadow: var(--shadow);
+}
+#ca-name-wrap { position: relative; }
+.inline-search-item {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--br);
+  background: transparent;
+  color: var(--tx);
+  padding: 9px 10px;
+  text-align: left;
+  cursor: pointer;
+}
+.inline-search-item:last-child { border-bottom: 0; }
+.inline-search-item:hover {
+  background: var(--bg-i);
+  color: var(--tx-i);
+}
+.inline-search-item strong {
+  display: block;
+  font-size: 12.5px;
+}
+.inline-search-item span {
+  display: block;
+  margin-top: 2px;
+  font-size: 10.5px;
+  color: var(--tx-t);
+}
 
 .entry-mode-switch {
   display: inline-flex;
@@ -2701,7 +2784,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     <div class="toolbar">
       <button class="btn" id="btn-show-closed" onclick="toggleClosedView()" style="border-color: var(--br);"><i class="ti ti-archive"></i>종료 프로젝트 (0)</button>
       <input type="text" id="clients-q" placeholder="업체명 또는 담당자 검색..." style="min-width:200px;" oninput="renderClients()">
-      <button class="btn btn-primary btn-icon" onclick="openClientAdd()" title="신규 수주처 등록"><i class="ti ti-plus"></i></button>
+      <button class="btn btn-primary btn-icon" onclick="openClientAdd()" title="수주 정보 등록"><i class="ti ti-plus"></i></button>
     </div>
     <!-- 고객사 추가 패널 -->
     <div id="client-list">
@@ -3557,13 +3640,13 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     <div class="metrics" id="bp-kpi">
       <div class="mc clickable" onclick="filterPartners('')"><div class="mc-lbl"><i class="ti ti-address-book"></i>전체 거래처</div><div class="mc-val" id="bp-kpi-total">0개사</div></div>
       <div class="mc clickable" onclick="kpiFilter('bp-ft','공급처','renderPartners')"><div class="mc-lbl"><i class="ti ti-package-import" style="color:var(--tx-i);"></i>공급처</div><div class="mc-val" id="bp-kpi-sup" style="color:var(--tx-i);">0</div></div>
-      <div class="mc clickable" onclick="kpiFilter('bp-ft','구매처','renderPartners')"><div class="mc-lbl"><i class="ti ti-building-community" style="color:var(--tx-ok);"></i>구매처</div><div class="mc-val" id="bp-kpi-buy" style="color:var(--tx-ok);">0</div></div>
+      <div class="mc clickable" onclick="kpiFilter('bp-ft','고객사','renderPartners')"><div class="mc-lbl"><i class="ti ti-building-community" style="color:var(--tx-ok);"></i>고객사</div><div class="mc-val" id="bp-kpi-buy" style="color:var(--tx-ok);">0</div></div>
       <div class="mc clickable" onclick="kpiFilter('bp-ft','외주처','renderPartners')"><div class="mc-lbl"><i class="ti ti-tools" style="color:var(--tx-w);"></i>외주처</div><div class="mc-val" id="bp-kpi-out" style="color:var(--tx-w);">0</div></div>
     </div>
     <div class="toolbar">
       <select id="bp-ft" onchange="renderPartners()">
         <option value="">전체 유형</option>
-        <option>공급처</option><option>구매처</option><option>외주처</option><option>기타</option>
+        <option>공급처</option><option>고객사</option><option>외주처</option><option>기타</option>
       </select>
       <input type="text" id="bp-q" placeholder="거래처명·담당자·이메일 검색..." style="min-width:200px;" oninput="renderPartners()">
       <button class="btn btn-primary btn-icon" onclick="openPartnerModal()" title="거래처 등록"><i class="ti ti-plus"></i></button>
@@ -3999,7 +4082,6 @@ function reloadAllData() {
   taxList      = loadStorage('taxList',       defaultTaxList);
   quoteList    = loadStorage('quoteList',     defaultQuoteList);
   orderList    = loadStorage('orderList',     defaultOrderList);
-  if (typeof repairSalesOrderClients === 'function') repairSalesOrderClients();
   financeData  = loadStorage('financeData',  { entries: [], paidReceivable: {}, paidPayable: {} });
   if (!financeData.entries) financeData.entries = [];
   if (!financeData.paidReceivable) financeData.paidReceivable = {};
@@ -4020,6 +4102,7 @@ function reloadAllData() {
   if (!processStages.includes('완료')) processStages.splice(Math.max(0,processStages.indexOf('납품')),0,'완료');
   if (!processStages.includes('납품')) processStages.push('납품');
   products.forEach(p => { if (p.processStage==='출하완료') { p.processStage='완료'; p.status='완료'; } });
+  if (typeof migrateClientMasterToPartners === 'function') migrateClientMasterToPartners();
 }
 
 /* ════════ (제거됨) HTML 파일 자동 저장 ════════
@@ -4110,7 +4193,7 @@ function exportAllXLS() {
 
   // 각 데이터셋 → 시트 정의
   const sheets = [
-    { name: '고객사', data: clients, cols: ['id','name','manager','tel','email','date','note','closed','closedAt'] },
+    { name: '고객사', data: clients, cols: ['id','name','manager','tel','email','bizNo','date','note','closed','closedAt'] },
     { name: '제품', data: products, cols: ['id','clientId','name','spec','qty','unit','price','deliveryDate','processStage','status','processMemo','note'] },
     { name: '자재', data: materials, cols: ['id','productId','name','supplier','unitPrice','qty','unit','orderDate','expectedDate','status','note'] },
     { name: '생산지시', data: workOrders, cols: ['id','clientId','productId','line','qty','done','defect','start','due','status','manager','note'] },
@@ -4291,29 +4374,196 @@ let statementList = loadStorage('statementList', defaultStatementList);
 let taxList = loadStorage('taxList', defaultTaxList);
 let quoteList = loadStorage('quoteList', defaultQuoteList);
 let orderList = loadStorage('orderList', defaultOrderList);
-/* 수주 전환 고아 제품 복구: 제품의 clientId가 실제 고객사에 없으면 수주 정보로 고객사 자동 생성·연결 */
-function repairSalesOrderClients() {
-  let cChanged = false, pChanged = false, oChanged = false;
-  orderList.forEach(o => {
-    const p = o.productId ? products.find(x => x.id === o.productId) : null;
-    if (!p) return;
-    if (clients.some(c => c.id === p.clientId)) return; // 이미 유효
-    const name = (o.clientName || (o.clientId && getClientName(o.clientId)) || p.clientId || '미지정 고객사').trim();
-    let ex = clients.find(c => c.name === name);
-    let cid;
-    if (ex) cid = ex.id;
-    else {
-      cid = nextCode('CL', clients);
-      clients.push({ id: cid, name, manager:'', tel:'', email: o.clientEmail||'', date: today(), note: '수주 전환 고객사 복구' });
-      cChanged = true;
-    }
-    p.clientId = cid; o.clientId = cid; pChanged = true; oChanged = true;
-  });
-  if (cChanged) saveStorage('clients', clients);
-  if (pChanged) saveStorage('products', products);
-  if (oChanged) saveStorage('orderList', orderList);
+/* 고객사 기준키 통합: 기존 CL 고객사를 거래처 관리의 고객사(BP) 코드로 이관 */
+function _customerType(type) {
+  return type === '구매처' ? '고객사' : (type || '고객사');
 }
-repairSalesOrderClients();
+function _isCustomerPartner(p) {
+  return p && _customerType(p.type) === '고객사';
+}
+function _normName(name) {
+  return String(name || '').trim().toLowerCase();
+}
+function _findCustomerPartnerByName(name) {
+  const key = _normName(name);
+  return key ? partners.find(p => _isCustomerPartner(p) && _normName(p.name) === key) : null;
+}
+function _mergeMissing(target, source, fields) {
+  let changed = false;
+  fields.forEach(([to, from]) => {
+    const value = source && source[from || to];
+    if ((target[to] == null || target[to] === '') && value != null && value !== '') {
+      target[to] = value;
+      changed = true;
+    }
+  });
+  return changed;
+}
+function ensureCustomerClient(source = {}) {
+  const sourceId = String(source.id || source.clientId || '').trim();
+  let partner = sourceId.startsWith('BP-') ? partners.find(p => p.id === sourceId) : null;
+  if (!partner) partner = _findCustomerPartnerByName(source.name || source.clientName);
+  if (!partner) {
+    partner = {
+      id: sourceId.startsWith('BP-') ? sourceId : nextCode('BP', partners),
+      name: source.name || source.clientName || sourceId || '미지정 고객사',
+      type: '고객사',
+      manager: source.manager || '',
+      tel: source.tel || '',
+      mobile: source.mobile || '',
+      email: source.email || source.clientEmail || '',
+      bizNo: source.bizNo || source.clientBizNo || '',
+      address: source.address || '',
+      note: source.note || ''
+    };
+    partners.unshift(partner);
+  } else {
+    partner.type = '고객사';
+    _mergeMissing(partner, source, [['manager'], ['tel'], ['mobile'], ['email'], ['bizNo'], ['address'], ['note']]);
+  }
+  if (sourceId && sourceId !== partner.id) {
+    const legacy = Array.isArray(partner.legacyClientIds) ? partner.legacyClientIds : [];
+    if (!legacy.includes(sourceId)) partner.legacyClientIds = legacy.concat(sourceId);
+  }
+  let client = clients.find(c => c.id === partner.id);
+  if (!client) {
+    client = {
+      id: partner.id,
+      name: partner.name,
+      manager: partner.manager || source.manager || '',
+      tel: partner.tel || source.tel || '',
+      email: partner.email || source.email || source.clientEmail || '',
+      bizNo: partner.bizNo || source.bizNo || source.clientBizNo || '',
+      date: source.date || today(),
+      note: source.note || partner.note || '',
+      closed: !!source.closed
+    };
+    if (source.closedAt) client.closedAt = source.closedAt;
+    clients.push(client);
+  } else {
+    client.name = partner.name || client.name;
+    _mergeMissing(client, partner, [['manager'], ['tel'], ['email'], ['bizNo'], ['note']]);
+    if (source.closed) client.closed = true;
+    if (source.closedAt && !client.closedAt) client.closedAt = source.closedAt;
+  }
+  return client;
+}
+function syncPartnerFromClient(c) {
+  if (!c || !c.id) return null;
+  let partner = partners.find(p => p.id === c.id);
+  if (!partner) {
+    partner = { id:c.id, type:'고객사' };
+    partners.unshift(partner);
+  }
+  partner.name = c.name || partner.name || '미지정 고객사';
+  partner.type = '고객사';
+  partner.manager = c.manager || '';
+  partner.tel = c.tel || '';
+  partner.email = c.email || '';
+  partner.bizNo = c.bizNo || '';
+  partner.note = c.note || '';
+  return partner;
+}
+function syncClientFromPartner(p) {
+  if (!p || !_isCustomerPartner(p)) return null;
+  let client = clients.find(c => c.id === p.id);
+  if (!client) {
+    client = { id:p.id, date:today(), closed:false };
+    clients.push(client);
+  }
+  client.name = p.name || client.name || '미지정 고객사';
+  client.manager = p.manager || '';
+  client.tel = p.tel || p.mobile || '';
+  client.email = p.email || '';
+  client.bizNo = p.bizNo || '';
+  client.note = p.note || '';
+  return client;
+}
+function _applyClientIdMap(list, map) {
+  if (!Array.isArray(list)) return false;
+  let changed = false;
+  list.forEach(item => {
+    if (!item) return;
+    if (item.clientId && map[item.clientId]) { item.clientId = map[item.clientId]; changed = true; }
+    if (!item.clientId && item.clientName) {
+      const c = ensureCustomerClient({ name:item.clientName, email:item.clientEmail, bizNo:item.clientBizNo, note:'미등록 고객사 자동 이관' });
+      item.clientId = c.id;
+      changed = true;
+    }
+    if (item.clientName) { item.clientName = ''; changed = true; }
+  });
+  return changed;
+}
+function _markClientMasterMigrationPending(keys) {
+  const clean = Array.from(new Set((keys || []).filter(Boolean)));
+  if (!clean.length) return;
+  let pending = [];
+  try { pending = JSON.parse(localStorage.getItem('mes_clientMasterMigrationPending') || '[]'); } catch(e) {}
+  localStorage.setItem('mes_clientMasterMigrationPending', JSON.stringify(Array.from(new Set(pending.concat(clean)))));
+}
+function flushClientMasterMigrationSync() {
+  let pending = [];
+  try { pending = JSON.parse(localStorage.getItem('mes_clientMasterMigrationPending') || '[]'); } catch(e) {}
+  pending = Array.from(new Set((pending || []).filter(Boolean)));
+  if (!pending.length || typeof cloudQueueSave !== 'function') return;
+  pending.forEach(key => cloudQueueSave(key));
+  localStorage.removeItem('mes_clientMasterMigrationPending');
+}
+function migrateClientMasterToPartners() {
+  const beforePartnersJson = JSON.stringify(partners);
+  let partnersChanged = false, clientsChanged = false;
+  const idMap = {};
+  const originalClients = clients.slice();
+  originalClients.forEach(c => {
+    const ensured = ensureCustomerClient(c);
+    if (c.id && c.id !== ensured.id) idMap[c.id] = ensured.id;
+  });
+  partners.filter(_isCustomerPartner).forEach(p => ensureCustomerClient(p));
+
+  const merged = new Map();
+  clients.forEach(c => {
+    if (!c || !c.id || !String(c.id).startsWith('BP-')) return;
+    const existing = merged.get(c.id);
+    if (!existing) { merged.set(c.id, Object.assign({}, c)); return; }
+    _mergeMissing(existing, c, [['name'], ['manager'], ['tel'], ['email'], ['bizNo'], ['date'], ['note']]);
+    existing.closed = !!(existing.closed && c.closed);
+    if (!existing.closedAt && c.closedAt) existing.closedAt = c.closedAt;
+  });
+  const nextClients = Array.from(merged.values());
+  if (JSON.stringify(clients) !== JSON.stringify(nextClients)) {
+    clients = nextClients;
+    clientsChanged = true;
+  }
+
+  const mappings = [
+    ['products', products],
+    ['workOrders', workOrders],
+    ['claims', claims],
+    ['checkRecords', checkRecords],
+    ['deliveries', deliveries],
+    ['rfqList', rfqList],
+    ['poList', poList],
+    ['statementList', statementList],
+    ['taxList', taxList],
+    ['quoteList', quoteList],
+    ['orderList', orderList],
+    ['asList', asList]
+  ];
+  const changedKeys = [];
+  mappings.forEach(([key, list]) => { if (_applyClientIdMap(list, idMap)) changedKeys.push(key); });
+  partners.forEach(p => { if (p && p.type === '구매처') { p.type = '고객사'; partnersChanged = true; } });
+  if (!partnersChanged && beforePartnersJson !== JSON.stringify(partners)) partnersChanged = true;
+  if (Object.keys(idMap).length) localStorage.setItem('mes_clientPartnerIdMap', JSON.stringify(idMap));
+  const migrationKeys = [];
+  if (partnersChanged || Object.keys(idMap).length) { saveStorage('partners', partners); migrationKeys.push('partners'); }
+  if (clientsChanged || Object.keys(idMap).length) { saveStorage('clients', clients); migrationKeys.push('clients'); }
+  changedKeys.forEach(key => saveStorage(key, ({
+    products, workOrders, claims, checkRecords, deliveries, rfqList, poList,
+    statementList, taxList, quoteList, orderList, asList
+  })[key]));
+  _markClientMasterMigrationPending(migrationKeys.concat(changedKeys));
+}
+migrateClientMasterToPartners();
 
 // 마이그레이션: 구형 예시 데이터만 존재하거나 비어있을 시 5개 추가 데이터 자동 삽입
 // (제거됨) 데모 시드 자동삽입 — 데이터는 Firebase가 담당
@@ -5017,7 +5267,7 @@ document.addEventListener('click', function(e) {
 let editClientId = null, editProductId = null, editMatId = null, editOrderId = null, editInvId = null;
 let editDefectId = null, editClaimId = null, editCheckId = null;
 let currentSelectedKanbanProductId = null;
-let expandedClients = new Set(['CL-001']);
+let expandedClients = new Set();
 let showClosedProjects = false;
 let currentPage = 'dashboard';
 let currentRole = 'admin';      // 권한 역할 (로컬/미인증 시 전체 권한). 클라우드 로그인 시 실제 역할로 설정됨
@@ -5156,7 +5406,9 @@ function _kpiActive(selectId, map) {
     }
   });
 }
-function getClientName(id) { return clients.find(c => c.id === id)?.name || id; }
+function getClientName(id) {
+  return clients.find(c => c.id === id)?.name || partners.find(p => p.id === id)?.name || id;
+}
 function getProductById(id) { return products.find(p => p.id === id); }
 function getProductName(id) { return getProductById(id)?.name || id; }
 function getMatAmt(m) { return m.unitPrice * m.qty; }
@@ -5876,6 +6128,7 @@ function readBulkEntryTable(key, options = {}) {
   const config = BULK_ENTRY_TABLES[key];
   const body = config && inp(config.body);
   if (!body) return [];
+  const meaningfulFields = config.fields.filter(field => field.required);
   const rows = Array.from(body.querySelectorAll('tr')).map(tr => {
     const row = {};
     config.fields.forEach(field => {
@@ -5885,7 +6138,8 @@ function readBulkEntryTable(key, options = {}) {
     return row;
   });
   if (options.keepEmpty) return rows;
-  return rows.filter(row => config.fields.some(field => String(row[field.name] || '').trim() !== ''));
+  const fieldsToCheck = meaningfulFields.length ? meaningfulFields : config.fields;
+  return rows.filter(row => fieldsToCheck.some(field => String(row[field.name] || '').trim() !== ''));
 }
 
 function refreshBulkEntryTable(key) {
@@ -7556,7 +7810,7 @@ function renderClients() {
             <div style="font-size:14px; font-weight:700; ${isClosed ? 'color:var(--tx-t); text-decoration:line-through;' : ''}">${esc(c.name)}
               ${isClosed ? `<span class="bd" style="font-size:10px; background:#86868618; color:#868686; border-color:#86868644; margin-left:6px; text-decoration:none;">종료 ${esc(c.closedAt)||''}</span>` : ''}
             </div>
-            <div style="font-size:11.5px; color:var(--tx-t); font-weight:500;">담당: ${esc(c.manager)||'미지정'} · 연락처: ${esc(c.tel)||'미지정'} · 제품: ${prods.length}종</div>
+            <div style="font-size:11.5px; color:var(--tx-t); font-weight:500;">거래처코드: ${esc(c.id)} · 담당: ${esc(c.manager)||'미지정'} · 연락처: ${esc(c.tel)||'미지정'} · 제품: ${prods.length}종</div>
           </div>
           <div style="display:flex; gap:6px; align-items:center;" onclick="event.stopPropagation();">
             <button class="btn btn-sm" onclick="showClient360('${c.id}')" title="고객사 360도 종합 현황"><i class="ti ti-building-community"></i>360°</button>
@@ -7572,8 +7826,8 @@ function renderClients() {
                 <button class="btn btn-sm" style="background:var(--bg-t); color:var(--tx-t); border-color:var(--br);" onclick="closeProject('${c.id}', true)" title="진행 중인 제품이 있습니다 — 강제 종료">
                   <i class="ti ti-lock"></i>강제 종료
                 </button>` : ''}
-              <button class="btn btn-sm" onclick="openClientEdit('${c.id}')" title="수주처 정보 수정"><i class="ti ti-edit"></i>수정</button>
-              <button class="btn btn-sm btn-danger" onclick="deleteClient('${c.id}')" title="수주처 삭제"><i class="ti ti-trash"></i></button>`}
+              <button class="btn btn-sm" onclick="openClientEdit('${c.id}')" title="고객사 정보 수정"><i class="ti ti-edit"></i>수정</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteClient('${c.id}')" title="고객사 삭제"><i class="ti ti-trash"></i></button>`}
           </div>
           <i class="ti ${isExp ? 'ti-chevron-up' : 'ti-chevron-down'}" style="color:var(--tx-t); font-size:16px; margin-left:12px;"></i>
         </div>
@@ -7584,10 +7838,11 @@ function renderClients() {
           <div class="add-panel edit-mode" id="${editPanelId}">
             <div class="panel-ttl clr-edit"><i class="ti ti-edit"></i>${esc(c.name)} 프로필 수정</div>
             <div class="fg fg4">
-              <div class="ff"><label>업체명 *</label><input id="ce-name-${c.id}" value="${esc(c.name)}"></div>
+              <div class="ff"><label>고객사명 *</label><input id="ce-name-${c.id}" value="${esc(c.name)}"></div>
               <div class="ff"><label>실무자명</label><input id="ce-mgr-${c.id}" value="${esc(c.manager)}"></div>
               <div class="ff"><label>전화번호</label><input id="ce-tel-${c.id}" value="${esc(c.tel)}"></div>
               <div class="ff"><label>이메일</label><input id="ce-email-${c.id}" value="${esc(c.email)}"></div>
+              <div class="ff"><label>사업자번호</label><input id="ce-bizno-${c.id}" value="${esc(c.bizNo||'')}"></div>
               <div class="ff"><label>계약 수주일</label><input id="ce-date-${c.id}" type="date" value="${esc(c.date)}"></div>
               <div class="ff" style="grid-column:span 3;"><label>특이사항</label><input id="ce-note-${c.id}" value="${esc(c.note)}"></div>
             </div>
@@ -7662,52 +7917,172 @@ function renderClients() {
   }).join('');
 }
 
-/* ════════ [복구] 수주처 (clients) ════════ */
+/* ════════ [복구] 고객사 (clients) ════════ */
 function toggleClient(id) {
   if (expandedClients.has(id)) expandedClients.delete(id);
   else expandedClients.add(id);
   renderClients();
 }
 function toggleClosedView() { showClosedProjects = !showClosedProjects; renderClients(); }
+function _clientRegisterText(c) {
+  return [c.name || '', c.id || '', c.manager || '', c.tel || '', c.email || '', c.bizNo || ''].join(' ').toLowerCase();
+}
+function _clientRegisterMatches(query) {
+  const q = String(query || '').trim().toLowerCase();
+  if (!q) return [];
+  return clients
+    .filter(c => _clientRegisterText(c).includes(q))
+    .sort((a, b) => {
+      const an = String(a.name || '').toLowerCase(), bn = String(b.name || '').toLowerCase();
+      const ap = an.startsWith(q) ? 0 : 1, bp = bn.startsWith(q) ? 0 : 1;
+      return (ap - bp) || an.localeCompare(bn, 'ko');
+    })
+    .slice(0, 6);
+}
+function hideClientRegisterMatches() {
+  const box = inp('ca-client-results');
+  if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+}
+function renderClientRegisterMatches() {
+  const modal = inp('ca-modal');
+  const box = inp('ca-client-results');
+  if (!box || (modal && modal.dataset.editId)) return;
+  const q = v('ca-name').trim();
+  const rows = _clientRegisterMatches(q);
+  if (!q || !rows.length) { hideClientRegisterMatches(); return; }
+  box.innerHTML = rows.map(c => `
+    <button type="button" class="inline-search-item" onmousedown="setClientRegisterSelection('${esc(c.id)}')">
+      <strong>${esc(c.name || c.id)}</strong>
+      <span>${esc(c.id)} · 담당 ${esc(c.manager || '미지정')} · ${esc(c.tel || c.email || '연락처 미지정')}</span>
+    </button>
+  `).join('');
+  box.style.display = 'block';
+}
+function onClientRegisterNameInput() {
+  const modal = inp('ca-modal');
+  const selectedId = modal && modal.dataset.existingId;
+  if (selectedId) {
+    const selected = clients.find(c => c.id === selectedId);
+    if (!selected || v('ca-name').trim() !== (selected.name || '').trim()) {
+      delete modal.dataset.existingId;
+      sv('ca-id', nextCode('BP', partners));
+      ['ca-mgr','ca-tel','ca-email','ca-bizno','ca-note'].forEach(x=>sv(x,''));
+      sv('ca-date', today());
+    }
+  }
+  renderClientRegisterMatches();
+}
+function onClientRegisterNameKey(e) {
+  if (e.key === 'Escape') { hideClientRegisterMatches(); return; }
+  if (e.key !== 'Enter') return;
+  const first = _clientRegisterMatches(v('ca-name'))[0];
+  if (first) {
+    e.preventDefault();
+    setClientRegisterSelection(first.id);
+  }
+}
+function openClientRegisterPicker() {
+  openClientPicker(function(c){
+    setClientRegisterSelection(c.id);
+    hideClientRegisterMatches();
+  });
+}
+function setClientRegisterSelection(clientId) {
+  const modal = inp('ca-modal');
+  if (!clientId) {
+    delete modal.dataset.existingId;
+    sv('ca-id', nextCode('BP', partners));
+    ['ca-name','ca-mgr','ca-tel','ca-email','ca-bizno','ca-note'].forEach(x=>sv(x,''));
+    sv('ca-date', today());
+    hideClientRegisterMatches();
+    return;
+  }
+  const c = clients.find(x => x.id === clientId);
+  if (!c) return;
+  modal.dataset.existingId = c.id;
+  sv('ca-id', c.id);
+  sv('ca-name', c.name || '');
+  sv('ca-mgr', c.manager || '');
+  sv('ca-tel', c.tel || '');
+  sv('ca-email', c.email || '');
+  sv('ca-bizno', c.bizNo || '');
+  sv('ca-date', c.date || today());
+  sv('ca-note', c.note || '');
+  hideClientRegisterMatches();
+}
 function openClientAdd() {
-  inp('ca-modal').dataset.editId = '';
-  inp('ca-modal-ttl').innerHTML = '<i class="ti ti-building-plus" style="color:var(--tx-i);"></i>신규 수주처 등록';
-  inp('ca-id').value = nextCode('CL', clients);
-  ['ca-name','ca-mgr','ca-tel','ca-email','ca-note'].forEach(x=>sv(x,''));
-  sv('ca-date', today());
-  inp('ca-modal').classList.add('open');
+  const modal = inp('ca-modal');
+  modal.dataset.editId = '';
+  delete modal.dataset.existingId;
+  inp('ca-modal-ttl').innerHTML = '<i class="ti ti-building-plus" style="color:var(--tx-i);"></i>수주 정보 등록';
+  const searchBtn = inp('ca-client-search-btn'); if (searchBtn) searchBtn.style.display = '';
+  setClientRegisterSelection('');
+  modal.classList.add('open');
 }
 function saveClient() {
   if (!checkAdminAction()) return;
   const name = v('ca-name').trim();
-  if (!name) { showToast('업체명은 필수입니다.', 'error'); return; }
-  const editId = inp('ca-modal').dataset.editId;
+  if (!name) { showToast('고객사명은 필수입니다.', 'error'); return; }
+  const modal = inp('ca-modal');
+  const editId = modal.dataset.editId;
+  let existingId = modal.dataset.existingId;
+  if (!editId && !existingId) {
+    const exact = clients.find(c => String(c.name || '').trim().toLowerCase() === name.toLowerCase());
+    if (exact) existingId = exact.id;
+  }
   if (editId) {
     const c = clients.find(x => x.id === editId);
-    if (c) { c.name = name; c.manager = v('ca-mgr'); c.tel = v('ca-tel'); c.email = v('ca-email'); c.date = v('ca-date') || today(); c.note = v('ca-note'); }
+    if (c) {
+      c.name = name; c.manager = v('ca-mgr'); c.tel = v('ca-tel'); c.email = v('ca-email');
+      c.bizNo = v('ca-bizno'); c.date = v('ca-date') || today(); c.note = v('ca-note');
+      if (typeof syncPartnerFromClient === 'function') syncPartnerFromClient(c);
+    }
     saveStorage('clients', clients);
+    saveStorage('partners', partners);
     closeModal('ca-modal');
     renderClients(); syncFilterDropdowns();
-    showToast('수주처 정보가 수정되었습니다.');
+    showToast('고객사 정보가 수정되었습니다.');
+  } else if (existingId) {
+    const c = clients.find(x => x.id === existingId);
+    if (!c) { showToast('선택한 고객사를 찾을 수 없습니다.', 'error'); return; }
+    c.name = name; c.manager = v('ca-mgr'); c.tel = v('ca-tel'); c.email = v('ca-email');
+    c.bizNo = v('ca-bizno'); c.date = v('ca-date') || c.date || today(); c.note = v('ca-note');
+    c.closed = false; delete c.closedAt;
+    if (typeof syncPartnerFromClient === 'function') syncPartnerFromClient(c);
+    saveStorage('clients', clients);
+    saveStorage('partners', partners);
+    closeModal('ca-modal');
+    expandedClients.add(c.id);
+    renderClients(); syncFilterDropdowns();
+    if (typeof consumeClientPickerCreatedClient === 'function') consumeClientPickerCreatedClient(c);
+    showToast('기존 고객사가 수주 정보에 연결되었습니다. 제품 추가로 수주 품목을 등록하세요.');
   } else {
-    clients.push({
-      id: v('ca-id') || nextCode('CL', clients),
+    const createdClient = {
+      id: v('ca-id') || nextCode('BP', partners),
       name, manager: v('ca-mgr'), tel: v('ca-tel'), email: v('ca-email'),
-      date: v('ca-date') || today(), note: v('ca-note'), closed: false
-    });
+      bizNo: v('ca-bizno'), date: v('ca-date') || today(), note: v('ca-note'), closed: false
+    };
+    clients.push(createdClient);
+    if (typeof syncPartnerFromClient === 'function') syncPartnerFromClient(createdClient);
     saveStorage('clients', clients);
+    saveStorage('partners', partners);
     closeModal('ca-modal');
+    expandedClients.add(createdClient.id);
     renderClients(); syncFilterDropdowns();
-    showToast('신규 수주처가 등록되었습니다.');
+    if (typeof consumeClientPickerCreatedClient === 'function') consumeClientPickerCreatedClient(createdClient);
+    showToast('신규 고객사가 등록되었습니다.');
   }
 }
 function openClientEdit(id) {
   const c = clients.find(x => x.id === id); if (!c) return;
+  const searchBtn = inp('ca-client-search-btn'); if (searchBtn) searchBtn.style.display = 'none';
+  hideClientRegisterMatches();
   inp('ca-modal').dataset.editId = id;
-  inp('ca-modal-ttl').innerHTML = '<i class="ti ti-edit" style="color:var(--tx-w);"></i>수주처 정보 수정';
+  delete inp('ca-modal').dataset.existingId;
+  inp('ca-modal-ttl').innerHTML = '<i class="ti ti-edit" style="color:var(--tx-w);"></i>고객사 정보 수정';
   sv('ca-id', c.id);
   sv('ca-name', c.name || ''); sv('ca-mgr', c.manager || ''); sv('ca-tel', c.tel || '');
-  sv('ca-email', c.email || ''); sv('ca-date', c.date || today()); sv('ca-note', c.note || '');
+  sv('ca-email', c.email || ''); sv('ca-bizno', c.bizNo || ''); sv('ca-date', c.date || today()); sv('ca-note', c.note || '');
   inp('ca-modal').classList.add('open');
 }
 function saveClientEdit(id) {
@@ -7719,11 +8094,14 @@ function saveClientEdit(id) {
   c.manager = v('ce-mgr-'+id);
   c.tel = v('ce-tel-'+id);
   c.email = v('ce-email-'+id);
+  c.bizNo = v('ce-bizno-'+id);
   c.date = v('ce-date-'+id);
   c.note = v('ce-note-'+id);
+  if (typeof syncPartnerFromClient === 'function') syncPartnerFromClient(c);
   saveStorage('clients', clients);
+  saveStorage('partners', partners);
   renderClients(); syncFilterDropdowns();
-  showToast('수주처 정보가 수정되었습니다.');
+  showToast('고객사 정보가 수정되었습니다.');
 }
 function closeProject(id, force) {
   if (!checkAdminAction()) return;
@@ -7758,11 +8136,11 @@ function deleteClient(id) {
 function exportClientsCSV() {
   if (typeof XLSX === 'undefined') { showToast('SheetJS 로딩 중...', 'error'); return; }
   const wb = XLSX.utils.book_new();
-  const h = ['코드','업체명','담당자','연락처','이메일','수주일','상태','비고'];
-  const rows = clients.map(c => [c.id, c.name, c.manager||'', c.tel||'', c.email||'', c.date||'', c.closed?'종료':'진행', c.note||'']);
+  const h = ['거래처코드','고객사명','담당자','연락처','이메일','사업자번호','수주일','상태','비고'];
+  const rows = clients.map(c => [c.id, c.name, c.manager||'', c.tel||'', c.email||'', c.bizNo||'', c.date||'', c.closed?'종료':'진행', c.note||'']);
   const ws = XLSX.utils.aoa_to_sheet([h, ...rows]);
-  XLSX.utils.book_append_sheet(wb, ws, '수주처');
-  XLSX.writeFile(wb, '수주처_' + today() + '.xlsx');
+  XLSX.utils.book_append_sheet(wb, ws, '고객사');
+  XLSX.writeFile(wb, '고객사_' + today() + '.xlsx');
   showToast('엑셀 저장 완료');
 }
 
@@ -7771,7 +8149,7 @@ function toggleClosedView() {
   renderClients();
 }
 
-/* ════════ [복구] 수주처 카드 드래그 정렬 ════════ */
+/* ════════ [복구] 고객사 카드 드래그 정렬 ════════ */
 function onClientDragStart(e, id) { draggedClientId = id; e.dataTransfer.effectAllowed = 'move'; }
 function onClientDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
 function onClientDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
@@ -8009,7 +8387,7 @@ registerBulkEntryTable('mat', {
   body: 'mat-bulk-body',
   minRows: 3,
   fields: [
-    { name: 'name', type: 'text', placeholder: '자재명', width: '170px' },
+    { name: 'name', type: 'text', placeholder: '자재명', width: '170px', required: true },
     { name: 'spec', type: 'text', placeholder: '규격/사양', width: '120px' },
     { name: 'supplier', type: 'text', placeholder: '공급처', width: '140px' },
     { name: 'qty', type: 'number', min: 0, step: '0.01', default: '1', width: '82px' },
@@ -8293,6 +8671,26 @@ function switchInvTab(tab) {
   if (ledger) ledger.style.display = (tab === 'ledger') ? 'block' : 'none';
   if (tab === 'ledger') renderInventoryLedger();
 }
+registerBulkEntryTable('inv', {
+  body: 'inv-bulk-body',
+  minRows: 3,
+  fields: [
+    { name: 'name', type: 'text', placeholder: '품목명', width: '180px', required: true },
+    { name: 'category', type: 'select', default: () => invCategory || '생산부품', options: ['완제품','생산부품','사무비품'], width: '110px' },
+    { name: 'type', type: 'select', default: () => invCategory === '완제품' ? '완제품' : invCategory === '사무비품' ? '소모품' : '자재', options: ['자재','반제품','완제품','비품','소모품','기타'], width: '104px' },
+    { name: 'qty', type: 'number', min: 0, step: 1, default: '0', width: '90px' },
+    { name: 'unit', type: 'select', default: 'EA', options: ['EA','대','SET','kg','M','L','BOX','ton'], width: '78px' },
+    { name: 'minQty', type: 'number', min: 0, step: 1, default: '10', width: '92px' },
+    { name: 'location', type: 'text', placeholder: '예: A-4 선반', width: '160px' },
+    { name: 'note', type: 'text', placeholder: '비고', width: '180px' }
+  ]
+});
+function setInventoryEntryMode(mode) {
+  const bulk = mode === 'bulk';
+  setBulkEntryMode('inv', bulk);
+  const saveBtn = inp('inv-save-btn');
+  if (saveBtn && !editInvId) saveBtn.innerHTML = bulk ? '<i class="ti ti-check"></i>일괄 등록' : '<i class="ti ti-check"></i>저장';
+}
 function renderInventory() {
   // 현재 분류 한정 집합
   const catItems = inventory.filter(i => (i.category || '생산부품') === invCategory);
@@ -8398,26 +8796,57 @@ function adjustStock(id, delta) {
 function openInvAdd() {
   editInvId = null;
   inp('inv-modal-ttl').innerHTML = '<i class="ti ti-package" style="color:var(--tx-i);"></i>재고 품목 등록';
+  const saveBtn = inp('inv-save-btn'); if (saveBtn) saveBtn.innerHTML = '<i class="ti ti-check"></i>저장';
   sv('inva-id', nextCode('INV', inventory));
   sv('inva-name','');
   sv('inva-category', invCategory);
   sv('inva-type', invCategory==='완제품' ? '완제품' : invCategory==='사무비품' ? '소모품' : '자재');
   sv('inva-unit','EA');
   sv('inva-qty','0'); sv('inva-minQty','10'); sv('inva-location',''); sv('inva-note','');
+  initBulkEntryTable('inv');
+  setInventoryEntryMode('bulk');
+  const mode = inp('inv-mode-switch'); if (mode) mode.style.display = '';
   inp('inv-modal').classList.add('open');
 }
 function openInvEdit(id) {
   const i = inventory.find(x=>x.id===id); if (!i) return;
   editInvId = id;
   inp('inv-modal-ttl').innerHTML = '<i class="ti ti-edit" style="color:var(--tx-w);"></i>재고 수정';
+  const saveBtn = inp('inv-save-btn'); if (saveBtn) saveBtn.innerHTML = '<i class="ti ti-device-floppy"></i>수정';
   sv('inva-id', i.id); sv('inva-name', i.name);
   sv('inva-category', i.category || '생산부품'); sv('inva-type', i.type);
   sv('inva-unit', i.unit||'EA'); sv('inva-qty', i.qty||0); sv('inva-minQty', i.minQty||0);
   sv('inva-location', i.location||''); sv('inva-note', i.note||'');
+  setInventoryEntryMode('single');
+  const mode = inp('inv-mode-switch'); if (mode) mode.style.display = 'none';
   inp('inv-modal').classList.add('open');
 }
 function saveInventoryForm() {
   if (!checkAdminAction()) return;
+  if (!editInvId && isBulkEntryMode('inv')) {
+    const rows = readBulkEntryTable('inv');
+    if (!rows.length) { showToast('등록할 재고 행을 입력해주세요.', 'error'); return; }
+    const invalid = rows.find(r => !r.name.trim() || (parseInt(r.qty) || 0) < 0 || (parseInt(r.minQty) || 0) < 0);
+    if (invalid) { showToast('품목명과 수량을 확인해주세요.', 'error'); return; }
+    rows.slice().reverse().forEach(r => {
+      inventory.unshift({
+        id: nextCode('INV', inventory),
+        name: r.name.trim(),
+        category: r.category || '생산부품',
+        type: r.type || '자재',
+        unit: r.unit || 'EA',
+        qty: parseInt(r.qty) || 0,
+        minQty: parseInt(r.minQty) || 0,
+        location: r.location,
+        note: r.note
+      });
+    });
+    saveStorage('inventory', inventory);
+    closeModal('inv-modal');
+    renderInventory();
+    showToast(`재고 품목 ${rows.length}건이 등록되었습니다.`);
+    return;
+  }
   const name = v('inva-name').trim();
   if (!name) { showToast('품목명은 필수입니다.', 'error'); return; }
   const obj = {
@@ -8672,7 +9101,7 @@ registerBulkEntryTable('order', {
   body: 'order-bulk-body',
   minRows: 3,
   fields: [
-    { name: 'productId', type: 'select', options: () => bulkProductOptions(v('oa-client')), width: '190px' },
+    { name: 'productId', type: 'select', options: () => bulkProductOptions(v('oa-client')), width: '190px', required: true },
     { name: 'line', type: 'select', default: '라인 A', options: ['라인 A','라인 B','라인 C'], width: '92px' },
     { name: 'qty', type: 'number', min: 1, step: 1, default: '1', width: '86px' },
     { name: 'start', type: 'date', default: today, width: '126px' },
@@ -9757,9 +10186,9 @@ registerBulkEntryTable('df', {
   body: 'df-bulk-body',
   minRows: 3,
   fields: [
-    { name: 'productId', type: 'select', options: () => bulkProductOptions(v('df-client')), width: '190px' },
+    { name: 'productId', type: 'select', options: () => bulkProductOptions(v('df-client')), width: '190px', required: true },
     { name: 'stage', type: 'select', default: () => processStages[0] || '', options: () => processStages, width: '130px' },
-    { name: 'type', type: 'text', placeholder: '불량 유형', width: '160px' },
+    { name: 'type', type: 'text', placeholder: '불량 유형', width: '160px', required: true },
     { name: 'qty', type: 'number', min: 1, step: 1, default: '1', width: '82px' },
     { name: 'cause', type: 'text', placeholder: '원인', width: '150px' },
     { name: 'action', type: 'text', placeholder: '조치', width: '150px' },
@@ -9774,7 +10203,7 @@ registerBulkEntryTable('cl', {
   fields: [
     { name: 'kind', type: 'select', default: '클레임', options: ['클레임','AS','기타'], width: '96px' },
     { name: 'spec', type: 'text', placeholder: '사양', width: '180px' },
-    { name: 'content', type: 'text', placeholder: '불만/요청 내용', width: '320px' },
+    { name: 'content', type: 'text', placeholder: '불만/요청 내용', width: '320px', required: true },
     { name: 'response', type: 'text', placeholder: '조치 방안', width: '260px' },
     { name: 'status', type: 'select', default: '접수', options: ['접수','처리중','완료'], width: '96px' }
   ]
@@ -9784,7 +10213,7 @@ registerBulkEntryTable('ck', {
   body: 'ck-bulk-body',
   minRows: 3,
   fields: [
-    { name: 'productId', type: 'select', options: () => bulkProductOptions(v('ck-client')), width: '220px' },
+    { name: 'productId', type: 'select', options: () => bulkProductOptions(v('ck-client')), width: '220px', required: true },
     { name: 'visual', type: 'select', default: '합격', options: ['합격','불합격','조건부합격'], width: '110px' },
     { name: 'dim', type: 'select', default: '합격', options: ['합격','불합격','조건부합격'], width: '110px' },
     { name: 'func', type: 'select', default: '합격', options: ['합격','불합격','조건부합격'], width: '110px' },
@@ -11617,9 +12046,9 @@ const COLUMN_TABLES = {
   rfq:        { sel:'#rfq-table',         label:'견적요청서',        addBtn:'openRfqAdd',    cols:['문서번호','요청일','고객사','연결제품','공급처','품목명','규격','수량','희망단가','상태','비고','관리'] },
   po:         { sel:'#po-table',          label:'구매발주서',        addBtn:'openPoAdd',     cols:['발주번호','발행일','고객사','연결제품','공급처','품목명','규격','수량','단가','금액','결제조건','납품방법','상태','비고'] },
   quote:      { sel:'#qt-table',          label:'견적/수주-견적서',   addBtn:'openSODocAdd',  cols:['견적번호','일자','고객사','품목명','규격','수량','단가','공급가액','납기','상태','관리'] },
-  order:      { sel:'#so-table',          label:'견적/수주-수주서',   addBtn:'openSODocAdd',  cols:['수주번호','일자','고객사','품목명','규격','수량','단가','공급가액','연결 제품(공정)','상태','관리'] },
-  statement:  { sel:'#st-table',          label:'거래명세표',        addBtn:'openSalesDocAdd', cols:['문서번호','발행일','공급받는 고객사','연결제품','품목명','규격','수량','단가','공급가액','부가세','합계','상태','관리'] },
-  tax:        { sel:'#tx-table',          label:'세금계산서',        addBtn:'openSalesDocAdd', cols:['문서번호','발행일','공급받는 고객사','연결제품','품목명','규격','수량','단가','공급가액','부가세','합계','상태','관리'] },
+  order:      { sel:'#so-table',          label:'견적/수주-수주서',   addBtn:'openSODocAdd',  cols:['수주번호','일자','고객사','품목명','규격','수량','단가','공급가액','사업자번호','상태','관리'] },
+  statement:  { sel:'#st-table',          label:'거래명세표',        addBtn:'openSalesDocAdd', cols:['문서번호','발행일','공급받는 고객사','사업자번호','품목명','규격','수량','단가','공급가액','부가세','합계','상태','관리'] },
+  tax:        { sel:'#tx-table',          label:'세금계산서',        addBtn:'openSalesDocAdd', cols:['문서번호','발행일','공급받는 고객사','사업자번호','품목명','규격','수량','단가','공급가액','부가세','합계','상태','관리'] },
   partners:   { sel:'#bp-table',          label:'거래처 관리',       addBtn:'openPartnerModal', cols:['코드','거래처명','유형','담당자','전화번호','이메일','사업자번호','비고','납기이행률','거래금액','관리'] },
   deliveries: { sel:'#dlv-table',         label:'납품 현황',        cols:['납품번호','납품일자','고객사','제품명','규격','수량','단가','납품금액','비고','삭제'] },
   inventory:  { sel:'#inventory-table',   label:'재고',             addBtn:'openInvAdd',    cols:['재고코드','품목명','분류','현재고','안전재고','보관위치','참고','관리'] }
@@ -11732,6 +12161,7 @@ function cloudBootstrap(){
           _fbAuth.signOut(); return;
         }
         _cloudActive = true; _hideLogin(); _cloudChip('online');
+        if (typeof flushClientMasterMigrationSync === 'function') flushClientMasterMigrationSync();
         updateAdminUI(); applyRoleGating(); applyColumnGating(); applyFeatureGating(); cloudSubscribe();   // 역할 UI/컬럼/기능 반영 + 실시간 동기화 시작
         if (currentPage !== 'dashboard' && !pageAllowed(currentPage)) {
           showToast('이 페이지에 접근할 권한이 없습니다.', 'error');
@@ -11760,7 +12190,10 @@ function cloudV2StripMeta(value){
   return out;
 }
 const _cloudKeyApplied = {};   // key -> 마지막으로 로컬에 반영한 sourceUpdatedAt(ms). 비순차 원격 읽기 거부용
+const _cloudSavingKeys = new Set(); // 저장 중인 키는 이전 원격 스냅샷으로 덮지 않음
 async function cloudLoadV2Key(key){
+  if (typeof _cloudQueue !== 'undefined' && _cloudQueue && _cloudQueue.has(key)) return false;
+  if (_cloudSavingKeys.has(key)) return false;
   const entityRef = _fbDb.collection('mes_v2').doc(key);
   const metaSnap = await entityRef.get();
   if (!metaSnap.exists) return false;
@@ -11934,11 +12367,16 @@ async function cloudMirrorV2Keys(keys){
 async function cloudFlush(){
   if (!_cloudActive || !_cloudQueue.size) return;
   const keys=[..._cloudQueue]; _cloudQueue.clear();
+  keys.forEach(k=>_cloudSavingKeys.add(k));
   _cloudChip('saving');
   const failed = await cloudMirrorV2Keys(keys);
+  const failedSet = new Set(failed);
+  keys.filter(k=>!failedSet.has(k)).forEach(k=>{
+    setTimeout(()=>_cloudSavingKeys.delete(k), 2000);
+  });
   if (!failed.length) { _cloudChip('online'); return; }
   _cloudChip('error');
-  failed.forEach(k=>_cloudQueue.add(k));                       // 실제 실패한 키만 재큐잉 후 재시도
+  failed.forEach(k=>{ _cloudSavingKeys.delete(k); _cloudQueue.add(k); });                       // 실제 실패한 키만 재큐잉 후 재시도
   clearTimeout(_cloudTimer); _cloudTimer=setTimeout(cloudFlush, 5000);
   showToast('일부 항목 클라우드 저장에 실패했습니다. 잠시 후 자동 재시도합니다.', 'error');
 }
@@ -11967,6 +12405,7 @@ function cloudResyncGlobals(){
   if(!financeData.auditLog) financeData.auditLog=[]; if(!financeData.payrollSettings) financeData.payrollSettings={};
   asList=L('asList',asList); bomList=L('bomList',bomList);
   memoList=L('memoList',memoList); todoList=L('todoList',todoList);
+  if (typeof migrateClientMasterToPartners === 'function') migrateClientMasterToPartners();
 }
 let _cloudRemoteRefreshTimer = null;
 function cloudScheduleRemoteRefresh(){
@@ -11992,6 +12431,7 @@ function cloudSubscribe(){
     // 아직 서버로 보내지 않은 로컬 편집이 대기 중인 키는 원격값으로 덮어쓰지 않음
     // (비순차 원격 읽기가 최신 로컬 데이터를 되돌리는 것을 방지 — 편집 중 키는 로컬 우선)
     if (typeof _cloudQueue !== 'undefined' && _cloudQueue && _cloudQueue.has(key)) return;
+    if (typeof _cloudSavingKeys !== 'undefined' && _cloudSavingKeys && _cloudSavingKeys.has(key)) return;
     if (typeof cloudLoadV2Key !== 'function') return;
     cloudLoadV2Key(key)
       .then(loaded => { if (loaded) cloudScheduleRemoteRefresh(); })
@@ -14332,7 +14772,7 @@ function _docTemplateVariableSchema() {
   return {
     version:1,
     common:['회사명','회사주소','회사전화','회사팩스','회사연락처','회사사업자정보','사업자번호','대표자','부서'],
-    document:['문서번호','발행일','공급처','공급처이메일','고객사','고객이메일','연결제품','결제조건','납품방법','납품주소','상태','비고'],
+    document:['문서번호','발행일','공급처','공급처이메일','고객사','고객이메일','고객사업자번호','공급받는자사업자번호','연결제품','결제조건','납품방법','납품주소','상태','비고'],
     amounts:['공급가액','부가세','합계금액'],
     repeating:{
       pattern:['번호{n}','품목명{n}','규격{n}','수량{n}','단위{n}','단가{n}','금액{n}','품목비고{n}'],
@@ -14615,7 +15055,7 @@ function _defaultDocTemplateBook(type) {
     ['A12:B12','담당 연락처','C12:L12','{{부서}} {{회사전화}}']
   ] : [
     ['A9:B9','공급자','C9:F9','{{회사명}} ({{사업자번호}})','G9:H9','발행일자','I9:L9','{{발행일}}'],
-    ['A10:B10','공급받는자','C10:F10','{{고객사}} 귀중','G10:H10','관련 제품','I10:L10','{{연결제품}}'],
+    ['A10:B10','공급받는자','C10:F10','{{고객사}} 귀중','G10:H10','사업자번호','I10:L10','{{고객사업자번호}}'],
     ['A11:B11','고객 이메일','C11:L11','{{고객이메일}}'],
     ['A12:B12',isQuote?'견적 유효기간':'문서 상태','C12:L12',isQuote?'발행일로부터 30일':'{{상태}}']
   ];
@@ -14749,7 +15189,7 @@ function _defaultDocTemplateBook(type) {
     ['3','기본 양식은 A4 한 페이지이며 품목은 12개까지 표시됩니다. 필요하면 {{품목명13}}부터 추가할 수 있습니다.'],
     ['4','수정한 파일을 화면의 "수정한 엑셀 인쇄 양식 등록" 버튼으로 등록합니다.'],
     ['공통 표시값','{{회사명}}, {{회사주소}}, {{회사전화}}, {{회사팩스}}, {{회사연락처}}, {{회사사업자정보}}, {{사업자번호}}, {{대표자}}, {{부서}}'],
-    ['문서 표시값','{{문서번호}}, {{발행일}}, {{공급처}}, {{공급처이메일}}, {{고객사}}, {{연결제품}}, {{결제조건}}, {{납품방법}}, {{납품주소}}, {{비고}}'],
+    ['문서 표시값','{{문서번호}}, {{발행일}}, {{공급처}}, {{공급처이메일}}, {{고객사}}, {{고객사업자번호}}, {{연결제품}}, {{결제조건}}, {{납품방법}}, {{납품주소}}, {{비고}}'],
     ['금액 표시값','{{공급가액}}, {{부가세}}, {{합계금액}}'],
     ['품목 표시값','{{번호1}}, {{품목명1}}, {{규격1}}, {{수량1}}, {{단위1}}, {{단가1}}, {{금액1}}, {{품목비고1}} ... 20']
   ].forEach(row => guide.addRow(row));
@@ -14951,6 +15391,9 @@ function _docTemplateValues(type, items) {
   const lines = _docLines(items, type);
   const amount = lines.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
   const vat = Math.round(amount * 0.1);
+  const clientName = first.clientName || getClientName(first.clientId) || '';
+  const clientBizNo = _docClientBizNo(first);
+  const isCustomerDoc = ['statement','tax','quote','order'].includes(type);
   const values = {
     회사명:ci.name || '', 회사주소:ci.address || '', 회사전화:ci.tel || '',
     회사팩스:ci.fax || '', 사업자번호:ci.bizNo || '', 대표자:ci.ceo || '',
@@ -14960,9 +15403,10 @@ function _docTemplateValues(type, items) {
     문서번호:[...new Set(items.map(x => x.id))].join(', '),
     발행일:first.date || '', 공급처:first.supplier || '',
     공급처이메일:first.supplierEmail || '',
-    고객사:first.clientName || getClientName(first.clientId) || '',
+    고객사:clientName,
     고객이메일:first.clientEmail || '',
-    연결제품:first.productId ? getProductName(first.productId) : '',
+    고객사업자번호:clientBizNo,
+    연결제품:isCustomerDoc ? clientBizNo : (first.productId ? getProductName(first.productId) : ''),
     결제조건:first.payMethod || '', 납품방법:first.dlvMethod || '', 상태:first.status || '',
     납품주소:ci.address || '', 공급가액:amount, 부가세:vat,
     합계금액:amount + vat, 비고:items.map(x => x.note || '').filter(Boolean).join(' / '),
@@ -14970,10 +15414,9 @@ function _docTemplateValues(type, items) {
     공급자회사명:ci.name || '', 공급자사업자번호:ci.bizNo || '', 공급자대표자:ci.ceo || '',
     공급자주소:ci.address || '', 공급자업태:ci.bizType || '', 공급자종목:ci.bizItem || '', 공급자이메일:ci.email || ''
   };
-  const clientName = first.clientName || getClientName(first.clientId) || '';
   const bp = partners.find(p => p.name === clientName) || {};
   Object.assign(values, {
-    공급받는자회사명:clientName, 공급받는자사업자번호:bp.bizNo || '', 공급받는자대표자:bp.ceo || '',
+    공급받는자회사명:clientName, 공급받는자사업자번호:clientBizNo || bp.bizNo || '', 공급받는자대표자:bp.ceo || '',
     공급받는자주소:bp.address || '', 공급받는자업태:bp.bizType || '', 공급받는자종목:bp.bizItem || '',
     공급받는자이메일:first.clientEmail || bp.email || ''
   });
@@ -15071,6 +15514,21 @@ function salesStatusColor(type, s) {
   return 'var(--tx-s)';
 }
 
+function _docClientName(d) {
+  return (d && d.clientName) || getClientName(d && d.clientId) || '';
+}
+function _docClientPartner(d) {
+  const name = _docClientName(d);
+  return partners.find(p => p.name === name) || {};
+}
+function _docClientBizNo(d) {
+  if (d && d.clientBizNo) return d.clientBizNo;
+  const client = d && d.clientId ? clients.find(c => c.id === d.clientId) : null;
+  if (client && (client.bizNo || client.businessNo || client.bizno)) return client.bizNo || client.businessNo || client.bizno;
+  const partner = _docClientPartner(d);
+  return partner.bizNo || '';
+}
+
 function renderSalesDoc(type) {
   const cfg = SALES[type], idp = cfg.idp, list = salesList(type);
   ensureDateView(type, idp+'-table', list.map(d=>d.date), ()=>renderSalesDoc(type));
@@ -15108,7 +15566,7 @@ function renderSalesDoc(type) {
 
   cont.innerHTML = `<table style="min-width:1080px;">
     <thead><tr>
-      <th>문서번호</th><th>발행일</th><th>공급받는 고객사</th><th>연결제품</th>
+      <th>문서번호</th><th>발행일</th><th>공급받는 고객사</th><th>사업자번호</th>
       <th>품목명</th><th>규격</th><th>수량</th><th>단가</th><th>공급가액</th><th>부가세</th><th>합계</th><th>상태</th><th>관리</th>
     </tr></thead>
     <tbody>${rows.map(d => {
@@ -15117,8 +15575,8 @@ function renderSalesDoc(type) {
       <tr>
         <td style="font-weight:700;color:var(--tx-i);">${d.id}</td>
         <td>${d.date}</td>
-        <td>${getClientName(d.clientId)||'—'}${d.clientEmail?`<br><span style="font-size:10px;color:var(--tx-t);">${d.clientEmail}</span>`:''}</td>
-        <td style="font-size:11px;">${d.productId?getProductName(d.productId):'—'}</td>
+        <td>${_docClientName(d)||'—'}${d.clientEmail?`<br><span style="font-size:10px;color:var(--tx-t);">${d.clientEmail}</span>`:''}</td>
+        <td style="font-size:11px;">${_docClientBizNo(d) || '—'}</td>
         <td style="font-weight:700;">${esc(_docItemSummary(d))}</td>
         <td style="font-size:11px;color:var(--tx-t);">${d.spec||'—'}</td>
         <td>${_docQtySummary(d)}</td>
@@ -15143,9 +15601,9 @@ function renderSalesDoc(type) {
 
 function onSalesDocClientChange() {
   const cid = v('sd-client');
-  fillProductSelect('sd-product', cid);
   const c = clients.find(x => x.id === cid);
   if (c && c.email && !v('sd-email')) sv('sd-email', c.email);
+  sv('sd-bizno', _docClientBizNo({ clientId: cid }));
 }
 
 function openSalesDocAdd(type) {
@@ -15160,8 +15618,7 @@ function openSalesDocAdd(type) {
   sv('sd-date', today());
   sv('sd-status', cfg.statuses[0]);
   inp('sd-client').innerHTML = '<option value="">-- 선택 --</option>' + clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-  inp('sd-product').innerHTML = '<option value="">-- 선택 --</option>';
-  ['sd-email','sd-note-common'].forEach(id=>sv(id,''));
+  ['sd-product','sd-email','sd-bizno','sd-note-common'].forEach(id=>sv(id,''));
   _initDocItemTable('sd');
   modal.classList.add('open');
 }
@@ -15179,8 +15636,9 @@ function openSalesDocEdit(type, id) {
   sv('sd-id', d.id);
   sv('sd-date', d.date);
   inp('sd-client').innerHTML = '<option value="">-- 선택 --</option>' + clients.map(c=>`<option value="${c.id}"${c.id===d.clientId?' selected':''}>${c.name}</option>`).join('');
-  fillProductSelect('sd-product', d.clientId, d.productId);
+  sv('sd-product', d.productId || '');
   sv('sd-email', d.clientEmail||'');
+  sv('sd-bizno', _docClientBizNo(d));
   _initDocItemTable('sd', _docItems(d));
   sv('sd-note-common', d.commonNote || d.note||'');
   sv('sd-status', d.status || cfg.statuses[0]);
@@ -15200,8 +15658,9 @@ function cloneSalesDoc(type, id) {
   sv('sd-id', nextDocCode(cfg.prefix, salesList(type)));
   sv('sd-date', today());
   inp('sd-client').innerHTML = '<option value="">-- 선택 --</option>' + clients.map(c=>`<option value="${c.id}"${c.id===d.clientId?' selected':''}>${c.name}</option>`).join('');
-  fillProductSelect('sd-product', d.clientId, d.productId);
+  sv('sd-product', d.productId || '');
   sv('sd-email', d.clientEmail||'');
+  sv('sd-bizno', _docClientBizNo(d));
   _initDocItemTable('sd', _docItems(d));
   sv('sd-note-common', d.commonNote || d.note||''); sv('sd-status', cfg.statuses[0]);
   modal.classList.add('open');
@@ -15221,6 +15680,7 @@ function saveSalesDoc() {
     clientId: v('sd-client'),
     productId: v('sd-product'),
     clientEmail: v('sd-email') || '',
+    clientBizNo: v('sd-bizno') || _docClientBizNo({ clientId: v('sd-client') }),
     itemName: first.itemName,
     spec: first.spec || '',
     qty: Number(first.qty) || 1,
@@ -15270,10 +15730,10 @@ function exportSalesDocCSV(type) {
   const cfg = SALES[type], list = salesList(type);
   if (!list.length) { showToast('내보낼 데이터가 없습니다.', 'error'); return; }
   const wb = XLSX.utils.book_new();
-  const hdr = ['문서번호','발행일','고객사','고객이메일','연결제품','품목명','규격','수량','단위','단가','공급가액','부가세','합계','상태','비고'];
+  const hdr = ['문서번호','발행일','고객사','고객이메일','사업자번호','품목명','규격','수량','단위','단가','공급가액','부가세','합계','상태','비고'];
   const rows = list.flatMap(d => _docLines(d, type).map(line => {
     const vat = Math.round(line.amount * 0.1);
-    return [d.id, d.date, getClientName(d.clientId)||'', d.clientEmail||'', d.productId?getProductName(d.productId):'',
+    return [d.id, d.date, getClientName(d.clientId)||'', d.clientEmail||'', _docClientBizNo(d),
       line.itemName, line.spec||'', line.qty, line.unit, line.price||0, line.amount, vat, line.amount+vat, d.status, line.rowNote || ''];
   }));
   const ws = XLSX.utils.aoa_to_sheet([hdr, ...rows]);
@@ -15287,8 +15747,8 @@ function exportSalesDocCSV(type) {
 function _taxInvoiceHtml(d, ci, copyLabel) {
   const lines = _docLines(d, 'tax');
   const total = _docAmount(d, 'tax'), vat = Math.round(total*0.1), grand = total+vat;
-  const cn = getClientName(d.clientId) || '';
-  const bp = partners.find(p => p.name === cn) || {};
+  const cn = _docClientName(d);
+  const bp = _docClientPartner(d);
   const num = n => Number(n||0).toLocaleString('ko-KR');
   const dt = (d.date || today()).split('-');
   const b = '1px solid #b9b9b9';
@@ -15326,7 +15786,7 @@ function _taxInvoiceHtml(d, ci, copyLabel) {
       </tr>
     </table>`;
   const supplier = { reg:ci.bizNo, company:ci.name, ceo:ci.ceo, address:ci.address, bizType:ci.bizType, bizItem:ci.bizItem, email:ci.email };
-  const buyer = { reg:bp.bizNo||'', company:cn, ceo:'', address:bp.address||'', bizType:'', bizItem:'', email:d.clientEmail||bp.email||'' };
+  const buyer = { reg:_docClientBizNo(d), company:cn, ceo:'', address:bp.address||'', bizType:'', bizItem:'', email:d.clientEmail||bp.email||'' };
   const itemRows = lines.map(line => {
     const parts = line.doc && line.doc.date ? line.doc.date.split('-') : dt;
     const lineVat = Math.round((Number(line.amount) || 0) * 0.1);
@@ -15411,8 +15871,8 @@ function _salesDocBodyHtml(d, type, ci) {
   const total = _docAmount(d, type);
   const vat = Math.round(total * 0.1);
   const grand = total + vat;
-  const client = (d.clientName || getClientName(d.clientId)) || '—';
-  const prod = d.productId ? getProductName(d.productId) : '—';
+  const client = _docClientName(d) || '—';
+  const clientBizNo = _docClientBizNo(d) || '—';
   const DOCMETA = {
     statement: { title:'거 래 명 세 표', sec:'거래 품목', remark:'위와 같이 거래 내역을 통보하오니 확인하여 주시기 바랍니다.' },
     quote:     { title:'견 적 서',        sec:'견적 품목', remark:'위와 같이 견적서를 제출하오니 검토 후 발주 부탁드립니다. (견적 유효기간: 발행일로부터 30일)' },
@@ -15436,7 +15896,7 @@ function _salesDocBodyHtml(d, type, ci) {
       </div>
       <table class="info-tbl" style="margin-top:15px;">
         <tr><th>공급자</th><td>${ci.name}${ci.bizNo?' ('+ci.bizNo+')':''}</td><th style="width:90px;">발행일자</th><td>${d.date}</td></tr>
-        <tr><th>공급받는자</th><td class="hl">${client} 귀중</td><th>관련 제품</th><td>${prod}</td></tr>
+        <tr><th>공급받는자</th><td class="hl">${client} 귀중</td><th>사업자번호</th><td>${clientBizNo}</td></tr>
       </table>
       <div class="sec-title" style="margin-top:20px;">■ ${isTax?'공급 내역':'거래 품목'}</div>
       <table class="items-tbl">
@@ -15540,6 +16000,12 @@ function soDocStatusColor(type, s) {
   return s==='완료' ? 'var(--tx-ok)' : s==='진행중' ? 'var(--tx-i)' : 'var(--tx-s)';
 }
 function soDocLabel(d) { return d.clientName || getClientName(d.clientId) || '—'; }
+function _soDocClientId(d) {
+  if (!d) return '';
+  if (d.clientId && clients.some(c => c.id === d.clientId)) return d.clientId;
+  const name = (d.clientName || '').trim();
+  return name ? (clients.find(c => c.name === name)?.id || '') : '';
+}
 
 function updateOrderBadge() {
   const b = inp('orderBadge'); if (!b) return;
@@ -15580,7 +16046,7 @@ function renderSODoc(type) {
     return;
   }
 
-  const headExtra = type === 'quote' ? '<th>납기</th>' : '<th>연결 제품(공정)</th>';
+  const headExtra = type === 'quote' ? '<th>납기</th>' : '<th>사업자번호</th>';
   cont.innerHTML = `<table style="min-width:1080px;">
     <thead><tr>
       <th>${type==='quote'?'견적번호':'수주번호'}</th><th>일자</th><th>고객사</th>
@@ -15590,10 +16056,7 @@ function renderSODoc(type) {
       const sup = _docAmount(d, type);
       let extraCell;
       if (type === 'quote') extraCell = `<td>${d.deliveryDate||'—'}</td>`;
-      else {
-        const p = d.productId ? products.find(x=>x.id===d.productId) : null;
-        extraCell = `<td style="font-size:11px;">${p?`${p.name}<br><span style="color:var(--tx-i);">${p.processStage}</span>`:'—'}</td>`;
-      }
+      else extraCell = `<td style="font-size:11px;">${_docClientBizNo(d) || '—'}</td>`;
       return `
       <tr>
         <td style="font-weight:700;color:var(--tx-i);">${d.id}</td>
@@ -15627,6 +16090,7 @@ function onSODocClientChange() {
   const cid = v('so2-client');
   const c = clients.find(x => x.id === cid);
   if (c && c.email && !v('so2-email')) sv('so2-email', c.email);
+  sv('so2-bizno', _docClientBizNo({ clientId: cid }));
 }
 
 function openSODocAdd(type) {
@@ -15640,8 +16104,8 @@ function openSODocAdd(type) {
   sv('so2-id', nextDocCode(cfg.prefix, soDocList(type)));
   sv('so2-date', today());
   sv('so2-status', cfg.statuses[0]);
-  inp('so2-client').innerHTML = '<option value="">-- 선택 (미등록 시 비움) --</option>' + clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-  ['so2-client-text','so2-email','so2-spec','so2-note-common','so2-due'].forEach(id=>sv(id,''));
+  inp('so2-client').innerHTML = '<option value="">-- 선택 --</option>' + clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  ['so2-email','so2-bizno','so2-spec','so2-note-common','so2-due'].forEach(id=>sv(id,''));
   _initDocItemTable('so2');
   sv('so2-unit','대'); sv('so2-price','');
   modal.classList.add('open');
@@ -15659,9 +16123,10 @@ function openSODocEdit(type, id) {
   inp('so2-status').innerHTML = cfg.statuses.map(s=>`<option>${s}</option>`).join('');
   sv('so2-id', d.id);
   sv('so2-date', d.date);
-  inp('so2-client').innerHTML = '<option value="">-- 선택 (미등록 시 비움) --</option>' + clients.map(c=>`<option value="${c.id}"${c.id===d.clientId?' selected':''}>${c.name}</option>`).join('');
-  sv('so2-client-text', d.clientName||'');
+  const clientId = _soDocClientId(d);
+  inp('so2-client').innerHTML = '<option value="">-- 선택 --</option>' + clients.map(c=>`<option value="${c.id}"${c.id===clientId?' selected':''}>${c.name}</option>`).join('');
   sv('so2-email', d.clientEmail||'');
+  sv('so2-bizno', _docClientBizNo(d));
   _initDocItemTable('so2', _docItems(d));
   sv('so2-spec', d.spec||'');
   sv('so2-unit', d.unit||'대');
@@ -15684,8 +16149,9 @@ function cloneSODoc(type, id) {
   inp('so2-status').innerHTML = cfg.statuses.map(s=>`<option>${s}</option>`).join('');
   sv('so2-id', nextDocCode(cfg.prefix, soDocList(type)));
   sv('so2-date', today());
-  inp('so2-client').innerHTML = '<option value="">-- 선택 (미등록 시 비움) --</option>' + clients.map(c=>`<option value="${c.id}"${c.id===d.clientId?' selected':''}>${c.name}</option>`).join('');
-  sv('so2-client-text', d.clientName||''); sv('so2-email', d.clientEmail||'');
+  const clientId = _soDocClientId(d);
+  inp('so2-client').innerHTML = '<option value="">-- 선택 --</option>' + clients.map(c=>`<option value="${c.id}"${c.id===clientId?' selected':''}>${c.name}</option>`).join('');
+  sv('so2-email', d.clientEmail||''); sv('so2-bizno', _docClientBizNo(d));
   _initDocItemTable('so2', _docItems(d));
   sv('so2-spec', d.spec||'');
   sv('so2-unit', d.unit||'대'); sv('so2-price', d.unitPrice||'');
@@ -15699,14 +16165,15 @@ function saveSODoc() {
   const type = modal.dataset.type || 'quote';
   const cfg = SODOCS[type];
   const items = _readDocItemTable('so2');
-  if (!v('so2-client') && !v('so2-client-text').trim()) { showToast('고객사를 선택하거나 직접 입력하세요.', 'error'); return; }
+  if (!v('so2-client')) { showToast('고객사를 선택하세요. 목록에 없으면 찾기에서 신규 고객사 등록 후 선택하세요.', 'error'); return; }
   if (!items.length) { showToast('품목명을 입력하세요.', 'error'); return; }
   const first = items[0] || { itemName:'', spec:'', qty:1, unit:'대', price:null, note:'' };
   const data = {
     date: v('so2-date') || today(),
     clientId: v('so2-client'),
-    clientName: v('so2-client-text').trim(),
+    clientName: '',
     clientEmail: v('so2-email') || '',
+    clientBizNo: v('so2-bizno') || _docClientBizNo({ clientId: v('so2-client') }),
     itemName: first.itemName,
     spec: first.spec || '',
     qty: Number(first.qty) || 1,
@@ -15757,10 +16224,10 @@ function exportSODocCSV(type) {
   const cfg = SODOCS[type], list = soDocList(type);
   if (!list.length) { showToast('내보낼 데이터가 없습니다.', 'error'); return; }
   const wb = XLSX.utils.book_new();
-  const hdr = ['문서번호','일자','고객사','고객이메일','품목명','규격','수량','단위','단가','공급가액','부가세','합계','납기','상태','비고'];
+  const hdr = ['문서번호','일자','고객사','고객이메일','사업자번호','품목명','규격','수량','단위','단가','공급가액','부가세','합계','납기','상태','비고'];
   const rows = list.flatMap(d => _docLines(d, type).map(line => {
     const vat = Math.round(line.amount * 0.1);
-    return [d.id, d.date, soDocLabel(d), d.clientEmail||'', line.itemName, line.spec||'', line.qty, line.unit, line.price||0, line.amount, vat, line.amount+vat, d.deliveryDate||'', d.status, line.rowNote || ''];
+    return [d.id, d.date, soDocLabel(d), d.clientEmail||'', _docClientBizNo(d), line.itemName, line.spec||'', line.qty, line.unit, line.price||0, line.amount, vat, line.amount+vat, d.deliveryDate||'', d.status, line.rowNote || ''];
   }));
   const ws = XLSX.utils.aoa_to_sheet([hdr, ...rows]);
   ws['!cols'] = hdr.map(h=>({wch:Math.max(h.length+2,12)}));
@@ -15791,8 +16258,9 @@ function convertQuoteToOrder(id) {
   if (q.status === '수주전환') { showToast('이미 수주 전환된 견적입니다.', 'info'); return; }
   const itemSummary = _docItemSummary(q);
   const totalQty = _docItems(q).reduce((sum, item) => sum + (Number(item.qty) || 0), 0) || q.qty || 1;
+  const clientBizNo = _docClientBizNo(q);
   confirm_('수주 전환', `<strong>${q.id}</strong> (${itemSummary}) 견적을 수주로 전환합니다.<br>제품이 자동 생성되어 공정 관리 '설계/도면' 단계로 투입됩니다. 진행할까요?`, () => {
-    // 1) 고객사 확보 (미등록·존재하지 않는 clientId면 이름으로 찾거나 자동 등록)
+    // 1) 고객사 확보 (존재하지 않는 clientId면 거래처 고객사로 자동 등록)
     let clientId = q.clientId;
     const valid = clientId && clients.some(c => c.id === clientId);
     if (!valid) {
@@ -15800,10 +16268,22 @@ function convertQuoteToOrder(id) {
       const existing = clients.find(c => c.name === name);
       if (existing) clientId = existing.id;
       else {
-        clientId = nextCode('CL', clients);
-        clients.push({ id: clientId, name, manager:'', tel:'', email: q.clientEmail||'', date: today(), note: '견적 수주 전환 자동 등록' });
+        const created = ensureCustomerClient({ name, email:q.clientEmail || '', bizNo:clientBizNo, note:'견적 수주 전환 자동 등록' });
+        clientId = created.id;
         saveStorage('clients', clients);
+        saveStorage('partners', partners);
       }
+    }
+    const orderClient = clients.find(c => c.id === clientId);
+    if (!orderClient) { showToast('수주 전환할 고객사 정보를 찾을 수 없습니다.', 'error'); return; }
+    let clientTouched = false;
+    if (orderClient.closed) { orderClient.closed = false; delete orderClient.closedAt; clientTouched = true; }
+    if (q.clientEmail && !orderClient.email) { orderClient.email = q.clientEmail; clientTouched = true; }
+    if (clientBizNo && !orderClient.bizNo) { orderClient.bizNo = clientBizNo; clientTouched = true; }
+    if (clientTouched) {
+      if (typeof syncPartnerFromClient === 'function') syncPartnerFromClient(orderClient);
+      saveStorage('clients', clients);
+      saveStorage('partners', partners);
     }
     // 2) 제품 자동 생성 (공정 첫 단계)
     const firstStage = processStages[0] || '설계/도면';
@@ -15818,17 +16298,19 @@ function convertQuoteToOrder(id) {
     // 3) 수주 레코드 생성
     const orderId = nextDocCode('SO', orderList);
     orderList.unshift({
-      id: orderId, date: today(), clientId, clientName: q.clientName||'', clientEmail: q.clientEmail||'',
+      id: orderId, date: today(), clientId, clientName: '', clientEmail: q.clientEmail||'', clientBizNo,
       itemName: q.itemName, spec: q.spec||'', qty: q.qty||1, unit: q.unit||'대', unitPrice: q.unitPrice||0,
       deliveryDate: q.deliveryDate||'', note: q.note||'', commonNote: q.commonNote || '', items: _docItems(q),
       status: '수주확정', productId, quoteId: q.id
     });
     saveStorage('orderList', orderList);
     // 4) 견적 상태 갱신
-    q.status = '수주전환'; q.orderId = orderId;
+    q.status = '수주전환'; q.orderId = orderId; q.clientId = clientId; q.clientName = '';
     saveStorage('quoteList', quoteList);
     // 화면 갱신
     syncFilterDropdowns && syncFilterDropdowns();
+    if (typeof expandedClients !== 'undefined') expandedClients.add(clientId);
+    if (typeof showClosedProjects !== 'undefined') showClosedProjects = false;
     if (typeof renderClients === 'function') renderClients();
     renderSODoc('quote');
     showToast('수주로 전환되었습니다. 제품이 수주정보관리·공정 관리에 등록되었습니다.', 'success');
@@ -15839,10 +16321,23 @@ function gotoOrderProcess(id) {
   const o = orderList.find(x=>x.id===id); if (!o) return;
   go('dashboard');
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
-  setTimeout(()=>{ switchDashTab('process'); setProcView && setProcView('list'); showToast(`수주 ${o.id} 연결 제품: ${o.itemName} — 공정 관리에서 확인`, 'info'); }, 60);
+  setTimeout(()=>{ switchDashTab('process'); setProcView && setProcView('list'); showToast(`수주 ${o.id} 공정 관리에서 확인`, 'info'); }, 60);
 }
 
 /* ════════ 거래처 관리 ════════ */
+function normalizePartnerType(type) {
+  return type === '구매처' ? '고객사' : (type || '기타');
+}
+function migratePartnerCustomerType() {
+  let changed = false;
+  partners.forEach(p => {
+    const normalized = normalizePartnerType(p.type);
+    if (p.type !== normalized) { p.type = normalized; changed = true; }
+  });
+  if (changed) saveStorage('partners', partners);
+}
+migratePartnerCustomerType();
+
 function getPartnerPerformance(partnerName) {
   const pos = poList.filter(function(p) { return p.supplier === partnerName; });
   if (!pos.length) return null;
@@ -15878,18 +16373,19 @@ function filterPartners(type) {
 function renderPartners() {
   const total = partners.length;
   const sup   = partners.filter(p => p.type === '공급처').length;
-  const buy   = partners.filter(p => p.type === '구매처').length;
+  const buy   = partners.filter(p => normalizePartnerType(p.type) === '고객사').length;
   const out   = partners.filter(p => p.type === '외주처').length;
   const setEl = (id, v) => { const el = inp(id); if(el) el.textContent = v; };
   setEl('bp-kpi-total', total + '개사');
   setEl('bp-kpi-sup',   sup);
   setEl('bp-kpi-buy',   buy);
   setEl('bp-kpi-out',   out);
-  _kpiActive('bp-ft', {'공급처':'bp-kpi-sup','구매처':'bp-kpi-buy','외주처':'bp-kpi-out'});
+  _kpiActive('bp-ft', {'공급처':'bp-kpi-sup','고객사':'bp-kpi-buy','외주처':'bp-kpi-out'});
 
   const ft = v('bp-ft'), q = v('bp-q').toLowerCase();
   const rows = partners.filter(p => {
-    if (ft && p.type !== ft) return false;
+    const type = normalizePartnerType(p.type);
+    if (ft && type !== ft) return false;
     if (q && !p.name.toLowerCase().includes(q) && !(p.manager||'').toLowerCase().includes(q) && !(p.email||'').toLowerCase().includes(q)) return false;
     return true;
   });
@@ -15906,7 +16402,7 @@ function renderPartners() {
   const cont = inp('bp-table');
   if (!rows.length) { cont.innerHTML = '<div class="empty"><i class="ti ti-inbox"></i>해당 조건의 거래처가 없습니다.</div>'; return; }
 
-  const typeColor = { '공급처':'bd-info', '구매처':'bd-ok', '외주처':'bd-warn', '기타':'bd-neu' };
+  const typeColor = { '공급처':'bd-info', '고객사':'bd-ok', '외주처':'bd-warn', '기타':'bd-neu' };
   const _bpth = (k, l, s) => `<th onclick="toggleSort('partners','${k}')" style="cursor:pointer;user-select:none;${s||''}">${l} ${sortIcon('partners',k)}</th>`;
   cont.innerHTML = `<table style="min-width:900px;">
     <thead><tr>
@@ -15914,7 +16410,8 @@ function renderPartners() {
       <th>전화번호</th><th>이메일</th><th>사업자번호</th><th>비고</th><th style="text-align:center;">납기이행률</th><th>거래금액</th><th>관리</th>
     </tr></thead>
     <tbody>${rows.map(p => {
-      var perf = (p.type === '공급처' || p.type === '외주처') ? getPartnerPerformance(p.name) : null;
+      const type = normalizePartnerType(p.type);
+      var perf = (type === '공급처' || type === '외주처') ? getPartnerPerformance(p.name) : null;
       var perfHtml = perf
         ? '<td style="text-align:center;">' +
           (perf.onTimeRate !== null
@@ -15927,7 +16424,7 @@ function renderPartners() {
       <tr>
         <td style="font-size:11px;color:var(--tx-t);">${esc(p.id)}</td>
         <td style="font-weight:700;">${esc(p.name)}</td>
-        <td><span class="bd ${typeColor[p.type]||'bd-neu'}">${esc(p.type)}</span></td>
+        <td><span class="bd ${typeColor[type]||'bd-neu'}">${esc(type)}</span></td>
         <td>${esc(p.manager)||'—'}</td>
         <td>${esc(p.tel||p.mobile)||'—'}</td>
         <td style="font-size:11px;">${p.email?`<a href="mailto:${esc(p.email)}" style="color:var(--tx-i);">${esc(p.email)}</a>`:'—'}</td>
@@ -15952,7 +16449,7 @@ function openPartnerModal(id) {
     if (!p) return;
     modal.dataset.editId = id;
     inp('partner-modal-ttl').innerHTML = '<i class="ti ti-edit" style="color:var(--tx-w);"></i>거래처 수정';
-    inp('bp-name').value   = p.name;     inp('bp-type').value   = p.type;
+    inp('bp-name').value   = p.name;     inp('bp-type').value   = normalizePartnerType(p.type);
     inp('bp-mgr').value    = p.manager||''; inp('bp-tel').value  = p.tel||'';
     inp('bp-mobile').value = p.mobile||''; inp('bp-email').value = p.email||'';
     inp('bp-fax').value    = p.fax||'';  inp('bp-bizno').value  = p.bizNo||'';
@@ -15972,7 +16469,7 @@ function savePartnerForm() {
   const editId = modal.dataset.editId;
   const obj = {
     id: editId || nextCode('BP', partners),
-    name: v('bp-name'), type: v('bp-type'),
+    name: v('bp-name'), type: normalizePartnerType(v('bp-type')),
     manager: v('bp-mgr'), tel: v('bp-tel'), mobile: v('bp-mobile'),
     email: v('bp-email'), fax: v('bp-fax'), bizNo: v('bp-bizno'),
     address: v('bp-addr'), note: v('bp-note')
@@ -15983,9 +16480,14 @@ function savePartnerForm() {
   } else {
     partners.unshift(obj);
   }
+  if (obj.type === '고객사' && typeof syncClientFromPartner === 'function') {
+    syncClientFromPartner(obj);
+    saveStorage('clients', clients);
+  }
   saveStorage('partners', partners);
   closeModal('partner-modal');
   if (document.getElementById('pg-partners')?.classList.contains('active')) renderPartners();
+  if (document.getElementById('pg-clients')?.classList.contains('active')) renderClients();
   showToast(editId ? '거래처가 수정되었습니다.' : '거래처가 등록되었습니다.');
   // picker가 열려 있으면 목록 갱신
   if (inp('partner-picker-modal')?.classList.contains('open')) renderPickerList();
@@ -16004,7 +16506,7 @@ function exportPartnersXLS() {
   if (!partners.length) { showToast('내보낼 거래처 데이터가 없습니다.', 'error'); return; }
   const wb = XLSX.utils.book_new();
   const hdr = ['코드','거래처명','유형','담당자','전화번호','휴대폰','이메일','팩스','사업자번호','주소','비고'];
-  const rows = partners.map(p => [p.id, p.name, p.type, p.manager||'', p.tel||'', p.mobile||'', p.email||'', p.fax||'', p.bizNo||'', p.address||'', p.note||'']);
+  const rows = partners.map(p => [p.id, p.name, normalizePartnerType(p.type), p.manager||'', p.tel||'', p.mobile||'', p.email||'', p.fax||'', p.bizNo||'', p.address||'', p.note||'']);
   const ws = XLSX.utils.aoa_to_sheet([hdr, ...rows]);
   ws['!cols'] = [8,16,8,10,12,12,20,12,12,20,16].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws, '거래처');
@@ -16027,7 +16529,8 @@ function renderPickerList() {
   const q  = (v('pp-q')||'').toLowerCase();
   const ft = v('pp-ft')||'';
   const list = partners.filter(p => {
-    if (ft && p.type !== ft) return false;
+    const type = normalizePartnerType(p.type);
+    if (ft && type !== ft) return false;
     if (q && !p.name.toLowerCase().includes(q) && !(p.manager||'').toLowerCase().includes(q) && !(p.email||'').toLowerCase().includes(q)) return false;
     return true;
   });
@@ -16036,10 +16539,10 @@ function renderPickerList() {
     cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--tx-t);font-size:12px;">검색 결과가 없습니다.<br>아래 버튼으로 새 거래처를 등록하세요.</div>';
     return;
   }
-  const typeColor = { '공급처':'bd-info', '구매처':'bd-ok', '외주처':'bd-warn', '기타':'bd-neu' };
+  const typeColor = { '공급처':'bd-info', '고객사':'bd-ok', '외주처':'bd-warn', '기타':'bd-neu' };
   cont.innerHTML = list.map(p => `
     <div onclick="selectPartner('${p.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--br);transition:background .1s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background=''">
-      <span class="bd ${typeColor[p.type]||'bd-neu'}" style="flex-shrink:0;">${esc(p.type)}</span>
+      <span class="bd ${typeColor[normalizePartnerType(p.type)]||'bd-neu'}" style="flex-shrink:0;">${esc(normalizePartnerType(p.type))}</span>
       <div style="flex:1;min-width:0;">
         <div style="font-weight:700;font-size:13px;">${esc(p.name)}</div>
         <div style="font-size:11px;color:var(--tx-t);">${p.manager?esc(p.manager)+' · ':''}${esc(p.tel||p.mobile)||''}${p.email?' · '+esc(p.email):''}</div>
@@ -16057,11 +16560,32 @@ function selectPartner(id) {
 
 /* ── 고객사 피커 (거래명세표·세금계산서 등 고객사 선택용) ── */
 let _clientPickerCb = null;
+let _clientPickerCreatePending = false;
+function setClientSelectValue(selectId, c) {
+  const sel = inp(selectId);
+  if (!sel || !c) return;
+  if (![...sel.options].some(opt => opt.value === c.id)) {
+    sel.insertAdjacentHTML('beforeend', `<option value="${esc(c.id)}">${esc(c.name)}</option>`);
+  }
+  sel.value = c.id;
+}
 function openClientPicker(callback){
   _clientPickerCb = callback;
+  _clientPickerCreatePending = false;
   if(inp('cp-q')) inp('cp-q').value = '';
   renderClientPickerList();
   inp('client-picker-modal').classList.add('open');
+}
+function openClientAddFromPicker() {
+  _clientPickerCreatePending = true;
+  closeModal('client-picker-modal');
+  openClientAdd();
+}
+function consumeClientPickerCreatedClient(c) {
+  if (!_clientPickerCreatePending || typeof _clientPickerCb !== 'function') return false;
+  _clientPickerCreatePending = false;
+  _clientPickerCb(c);
+  return true;
 }
 function renderClientPickerList(){
   const q = (v('cp-q')||'').toLowerCase();
@@ -21765,7 +22289,7 @@ window.addEventListener('resize', () => {
     <div class="fg fg2" style="gap:10px; margin-bottom:14px;">
       <div class="ff"><label>거래처명 *</label><input id="bp-name" placeholder="예: ㈜대한산업"></div>
       <div class="ff"><label>유형 *</label>
-        <select id="bp-type"><option>공급처</option><option>구매처</option><option>외주처</option><option>기타</option></select>
+        <select id="bp-type"><option>공급처</option><option>고객사</option><option>외주처</option><option>기타</option></select>
       </div>
       <div class="ff"><label>담당자</label><input id="bp-mgr" placeholder="홍길동"></div>
       <div class="ff"><label>전화번호</label><input id="bp-tel" placeholder="031-000-0000"></div>
@@ -21792,7 +22316,7 @@ window.addEventListener('resize', () => {
     </div>
     <div id="cp-list" style="max-height:320px;overflow-y:auto;border:1px solid var(--br);border-radius:var(--rm);"></div>
     <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;">
-      <button class="btn btn-sm" onclick="closeModal('client-picker-modal'); openClientAdd();"><i class="ti ti-plus"></i>신규 고객사 등록</button>
+      <button class="btn btn-sm" onclick="openClientAddFromPicker()"><i class="ti ti-plus"></i>신규 고객사 등록</button>
       <button class="btn" onclick="closeModal('client-picker-modal')">닫기</button>
     </div>
   </div>
@@ -21804,7 +22328,7 @@ window.addEventListener('resize', () => {
     <div style="display:flex;gap:8px;margin-bottom:12px;">
       <input id="pp-q" placeholder="거래처명·담당자·이메일 검색..." style="flex:1;" oninput="renderPickerList()">
       <select id="pp-ft" onchange="renderPickerList()" style="min-width:90px;">
-        <option value="">전체</option><option>공급처</option><option>구매처</option><option>외주처</option><option>기타</option>
+        <option value="">전체</option><option>공급처</option><option>고객사</option><option>외주처</option><option>기타</option>
       </select>
     </div>
     <div id="pp-list" style="max-height:320px;overflow-y:auto;border:1px solid var(--br);border-radius:var(--rm);"></div>
@@ -21903,10 +22427,10 @@ window.addEventListener('resize', () => {
       <div class="ff"><label>공급받는 고객사 *</label>
         <div style="display:flex;gap:4px;">
           <select id="sd-client" onchange="onSalesDocClientChange()" style="flex:1;"><option value="">-- 선택 --</option></select>
-          <button type="button" class="btn btn-sm" onclick="openClientPicker(function(c){ inp('sd-client').value=c.id; onSalesDocClientChange(); if(c.email && !v('sd-email')) sv('sd-email', c.email); })" style="white-space:nowrap;"><i class="ti ti-search"></i>찾기</button>
+          <button type="button" class="btn btn-sm" onclick="openClientPicker(function(c){ setClientSelectValue('sd-client', c); onSalesDocClientChange(); if(c.email && !v('sd-email')) sv('sd-email', c.email); })" style="white-space:nowrap;"><i class="ti ti-search"></i>찾기</button>
         </div>
       </div>
-      <div class="ff"><label>연결 제품</label><select id="sd-product"><option value="">-- 선택 --</option></select></div>
+      <div class="ff"><label>사업자번호</label><input id="sd-bizno" placeholder="123-45-67890"></div>
       <div class="ff" style="grid-column:span 3;"><label>고객 이메일</label><input id="sd-email" type="email" placeholder="client@example.com"></div>
       <div class="doc-item-grid">
         <div class="doc-item-grid-label"><i class="ti ti-table"></i>품목 입력 *</div>
@@ -21915,7 +22439,7 @@ window.addEventListener('resize', () => {
           <tbody id="sd-items-body"></tbody>
         </table>
       </div>
-      <input id="sd-item" type="hidden"><input id="sd-spec" type="hidden"><input id="sd-qty" type="hidden" value="1"><input id="sd-unit" type="hidden" value="EA"><input id="sd-price" type="hidden"><input id="sd-note" type="hidden">
+      <input id="sd-product" type="hidden"><input id="sd-item" type="hidden"><input id="sd-spec" type="hidden"><input id="sd-qty" type="hidden" value="1"><input id="sd-unit" type="hidden" value="EA"><input id="sd-price" type="hidden"><input id="sd-note" type="hidden">
       <div class="ff" style="grid-column:span 4;"><label>공통 메모</label><input id="sd-note-common" placeholder="문서 전체 특이사항"></div>
     </div>
     <div class="dlg-actions">
@@ -21933,9 +22457,14 @@ window.addEventListener('resize', () => {
       <div class="ff"><label>문서번호</label><input id="so2-id" readonly></div>
       <div class="ff"><label>발행일자 *</label><input id="so2-date" type="date"></div>
       <div class="ff"><label>상태</label><select id="so2-status"></select></div>
-      <div class="ff"><label>고객사 *</label><select id="so2-client" onchange="onSODocClientChange()"><option value="">-- 선택 --</option></select></div>
-      <div class="ff" style="grid-column:span 2;"><label>미등록 고객사 직접입력</label><input id="so2-client-text" placeholder="목록에 없으면 업체명 직접 입력"></div>
+      <div class="ff"><label>고객사 *</label>
+        <div style="display:flex;gap:4px;">
+          <select id="so2-client" onchange="onSODocClientChange()" style="flex:1;"><option value="">-- 선택 --</option></select>
+          <button type="button" class="btn btn-sm" onclick="openClientPicker(function(c){ setClientSelectValue('so2-client', c); onSODocClientChange(); if(c.email && !v('so2-email')) sv('so2-email', c.email); })" style="white-space:nowrap;"><i class="ti ti-search"></i>찾기</button>
+        </div>
+      </div>
       <div class="ff"><label>고객 이메일</label><input id="so2-email" type="email" placeholder="client@example.com"></div>
+      <div class="ff"><label>사업자번호</label><input id="so2-bizno" placeholder="123-45-67890"></div>
       <div class="doc-item-grid">
         <div class="doc-item-grid-label"><i class="ti ti-table"></i>품목 입력 *</div>
         <table>
@@ -21955,16 +22484,23 @@ window.addEventListener('resize', () => {
 </div>
 
 
-<!-- ══ 수주처 등록 모달 ══ -->
+<!-- ══ 수주 정보 등록 모달 ══ -->
 <div class="overlay" id="ca-modal">
   <div class="dlg" style="max-width:600px;width:96%;">
-    <div class="dlg-title" id="ca-modal-ttl"><i class="ti ti-building-plus" style="color:var(--tx-i);"></i>신규 수주처 등록</div>
+    <div class="dlg-title" id="ca-modal-ttl"><i class="ti ti-building-plus" style="color:var(--tx-i);"></i>수주 정보 등록</div>
     <div class="fg fg4" style="gap:10px;margin-bottom:14px;">
-      <div class="ff"><label>고객사 코드</label><input id="ca-id" readonly></div>
-      <div class="ff"><label>업체명 *</label><input id="ca-name" placeholder="예: ㈜우리제조"></div>
+      <div class="ff"><label>거래처 고객사 코드</label><input id="ca-id" readonly></div>
+      <div class="ff" id="ca-name-wrap" style="grid-column:span 2;"><label>고객사명 *</label>
+        <div class="field-search">
+          <input id="ca-name" placeholder="고객사명 검색 또는 신규 입력" autocomplete="off" oninput="onClientRegisterNameInput()" onfocus="renderClientRegisterMatches()" onblur="setTimeout(hideClientRegisterMatches,160)" onkeydown="onClientRegisterNameKey(event)">
+          <button type="button" class="field-search-btn" id="ca-client-search-btn" onclick="openClientRegisterPicker()" title="고객사 찾기"><i class="ti ti-search"></i></button>
+        </div>
+        <div class="inline-search-results" id="ca-client-results"></div>
+      </div>
       <div class="ff"><label>담당자명</label><input id="ca-mgr" placeholder="담당자 성함"></div>
       <div class="ff"><label>연락처</label><input id="ca-tel" placeholder="031-1234-5678"></div>
       <div class="ff"><label>이메일</label><input id="ca-email" placeholder="contact@company.com"></div>
+      <div class="ff"><label>사업자번호</label><input id="ca-bizno" placeholder="123-45-67890"></div>
       <div class="ff"><label>수주 계약일</label><input id="ca-date" type="date"></div>
       <div class="ff" style="grid-column:span 2;"><label>특이사항</label><input id="ca-note" placeholder="기타 참고사항"></div>
     </div>
@@ -22145,9 +22681,13 @@ window.addEventListener('resize', () => {
 
 <!-- ══ 재고 등록 모달 ══ -->
 <div class="overlay" id="inv-modal">
-  <div class="dlg" style="max-width:580px;width:96%;">
+  <div class="dlg" style="max-width:1040px;width:96%;">
     <div class="dlg-title" id="inv-modal-ttl"><i class="ti ti-package" style="color:var(--tx-i);"></i>재고 품목 등록</div>
-    <div class="fg fg4" style="gap:10px;margin-bottom:14px;">
+    <div class="entry-mode-switch" id="inv-mode-switch">
+      <button type="button" id="inv-mode-single" onclick="setInventoryEntryMode('single')">단건 입력</button>
+      <button type="button" id="inv-mode-bulk" onclick="setInventoryEntryMode('bulk')">일괄 입력</button>
+    </div>
+    <div class="fg fg4" id="inv-single-fields" style="gap:10px;margin-bottom:14px;">
       <div class="ff"><label>재고 코드</label><input id="inva-id" readonly></div>
       <div class="ff" style="grid-column:span 3;"><label>품목명 *</label><input id="inva-name" placeholder="예: LM 가이드 레일"></div>
       <div class="ff"><label>재고 구분 *</label>
@@ -22163,6 +22703,13 @@ window.addEventListener('resize', () => {
       <div class="ff"><label>최소 안전 재고 *</label><input id="inva-minQty" type="number" value="10" min="0"></div>
       <div class="ff" style="grid-column:span 2;"><label>보관 위치</label><input id="inva-location" placeholder="예: A-4 선반"></div>
       <div class="ff" style="grid-column:span 2;"><label>참고사항</label><input id="inva-note" placeholder="기타 메모"></div>
+    </div>
+    <div class="batch-entry-grid" id="inv-bulk-panel" style="display:none;">
+      <div class="batch-entry-label"><i class="ti ti-table"></i>재고 품목 일괄 입력</div>
+      <table>
+        <thead><tr><th>품목명 *</th><th>재고 구분</th><th>세부 유형</th><th>현재고 *</th><th>단위</th><th>안전재고</th><th>보관 위치</th><th>참고</th><th></th></tr></thead>
+        <tbody id="inv-bulk-body" data-bulk-key="inv"></tbody>
+      </table>
     </div>
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('inv-modal')">취소</button>
