@@ -1,7 +1,7 @@
 /* ════════ 인쇄 공통 스타일 ════════ */
 function _docPrintStyle() {
   return `<style>
-    @page{ size:A4; margin:10mm; }
+    @page{size:A4;margin:0;}
     *{box-sizing:border-box;margin:0;padding:0;}
     body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;padding:0;color:#111;font-size:12px;}
     .doc-header{display:flex;align-items:flex-end;justify-content:space-between;border-bottom:3px solid #1a3a6e;padding-bottom:12px;margin-bottom:20px;}
@@ -12,29 +12,29 @@ function _docPrintStyle() {
     .approval-box{display:flex;border:1px solid #bbb;width:fit-content;margin-left:auto;margin-bottom:16px;}
     .apv-cell{width:60px;border-right:1px solid #bbb;text-align:center;}
     .apv-cell:last-child{border-right:none;}
-    .apv-title{font-size:9px;font-weight:700;background:#f3f5f8;color:#555;padding:3px 0;border-bottom:1px solid #bbb;}
+    .apv-title{font-size:9px;font-weight:700;background:#fff;color:#555;padding:3px 0;border-bottom:1px solid #bbb;}
     .apv-sign{height:40px;}
     table{width:100%;border-collapse:collapse;margin-bottom:14px;}
     th,td{border:1px solid #ccc;padding:6px 9px;vertical-align:middle;}
-    .info-tbl th{background:#f3f5f8;font-weight:700;color:#333;width:100px;text-align:left;font-size:11px;}
+    .info-tbl th{background:#fff;font-weight:700;color:#333;width:100px;text-align:left;font-size:11px;}
     .info-tbl td{font-size:12px;}
     .info-tbl .hl{font-weight:800;font-size:13px;color:#1a3a6e;}
-    .sec-title{font-size:10px;font-weight:800;color:#1a3a6e;letter-spacing:.05em;background:#eef2fb;border-left:4px solid #1a3a6e;padding:5px 9px;margin-bottom:0;}
-    .items-tbl th{background:#1a3a6e;color:#fff;font-size:10px;font-weight:700;text-align:center;padding:7px 6px;}
+    .sec-title{font-size:10px;font-weight:800;color:#1a3a6e;letter-spacing:.05em;background:#fff;border-left:4px solid #1a3a6e;padding:5px 9px;margin-bottom:0;}
+    .items-tbl th{background:#fff;color:#1a3a6e;font-size:10px;font-weight:700;text-align:center;padding:7px 6px;}
     .items-tbl td{font-size:11px;padding:7px 6px;}
-    .items-tbl tbody tr:nth-child(even) td{background:#fafbfc;}
+    .items-tbl tbody tr:nth-child(even) td{background:#fff;}
     .num{text-align:right;} .ctr{text-align:center;}
-    .total-row td{background:#f0f4ff;font-weight:800;border-top:2px solid #1a3a6e;}
+    .total-row td{background:#fff;font-weight:800;border-top:2px solid #1a3a6e;}
     .empty-row td{color:#ccc;font-size:10px;text-align:center;height:24px;}
     .sum-wrap{display:flex;justify-content:flex-end;margin-bottom:16px;}
     .sum-box{border:2px solid #1a3a6e;border-radius:5px;overflow:hidden;min-width:280px;}
     .sum-row{display:flex;border-bottom:1px solid #dde;font-size:11px;}
     .sum-row:last-child{border-bottom:none;}
-    .sum-lbl{padding:7px 14px;background:#f3f5f8;font-weight:700;color:#555;flex:0 0 110px;}
+    .sum-lbl{padding:7px 14px;background:#fff;font-weight:700;color:#555;flex:0 0 110px;}
     .sum-val{padding:7px 14px;font-weight:700;text-align:right;flex:1;}
-    .sum-final .sum-lbl{background:#1a3a6e;color:#fff;font-size:12px;}
+    .sum-final .sum-lbl{background:#fff;color:#1a3a6e;font-size:12px;}
     .sum-final .sum-val{font-size:14px;font-weight:900;color:#1a3a6e;}
-    .remarks{border:1px solid #ccc;border-radius:4px;padding:10px 12px;font-size:10.5px;color:#444;line-height:1.8;margin-bottom:20px;background:#fafbfc;}
+    .remarks{border:1px solid #ccc;border-radius:4px;padding:10px 12px;font-size:10.5px;color:#444;line-height:1.8;margin-bottom:20px;background:#fff;}
     .remarks-title{font-weight:800;color:#1a3a6e;font-size:10px;margin-bottom:5px;letter-spacing:.04em;}
     .sign-area{display:flex;justify-content:space-between;align-items:flex-end;}
     .sign-left{font-size:10px;color:#777;line-height:1.8;}
@@ -42,7 +42,7 @@ function _docPrintStyle() {
     .sign-box{border:1px solid #bbb;border-radius:3px;text-align:center;padding:6px 0 0;min-width:82px;}
     .sign-title{font-size:9.5px;font-weight:700;color:#555;margin-bottom:3px;}
     .sign-content{height:46px;border-top:1px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:9px;color:#ccc;}
-    @page{size:A4;margin:0;} @media print{body{padding:20px 24px;}}
+    @media print{body{padding:20px 24px;}}
   </style>`;
 }
 
@@ -91,7 +91,10 @@ function renderRfq() {
   }
 
   const cont = inp('rfq-table');
-  if (!rows.length) { cont.innerHTML = '<div class="empty"><i class="ti ti-inbox"></i>해당 조건의 견적요청서가 없습니다.</div>'; return; }
+  if (!rows.length) {
+    cont.innerHTML = '<div class="empty"><i class="ti ti-inbox"></i>해당 조건의 견적요청서가 없습니다.</div>';
+    return;
+  }
   const _rfqth = (k, l) => `<th onclick="toggleSort('rfq','${k}')" style="cursor:pointer;user-select:none;">${l} ${sortIcon('rfq',k)}</th>`;
   cont.innerHTML = `<table style="min-width:980px;">
     <thead><tr>
@@ -118,6 +121,7 @@ function renderRfq() {
           <button class="edit-btn" onclick="openRfqEdit('${r.id}')"><i class="ti ti-edit"></i>수정</button>
           <button class="btn btn-sm" style="margin-left:3px;" onclick="openRfqPrint('${r.id}')" title="PDF 출력"><i class="ti ti-printer"></i></button>
           <button class="btn btn-sm" style="margin-left:3px;border-color:var(--br-ok);color:var(--tx-ok);" onclick="exportRfqXLS('${r.id}')" title="엑셀 다운로드"><i class="ti ti-file-spreadsheet"></i></button>
+          <button class="btn btn-sm drive-save-btn" style="margin-left:3px;" onclick="saveDocumentBundleToGoogleDrive('rfq','${r.id}')" title="PDF/XLSX Google Drive 저장"><i class="ti ti-cloud-upload"></i>Drive</button>
           <button class="btn btn-sm" style="margin-left:3px;border-color:var(--br-i);color:var(--tx-i);" onclick="openEmailModal(rfqList.find(x=>x.id==='${r.id}'),'rfq')" title="이메일 발송"><i class="ti ti-mail"></i></button>
           <button class="del-btn" style="margin-left:3px;" onclick="deleteRfq('${r.id}')"><i class="ti ti-trash"></i></button>
         </td>
@@ -241,6 +245,55 @@ function changeRfqStatus(id, val) {
   r.status = val; saveStorage('rfqList', rfqList); renderRfq();
 }
 
+function convertRfqToPo(ids) {
+  if (!checkAdminAction()) return;
+  const idList = Array.isArray(ids) ? ids : [ids];
+  const targets = idList.map(id => rfqList.find(r => r.id === id)).filter(Boolean);
+  if (!targets.length) {
+    showToast('구매발주서로 보낼 견적요청서가 없습니다.', 'info');
+    return;
+  }
+
+  const existing = new Set(poList.map(p => p.sourceRfqId).filter(Boolean));
+  const fresh = targets.filter(r => !existing.has(r.id));
+  const skipped = targets.length - fresh.length;
+  if (!fresh.length) {
+    showToast('이미 구매발주서로 생성된 견적요청서입니다.', 'info');
+    return;
+  }
+
+  const suffix = skipped ? `\n이미 생성된 ${skipped}건은 제외됩니다.` : '';
+  if (!confirm(`${fresh.length}건의 견적요청서를 구매발주서로 생성하시겠습니까?${suffix}`)) return;
+
+  fresh.forEach(r => {
+    poList.unshift({
+      id: nextDocCode('P', poList),
+      date: today(),
+      clientId: r.clientId || '',
+      productId: r.productId || '',
+      supplier: r.supplier || '',
+      supplierEmail: r.supplierEmail || '',
+      itemName: r.itemName || '',
+      spec: r.spec || '',
+      qty: Number(r.qty) || 1,
+      unit: r.unit || 'EA',
+      unitPrice: Number(r.targetPrice) || 0,
+      payMethod: '현금',
+      dlvMethod: '직납',
+      status: '작성중',
+      note: `견적요청서 ${r.id}에서 생성${r.note ? ' - ' + r.note : ''}`,
+      sourceRfqId: r.id
+    });
+    if (r.status !== '미채택') r.status = '채택';
+  });
+
+  saveStorage('poList', poList);
+  saveStorage('rfqList', rfqList);
+  renderRfq();
+  if (typeof renderPo === 'function') renderPo();
+  showToast(`구매발주서 ${fresh.length}건이 생성되었습니다.${skipped ? ` 중복 ${skipped}건 제외` : ''}`);
+}
+
 function deleteRfq(id) {
   if (!checkAdminAction()) return;
   if (!confirm('이 견적요청서를 삭제하시겠습니까?')) return;
@@ -319,12 +372,11 @@ function openRfqPrint(id) {
       </div>
     </div>`;
   }).join('');
-  const win = window.open('', '_blank', 'width=860,height=960');
   const docTitle = id ? id : '견적요청서_목록';
-  win.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${docTitle}</title>${_docPrintStyle()}</head><body>${pages}
-
-</body></html>`);
-  win.document.close(); win.print();
+  openDocumentPdfPreview(
+    `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${docTitle}</title>${_docPrintStyle()}</head><body>${pages}</body></html>`,
+    docTitle
+  );
 }
 
 function exportRfqXLS(id = null) {
@@ -414,11 +466,11 @@ function renderPo() {
       <th style="width:24px;padding:6px 3px;text-align:center;"><input type="checkbox" id="po-check-all" onclick="poToggleAll(this.checked)" style="width:12px;height:12px;cursor:pointer;vertical-align:middle;"></th>
       ${_poth('id','발주번호')}${_poth('date','발행일')}${_poth('client','고객사')}${_poth('product','연결제품')}
       ${_poth('supplier','공급처')}${_poth('itemName','품목명')}<th>규격</th>${_poth('qty','수량')}
-      ${_poth('unitPrice','단가')}${_poth('totalAmt','금액')}<th>결제조건</th><th>납품방법</th>${_poth('status','상태')}<th>비고</th><th>관리</th>
+      ${_poth('unitPrice','단가')}${_poth('totalAmt','금액')}<th>결제조건</th><th>납품방법</th>${_poth('status','상태')}<th>비고</th>
     </tr></thead>
     <tbody>${rows.map(p => `
-      <tr>
-        <td style="text-align:center;padding:6px 3px;"><input type="checkbox" class="po-check" value="${p.id}" onchange="poUpdateBulkBar()" style="width:12px;height:12px;cursor:pointer;vertical-align:middle;"></td>
+      <tr onclick="poRowClick(event,'${p.id}')">
+        <td style="text-align:center;padding:6px 3px;"><input type="checkbox" class="po-check" value="${p.id}" onclick="event.stopPropagation()" onchange="poUpdateBulkBar()" style="width:12px;height:12px;cursor:pointer;vertical-align:middle;"></td>
         <td style="font-weight:700;color:var(--tx-i);">${p.id}</td>
         <td>${p.date}</td>
         <td>${getClientName(p.clientId)||'—'}</td>
@@ -431,13 +483,10 @@ function renderPo() {
         <td style="font-weight:700;color:var(--tx-i);">${p.unitPrice?'₩'+Number(p.unitPrice*p.qty).toLocaleString('ko-KR'):'—'}</td>
         <td><span class="bd bd-neu">${p.payMethod||'현금'}</span></td>
         <td><span class="bd bd-info">${p.dlvMethod||'직납'}</span></td>
-        <td><select class="stat-sel" onchange="changePoStatus('${p.id}',this.value)" style="color:${poStatusColor(p.status)}">
+        <td><select class="stat-sel" onclick="event.stopPropagation()" onchange="changePoStatus('${p.id}',this.value)" style="color:${poStatusColor(p.status)}">
           ${['작성중','발송완료','확인완료','입고완료'].map(s=>`<option${s===p.status?' selected':''}>${s}</option>`).join('')}
         </select></td>
         <td style="font-size:11px;color:var(--tx-t);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${p.note||''}">${p.note||'—'}</td>
-        <td style="white-space:nowrap;">
-          <button class="edit-btn" onclick="openPoEdit('${p.id}')"><i class="ti ti-edit"></i>수정</button>
-        </td>
       </tr>`).join('')}
     </tbody>
   </table>`;
@@ -445,21 +494,51 @@ function renderPo() {
 }
 /* ── 구매발주서 선택 일괄 동작 ── */
 function poCheckedIds(){ return [...document.querySelectorAll('#po-table .po-check:checked')].map(c=>c.value); }
+function poRowClick(event, id){
+  if (event.target.closest('button,input,select,textarea,a')) return;
+  const cb = [...document.querySelectorAll('#po-table .po-check')].find(c => c.value === id);
+  if (!cb) return;
+  cb.checked = !cb.checked;
+  poUpdateBulkBar();
+}
 function poToggleAll(checked){
   document.querySelectorAll('#po-table .po-check').forEach(c=>c.checked=checked);
   poUpdateBulkBar();
 }
+function poSelectionBarHtml(count){
+  return `<span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${count}건 선택됨</span>
+    <button class="btn btn-sm" data-edit onclick="poBulkEdit()"><i class="ti ti-edit"></i>수정</button>
+    <button class="btn btn-sm" data-clone onclick="poBulkClone()"><i class="ti ti-copy"></i>복제</button>
+    <button class="btn btn-sm" onclick="poBulkPrint()"><i class="ti ti-printer"></i>PDF 출력</button>
+    <button class="btn btn-sm" onclick="poBulkExport()"><i class="ti ti-file-spreadsheet"></i>엑셀</button>
+    <button class="btn btn-sm drive-save-btn" onclick="poBulkDrive()"><i class="ti ti-cloud-upload"></i>Drive 저장</button>
+    <button class="btn btn-sm" onclick="poBulkEmail()"><i class="ti ti-mail"></i>이메일</button>
+    <button class="btn btn-sm btn-danger" onclick="poBulkDelete()"><i class="ti ti-trash"></i>삭제</button>
+    <button class="btn btn-sm date-view-clear-selection" onclick="poToggleAll(false)"><i class="ti ti-x"></i>해제</button>`;
+}
+function ensurePoDateSelectionClearer(){
+  if (ensurePoDateSelectionClearer.done || typeof registerDateViewSelectionClearer !== 'function') return;
+  ensurePoDateSelectionClearer.done = true;
+  registerDateViewSelectionClearer('po', function(){ poToggleAll(false); });
+}
 function poUpdateBulkBar(){
+  ensurePoDateSelectionClearer();
   const ids=poCheckedIds(), bar=inp('po-bulkbar');
-  if(bar){ bar.style.display = ids.length ? 'flex' : 'none'; const cnt=inp('po-sel-count'); if(cnt) cnt.textContent=ids.length; }
-  const clone=inp('po-clone-btn'); if(clone) clone.style.display=ids.length===1?'':'none';
+  const slotted = typeof setDateViewSelectionBar === 'function' && setDateViewSelectionBar('po', poSelectionBarHtml(ids.length), ids.length > 0);
+  if(bar){ bar.style.display = (!slotted && ids.length) ? 'flex' : 'none'; const cnt=inp('po-sel-count'); if(cnt) cnt.textContent=ids.length; }
+  [bar, inp('date-view-po')].filter(Boolean).forEach(scope => {
+    const edit=scope.querySelector('[data-edit],#po-edit-btn'); if(edit) edit.style.display=ids.length===1?'':'none';
+    const clone=scope.querySelector('[data-clone],#po-clone-btn'); if(clone) clone.style.display=ids.length===1?'':'none';
+  });
   const all=inp('po-check-all');
   if(all){ const total=document.querySelectorAll('#po-table .po-check').length;
     all.checked = total>0 && ids.length===total; all.indeterminate = ids.length>0 && ids.length<total; }
 }
 function poBulkPrint(){ const ids=poCheckedIds(); if(!ids.length) return; openPoPrint(ids, true); }   // 선택 건은 건별 개별 출력
+function poBulkEdit(){ const ids=poCheckedIds(); if(ids.length===1) openPoEdit(ids[0]); }
 function poBulkClone(){ const ids=poCheckedIds(); if(ids.length===1) clonePo(ids[0]); }
 function poBulkExport(){ const ids=poCheckedIds(); if(!ids.length) return; exportPoXLS(ids); }
+function poBulkDrive(){ const ids=poCheckedIds(); if(!ids.length) return; saveDocumentBundleToGoogleDrive('po', ids); }
 function poBulkEmail(){ const ids=poCheckedIds(); if(ids.length!==1){ showToast('이메일은 한 건만 선택해 발송하세요.','info'); return; } openEmailModal(poList.find(x=>x.id===ids[0]),'po'); }
 function poBulkDelete(){
   const ids=poCheckedIds(); if(!ids.length) return;
@@ -669,10 +748,11 @@ function openPoPrint(id, individual=false) {
       </div>
     </div>`;
   }).join('');
-  const win = window.open('', '_blank', 'width=860,height=960');
   const docTitle = id ? id : '구매발주서_목록';
-  win.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${docTitle}</title>${_docPrintStyle()}</head><body>${pages}</body></html>`);
-  win.document.close(); win.print();
+  openDocumentPdfPreview(
+    `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${docTitle}</title>${_docPrintStyle()}</head><body>${pages}</body></html>`,
+    docTitle
+  );
 }
 
 function exportPoXLS(id = null) {
@@ -797,6 +877,191 @@ const DOC_XLS_TEMPLATE_INFO = {
   statement: { title:'거래명세표', file:'거래명세표_인쇄양식.xlsx' },
   tax: { title:'세금계산서', file:'세금계산서_인쇄양식.xlsx' }
 };
+const DOC_TEMPLATE_PACKAGE_VERSION = 1;
+const DOC_TEMPLATE_PACKAGE_TYPES = ['rfq','po','quote','statement','tax'];
+
+function _requireTemplatePackageModules() {
+  if (!_requireExcelJS()) return false;
+  if (typeof JSZip === 'undefined') {
+    showToast('ZIP 양식 패키지 모듈을 불러오지 못했습니다. 인터넷 연결 후 다시 시도해 주세요.', 'error');
+    return false;
+  }
+  return true;
+}
+
+function _downloadBlob(blob, fileName) {
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = fileName;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1500);
+}
+
+function _docTemplateVariableSchema() {
+  return {
+    version:1,
+    common:['회사명','회사주소','회사전화','회사팩스','회사연락처','회사사업자정보','사업자번호','대표자','부서'],
+    document:['문서번호','발행일','공급처','공급처이메일','고객사','고객이메일','연결제품','결제조건','납품방법','납품주소','상태','비고'],
+    amounts:['공급가액','부가세','합계금액'],
+    repeating:{
+      pattern:['번호{n}','품목명{n}','규격{n}','수량{n}','단위{n}','단가{n}','금액{n}','품목비고{n}'],
+      supportedItems:20
+    }
+  };
+}
+
+async function _validateDocTemplateBuffer(type, data) {
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(data);
+  const ws = wb.worksheets[0];
+  if (!ws) throw new Error(`${DOC_XLS_TEMPLATE_INFO[type].title}: 첫 번째 시트가 없습니다.`);
+  let text = '';
+  ws.eachRow(row => row.eachCell(cell => { text += ' ' + String(cell.value ?? ''); }));
+  if (!text.includes('{{문서번호}}') || !text.includes('{{품목명1}}')) {
+    throw new Error(`${DOC_XLS_TEMPLATE_INFO[type].title}: {{문서번호}}와 {{품목명1}} 표시값이 필요합니다.`);
+  }
+}
+
+function _docTemplatePackageReadme() {
+  return `MESPro 공용 문서 양식 패키지
+
+1. templates 폴더의 XLSX 파일은 Excel에서 직접 편집할 수 있습니다.
+2. {{문서번호}}, {{품목명1}} 같은 변수는 삭제하지 말고 필요한 셀로 이동하세요.
+3. schemas/variables.json은 다른 프로그램에서 데이터를 연결할 때 사용하는 변수 규격입니다.
+4. print/print.css는 MESPro의 PDF 인쇄 색상, 표, 결재란과 A4 규격을 재현하기 위한 스타일입니다.
+5. 수정한 패키지는 manifest.json과 파일명을 유지해야 MESPro에서 다시 가져올 수 있습니다.
+6. MESPro에서 가져올 때 기존 사용자 양식은 자동으로 백업되며 '가져오기 전 양식 복원'으로 되돌릴 수 있습니다.
+`;
+}
+
+async function exportDocTemplatePackage() {
+  if (!_requireTemplatePackageModules()) return;
+  const button = document.querySelector('[onclick="exportDocTemplatePackage()"]');
+  if (button) { button.disabled = true; button.innerHTML = '<i class="ti ti-loader animate-spin"></i>패키지 생성 중'; }
+  try {
+    const zip = new JSZip();
+    const store = _docTemplateStore();
+    const files = [];
+    for (const type of DOC_TEMPLATE_PACKAGE_TYPES) {
+      const info = DOC_XLS_TEMPLATE_INFO[type];
+      const data = await _docTemplateArray(type);
+      const path = 'templates/' + info.file;
+      zip.file(path, data);
+      files.push({
+        type,
+        title:info.title,
+        path,
+        source:store[type] ? 'custom' : 'default',
+        savedName:store[type]?.name || info.file,
+        savedAt:store[type]?.savedAt || ''
+      });
+    }
+    zip.file('print/print.css', _docPrintStyle().replace(/^<style>|<\/style>$/g, '').trim());
+    zip.file('schemas/variables.json', JSON.stringify(_docTemplateVariableSchema(), null, 2));
+    zip.file('README.txt', _docTemplatePackageReadme());
+    const manifest = {
+      format:'MESPro-Document-Templates',
+      version:DOC_TEMPLATE_PACKAGE_VERSION,
+      generatedAt:new Date().toISOString(),
+      generator:'MES Pro',
+      files,
+      print:{ css:'print/print.css', page:'A4', orientation:'portrait' },
+      schema:'schemas/variables.json'
+    };
+    zip.file('manifest.json', JSON.stringify(manifest, null, 2));
+    const blob = await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+    const stamp = today().replace(/-/g, '');
+    _downloadBlob(blob, `MESPro-Templates-${stamp}.zip`);
+    showToast('전체 문서 양식 패키지를 내보냈습니다.', 'success');
+  } catch (error) {
+    showToast('양식 패키지 생성 실패: ' + error.message, 'error');
+  } finally {
+    if (button) { button.disabled = false; button.innerHTML = '<i class="ti ti-package-export"></i>전체 양식 패키지 내보내기'; }
+  }
+}
+
+function _saveDocTemplatePackageBackup() {
+  const backup = {
+    savedAt:new Date().toISOString(),
+    templates:_docTemplateStore()
+  };
+  localStorage.setItem('mes_docTemplatePackageBackup', JSON.stringify(backup));
+}
+
+function restoreDocTemplatePackageBackup() {
+  let backup = null;
+  try { backup = JSON.parse(localStorage.getItem('mes_docTemplatePackageBackup') || 'null'); } catch(e) {}
+  if (!backup || !backup.templates) {
+    showToast('복원할 가져오기 전 양식 백업이 없습니다.', 'info');
+    return;
+  }
+  confirm_('가져오기 전 양식 복원',
+    `<strong>${new Date(backup.savedAt).toLocaleString('ko-KR')}</strong> 시점의 양식으로 되돌리시겠습니까?<br><span style="font-size:11px;color:var(--tx-t);">업무 문서 데이터에는 영향을 주지 않습니다.</span>`,
+    () => {
+      saveStorage('docXlsxTemplates', backup.templates);
+      renderDocTemplateManagement();
+      showToast('가져오기 전 문서 양식으로 복원했습니다.', 'success');
+    },
+    'btn-primary', 'ti-history'
+  );
+}
+
+async function importDocTemplatePackage(input) {
+  const file = input && input.files && input.files[0];
+  if (input) input.value = '';
+  if (!file || !_requireTemplatePackageModules()) return;
+  if (file.size > 8 * 1024 * 1024) {
+    showToast('양식 패키지는 8MB 이하의 ZIP 파일을 사용해 주세요.', 'error');
+    return;
+  }
+  try {
+    const zip = await JSZip.loadAsync(await file.arrayBuffer());
+    const manifestFile = zip.file('manifest.json');
+    if (!manifestFile) throw new Error('manifest.json이 없는 양식 패키지입니다.');
+    const manifest = JSON.parse(await manifestFile.async('string'));
+    if (manifest.format !== 'MESPro-Document-Templates') throw new Error('MESPro 문서 양식 패키지가 아닙니다.');
+    if (Number(manifest.version) !== DOC_TEMPLATE_PACKAGE_VERSION) {
+      throw new Error(`지원하지 않는 패키지 버전입니다. 현재 지원 버전: ${DOC_TEMPLATE_PACKAGE_VERSION}`);
+    }
+    const pending = {};
+    const imported = [];
+    for (const type of DOC_TEMPLATE_PACKAGE_TYPES) {
+      const entry = (manifest.files || []).find(item => item.type === type);
+      if (!entry || !entry.path) continue;
+      const templateFile = zip.file(entry.path);
+      if (!templateFile) throw new Error(`${DOC_XLS_TEMPLATE_INFO[type].title} 파일이 패키지에 없습니다.`);
+      const data = await templateFile.async('arraybuffer');
+      await _validateDocTemplateBuffer(type, data);
+      pending[type] = {
+        name:entry.savedName || entry.path.split('/').pop(),
+        data:_arrayToBase64(data),
+        savedAt:new Date().toISOString(),
+        packageVersion:manifest.version
+      };
+      imported.push(DOC_XLS_TEMPLATE_INFO[type].title);
+    }
+    if (!imported.length) throw new Error('가져올 수 있는 XLSX 문서 양식이 없습니다.');
+    confirm_('공용 양식 패키지 가져오기',
+      `<strong>${imported.join(', ')}</strong><br>${imported.length}개 양식을 적용합니다.<br><span style="font-size:11px;color:var(--tx-t);">현재 양식은 자동 백업되며 가져오기 전 상태로 복원할 수 있습니다.</span>`,
+      () => {
+        _saveDocTemplatePackageBackup();
+        const next = Object.assign({}, _docTemplateStore(), pending);
+        saveStorage('docXlsxTemplates', next);
+        localStorage.setItem('mes_docTemplatePackageMeta', JSON.stringify({
+          name:file.name,
+          importedAt:new Date().toISOString(),
+          version:manifest.version,
+          types:Object.keys(pending)
+        }));
+        renderDocTemplateManagement();
+        showToast(`${imported.length}개 문서 양식을 가져왔습니다.`, 'success');
+      },
+      'btn-primary', 'ti-package-import'
+    );
+  } catch (error) {
+    showToast('양식 패키지 가져오기 실패: ' + error.message, 'error');
+  }
+}
 
 function _docTemplateStore() {
   return loadStorage('docXlsxTemplates', {});
@@ -872,7 +1137,7 @@ function _defaultDocTemplateBook(type) {
   ws.properties.defaultRowHeight = 16;
   [4,10,10,10,7,7,9,9,10,10,10,12].forEach((width, i) => { ws.getColumn(i + 1).width = width; });
 
-  const navy = 'FF1A3A6E', lightBlue = 'FFEEF2FB', lightGray = 'FFF3F5F8';
+  const navy = 'FF1A3A6E', white = 'FFFFFFFF';
   const gray = 'FF666666', border = _excelBorder();
   const font = { name:'맑은 고딕', size:9, color:{argb:'FF222222'} };
   _styleRange(ws, 'A1:L42', { font, alignment:{ vertical:'middle' } });
@@ -888,7 +1153,7 @@ function _defaultDocTemplateBook(type) {
     _styleRange(ws, `${startCol}1:${endCol}3`, {
       border, alignment:{ horizontal:'center', vertical:'middle' }
     });
-    ws.getCell(start).fill = { type:'pattern', pattern:'solid', fgColor:{argb:lightGray} };
+    ws.getCell(start).fill = { type:'pattern', pattern:'solid', fgColor:{argb:white} };
     ws.getCell(start).font = { name:'맑은 고딕', size:8, bold:true, color:{argb:gray} };
   });
   ws.getRow(1).height = 17; ws.getRow(2).height = 19; ws.getRow(3).height = 19;
@@ -930,7 +1195,7 @@ function _defaultDocTemplateBook(type) {
       const isLabel = i % 4 === 0;
       _styleRange(ws, range, {
         border,
-        fill:isLabel ? {type:'pattern',pattern:'solid',fgColor:{argb:lightGray}} : undefined,
+        fill:isLabel ? {type:'pattern',pattern:'solid',fgColor:{argb:white}} : undefined,
         font:{ name:'맑은 고딕', size:isLabel ? 9 : 10, bold:isLabel || (range === 'C9:L9'), color:{argb:isLabel?'FF333333':navy} },
         alignment:{ horizontal:isLabel?'left':'left', vertical:'middle', wrapText:true }
       });
@@ -941,7 +1206,7 @@ function _defaultDocTemplateBook(type) {
 
   _mergeValue(ws, 'A14:L14', isPo ? '■ 발주 품목' : isRfq ? '■ 견적 요청 품목' : isQuote ? '■ 견적 품목' : '■ 거래 품목');
   _styleRange(ws, 'A14:L14', {
-    fill:{type:'pattern',pattern:'solid',fgColor:{argb:lightBlue}},
+    fill:{type:'pattern',pattern:'solid',fgColor:{argb:white}},
     border:{left:{style:'medium',color:{argb:navy}}},
     font:{name:'맑은 고딕',size:9,bold:true,color:{argb:navy}},
     alignment:{vertical:'middle'}
@@ -953,9 +1218,9 @@ function _defaultDocTemplateBook(type) {
   headerRanges.forEach((range, i) => {
     _mergeValue(ws, range, headers[i]);
     _styleRange(ws, range, {
-      fill:{type:'pattern',pattern:'solid',fgColor:{argb:navy}},
-      border:_excelBorder('FFFFFFFF'),
-      font:{name:'맑은 고딕',size:8,bold:true,color:{argb:'FFFFFFFF'}},
+      fill:{type:'pattern',pattern:'solid',fgColor:{argb:white}},
+      border,
+      font:{name:'맑은 고딕',size:8,bold:true,color:{argb:navy}},
       alignment:{horizontal:'center',vertical:'middle',wrapText:true}
     });
   });
@@ -977,7 +1242,7 @@ function _defaultDocTemplateBook(type) {
       });
       if ([5,6].includes(idx)) cell.numFmt = '#,##0;[Red]-#,##0';
     });
-    if (i % 2 === 0) _styleRange(ws, `A${row}:L${row}`, { fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFFAFBFC'}} });
+    if (i % 2 === 0) _styleRange(ws, `A${row}:L${row}`, { fill:{type:'pattern',pattern:'solid',fgColor:{argb:white}} });
     ws.getRow(row).height = 19;
   }
 
@@ -985,7 +1250,7 @@ function _defaultDocTemplateBook(type) {
   ws.getCell('K28').value = '{{공급가액}}';
   ws.getCell('L28').value = '';
   _styleRange(ws, 'A28:L28', {
-    fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFF0F4FF'}},
+    fill:{type:'pattern',pattern:'solid',fgColor:{argb:white}},
     border:{top:{style:'medium',color:{argb:navy}},left:border.left,right:border.right,bottom:border.bottom},
     font:{name:'맑은 고딕',size:9,bold:true,color:{argb:navy}},
     alignment:{horizontal:'right',vertical:'middle'}
@@ -999,12 +1264,12 @@ function _defaultDocTemplateBook(type) {
     const value = _mergeValue(ws, parts[2], parts[3]);
     _styleRange(ws, `${parts[0].split(':')[0]}:${parts[2].split(':')[1]}`, {
       border:_excelBorder(idx===2?navy:'FFDDE0E8',idx===2?'medium':'thin'),
-      fill:{type:'pattern',pattern:'solid',fgColor:{argb:idx===2?navy:lightGray}},
-      font:{name:'맑은 고딕',size:idx===2?11:9,bold:true,color:{argb:idx===2?'FFFFFFFF':'FF555555'}},
+      fill:{type:'pattern',pattern:'solid',fgColor:{argb:white}},
+      font:{name:'맑은 고딕',size:idx===2?11:9,bold:true,color:{argb:idx===2?navy:'FF555555'}},
       alignment:{horizontal:'right',vertical:'middle'}
     });
     value.numFmt = '#,##0" 원";[Red]-#,##0" 원"';
-    value.font = {name:'맑은 고딕',size:idx===2?12:9,bold:true,color:{argb:idx===2?'FFFFFFFF':navy}};
+    value.font = {name:'맑은 고딕',size:idx===2?12:9,bold:true,color:{argb:navy}};
     label.alignment = {horizontal:'left',vertical:'middle'};
     ws.getRow(30 + idx).height = idx===2 ? 23 : 20;
   });
@@ -1021,7 +1286,7 @@ function _defaultDocTemplateBook(type) {
     ? '3. 세금계산서는 납품 완료 후 익일 발행 바랍니다.'
     : isRfq ? '3. 납품 가능 수량 및 납기일을 반드시 명시하여 주시기 바랍니다.' : '');
   _styleRange(ws, 'A34:L37', {
-    border, fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFFAFBFC'}},
+    border, fill:{type:'pattern',pattern:'solid',fgColor:{argb:white}},
     font:{name:'맑은 고딕',size:8,color:{argb:'FF444444'}},
     alignment:{vertical:'middle',wrapText:true}
   });
@@ -1060,7 +1325,7 @@ function _defaultDocTemplateBook(type) {
   _styleRange(guide, 'A1:B9', {font:{name:'맑은 고딕',size:10},alignment:{vertical:'middle',wrapText:true},border});
   _mergeValue(guide, 'A1:B1', '엑셀 인쇄 양식 사용 방법');
   guide.getCell('A1').font = {name:'맑은 고딕',size:16,bold:true,color:{argb:navy}};
-  guide.getCell('A1').fill = {type:'pattern',pattern:'solid',fgColor:{argb:lightBlue}};
+  guide.getCell('A1').fill = {type:'pattern',pattern:'solid',fgColor:{argb:white}};
   return wb;
 }
 
@@ -1071,13 +1336,13 @@ function _defaultTaxTemplateBook() {
     views:[{showGridLines:false}]
   });
   [4,8,11,11,11,11,11,11,11,11,11,13].forEach((w,i)=>ws.getColumn(i+1).width=w);
-  const red='FFC0392B', blue='FF1C5AA8', gray='FFF3F3F3', border=_excelBorder('FFB9B9B9');
+  const red='FFC0392B', blue='FF1C5AA8', white='FFFFFFFF', border=_excelBorder('FFB9B9B9');
   _mergeValue(ws,'A1:H2','전 자 세 금 계 산 서');
   _mergeValue(ws,'I1:J2','승인번호');
   _mergeValue(ws,'K1:L2','{{승인번호}}');
   _styleRange(ws,'A1:L2',{border,alignment:{horizontal:'center',vertical:'middle'},font:{name:'맑은 고딕',size:10,bold:true}});
   ws.getCell('A1').font={name:'맑은 고딕',size:18,bold:true,color:{argb:'FF222222'}};
-  ws.getCell('I1').fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFEAF1FB'}};
+  ws.getCell('I1').fill={type:'pattern',pattern:'solid',fgColor:{argb:white}};
   const party = (startRow, title, color, prefix) => {
     _mergeValue(ws,`A${startRow}:A${startRow+4}`,title);
     ws.getCell(`A${startRow}`).alignment={horizontal:'center',vertical:'middle',textRotation:90};
@@ -1091,11 +1356,11 @@ function _defaultTaxTemplateBook() {
         const actual=parts[i].includes(':') ? parts[i].replace(/(\D+):(\D+)/,`$1${startRow+idx}:$2${startRow+idx}`) : range;
         _mergeValue(ws,actual,parts[i+1]);
         _styleRange(ws,actual,{border,alignment:{vertical:'middle',wrapText:true},font:{name:'맑은 고딕',size:8,bold:i%4===0}});
-        if(i%4===0) ws.getCell(actual.split(':')[0]).fill={type:'pattern',pattern:'solid',fgColor:{argb:color}};
+        if(i%4===0) ws.getCell(actual.split(':')[0]).fill={type:'pattern',pattern:'solid',fgColor:{argb:white}};
       }
     });
     _styleRange(ws,`A${startRow}:L${startRow+4}`,{border});
-    ws.getCell(`A${startRow}`).fill={type:'pattern',pattern:'solid',fgColor:{argb:color}};
+    ws.getCell(`A${startRow}`).fill={type:'pattern',pattern:'solid',fgColor:{argb:white}};
     ws.getCell(`A${startRow}`).font={name:'맑은 고딕',size:9,bold:true,color:{argb:prefix==='공급자' ? red : blue}};
   };
   party(4,'공급자','FFFDECEC','공급자');
@@ -1106,11 +1371,11 @@ function _defaultTaxTemplateBook() {
   ];
   rows.forEach(([r,vals])=>{
     const ranges=r===15?['A:B','C:D','E:F','G:H','I:J','K:L']:['A:B','C:L'];
-    ranges.forEach((cols,i)=>{const rg=cols.replace(':',r+':')+r;_mergeValue(ws,rg,vals[i]);_styleRange(ws,rg,{border,alignment:{vertical:'middle'},font:{name:'맑은 고딕',size:8,bold:i%2===0},fill:i%2===0?{type:'pattern',pattern:'solid',fgColor:{argb:gray}}:undefined});});
+    ranges.forEach((cols,i)=>{const rg=cols.replace(':',r+':')+r;_mergeValue(ws,rg,vals[i]);_styleRange(ws,rg,{border,alignment:{vertical:'middle'},font:{name:'맑은 고딕',size:8,bold:i%2===0},fill:i%2===0?{type:'pattern',pattern:'solid',fgColor:{argb:white}}:undefined});});
   });
   const heads=['월','일','품목','규격','수량','단가','공급가액','세액','비고'];
   const ranges=['A','B','C:E','F:G','H','I','J','K','L'];
-  heads.forEach((h,i)=>{const rg=ranges[i].includes(':')?ranges[i].replace(':','17:')+'17':ranges[i]+'17';_mergeValue(ws,rg,h);_styleRange(ws,rg,{border,fill:{type:'pattern',pattern:'solid',fgColor:{argb:gray}},font:{name:'맑은 고딕',size:8,bold:true},alignment:{horizontal:'center'}});});
+  heads.forEach((h,i)=>{const rg=ranges[i].includes(':')?ranges[i].replace(':','17:')+'17':ranges[i]+'17';_mergeValue(ws,rg,h);_styleRange(ws,rg,{border,fill:{type:'pattern',pattern:'solid',fgColor:{argb:white}},font:{name:'맑은 고딕',size:8,bold:true},alignment:{horizontal:'center'}});});
   for(let i=1;i<=12;i++){
     const r=17+i;
     const vals=[`{{월${i}}}`,`{{일${i}}}`,`{{품목명${i}}}`,`{{규격${i}}}`,`{{수량${i}}}`,`{{단가${i}}}`,`{{금액${i}}}`,`{{세액${i}}}`,`{{품목비고${i}}}`];
@@ -1407,7 +1672,10 @@ function renderSalesDoc(type) {
   }).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
 
   const cont = inp(idp+'-table'); if (!cont) return;
-  if (!rows.length) { cont.innerHTML = empty(`등록된 ${cfg.title}가 없습니다. [${cfg.title} 등록] 버튼으로 추가하세요.`); return; }
+  if (!rows.length) {
+    cont.innerHTML = empty(`등록된 ${cfg.title}가 없습니다. [${cfg.title} 등록] 버튼으로 추가하세요.`);
+    return;
+  }
 
   cont.innerHTML = `<table style="min-width:1080px;">
     <thead><tr>
@@ -1435,6 +1703,7 @@ function renderSalesDoc(type) {
         <td style="white-space:nowrap;">
           <button class="edit-btn" onclick="openSalesDocEdit('${type}','${d.id}')"><i class="ti ti-edit"></i>수정</button>
           <button class="btn btn-sm" style="margin-left:3px;" onclick="openSalesDocPrint('${type}','${d.id}')" title="PDF 출력"><i class="ti ti-printer"></i></button>
+          <button class="btn btn-sm drive-save-btn" style="margin-left:3px;" onclick="saveDocumentBundleToGoogleDrive('${type}','${d.id}')" title="PDF/XLSX Google Drive 저장"><i class="ti ti-cloud-upload"></i>Drive</button>
           <button class="btn btn-sm" style="margin-left:3px;border-color:var(--br-i);color:var(--tx-i);" onclick="openEmailModal(salesList('${type}').find(x=>x.id==='${d.id}'),'${type}')" title="이메일 발송"><i class="ti ti-mail"></i></button>
           <button class="del-btn" style="margin-left:3px;" onclick="deleteSalesDoc('${type}','${d.id}')"><i class="ti ti-trash"></i></button>
         </td>
@@ -1773,9 +2042,11 @@ function openSalesDocPrint(type, id) {
   if (!targets.length) { showToast('출력할 문서가 없습니다.', 'error'); return; }
   const ci = getCompanyInfo();
   const pages = targets.map((d,i) => `<div style="${i<targets.length-1?'page-break-after:always;':''}">${_salesDocBodyHtml(d, type, ci)}</div>`).join('');
-  const win = window.open('', '_blank', 'width=860,height=960');
-  win.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${id || cfg.title}</title>${_docPrintStyle()}</head><body>${pages}</body></html>`);
-  win.document.close(); win.print();
+  const docTitle = id || cfg.title;
+  openDocumentPdfPreview(
+    `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${docTitle}</title>${_docPrintStyle()}</head><body>${pages}</body></html>`,
+    docTitle
+  );
 }
 
 function buildSalesEmailBody(d, ci, label) {
@@ -1813,6 +2084,7 @@ const SODOCS = {
 let salesTab = 'quote';
 function switchSalesTab(tab) {
   salesTab = tab;
+  syncCurrentSubRoute('salesdoc', salesTab);
   document.querySelectorAll('#sd-tabs [data-sdtab]').forEach(b => b.classList.toggle('btn-primary', b.dataset.sdtab === tab));
   const q = inp('sd-tab-quote'), o = inp('sd-tab-order');
   if (q) q.style.display = tab === 'quote' ? '' : 'none';
@@ -1861,7 +2133,10 @@ function renderSODoc(type) {
   }).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
 
   const cont = inp(idp+'-table'); if (!cont) return;
-  if (!rows.length) { cont.innerHTML = empty(`등록된 ${cfg.title}가 없습니다.${type==='order'?' 견적서에서 [수주 전환] 시 자동 생성됩니다.':' [견적서 등록] 버튼으로 추가하세요.'}`); return; }
+  if (!rows.length) {
+    cont.innerHTML = empty(`등록된 ${cfg.title}가 없습니다.${type==='order'?' 견적서에서 [수주 전환] 시 자동 생성됩니다.':' [견적서 등록] 버튼으로 추가하세요.'}`);
+    return;
+  }
 
   const headExtra = type === 'quote' ? '<th>납기</th>' : '<th>연결 제품(공정)</th>';
   cont.innerHTML = `<table style="min-width:1080px;">
@@ -1894,6 +2169,7 @@ function renderSODoc(type) {
         <td style="white-space:nowrap;">
           <button class="edit-btn" onclick="openSODocEdit('${type}','${d.id}')"><i class="ti ti-edit"></i>수정</button>
           <button class="btn btn-sm" style="margin-left:3px;" onclick="openSODocPrint('${type}','${d.id}')" title="PDF 출력"><i class="ti ti-printer"></i></button>
+          <button class="btn btn-sm drive-save-btn" style="margin-left:3px;" onclick="saveDocumentBundleToGoogleDrive('${type}','${d.id}')" title="PDF/XLSX Google Drive 저장"><i class="ti ti-cloud-upload"></i>Drive</button>
           <button class="btn btn-sm" style="margin-left:3px;border-color:var(--br-i);color:var(--tx-i);" onclick="openEmailModal(soDocList('${type}').find(x=>x.id==='${d.id}'),'${type}')" title="이메일 발송"><i class="ti ti-mail"></i></button>
           ${type==='quote'
             ? `<button class="btn btn-sm" style="margin-left:3px;border-color:var(--br-ok);color:var(--tx-ok);" onclick="convertQuoteToOrder('${d.id}')" title="수주 전환"${d.status==='수주전환'?' disabled':''}><i class="ti ti-arrow-right-bar"></i>수주전환</button>`
@@ -2051,10 +2327,14 @@ function openSODocPrint(type, id) {
   const targets = Array.isArray(id) ? list.filter(x=>id.includes(x.id)) : (id ? list.filter(x=>x.id===id) : list);
   if (!targets.length) { showToast('출력할 문서가 없습니다.', 'error'); return; }
   const ci = getCompanyInfo();
-  const pages = targets.map(d => `<div style="page-break-after:always;">${_salesDocBodyHtml(d, cfg.docType, ci)}</div>`).join('');
-  const win = window.open('', '_blank', 'width=860,height=960');
-  win.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${id||cfg.title}</title>${_docPrintStyle()}</head><body>${pages}</body></html>`);
-  win.document.close(); win.print();
+  const pages = targets.map((d, index) =>
+    `<div style="${index < targets.length - 1 ? 'page-break-after:always;' : ''}">${_salesDocBodyHtml(d, cfg.docType, ci)}</div>`
+  ).join('');
+  const docTitle = id || cfg.title;
+  openDocumentPdfPreview(
+    `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${docTitle}</title>${_docPrintStyle()}</head><body>${pages}</body></html>`,
+    docTitle
+  );
 }
 
 /* 견적 → 수주 전환: 고객사 자동등록 + 제품(공정 '설계/도면') 자동생성 + 수주 레코드 생성 */

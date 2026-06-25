@@ -1,15 +1,15 @@
   <!-- ══════ 재무 관리 ══════ -->
   <div class="content" id="pg-finance">
     <div class="toolbar" id="finance-tabs">
-      <button class="btn btn-primary" data-fintab="dashboard" onclick="switchFinTab('dashboard')"><i class="ti ti-chart-pie"></i>재무 현황</button>
+      <button class="btn btn-primary" data-fintab="dashboard" onclick="switchFinTab('dashboard')"><i class="ti ti-chart-pie"></i>요약</button>
+      <button class="btn" data-fintab="ar" onclick="switchFinTab('ar')"><i class="ti ti-receipt"></i>수금/지급</button>
       <button class="btn" data-fintab="revenue" onclick="switchFinTab('revenue')"><i class="ti ti-trending-up"></i>매출</button>
-      <button class="btn" data-fintab="purchase" onclick="switchFinTab('purchase')"><i class="ti ti-trending-down"></i>매입/지출</button>
-      <button class="btn" data-fintab="labor" onclick="switchFinTab('labor')"><i class="ti ti-cash"></i>인건비</button>
-      <button class="btn" data-fintab="cost" onclick="switchFinTab('cost')"><i class="ti ti-calculator"></i>제품원가</button>
-      <button class="btn" data-fintab="pnl" onclick="switchFinTab('pnl')"><i class="ti ti-report-money"></i>손익(P&L)</button>
-      <button class="btn" data-fintab="ar" onclick="switchFinTab('ar')"><i class="ti ti-receipt"></i>미수금/미지급</button>
-      <button class="btn" data-fintab="etc" onclick="switchFinTab('etc')"><i class="ti ti-list-details"></i>기타 수입/비용</button>
-      <button class="btn btn-primary btn-icon" onclick="openFinanceAdd()" style="margin-left:auto;" title="기타 항목 등록"><i class="ti ti-plus"></i></button>
+      <button class="btn" data-fintab="purchase" onclick="switchFinTab('purchase')"><i class="ti ti-trending-down"></i>매입</button>
+      <button class="btn" data-fintab="labor" onclick="switchFinTab('labor')"><i class="ti ti-cash"></i>급여</button>
+      <button class="btn" data-fintab="cost" onclick="switchFinTab('cost')"><i class="ti ti-calculator"></i>원가</button>
+      <button class="btn" data-fintab="pnl" onclick="switchFinTab('pnl')"><i class="ti ti-report-money"></i>손익</button>
+      <button class="btn" data-fintab="etc" onclick="switchFinTab('etc')"><i class="ti ti-list-details"></i>기타</button>
+      <button class="btn btn-primary" id="finance-primary-action" onclick="openFinancePrimaryAction()" style="margin-left:auto;display:none;" title="기타 항목 등록"><i class="ti ti-plus"></i>기타 등록</button>
     </div>
     <div id="finance-body"></div>
   </div>
@@ -28,18 +28,32 @@
   </div>
 
   <!-- 시스템 관리 -->
-  <div class="content" id="pg-system">
-    <div class="toolbar" id="system-tabs" style="margin-bottom:16px;">
-      <button class="btn btn-primary" data-systab="permissions" onclick="switchSystemTab('permissions')"><i class="ti ti-user-shield"></i>권한 관리</button>
-      <button class="btn" data-systab="company" onclick="switchSystemTab('company')"><i class="ti ti-building"></i>회사 관리</button>
-      <button class="btn" data-systab="templates" onclick="switchSystemTab('templates')"><i class="ti ti-template"></i>양식 내보내기</button>
-      <button class="btn" data-systab="api" onclick="switchSystemTab('api')"><i class="ti ti-key"></i>API 관리</button>
-      <button class="btn" data-systab="alimtalk" onclick="switchSystemTab('alimtalk')"><i class="ti ti-brand-kakao"></i>알림톡 설정</button>
-      <button class="btn" data-systab="alerts" onclick="switchSystemTab('alerts')"><i class="ti ti-bell"></i>알림 관리</button>
-      <button class="btn" data-systab="trash" onclick="switchSystemTab('trash')"><i class="ti ti-trash"></i>휴지통</button>
+<div class="content" id="pg-system">
+    <div class="system-shell">
+      <aside class="system-sidebar">
+        <div class="system-sidebar-title">시스템 설정</div>
+        <div id="system-tabs" class="system-nav">
+          <button type="button" class="active" data-systab="initial" onclick="switchSystemTab('initial')"><i class="ti ti-list-check"></i>초기 설정</button>
+          <button type="button" data-systab="permissions" onclick="switchSystemTab('permissions')"><i class="ti ti-user-shield"></i>권한 관리</button>
+          <button type="button" data-systab="company" onclick="switchSystemTab('company')"><i class="ti ti-building"></i>회사 관리</button>
+          <button type="button" data-systab="columns" onclick="switchSystemTab('columns')"><i class="ti ti-table-options"></i>표시 설정</button>
+          <button type="button" data-systab="display" onclick="switchSystemTab('display')"><i class="ti ti-palette"></i>화면 설정</button>
+          <button type="button" data-systab="templates" onclick="switchSystemTab('templates')"><i class="ti ti-template"></i>양식 내보내기</button>
+          <button type="button" data-systab="api" onclick="switchSystemTab('api')"><i class="ti ti-key"></i>API 관리</button>
+          <button type="button" class="drive-save-btn" data-systab="drive" onclick="switchSystemTab('drive')"><i class="ti ti-cloud"></i>Google Drive 저장</button>
+          <button type="button" data-systab="alimtalk" onclick="switchSystemTab('alimtalk')"><i class="ti ti-brand-kakao"></i>알림톡 설정</button>
+          <button type="button" data-systab="alerts" onclick="switchSystemTab('alerts')"><i class="ti ti-bell"></i>알림 관리</button>
+          <button type="button" data-systab="trash" onclick="switchSystemTab('trash')"><i class="ti ti-trash"></i>휴지통</button>
+        </div>
+      </aside>
+
+      <section class="system-workspace">
+
+    <div class="system-panel" id="system-panel-initial">
+      <div id="system-initial-body"></div>
     </div>
 
-    <div class="system-panel" id="system-panel-permissions"><div id="perm-body"></div></div>
+    <div class="system-panel" id="system-panel-permissions" style="display:none;"><div id="perm-body"></div></div>
 
     <div class="system-panel" id="system-panel-company" style="display:none;">
       <div class="card">
@@ -54,7 +68,107 @@
       </div>
     </div>
 
+    <div class="system-panel" id="system-panel-columns" style="display:none;">
+      <div id="table-display-settings-body"></div>
+    </div>
+
+    <div class="system-panel" id="system-panel-display" style="display:none;">
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-arrows-maximize"></i>화면 밀도</span>
+          <span style="font-size:11px;color:var(--tx-t);">화면 폭이 좁아져도 글자 크기는 유지하고 여백만 조절</span>
+        </div>
+        <div class="ui-scale-settings">
+          <div class="ui-scale-current">
+            <span>사용자 설정</span>
+            <strong id="ui-scale-value">100%</strong>
+          </div>
+          <input id="ui-scale-range" class="ui-scale-range" type="range" min="80" max="120" step="1" value="100"
+            oninput="previewUiScale(this.value)" onchange="saveUiScale(this.value)">
+          <div class="ui-scale-presets">
+            <button class="btn btn-sm" type="button" onclick="setUiScale(80)">80%</button>
+            <button class="btn btn-sm" type="button" onclick="setUiScale(90)">90%</button>
+            <button class="btn btn-sm" type="button" onclick="setUiScale(100)">100%</button>
+            <button class="btn btn-sm" type="button" onclick="setUiScale(110)">110%</button>
+            <button class="btn btn-sm" type="button" onclick="setUiScale(120)">120%</button>
+            <button class="btn btn-sm" type="button" onclick="resetUiScale()"><i class="ti ti-restore"></i>기본값 복원</button>
+          </div>
+          <div class="ui-scale-info">
+            <i class="ti ti-info-circle"></i>
+            <span>이 설정은 표와 카드의 여백 밀도만 조절합니다. 브라우저 폭이 줄어도 글자는 자동으로 작아지지 않습니다.</span>
+          </div>
+          <div class="ui-scale-preview">
+            <div>
+              <strong>미리보기</strong>
+              <span>글자 크기는 유지되고 표 간격만 조절됩니다.</span>
+            </div>
+            <button class="btn btn-primary" type="button"><i class="ti ti-check"></i>버튼 예시</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-text-size"></i>글자 크기</span>
+          <span style="font-size:11px;color:var(--tx-t);">표·입력창·버튼의 기본 글자 크기 조절</span>
+        </div>
+        <div class="ui-font-settings">
+          <div class="ui-scale-current">
+            <span>글자 설정</span>
+            <strong id="ui-font-value">100%</strong>
+          </div>
+          <input id="ui-font-range" class="ui-scale-range" type="range" min="90" max="120" step="1" value="100"
+            oninput="previewUiFontScale(this.value)" onchange="saveUiFontScale(this.value)">
+          <div class="ui-font-presets">
+            <button class="btn btn-sm" type="button" onclick="setUiFontScale(90)">90%</button>
+            <button class="btn btn-sm" type="button" onclick="setUiFontScale(100)">100%</button>
+            <button class="btn btn-sm" type="button" onclick="setUiFontScale(110)">110%</button>
+            <button class="btn btn-sm" type="button" onclick="setUiFontScale(120)">120%</button>
+            <button class="btn btn-sm" type="button" onclick="resetUiFontScale()"><i class="ti ti-restore"></i>기본값 복원</button>
+          </div>
+          <div class="ui-font-preview">
+            <strong>표 본문 예시</strong>
+            <span>수주 제품, 자재 발주, 재고 관리 화면의 글자 크기에 함께 적용됩니다.</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-palette"></i>화면 색상</span>
+          <span style="font-size:11px;color:var(--tx-t);">밝은 테마와 어두운 테마를 각각 저장</span>
+        </div>
+        <div class="ui-color-settings">
+          <div class="ui-color-theme-tabs">
+            <button class="btn btn-sm" type="button" data-color-theme="light" onclick="selectUiColorTheme('light')"><i class="ti ti-sun"></i>밝은 테마</button>
+            <button class="btn btn-sm" type="button" data-color-theme="dark" onclick="selectUiColorTheme('dark')"><i class="ti ti-moon"></i>어두운 테마</button>
+          </div>
+          <div id="ui-color-fields" class="ui-color-fields"></div>
+          <div id="ui-color-contrast" class="ui-color-contrast"></div>
+          <div class="ui-color-actions">
+            <button class="btn btn-primary" type="button" onclick="saveUiColors()"><i class="ti ti-device-floppy"></i>색상 적용</button>
+            <button class="btn" type="button" onclick="cancelUiColorPreview()"><i class="ti ti-arrow-back-up"></i>변경 취소</button>
+            <button class="btn" type="button" onclick="resetUiColors()"><i class="ti ti-restore"></i>현재 테마 기본값 복원</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="system-panel" id="system-panel-templates" style="display:none;">
+      <div class="card" style="margin-bottom:16px;border-color:var(--br-i);">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-package-export"></i>공용 양식 패키지</span>
+          <span id="template-package-status" style="font-size:11px;color:var(--tx-t);">다른 MESPro 또는 외부 프로그램에서 사용할 수 있는 ZIP 패키지</span>
+        </div>
+        <div style="font-size:11.5px;color:var(--tx-s);line-height:1.75;margin-bottom:12px;">
+          현재 등록된 XLSX 양식, PDF 인쇄 CSS, 데이터 변수 규격과 사용 안내를 하나의 ZIP 파일로 내보냅니다.
+          가져오기 전 형식과 버전을 검사하며 기존 사용자 양식은 자동 백업됩니다.
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          <button class="btn btn-primary" onclick="exportDocTemplatePackage()"><i class="ti ti-package-export"></i>전체 양식 패키지 내보내기</button>
+          <button class="btn" onclick="inp('template-package-input').click()"><i class="ti ti-package-import"></i>양식 패키지 가져오기</button>
+          <button class="btn" onclick="restoreDocTemplatePackageBackup()"><i class="ti ti-history"></i>가져오기 전 양식 복원</button>
+          <input id="template-package-input" type="file" accept=".zip,application/zip" style="display:none;" onchange="importDocTemplatePackage(this)">
+        </div>
+      </div>
       <div class="card" style="margin-bottom:16px;">
         <div class="card-hd">
           <span class="card-ttl"><i class="ti ti-file-description"></i>견적요청서 엑셀 인쇄 양식</span>
@@ -130,6 +244,10 @@
       <div id="api-settings-body"></div>
     </div>
 
+    <div class="system-panel" id="system-panel-drive" style="display:none;">
+      <div id="google-drive-settings-body"></div>
+    </div>
+
     <div class="system-panel" id="system-panel-alimtalk" style="display:none;">
       <div class="card">
         <div class="card-hd">
@@ -184,7 +302,9 @@
         <input type="text" id="trash-q" placeholder="항목명 또는 식별 코드 검색..." style="min-width:220px;" oninput="renderTrash()">
         <button class="btn btn-danger" onclick="emptyTrash()"><i class="ti ti-trash-x"></i>휴지통 비우기</button>
       </div>
-      <div class="card"><div id="trash-table" style="overflow-x:auto;"></div></div>
+      <div class="card trash-table-card"><div id="trash-table" class="trash-table-scroll" style="overflow-x:auto;"></div></div>
+    </div>
+      </section>
     </div>
   </div>
 

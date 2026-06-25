@@ -3,6 +3,7 @@ let currentDlvTab = 'list';
 
 function switchDlvTab(tab, el) {
   currentDlvTab = tab;
+  syncCurrentSubRoute('deliveries', currentDlvTab);
   document.querySelectorAll('#pg-deliveries .dash-tab').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('#pg-deliveries .dash-panel').forEach(p => p.classList.remove('active'));
   if (el) el.classList.add('active');

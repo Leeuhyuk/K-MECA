@@ -9,7 +9,8 @@ const PAGE_LIST = [
   {id:'partners',label:'거래처 관리'},{id:'rfq',label:'견적요청서'},{id:'po',label:'구매발주서'},
   {id:'salesdoc',label:'견적/수주'},{id:'statement',label:'거래명세표'},{id:'taxinvoice',label:'세금계산서'},
   {id:'finance',label:'재무 관리'},{id:'workers',label:'인사 관리'},
-  {id:'as',label:'고객 A/S'},{id:'notes',label:'메모·할 일'},{id:'system',label:'시스템 관리'}
+  {id:'as',label:'고객 A/S'},{id:'notes',label:'메모·할 일'},
+  {id:'popbill',label:'Popbill API'},{id:'system',label:'시스템 관리'}
 ];
 /* 역할별 기본 접근 페이지(관리자가 화면에서 편집 가능). admin은 항상 전체. */
 const DEFAULT_ROLE_PAGES = {
@@ -46,6 +47,13 @@ function applyRoleGating(){
     const anyVisible=items.some(n=>n.style.display!=='none');
     g.style.display = (items.length && !anyVisible) ? 'none' : '';
   });
+  document.querySelectorAll('.topnav-menu [data-top-page]').forEach(item => {
+    item.style.display = pageAllowed(item.dataset.topPage) ? '' : 'none';
+  });
+  document.querySelectorAll('.topnav-group').forEach(group => {
+    const items = [...group.querySelectorAll('[data-top-page]')];
+    group.style.display = items.some(item => item.style.display !== 'none') ? '' : 'none';
+  });
 }
 /* ════════ 열(컬럼) 단위 권한 ════════
    각 표의 컬럼을 역할별로 숨길 수 있음. nth-child CSS 주입 방식이라 재렌더에도 자동 적용. */
@@ -58,6 +66,13 @@ const COLUMN_TABLES = {
   claims:     { sel:'#claims-table-full', label:'고객 클레임',       addBtn:'openClaimAdd',  cols:['인입일','유형','의뢰 고객사','해당 제품','클레임 사양','내용','조치 방안','상태','관리'] },
   as:         { sel:'#as-body',           label:'고객 A/S',         addBtn:'openAsAdd',     cols:['접수번호','접수일','고객사','제품','증상','보증','상태','담당자','수리비','관리'] },
   materials:  { sel:'#mat-table',         label:'자재 수급/발주',    addBtn:'openMatAdd',    cols:['자재코드','고객사','매칭제품','자재명','공급처','구매단가','수량','매입총액','주문일자','입고예정일','진행상황','참고','관리'] },
+  rfq:        { sel:'#rfq-table',         label:'견적요청서',        addBtn:'openRfqAdd',    cols:['문서번호','요청일','고객사','연결제품','공급처','품목명','규격','수량','희망단가','상태','비고','관리'] },
+  po:         { sel:'#po-table',          label:'구매발주서',        addBtn:'openPoAdd',     cols:['발주번호','발행일','고객사','연결제품','공급처','품목명','규격','수량','단가','금액','결제조건','납품방법','상태','비고'] },
+  quote:      { sel:'#qt-table',          label:'견적/수주-견적서',   addBtn:'openSODocAdd',  cols:['견적번호','일자','고객사','품목명','규격','수량','단가','공급가액','납기','상태','관리'] },
+  order:      { sel:'#so-table',          label:'견적/수주-수주서',   addBtn:'openSODocAdd',  cols:['수주번호','일자','고객사','품목명','규격','수량','단가','공급가액','연결 제품(공정)','상태','관리'] },
+  statement:  { sel:'#st-table',          label:'거래명세표',        addBtn:'openSalesDocAdd', cols:['문서번호','발행일','공급받는 고객사','연결제품','품목명','규격','수량','단가','공급가액','부가세','합계','상태','관리'] },
+  tax:        { sel:'#tx-table',          label:'세금계산서',        addBtn:'openSalesDocAdd', cols:['문서번호','발행일','공급받는 고객사','연결제품','품목명','규격','수량','단가','공급가액','부가세','합계','상태','관리'] },
+  partners:   { sel:'#bp-table',          label:'거래처 관리',       addBtn:'openPartnerModal', cols:['코드','거래처명','유형','담당자','전화번호','이메일','사업자번호','비고','납기이행률','거래금액','관리'] },
   deliveries: { sel:'#dlv-table',         label:'납품 현황',        cols:['납품번호','납품일자','고객사','제품명','규격','수량','단가','납품금액','비고','삭제'] },
   inventory:  { sel:'#inventory-table',   label:'재고',             addBtn:'openInvAdd',    cols:['재고코드','품목명','분류','현재고','안전재고','보관위치','참고','관리'] }
 };
@@ -170,6 +185,14 @@ function cloudBootstrap(){
         }
         _cloudActive = true; _hideLogin(); _cloudChip('online');
         updateAdminUI(); applyRoleGating(); applyColumnGating(); applyFeatureGating(); cloudSubscribe();   // 역할 UI/컬럼/기능 반영 + 실시간 동기화 시작
+        if (currentPage !== 'dashboard' && !pageAllowed(currentPage)) {
+          showToast('이 페이지에 접근할 권한이 없습니다.', 'error');
+          if (typeof writeAppRoute === 'function') writeAppRoute('dashboard', '', 'replace');
+          if (typeof _goTo === 'function') _goTo('dashboard', null);
+        }
+        if (typeof autoConnectGoogleDriveAfterLogin === 'function') {
+          setTimeout(autoConnectGoogleDriveAfterLogin, 300);
+        }
       } else {
         _cloudUser=null; _cloudActive=false;
         sessionStorage.removeItem('mes_cloud_synced');
@@ -179,11 +202,46 @@ function cloudBootstrap(){
   } catch(e){ console.error('Firebase 초기화 오류', e); _cloudChip('error'); }
 }
 
+function cloudV2MapKeys(){
+  return ['financeData', 'companyInfo', 'docXlsxTemplates'];
+}
+function cloudV2StripMeta(value){
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  const out = Object.assign({}, value);
+  delete out._mes;
+  return out;
+}
+async function cloudLoadV2Key(key){
+  const entityRef = _fbDb.collection('mes_v2').doc(key);
+  const metaSnap = await entityRef.get();
+  if (!metaSnap.exists) return false;
+  const meta = metaSnap.data() || {};
+  if (meta.sourceExists === false || meta.sourceType === 'missing') return false;
+  if (meta.sourceType === 'array' || !cloudV2MapKeys().includes(key)) {
+    const itemsSnap = await entityRef.collection('items').get();
+    const rows = itemsSnap.docs.map(doc => {
+      const data = doc.data() || {};
+      const idx = data._mes && Number.isFinite(data._mes.sourceIndex) ? data._mes.sourceIndex : Number.MAX_SAFE_INTEGER;
+      return { idx, id: doc.id, value: cloudV2StripMeta(data) };
+    }).sort((a, b) => (a.idx - b.idx) || a.id.localeCompare(b.id));
+    localStorage.setItem('mes_' + key, JSON.stringify(rows.map(row => row.value)));
+    return true;
+  }
+  const stateSnap = await entityRef.collection('state').doc('current').get();
+  if (!stateSnap.exists) return false;
+  localStorage.setItem('mes_' + key, JSON.stringify(cloudV2StripMeta(stateSnap.data() || {})));
+  return true;
+}
 async function cloudLoadAll(){
   await cloudLoadRole();   // 내 역할/권한 먼저 로드(승인 대기 판정 포함)
-  const snap = await _fbDb.collection('mes_state').get();
   let n=0;
-  snap.forEach(doc=>{ const d=doc.data(); if (d && d.value!==undefined){ localStorage.setItem('mes_'+doc.id, JSON.stringify(d.value)); n++; } });
+  await Promise.all(CLOUD_KEYS.map(async key => {
+    try {
+      if (await cloudLoadV2Key(key)) n++;
+    } catch(e) {
+      console.warn('MES 클라우드 문서 로드 실패:', key, e);
+    }
+  }));
   localStorage.setItem('mes__savedAt', new Date().toISOString());       // 임베드 데이터가 덮어쓰지 않도록 최신화
   return n;
 }
@@ -196,21 +254,138 @@ function cloudQueueSave(key){
     _cloudTimer = setTimeout(cloudFlush, 800);
   } catch(e){ /* 클라우드 모듈 초기화 이전 saveStorage 호출 — 무시 */ }
 }
+function cloudV2ServerTimestamp(){
+  return firebase.firestore.FieldValue.serverTimestamp();
+}
+function cloudV2SafeDocId(raw){
+  const s = String(raw || '').trim().replace(/[\\/#?[\]*]/g, '_').replace(/\s+/g, '_').slice(0, 120);
+  return s || null;
+}
+function cloudV2Hash(value){
+  const str = JSON.stringify(value == null ? '' : value);
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(16).padStart(8, '0');
+}
+function cloudV2StableRecordId(item, index){
+  const keys = ['id','code','no','number','docNo','quoteNo','orderNo','poNo','rfqNo','statementNo','taxNo','name'];
+  if (item && typeof item === 'object' && !Array.isArray(item)) {
+    for (const k of keys) {
+      const id = cloudV2SafeDocId(item[k]);
+      if (id) return id;
+    }
+  }
+  return 'idx_' + String(index).padStart(6, '0') + '_' + cloudV2Hash(item);
+}
+function cloudV2ItemPayload(item, key, index){
+  const meta = {
+    sourceCollection: 'mes_v2',
+    sourceKey: key,
+    sourceIndex: index,
+    migratedAt: cloudV2ServerTimestamp(),
+    mode: 'v2'
+  };
+  if (item && typeof item === 'object' && !Array.isArray(item)) {
+    return Object.assign({}, item, { _mes: meta });
+  }
+  return { value: item, _mes: meta };
+}
+async function cloudV2CommitWrites(writes){
+  for (let i = 0; i < writes.length; i += 450) {
+    const batch = _fbDb.batch();
+    writes.slice(i, i + 450).forEach(w => {
+      if (w.delete) batch.delete(w.ref);
+      else if (w.replace) batch.set(w.ref, w.data);   // 문서 전체 교체(중첩 키 삭제 전파)
+      else batch.set(w.ref, w.data, { merge: true });
+    });
+    await batch.commit();
+  }
+}
+async function cloudMirrorV2Key(key){
+  if (!_fbDb || !CLOUD_KEYS.includes(key)) return;
+  const raw = localStorage.getItem('mes_' + key);
+  let value;
+  try {
+    value = raw ? JSON.parse(raw) : null;
+  } catch(e){
+    // 손상된 로컬 값은 재시도해도 영원히 실패하므로 건너뛴다(전체 동기화 루프 방지)
+    console.warn('클라우드 동기화 건너뜀(로컬 JSON 손상):', key, e);
+    return;
+  }
+  const entityRef = _fbDb.collection('mes_v2').doc(key);
+  const type = Array.isArray(value) ? 'array' : (value && typeof value === 'object' ? 'map' : (value === null ? 'null' : typeof value));
+  const count = Array.isArray(value) ? value.length : (value && typeof value === 'object' ? Object.keys(value).length : 0);
+  const writes = [{
+    ref: entityRef,
+    data: {
+      key,
+      sourceCollection: 'mes_v2',
+      sourceDocId: key,
+      sourceExists: raw != null,
+      sourceType: type,
+      sourceCount: count,
+      sourceUpdatedAt: cloudV2ServerTimestamp(),
+      schemaVersion: 1,
+      mode: 'v2',
+      migratedAt: cloudV2ServerTimestamp()
+    }
+  }];
+  if (Array.isArray(value)) {
+    const nextIds = new Set();
+    const used = {};
+    value.forEach((item, index) => {
+      let id = cloudV2StableRecordId(item, index);
+      used[id] = (used[id] || 0) + 1;
+      if (used[id] > 1) id += '_' + used[id];
+      nextIds.add(id);
+      writes.push({ ref: entityRef.collection('items').doc(id), data: cloudV2ItemPayload(item, key, index) });
+    });
+    const existing = await entityRef.collection('items').get();
+    existing.forEach(doc => {
+      if (!nextIds.has(doc.id)) writes.push({ ref: doc.ref, delete: true });
+    });
+  } else if (value && typeof value === 'object') {
+    writes.push({
+      ref: entityRef.collection('state').doc('current'),
+      replace: true,   // map 전체를 교체해 삭제된 중첩 키(예: 결제 취소)가 서버에서도 제거되도록 함
+      data: Object.assign({}, value, {
+        _mes: {
+          sourceCollection: 'mes_v2',
+          sourceKey: key,
+          migratedAt: cloudV2ServerTimestamp(),
+          mode: 'v2'
+        }
+      })
+    });
+  }
+  await cloudV2CommitWrites(writes);
+}
+async function cloudMirrorV2Keys(keys){
+  // 키별로 격리: 한 키 실패가 나머지 키 동기화를 막지 않도록 하고, 실패한 키 목록을 반환
+  const failed = [];
+  for (const key of keys) {
+    try {
+      await cloudMirrorV2Key(key);
+    } catch(e){
+      console.warn('클라우드 키 저장 실패:', key, e);
+      failed.push(key);
+    }
+  }
+  return failed;
+}
 async function cloudFlush(){
   if (!_cloudActive || !_cloudQueue.size) return;
   const keys=[..._cloudQueue]; _cloudQueue.clear();
   _cloudChip('saving');
-  try {
-    const batch=_fbDb.batch();
-    keys.forEach(k=>{ const raw=localStorage.getItem('mes_'+k); const value=raw?JSON.parse(raw):null;
-      batch.set(_fbDb.collection('mes_state').doc(k), { value, updatedAt:Date.now(), by:(_cloudUser&&_cloudUser.email)||'' }); });
-    await batch.commit(); _cloudChip('online');
-  } catch(e){
-    console.warn('클라우드 저장 실패', e); _cloudChip('error');
-    keys.forEach(k=>_cloudQueue.add(k));                       // 실패 키 재큐잉 후 재시도
-    clearTimeout(_cloudTimer); _cloudTimer=setTimeout(cloudFlush, 5000);
-    showToast('클라우드 저장에 실패했습니다. 잠시 후 자동 재시도합니다.', 'error');
-  }
+  const failed = await cloudMirrorV2Keys(keys);
+  if (!failed.length) { _cloudChip('online'); return; }
+  _cloudChip('error');
+  failed.forEach(k=>_cloudQueue.add(k));                       // 실제 실패한 키만 재큐잉 후 재시도
+  clearTimeout(_cloudTimer); _cloudTimer=setTimeout(cloudFlush, 5000);
+  showToast('일부 항목 클라우드 저장에 실패했습니다. 잠시 후 자동 재시도합니다.', 'error');
 }
 
 /* 클라우드에서 수동으로 최신 데이터 다시 불러오기 */

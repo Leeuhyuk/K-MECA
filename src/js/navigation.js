@@ -10,6 +10,131 @@ function togglePanel(id) {
 }
 function closePanel(id) { inp(id)?.classList.remove('open'); }
 
+const TOPNAV_GROUP_PAGES = {
+  main: ['dashboard','clients','materials','deliveries','calendar'],
+  process: ['orders','quality','claims','as'],
+  inventory: ['inventory'],
+  documents: ['notes','rfq','po'],
+  business: ['salesdoc','statement','taxinvoice','partners','bom','finance','workers'],
+  system: ['system']
+};
+
+function closeTopNavMenus() {
+  document.querySelectorAll('.topnav-group.open').forEach(group => group.classList.remove('open'));
+}
+
+function setMegaMenuOpen(open) {
+  const menu = inp('topnav');
+  const button = inp('menu-toggle-btn');
+  const backdrop = inp('sidebar-backdrop');
+  if (!menu) return;
+  menu.classList.toggle('mega-open', open);
+  document.body.classList.toggle('mega-menu-open', open);
+  document.body.classList.toggle('mega-menu-backdrop-active', open);
+  button?.classList.toggle('active', open);
+  button?.setAttribute('aria-expanded', open ? 'true' : 'false');
+  backdrop?.classList.toggle('active', open);
+  if (open) {
+    closeTopbarAlerts();
+    closeTopbarMoreMenu();
+  }
+}
+
+function toggleMegaMenu() {
+  setMegaMenuOpen(!inp('topnav')?.classList.contains('mega-open'));
+}
+
+function closeMegaMenu() {
+  setMegaMenuOpen(false);
+}
+
+function toggleTopNavGroup(group, event) {
+  if (event) event.stopPropagation();
+  if (!group) return;
+  const open = !group.classList.contains('open');
+  closeTopNavMenus();
+  closeTopbarAlerts();
+  closeTopbarMoreMenu();
+  if (open) group.classList.add('open');
+}
+
+function syncTopNavActive(page, inventoryKey) {
+  document.querySelectorAll('.topnav-group, .topnav-menu button, .topnav-home').forEach(el => el.classList.remove('active'));
+  const home = document.querySelector('.topnav-home');
+  if (page === 'dashboard' && home?.classList.contains('topnav-home')) home.classList.add('active');
+  const itemSelector = page === 'inventory' && inventoryKey
+    ? `.topnav-menu button[data-top-page="inventory"][data-inventory-key="${inventoryKey}"]`
+    : `.topnav-menu button[data-top-page="${page}"]`;
+  const item = document.querySelector(itemSelector);
+  if (item) {
+    item.classList.add('active');
+    item.closest('.topnav-group')?.classList.add('active');
+  }
+}
+
+function openTopNavItem(page, inventoryKey) {
+  closeMegaMenu();
+  if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  if (page !== 'dashboard' && typeof pageAllowed === 'function' && !pageAllowed(page)) {
+    showToast('이 페이지에 접근할 권한이 없습니다.', 'error');
+    return;
+  }
+  if (page === 'inventory') goInventory(inventoryKey || 'finished', null);
+  else go(page, null);
+  syncTopNavActive(page, inventoryKey);
+}
+
+function toggleTopbarAlerts() {
+  const wrap = inp('topbar-alert');
+  const button = inp('topbar-alert-btn');
+  if (!wrap) return;
+  closeMegaMenu();
+  closeTopNavMenus();
+  closeTopbarMoreMenu();
+  const open = wrap.classList.toggle('open');
+  if (button) button.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open && typeof renderTopbarAlerts === 'function') renderTopbarAlerts(true);
+}
+function closeTopbarAlerts() {
+  const wrap = inp('topbar-alert');
+  const button = inp('topbar-alert-btn');
+  if (wrap) wrap.classList.remove('open');
+  if (button) button.setAttribute('aria-expanded', 'false');
+}
+
+function toggleTopbarMoreMenu() {
+  const wrap = inp('topbar-more');
+  const button = inp('topbar-more-btn');
+  if (!wrap) return;
+  closeMegaMenu();
+  closeTopNavMenus();
+  closeTopbarAlerts();
+  const open = wrap.classList.toggle('open');
+  if (button) button.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+function closeTopbarMoreMenu() {
+  const wrap = inp('topbar-more');
+  const button = inp('topbar-more-btn');
+  if (wrap) wrap.classList.remove('open');
+  if (button) button.setAttribute('aria-expanded', 'false');
+}
+document.addEventListener('click', function(event) {
+  const moreWrap = inp('topbar-more');
+  const alertWrap = inp('topbar-alert');
+  const topnav = inp('topnav');
+  if (moreWrap && !moreWrap.contains(event.target)) closeTopbarMoreMenu();
+  if (alertWrap && !alertWrap.contains(event.target)) closeTopbarAlerts();
+  if (topnav && !topnav.contains(event.target)) closeTopNavMenus();
+});
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Escape') {
+    closeMegaMenu();
+    closeTopNavMenus();
+    closeTopbarMoreMenu();
+    closeTopbarAlerts();
+  }
+});
+
 let _cfn = null;
 function confirm_(title, msg, fn, btnCls = 'btn-danger', btnIcon = 'ti-trash') {
   _cfn = fn;
@@ -55,39 +180,102 @@ function onPraStageChange(clientId) {
   }
 }
 
-/* ════ 유튜브 방식 사이드바: 미니(아이콘) ↔ 전체(고정) ════
-   ☰ 클릭: 전체 고정 모드 ↔ 미니 레일 모드 전환
-   미니 레일에 마우스 hover → 오버레이로 자동 펼침 (벗어나면 닫힘)
-   미니 아이콘 클릭 → 바로 페이지 이동
-*/
-function toggleSidebar() {
-  if (window.innerWidth <= 680) { toggleMobileSidebar(); return; }
-  const body = document.body;
-  if (body.classList.contains('sb-mini')) {
-    // 미니 → 전체 고정 모드로 복귀
-    body.classList.remove('sb-mini', 'sb-expanded', 'sb-collapsed');
-  } else {
-    // 전체 → 미니 레일 모드로 전환
-    body.classList.add('sb-mini');
-    body.classList.remove('sb-expanded', 'sb-collapsed');
-    _initSbMini();
-  }
-  try { localStorage.setItem('mes_sbMini', body.classList.contains('sb-mini') ? '1' : ''); } catch(e){}
+/* ════ 사이드바 모드 ════
+   숨김 버튼 클릭: 사이드바 완전 숨김 ↔ 표시 (숨김 시 탑바에 표시 버튼만 노출)
+   화면 폭 681~1280px: 숨김 상태가 아니면 자동으로 미니 레일(아이콘+명칭) 표시
+   숨김 상태는 화면 크기가 변해도 유지 (localStorage 보존)
+   미니 레일은 마우스를 올려도 아이콘 상태를 유지하며, 메뉴 클릭 시 바로 이동 */
+const SB_AUTO_MINI_MAX = 1280;
+let _sidebarScrollTimer = null;
+const SB_WIDE_MIN = 1440;
+let _sidebarModeFrame = 0;
+let _sidebarModeObserver = null;
+
+function initSidebarScrollIndicator() {
+  const sidebar = document.querySelector('.sidebar');
+  if (!sidebar || sidebar.dataset.scrollIndicatorBound) return;
+  sidebar.dataset.scrollIndicatorBound = '1';
+  sidebar.addEventListener('scroll', () => {
+    sidebar.classList.add('is-scrolling');
+    if (_sidebarScrollTimer) clearTimeout(_sidebarScrollTimer);
+    _sidebarScrollTimer = setTimeout(() => {
+      sidebar.classList.remove('is-scrolling');
+      _sidebarScrollTimer = null;
+    }, 800);
+  }, { passive: true });
 }
+
+function toggleSidebar() {
+  try { localStorage.setItem('mes_sbHidden', '1'); } catch(e){}
+  document.body.classList.remove('wide-sidebar');
+  closeMegaMenu();
+}
+
+function isSidebarHiddenByUser() {
+  try { return localStorage.getItem('mes_sbHidden') === '1'; }
+  catch(e) { return false; }
+}
+
+function togglePrimaryMenu() {
+  if (window.innerWidth >= SB_WIDE_MIN && isSidebarHiddenByUser()) {
+    try { localStorage.removeItem('mes_sbHidden'); } catch(e){}
+    applySidebarMode();
+    if (document.body.classList.contains('wide-sidebar')) return;
+  }
+  toggleMegaMenu();
+}
+
+function activePageTableOverflows() {
+  const activePage = document.querySelector('.content.active');
+  if (!activePage) return false;
+  return Array.from(activePage.querySelectorAll('table')).some(table => {
+    if (!table.offsetParent) return false;
+    const wrap = table.parentElement;
+    if (!wrap || wrap.clientWidth < 1) return false;
+    return table.scrollWidth > wrap.clientWidth + 2;
+  });
+}
+
+function scheduleSidebarModeCheck() {
+  if (_sidebarModeFrame) cancelAnimationFrame(_sidebarModeFrame);
+  _sidebarModeFrame = requestAnimationFrame(() => {
+    _sidebarModeFrame = requestAnimationFrame(() => {
+      _sidebarModeFrame = 0;
+      applySidebarMode();
+    });
+  });
+}
+
+function initAdaptiveSidebarObserver() {
+  const main = document.querySelector('.main');
+  if (_sidebarModeObserver || !main) return;
+  _sidebarModeObserver = new MutationObserver(scheduleSidebarModeCheck);
+  _sidebarModeObserver.observe(main, { childList: true, subtree: true });
+}
+
+/* 현재 화면 폭·숨김 여부에 맞는 사이드바 모드 적용 (부팅·리사이즈·토글 시 호출) */
+function applySidebarMode() {
+  const body = document.body;
+  body.classList.remove('sb-mini', 'sb-expanded', 'sb-collapsed', 'wide-sidebar');
+  closeMegaMenu();
+  if (window.innerWidth < SB_WIDE_MIN || isSidebarHiddenByUser()) return;
+  body.classList.add('wide-sidebar');
+  if (activePageTableOverflows()) body.classList.remove('wide-sidebar');
+}
+window.addEventListener('resize', scheduleSidebarModeCheck);
 
 /* 미니 오버레이 닫기 (배경 딤 클릭 / 메뉴 이동 시) */
 function closeSbOverlay() {
-  document.body.classList.remove('sb-expanded');
+  closeMegaMenu();
 }
 
-/* 미니 레일 → 전체 모드로 복귀 */
+/* 미니 레일 → 전체 모드로 복귀 (숨김 해제 포함) */
 function expandSidebar() {
   document.body.classList.remove('sb-mini', 'sb-expanded', 'sb-collapsed');
-  try { localStorage.setItem('mes_sbMini', ''); } catch(e){}
+  try { localStorage.setItem('mes_sbHidden', ''); } catch(e){}
 }
 
-/* 미니 레일 초기화: 각 .ni에 data-label 부여 + 오버레이 배경 + hover 펼침 */
-let _sbHoverTimer = null;
+/* 미니 레일 초기화: 각 메뉴에 표시용 라벨 정보 부여 */
 function _initSbMini() {
   // data-label (툴팁용)
   document.querySelectorAll('.sidebar .ni').forEach(ni => {
@@ -95,47 +283,134 @@ function _initSbMini() {
     const txt = ni.textContent.replace(/[0-9]/g,'').trim();
     ni.dataset.label = txt;
   });
-  // 배경 오버레이
-  if (!document.getElementById('sb-overlay')) {
-    const ov = document.createElement('div');
-    ov.id = 'sb-overlay';
-    ov.className = 'sb-overlay';
-    ov.addEventListener('click', closeSbOverlay);
-    document.body.appendChild(ov);
-  }
-  // 미니 레일 hover → 오버레이 펼침 (마우스 벗어나면 닫힘, 깜빡임 방지 딜레이)
-  const sb = document.querySelector('.sidebar');
-  if (sb && !sb.dataset.hoverBound) {
-    sb.dataset.hoverBound = '1';
-    sb.addEventListener('mouseenter', () => {
-      if (_sbHoverTimer) { clearTimeout(_sbHoverTimer); _sbHoverTimer = null; }
-      if (document.body.classList.contains('sb-mini')) document.body.classList.add('sb-expanded');
-    });
-    sb.addEventListener('mouseleave', () => {
-      if (_sbHoverTimer) clearTimeout(_sbHoverTimer);
-      _sbHoverTimer = setTimeout(() => {
-        document.body.classList.remove('sb-expanded');
-      }, 180);
-    });
-  }
 }
 function toggleMobileSidebar() {
-  const sidebar = document.querySelector('.sidebar');
-  const backdrop = document.getElementById('sidebar-backdrop');
-  if (sidebar && backdrop) {
-    const isOpen = sidebar.classList.contains('mobile-open');
-    if (isOpen) {
-      sidebar.classList.remove('mobile-open');
-      backdrop.classList.remove('active');
-    } else {
-      sidebar.classList.add('mobile-open');
-      backdrop.classList.add('active');
-    }
+  toggleMegaMenu();
+}
+
+/* ── 모듈형 SPA 라우팅 ──
+   각 업무 화면은 하나의 index.html 안에서 동작하지만 고유 URL을 가진다.
+   예: #/finance/labor, #/workers/att, #/inventory/parts */
+let pageHistory = [];
+let _routeApplying = false;
+let _routeDepth = 0;
+
+const ROUTE_SUBPAGES = {
+  system: ['initial','permissions','company','columns','display','templates','api','drive','alimtalk','alerts','trash'],
+  workers: ['roster','att','leave'],
+  finance: ['dashboard','revenue','purchase','labor','cost','pnl','ar','etc'],
+  notes: ['memos','todos','board','report'],
+  salesdoc: ['quote','order'],
+  deliveries: ['list','closed'],
+  inventory: ['finished','parts','office']
+};
+
+function currentRouteSegment(page) {
+  if (page === 'system') return typeof systemTab === 'string' ? systemTab : 'initial';
+  if (page === 'workers') return typeof empTab === 'string' ? empTab : 'roster';
+  if (page === 'finance') return typeof financeTab === 'string' ? financeTab : 'dashboard';
+  if (page === 'notes') return typeof memoTab === 'string' ? memoTab : 'memos';
+  if (page === 'salesdoc') return typeof salesTab === 'string' ? salesTab : 'quote';
+  if (page === 'deliveries') return typeof currentDlvTab === 'string' ? currentDlvTab : 'list';
+  if (page === 'inventory') {
+    return invCategory === '완제품' ? 'finished' : invCategory === '사무비품' ? 'office' : 'parts';
+  }
+  return '';
+}
+
+function appRouteHash(page, segment) {
+  const safePage = String(page || 'dashboard').replace(/[^a-z0-9-]/gi, '');
+  const allowed = ROUTE_SUBPAGES[safePage];
+  const safeSegment = allowed && allowed.includes(segment) ? segment : '';
+  return '#/' + safePage + (safeSegment ? '/' + safeSegment : '');
+}
+
+function parseAppRoute() {
+  const parts = String(location.hash || '').replace(/^#\/?/, '').split('/').filter(Boolean);
+  let page = parts[0] || 'dashboard';
+  if (!inp('pg-' + page)) page = 'dashboard';
+  const allowed = ROUTE_SUBPAGES[page] || [];
+  const segment = allowed.includes(parts[1]) ? parts[1] : (allowed[0] || '');
+  return { page, segment };
+}
+
+function writeAppRoute(page, segment, mode) {
+  const hash = appRouteHash(page, segment);
+  if (location.hash === hash && mode !== 'replace') return;
+  if (mode === 'replace') {
+    history.replaceState({ mesRoute:true, depth:_routeDepth }, '', hash);
+  } else {
+    _routeDepth += 1;
+    history.pushState({ mesRoute:true, depth:_routeDepth }, '', hash);
+  }
+  updateTopbarBackButton();
+}
+
+function applyRouteSubpage(page, segment) {
+  if (page === 'system') systemTab = segment || 'initial';
+  else if (page === 'workers') empTab = segment || 'roster';
+  else if (page === 'finance') financeTab = segment || 'dashboard';
+  else if (page === 'notes') memoTab = segment || 'memos';
+  else if (page === 'salesdoc') salesTab = segment || 'quote';
+  else if (page === 'deliveries') currentDlvTab = segment || 'list';
+  else if (page === 'inventory') {
+    const meta = INV_CATS[segment] || INV_CATS.finished;
+    invCategory = meta.cat;
   }
 }
 
-/* ── 페이지 히스토리 스택 ── */
-let pageHistory = [];
+function applyAppRoute() {
+  const route = parseAppRoute();
+  const canCheckPermission = typeof cloudConfigured !== 'function' || !cloudConfigured() || !!_cloudUser;
+  if (canCheckPermission && route.page !== 'dashboard' && typeof pageAllowed === 'function' && !pageAllowed(route.page)) {
+    showToast('이 페이지에 접근할 권한이 없습니다.', 'error');
+    _routeDepth = 0;
+    writeAppRoute('dashboard', '', 'replace');
+    return _goTo('dashboard', null);
+  }
+  _routeApplying = true;
+  try {
+    applyRouteSubpage(route.page, route.segment);
+    if (route.page === 'inventory') {
+      const meta = INV_CATS[route.segment] || INV_CATS.finished;
+      return _showInventoryPage(route.segment || 'finished', meta, null);
+    }
+    return _goTo(route.page, null);
+  } finally {
+    _routeApplying = false;
+  }
+}
+
+function initAppRouter() {
+  const route = parseAppRoute();
+  const initialHash = appRouteHash(route.page, route.segment);
+  const stateDepth = history.state && history.state.mesRoute ? Number(history.state.depth) || 0 : 0;
+  _routeDepth = stateDepth;
+  history.replaceState({ mesRoute:true, depth:_routeDepth }, '', initialHash);
+  applyAppRoute();
+  window.addEventListener('popstate', function(event) {
+    _routeDepth = event.state && event.state.mesRoute ? Number(event.state.depth) || 0 : 0;
+    applyAppRoute();
+    updateTopbarBackButton();
+  });
+  window.addEventListener('hashchange', function() {
+    const route = parseAppRoute();
+    if (appRouteHash(currentPage, currentRouteSegment(currentPage)) !== appRouteHash(route.page, route.segment)) {
+      applyAppRoute();
+    }
+  });
+}
+
+function syncCurrentSubRoute(page, segment) {
+  if (_routeApplying || currentPage !== page) return;
+  const nextHash = appRouteHash(page, segment);
+  if (location.hash !== nextHash) writeAppRoute(page, segment, 'push');
+}
+
+function updateTopbarBackButton() {
+  const btn = inp('topnav-back-btn');
+  if (btn) btn.disabled = _routeDepth <= 0;
+}
 
 function go(id, el) {
   if (id === currentPage) {                // 같은 페이지 재클릭: 드로어/오버레이만 닫기
@@ -144,16 +419,20 @@ function go(id, el) {
     closeSbOverlay();
     return;
   }
-  if (currentPage) pageHistory.push(currentPage);
-  if (pageHistory.length > 30) pageHistory.shift(); // 최대 30개 유지
-
+  if (id !== 'dashboard' && typeof pageAllowed === 'function' && !pageAllowed(id)) {
+    showToast('이 페이지에 접근할 권한이 없습니다.', 'error');
+    return;
+  }
+  writeAppRoute(id, currentRouteSegment(id), 'push');
   _goTo(id, el);
 }
 
 function goBack() {
-  if (!pageHistory.length) return;
-  const prev = pageHistory.pop();
-  _goTo(prev, null);
+  if (_routeDepth <= 0) {
+    updateTopbarBackButton();
+    return;
+  }
+  history.back();
 }
 
 function _goTo(id, el) {
@@ -165,7 +444,12 @@ function _goTo(id, el) {
   }
   document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
   document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
-  inp('pg-' + id).classList.add('active');
+  const page = inp('pg-' + id);
+  if (!page) {
+    showToast('요청한 화면을 찾을 수 없습니다.', 'error');
+    return false;
+  }
+  page.classList.add('active');
 
   if (el) {
     el.classList.add('active');
@@ -195,15 +479,20 @@ function _goTo(id, el) {
     notes: '메모·할 일',
     statement: '거래명세표 관리', taxinvoice: '세금계산서 관리',
     salesdoc: '견적/수주 관리',
-    calendar: '납기 캘린더'
+    calendar: '납기 캘린더',
+    popbill: 'Popbill API'
   };
   inp('ptitle').textContent = PN[id] || id;
+  document.title = (PN[id] || id) + ' — MES Pro';
   currentPage = id;
-  _updateBackBtn();
+  syncTopNavActive(id);
   refreshPage(id);
+  scheduleSidebarModeCheck();
+  updateTopbarBackButton();
   // 모바일: 페이지 이동 시 홈 오버레이 해제 + 하단 탭 동기화
   document.body.classList.remove('mhome');
   if (typeof syncMobileTab === 'function') syncMobileTab();
+  return true;
 }
 
 /* 재고 관리 — 분류별(완제품/생산부품/사무비품) 사이드바 진입 */
@@ -216,8 +505,16 @@ let invCategory = '완제품';
 
 function goInventory(key, el) {
   const meta = INV_CATS[key] || INV_CATS.finished;
+  if (currentPage === 'inventory' && invCategory === meta.cat) {
+    closeSbOverlay();
+    return;
+  }
+  writeAppRoute('inventory', key in INV_CATS ? key : 'finished', 'push');
+  _showInventoryPage(key, meta, el);
+}
+
+function _showInventoryPage(key, meta, el) {
   invCategory = meta.cat;
-  if (currentPage !== 'inventory' && currentPage) pageHistory.push(currentPage);
   document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
   document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
   inp('pg-inventory').classList.add('active');
@@ -226,28 +523,16 @@ function goInventory(key, el) {
     if (item.getAttribute('onclick')?.includes(`goInventory('${key}'`)) item.classList.add('active');
   });
   inp('ptitle').textContent = meta.title;
+  document.title = meta.title + ' — MES Pro';
   currentPage = 'inventory';
-  _updateBackBtn();
+  syncTopNavActive('inventory', key);
   renderInventory();
+  scheduleSidebarModeCheck();
+  updateTopbarBackButton();
   // 모바일 드로어 닫기
   const sb = document.querySelector('.sidebar');
   if (sb && sb.classList.contains('mobile-open')) { sb.classList.remove('mobile-open'); document.getElementById('sidebar-backdrop')?.classList.remove('active'); }
-}
-
-function _updateBackBtn() {
-  const btn = inp('back-btn');
-  if (!btn) return;
-  if (pageHistory.length > 0) {
-    btn.style.display = 'inline-flex';
-    const PN = {
-      dashboard:'대시보드', clients:'수주관리', materials:'자재관리',
-      orders:'생산지시', process:'공정관리', quality:'품질검사',
-      workers:'인사', system:'시스템 관리', inventory:'재고', finance:'재무', claims:'클레임', notes:'메모·할 일', statement:'거래명세표', taxinvoice:'세금계산서', salesdoc:'견적/수주'
-    };
-    btn.title = `이전: ${PN[pageHistory[pageHistory.length-1]] || '이전 화면'}으로 돌아가기`;
-  } else {
-    btn.style.display = 'none';
-  }
+  return true;
 }
 
 function refreshPage(id) {
@@ -264,11 +549,15 @@ function refreshPage(id) {
   else if (id === 'workers') switchEmpTab(empTab);
   else if (id === 'process') { go('dashboard'); setTimeout(()=>switchDashTab('process'),50); return; }
   else if (id === 'inventory') renderInventory();
-  else if (id === 'deliveries') { renderDeliveries(); if (currentDlvTab === 'closed') renderClosedProjects(); }
+  else if (id === 'deliveries') {
+    renderDeliveries();
+    switchDlvTab(currentDlvTab, inp('dlv-tab-' + currentDlvTab));
+  }
   else if (id === 'rfq') renderRfq();
   else if (id === 'po') renderPo();
   else if (id === 'partners') renderPartners();
   else if (id === 'finance') renderFinance();
+  else if (id === 'popbill') renderPopbill();
   else if (id === 'as') renderAS();
   else if (id === 'bom') renderBom();
   else if (id === 'notes') renderNotes();

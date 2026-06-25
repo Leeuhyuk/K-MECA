@@ -425,14 +425,6 @@ function addDefect() {
 }
 
 function changeDefectStatus(id, status) {
-  if (!isAdmin) {
-    promptAdmin(() => {
-      const d = defects.find(x => x.id === id);
-      if (d) { d.status = status; saveStorage('defects', defects); renderQuality(); }
-    });
-    refreshPage(currentPage);
-    return;
-  }
   const d = defects.find(x => x.id === id);
   if (d) { d.status = status; saveStorage('defects', defects); renderQuality(); }
 }
@@ -519,14 +511,6 @@ function claimClientLabel(c) { return c.clientName || getClientName(c.clientId) 
 function claimProductLabel(c) { return c.productName || (c.productId ? getProductName(c.productId) : '') || '—'; }
 
 function changeClaimStatus(id, status) {
-  if (!isAdmin) {
-    promptAdmin(() => {
-      const c = claims.find(x => x.id === id);
-      if (c) { c.status = status; saveStorage('claims', claims); renderQuality(); }
-    });
-    refreshPage(currentPage);
-    return;
-  }
   const c = claims.find(x => x.id === id);
   if (c) { c.status = status; saveStorage('claims', claims); renderQuality(); }
 }

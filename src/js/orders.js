@@ -322,7 +322,6 @@ function qDone(id, val) {
     syncProductOnOrderChange(o.productId);    // ← 제품 상태 동기화
     renderOrders();
   };
-  if (!isAdmin) { promptAdmin(applyFn); refreshPage(currentPage); return; }
   applyFn();
 }
 
@@ -333,7 +332,6 @@ function qDefect(id, val) {
     saveStorage('workOrders', workOrders);
     renderOrders();
   };
-  if (!isAdmin) { promptAdmin(applyFn); refreshPage(currentPage); return; }
   applyFn();
 }
 
@@ -345,7 +343,6 @@ function qStatus(id, val) {
     syncProductOnOrderChange(o.productId);    // ← 제품 상태 동기화
     renderOrders();
   };
-  if (!isAdmin) { promptAdmin(applyFn); refreshPage(currentPage); return; }
   applyFn();
 }
 

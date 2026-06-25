@@ -171,8 +171,11 @@ function exportInvCSV() {
 function renderInventoryLedger() {
   const cont = document.getElementById('inv-ledger-table');
   if (!cont) return;
+  ensureDateView('inventoryLedger', 'inv-ledger-table', inventoryLedger.map(e=>e.date), renderInventoryLedger);
   const filter = document.getElementById('inv-ledger-inv') ? document.getElementById('inv-ledger-inv').value : '';
-  const rows = inventoryLedger.filter(e => !filter || e.invId === filter);
+  const rows = inventoryLedger.filter(e =>
+    (!filter || e.invId === filter) && dateViewMatch('inventoryLedger', e.date)
+  );
   if (!rows.length) { cont.innerHTML = empty('입출고 이력이 없습니다.'); return; }
   const typeColor = { '입고': 'var(--tx-ok)', '출고': 'var(--tx-d)', '조정': 'var(--tx-w)' };
   cont.innerHTML = '<table><thead><tr>' +

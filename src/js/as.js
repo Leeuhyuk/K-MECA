@@ -8,6 +8,7 @@ function updateAsBadge(){
 }
 function renderAS(){
   const body = inp('as-body'); if(!body) return;
+  ensureDateView('asRecords', 'as-body', asList.map(a=>a.recvDate), renderAS);
   const kpi = inp('as-kpi');
   updateAsBadge();
   const fil = (inp('as-filter')?.value)||'';
@@ -17,6 +18,7 @@ function renderAS(){
   const done = asList.filter(a=>a.status==='완료').length;
   const paidCost = asList.reduce((s,a)=>s+(a.warranty==='유상'?(Number(a.cost)||0):0),0);
   const list = asList.filter(a=>{
+    if (!dateViewMatch('asRecords', a.recvDate)) return false;
     if (fil === 'open') { if (!(a.status==='접수'||a.status==='처리중')) return false; }
     else if (fil && a.status!==fil) return false;
     if (q && ![getClientName(a.clientId),a.productName,a.symptom,a.id].join(' ').toLowerCase().includes(q)) return false;

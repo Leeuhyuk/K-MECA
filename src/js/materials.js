@@ -85,8 +85,8 @@ function renderMaterials() {
   if (!rows.length) { cont.innerHTML = empty('자재 발주 내역이 없습니다.'); return; }
   const sColor = {발주전:'var(--tx-t)',발주중:'var(--tx-i)',입고완료:'var(--tx-ok)',지연:'var(--tx-d)'};
   // editField/editType: 인라인 편집 대상 헤더에 부여 (열 순서가 바뀌어도 필드 기준으로 편집)
-  const thSort = (key, label, editField, editType) => {
-    const ef = editField ? ' data-field="'+editField+'" data-type="'+(editType||'text')+'"' : '';
+  const thSort = (key, label) => {
+    const ef = '';
     return '<th onclick="toggleSort(\'materials\',\''+key+'\')" style="cursor:pointer;user-select:none;"'+ef+'>'+label+' '+sortIcon('materials',key)+'</th>';
   };
   cont.innerHTML = '<table style="min-width:1080px;"><thead><tr>' +

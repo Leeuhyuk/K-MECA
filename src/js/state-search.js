@@ -19,12 +19,14 @@ const sortState = {
   po:       { key: null, asc: true },
 };
 
-/* ════════ 공통 날짜 보기 전환 (전체 · 연도 · 월 · 일) ════════ */
+/* ════════ 공통 날짜 보기 전환 (전체 · 연도 · 월 · 일 · 기간) ════════ */
 const dateViewState = (() => {
   try { return JSON.parse(localStorage.getItem('mes_dateViewState') || '{}'); }
   catch(e) { return {}; }
 })();
 const dateViewRenderers = {};
+const dateViewSelectionState = {};
+const dateViewSelectionClearers = {};
 function _dateViewSave() {
   try { localStorage.setItem('mes_dateViewState', JSON.stringify(dateViewState)); } catch(e) {}
 }
@@ -35,57 +37,162 @@ function _dateViewDefault(mode) {
   if (mode === 'day') return t;
   return '';
 }
+function _dateViewRangeDefault() {
+  const end = today();
+  return { from:end.slice(0,7) + '-01', to:end };
+}
+function _dateViewNormalize(value) {
+  const raw = String(value || '').trim();
+  const compact = raw.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if (compact) return compact[1] + '-' + compact[2] + '-' + compact[3];
+  const dashed = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (dashed) return dashed[1] + '-' + dashed[2].padStart(2,'0') + '-' + dashed[3].padStart(2,'0');
+  const dotted = raw.match(/^(\d{4})[./](\d{1,2})[./](\d{1,2})/);
+  if (dotted) return dotted[1] + '-' + dotted[2].padStart(2,'0') + '-' + dotted[3].padStart(2,'0');
+  return '';
+}
 function _dateViewLabel(mode, value) {
   if (mode === 'all') return '전체 기간';
+  if (mode === 'range') return '기간 선택';
   value = value || _dateViewDefault(mode);
   const p = value.split('-');
   if (mode === 'year') return p[0] + '년';
   if (mode === 'month') return p[0] + '년 ' + Number(p[1]) + '월';
   return p[0] + '년 ' + Number(p[1]) + '월 ' + Number(p[2]) + '일';
 }
-function ensureDateView(key, containerId, dates, renderer) {
-  const container = inp(containerId); if (!container || !container.parentNode) return;
-  dateViewRenderers[key] = renderer;
-  const state = dateViewState[key] || (dateViewState[key] = { mode:'all', value:'' });
-  let bar = inp('date-view-' + key);
-  if (!bar) {
-    bar = document.createElement('div');
-    bar.id = 'date-view-' + key;
-    bar.style.cssText = 'display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:0 0 8px;padding:4px 8px;background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rm);';
-    container.parentNode.insertBefore(bar, container);
+function registerDateViewSelectionClearer(key, handler) {
+  if (!key || typeof handler !== 'function') return;
+  const list = dateViewSelectionClearers[key] || (dateViewSelectionClearers[key] = []);
+  if (!list.includes(handler)) list.push(handler);
+}
+function _dateViewSelectionActive(key) {
+  return !!(dateViewSelectionState[key] && dateViewSelectionState[key].html);
+}
+function setDateViewSelectionBar(key, html, active) {
+  if (!key) return false;
+  if (active && html) dateViewSelectionState[key] = { html };
+  else delete dateViewSelectionState[key];
+  const bar = inp('date-view-' + key);
+  if (bar) {
+    _renderDateViewBar(key, bar);
+    return true;
   }
-  const disabled = state.mode === 'all';
+  return false;
+}
+function clearDateViewSelection(key) {
+  if (!key) return;
+  const clearers = dateViewSelectionClearers[key] || [];
+  clearers.forEach(fn => { try { fn(); } catch(e) {} });
+  delete dateViewSelectionState[key];
+  const bar = inp('date-view-' + key);
+  if (bar) _renderDateViewBar(key, bar);
+}
+function _dateViewBeforeChange(key) {
+  if (_dateViewSelectionActive(key)) clearDateViewSelection(key);
+}
+function _renderDateViewBar(key, bar) {
+  if (!bar) return;
+  const selected = dateViewSelectionState[key];
+  if (selected && selected.html) {
+    bar.classList.add('date-view-selected-mode');
+    bar.innerHTML = selected.html;
+    return;
+  }
+  bar.classList.remove('date-view-selected-mode');
+  const state = dateViewState[key] || (dateViewState[key] = { mode:'all', value:'', from:'', to:'' });
+  if (state.mode === 'range' && (!state.from || !state.to)) Object.assign(state, _dateViewRangeDefault());
+  const disabled = state.mode === 'all' || state.mode === 'range';
+  const range = state.mode === 'range';
   bar.innerHTML = `
-    <span style="font-size:11px;font-weight:700;color:var(--tx-s);">날짜 보기</span>
     <select onchange="dateViewModeChange('${key}',this.value)" style="height:28px;min-width:96px;font-size:11px;">
       <option value="all"${state.mode==='all'?' selected':''}>전체</option>
       <option value="year"${state.mode==='year'?' selected':''}>연</option>
       <option value="month"${state.mode==='month'?' selected':''}>월</option>
       <option value="day"${state.mode==='day'?' selected':''}>일</option>
+      <option value="range"${state.mode==='range'?' selected':''}>기간</option>
     </select>
-    <button class="btn btn-sm" style="height:28px;padding:0 9px;" onclick="dateViewMove('${key}',-1)" title="이전" ${disabled?'disabled':''}><i class="ti ti-chevron-left"></i></button>
-    <span style="font-weight:800;min-width:${state.mode==='day'?'135':'115'}px;text-align:center;font-size:13px;">${_dateViewLabel(state.mode,state.value)}</span>
-    <button class="btn btn-sm" style="height:28px;padding:0 9px;" onclick="dateViewMove('${key}',1)" title="다음" ${disabled?'disabled':''}><i class="ti ti-chevron-right"></i></button>
-    <button class="btn btn-sm" style="height:28px;padding:0 10px;" onclick="dateViewToday('${key}')" title="오늘" ${disabled?'disabled':''}>오늘</button>
+    <div class="date-view-period"${range?'':' style="display:none;"'}>
+      <input type="date" value="${state.from||''}" onchange="dateViewRangeChange('${key}','from',this.value)" title="시작일">
+      <span>~</span>
+      <input type="date" value="${state.to||''}" onchange="dateViewRangeChange('${key}','to',this.value)" title="종료일">
+    </div>
+    <button class="btn btn-sm date-view-nav" onclick="dateViewMove('${key}',-1)" title="이전" ${disabled?'disabled':''}><i class="ti ti-chevron-left"></i></button>
+    <span class="date-view-label"${range?' style="display:none;"':''}>${_dateViewLabel(state.mode,state.value)}</span>
+    <button class="btn btn-sm date-view-nav" onclick="dateViewMove('${key}',1)" title="다음" ${disabled?'disabled':''}><i class="ti ti-chevron-right"></i></button>
+    <button class="btn btn-sm date-view-today" onclick="dateViewToday('${key}')" title="오늘" ${disabled?'disabled':''}>오늘</button>
+    <div class="date-view-quick"${range?'':' style="display:none;"'}>
+      <button class="btn btn-sm" onclick="dateViewQuickRange('${key}','7d')">최근 7일</button>
+      <button class="btn btn-sm" onclick="dateViewQuickRange('${key}','month')">이번 달</button>
+      <button class="btn btn-sm" onclick="dateViewQuickRange('${key}','prevMonth')">지난달</button>
+    </div>
     <button class="btn btn-sm" style="height:28px;padding:0 9px;" onclick="dateViewReset('${key}')" title="전체 보기"><i class="ti ti-x"></i></button>`;
 }
+function ensureDateView(key, containerId, dates, renderer) {
+  const container = inp(containerId); if (!container || !container.parentNode) return;
+  dateViewRenderers[key] = renderer;
+  let bar = inp('date-view-' + key);
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'date-view-' + key;
+    bar.className = 'date-view-bar';
+    bar.style.cssText = 'display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:0 0 8px;padding:4px 8px;background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rm);';
+    container.parentNode.insertBefore(bar, container);
+  }
+  _renderDateViewBar(key, bar);
+}
 function dateViewModeChange(key, mode) {
-  dateViewState[key] = { mode, value:_dateViewDefault(mode) };
+  _dateViewBeforeChange(key);
+  const range = _dateViewRangeDefault();
+  dateViewState[key] = { mode, value:_dateViewDefault(mode), from:range.from, to:range.to };
   _dateViewSave();
   if (dateViewRenderers[key]) dateViewRenderers[key]();
 }
 function dateViewValueChange(key, value) {
+  _dateViewBeforeChange(key);
   const state = dateViewState[key] || { mode:'all', value:'' };
   state.value = value; dateViewState[key] = state;
   _dateViewSave();
   if (dateViewRenderers[key]) dateViewRenderers[key]();
 }
+function dateViewRangeChange(key, field, value) {
+  _dateViewBeforeChange(key);
+  const state = dateViewState[key] || { mode:'range', value:'', from:'', to:'' };
+  state.mode = 'range';
+  state[field] = _dateViewNormalize(value);
+  if (state.from && state.to && state.from > state.to) {
+    const swap = state.from; state.from = state.to; state.to = swap;
+  }
+  dateViewState[key] = state;
+  _dateViewSave();
+  if (dateViewRenderers[key]) dateViewRenderers[key]();
+}
+function dateViewQuickRange(key, preset) {
+  _dateViewBeforeChange(key);
+  const now = new Date();
+  let from, to;
+  const fmt = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  if (preset === '7d') {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
+    from = fmt(start); to = fmt(now);
+  } else if (preset === 'prevMonth') {
+    from = fmt(new Date(now.getFullYear(), now.getMonth()-1, 1));
+    to = fmt(new Date(now.getFullYear(), now.getMonth(), 0));
+  } else {
+    from = fmt(new Date(now.getFullYear(), now.getMonth(), 1));
+    to = fmt(now);
+  }
+  dateViewState[key] = { mode:'range', value:'', from, to };
+  _dateViewSave();
+  if (dateViewRenderers[key]) dateViewRenderers[key]();
+}
 function dateViewReset(key) {
-  dateViewState[key] = { mode:'all', value:'' };
+  _dateViewBeforeChange(key);
+  dateViewState[key] = { mode:'all', value:'', from:'', to:'' };
   _dateViewSave();
   if (dateViewRenderers[key]) dateViewRenderers[key]();
 }
 function dateViewMove(key, amount) {
+  _dateViewBeforeChange(key);
   const state = dateViewState[key]; if (!state || state.mode === 'all') return;
   let value = state.value || _dateViewDefault(state.mode);
   if (state.mode === 'year') {
@@ -105,6 +212,7 @@ function dateViewMove(key, amount) {
   if (dateViewRenderers[key]) dateViewRenderers[key]();
 }
 function dateViewToday(key) {
+  _dateViewBeforeChange(key);
   const state = dateViewState[key]; if (!state || state.mode === 'all') return;
   state.value = _dateViewDefault(state.mode);
   _dateViewSave();
@@ -112,8 +220,15 @@ function dateViewToday(key) {
 }
 function dateViewMatch(key, dateValue) {
   const state = dateViewState[key] || { mode:'all', value:'' };
-  if (state.mode === 'all' || !state.value) return true;
-  const d = String(dateValue||'');
+  if (state.mode === 'all') return true;
+  const d = _dateViewNormalize(dateValue);
+  if (!d) return false;
+  if (state.mode === 'range') {
+    const from = _dateViewNormalize(state.from);
+    const to = _dateViewNormalize(state.to);
+    return (!from || d >= from) && (!to || d <= to);
+  }
+  if (!state.value) return true;
   if (state.mode === 'year') return d.slice(0,4) === state.value;
   if (state.mode === 'month') return d.slice(0,7) === state.value;
   if (state.mode === 'day') return d.slice(0,10) === state.value;
@@ -158,20 +273,41 @@ function sortIcon(table, key) {
 // ════════ 통합 글로벌 검색창 기능 ════════
 let globalSearchSelectedIndex = -1;
 
+/* 검색 결과 드롭다운 위치 계산 — 검색창이 사이드바 안에 있어 absolute 로는
+   사이드바 overflow/210px 폭에 잘리므로, 입력창 위치 기준 fixed 로 띄운다.
+   화면 밀도 조절은 좌표계를 바꾸지 않으므로 rect 값을 그대로 사용한다. */
+function positionGlobalSearchResults() {
+  const input = document.getElementById('global-search-input');
+  const resultsDiv = document.getElementById('global-search-results');
+  if (!input || !resultsDiv) return;
+  const r = input.getBoundingClientRect();
+  if (r.width === 0) return; // 검색창이 숨겨진 상태(닫힌 드로어·미니 레일·모바일 홈 검색 등)면 위치 갱신 안 함
+  if (window.matchMedia('(max-width: 680px)').matches) {
+    // 모바일: responsive.css 의 fixed 규칙(!important)이 좌우 폭을 잡고, 상단만 변수로 전달
+    document.documentElement.style.setProperty('--mh-results-top', (r.bottom + 6) + 'px');
+    return;
+  }
+  resultsDiv.style.position = 'fixed';
+  resultsDiv.style.top = (r.bottom + 6) + 'px';
+  resultsDiv.style.left = r.left + 'px';
+  resultsDiv.style.width = Math.min(440, window.innerWidth - r.left - 12) + 'px';
+}
+
 function onGlobalSearch(q) {
   globalSearchSelectedIndex = -1;
   const resultsDiv = document.getElementById('global-search-results');
   const clearBtn = document.getElementById('global-search-clear');
   if (!resultsDiv || !clearBtn) return;
-  
+
   q = q.trim().toLowerCase();
   if (!q) {
     resultsDiv.style.display = 'none';
     clearBtn.style.display = 'none';
     return;
   }
-  
+
   clearBtn.style.display = 'flex';
+  positionGlobalSearchResults();
   resultsDiv.style.display = 'block';
   
   let html = '';
@@ -314,6 +450,49 @@ function onGlobalSearch(q) {
     });
   }
 
+  // 8. 메모
+  const matchingMemos = (typeof memoList !== 'undefined' ? memoList : []).filter(m => {
+    const attachments = (m.attachments || []).map(file => file.name || '').join(' ');
+    return [m.title, m.content, m.summary, m.author, m.owner, (m.tags || []).join(' '), attachments]
+      .join(' ').toLowerCase().includes(q);
+  });
+  if (matchingMemos.length > 0) {
+    html += '<div style="padding:8px 12px; font-size:11px; font-weight:700; color:var(--tx-i); background:rgba(255,255,255,0.02); border-bottom:1px solid var(--br);"><i class="ti ti-notes"></i> 메모 (' + matchingMemos.length + ')</div>';
+    matchingMemos.forEach(m => {
+      matchCount++;
+      const title = m.title || '제목 없는 메모';
+      const preview = String(m.summary || m.content || '').replace(/\s+/g, ' ').trim().slice(0, 90);
+      const tags = (m.tags || []).slice(0, 3).map(tag => '#' + tag).join(' ');
+      const attachmentCount = (m.attachments || []).length;
+      html += `<div class="search-result-item" onclick="navToGlobalSearchResult('memo', '${m.id}')" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--br); transition: background 0.15s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background='transparent'">
+        <div style="font-weight:700; font-size:12px;"><i class="ti ti-notes" style="color:var(--tx-i);margin-right:4px;"></i>${esc(title)}</div>
+        <div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">${esc(preview) || '내용 없음'}</div>
+        <div style="font-size:9.5px; color:var(--tx-t); margin-top:3px;">${esc(tags)}${attachmentCount ? ' · 첨부 '+attachmentCount+'개' : ''}${m.author ? ' · '+esc(m.author) : ''}</div>
+      </div>`;
+    });
+  }
+
+  // 9. 할 일
+  const matchingTodos = (typeof todoList !== 'undefined' ? todoList : []).filter(t => {
+    const checklist = (t.checklist || []).map(entry =>
+      typeof entry === 'string' ? entry : (entry.text || entry.title || '')
+    ).join(' ');
+    return [t.title, t.content, t.owner, t.status, t.priority, checklist]
+      .join(' ').toLowerCase().includes(q);
+  });
+  if (matchingTodos.length > 0) {
+    html += '<div style="padding:8px 12px; font-size:11px; font-weight:700; color:var(--tx-ok); background:rgba(255,255,255,0.02); border-bottom:1px solid var(--br);"><i class="ti ti-list-check"></i> 할 일 (' + matchingTodos.length + ')</div>';
+    matchingTodos.forEach(t => {
+      matchCount++;
+      const preview = String(t.content || '').replace(/\s+/g, ' ').trim().slice(0, 90);
+      html += `<div class="search-result-item" onclick="navToGlobalSearchResult('todo', '${t.id}')" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--br); transition: background 0.15s;" onmouseover="this.style.background='var(--bg-s)'" onmouseout="this.style.background='transparent'">
+        <div style="font-weight:700; font-size:12px;"><i class="ti ti-list-check" style="color:var(--tx-ok);margin-right:4px;"></i>${esc(t.title || '할 일')}</div>
+        ${preview ? `<div style="font-size:10.5px; color:var(--tx-t); margin-top:2px;">${esc(preview)}</div>` : ''}
+        <div style="font-size:9.5px; color:var(--tx-t); margin-top:3px;">${esc(t.status || '대기')} · ${esc(t.owner || '담당자 미지정')}${t.dueDate ? ' · 마감 '+esc(t.dueDate) : ''}</div>
+      </div>`;
+    });
+  }
+
   if (matchCount === 0) {
     html = `<div style="padding:24px 16px; text-align:center; color:var(--tx-t); font-size:12px;">
       <i class="ti ti-search-off" style="font-size:24px; display:block; margin-bottom:8px; opacity:0.4;"></i>
@@ -328,6 +507,7 @@ function onGlobalSearchFocus() {
   const resultsDiv = document.getElementById('global-search-results');
   const input = document.getElementById('global-search-input');
   if (resultsDiv && input && input.value.trim()) {
+    positionGlobalSearchResults();
     resultsDiv.style.display = 'block';
   }
 }
@@ -348,7 +528,7 @@ function toggleGlobalSearchBox() {
   const wrapper = document.querySelector('.global-search-wrapper');
   const input = document.getElementById('global-search-input');
   if (!wrapper || !input) return;
-  if (window.matchMedia('(max-width: 680px)').matches && !wrapper.classList.contains('search-open')) {
+  if (!wrapper.classList.contains('search-open')) {
     wrapper.classList.add('search-open');
     setTimeout(() => input.focus(), 0);
     return;
@@ -359,7 +539,9 @@ function toggleGlobalSearchBox() {
 
 function navToGlobalSearchResult(category, id, parentId) {
   const resultsDiv = document.getElementById('global-search-results');
+  const wrapper = document.querySelector('.global-search-wrapper');
   if (resultsDiv) resultsDiv.style.display = 'none';
+  if (wrapper) wrapper.classList.remove('search-open');
   
   if (category === 'client') {
     go('clients');
@@ -417,6 +599,14 @@ function navToGlobalSearchResult(category, id, parentId) {
     const w = workers.find(x => x.id === id);
     sv('workers-q', w ? w.name : id);
     renderWorkers();
+  } else if (category === 'memo') {
+    go('notes');
+    switchMemoTab('memos');
+    openMemoEditor(id);
+  } else if (category === 'todo') {
+    go('notes');
+    switchMemoTab('todos');
+    openTodoEditor(id);
   }
 }
 
@@ -471,10 +661,14 @@ function highlightGlobalSearchResult(index) {
 // 클릭 외부 시 결과 드롭다운 닫기 이벤트 리스너 등록
 document.addEventListener('click', function(e) {
   const wrapper = document.querySelector('.global-search-wrapper');
-  if (wrapper && !wrapper.contains(e.target)) {
-    const results = document.getElementById('global-search-results');
+  const results = document.getElementById('global-search-results');
+  const mhSearchBox = document.querySelector('.mh-search'); // 모바일 홈 검색창
+  const inSearchUi = (wrapper && wrapper.contains(e.target))
+    || (results && results.contains(e.target))
+    || (mhSearchBox && mhSearchBox.contains(e.target));
+  if (!inSearchUi) {
     if (results) results.style.display = 'none';
-    if (window.matchMedia('(max-width: 680px)').matches) wrapper.classList.remove('search-open');
+    if (wrapper) wrapper.classList.remove('search-open');
   }
 });
 
@@ -501,10 +695,8 @@ let alertSettings = loadStorage('alertSettings', {
 let dismissedAlerts = loadStorage('dismissedAlerts', []);
 let _currentScannedTitles = [];
 
-// 관리자 자격 증명 전역 상태 변수 및 동적 비밀번호 로드
-let isAdmin = loadStorage('isAdmin', false);
-let adminPassword = loadStorage('adminPassword', '1234');
-let pendingAdminCallback = null;
+// 관리자 비밀번호 인증 제거됨 — 클라우드 로그인(추후 구글 로그인 연동)이 인증 담당. 항상 허용.
+let isAdmin = true;
 
 // 드래그 앤 드롭 글로벌 변수
 let draggedClientId = null;

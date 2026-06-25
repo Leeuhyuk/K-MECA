@@ -79,7 +79,7 @@ function renderMobileHome() {
 
     <div class="mh-search">
       <i class="ti ti-search mh-s-ico"></i>
-      <input type="text" id="mh-search-input" placeholder="통합 검색 (제품·고객사·자재·재고·직원…)"
+      <input type="text" id="mh-search-input" placeholder="통합 검색 (제품·직원·메모·할 일…)"
              autocomplete="off" oninput="mhSearch(this.value)" onkeydown="mhSearchKeyDown(event)">
       <i class="ti ti-x mh-s-clear" id="mh-search-clear" onclick="mhSearchClear()"></i>
     </div>

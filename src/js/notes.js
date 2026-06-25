@@ -4,7 +4,36 @@ let _memoAiResult = null;
 let _memoAttachments = [];
 let _todoChecklist = [];
 let _weeklyReportDraft = null;
+let _memoSelected = new Set();
 let _todoSelected = new Set();
+let _notesDateClearerRegistered = false;
+let _notesLastViewKey = '';
+
+function ensureNotesDateSelectionClearer() {
+  if (_notesDateClearerRegistered || typeof registerDateViewSelectionClearer !== 'function') return;
+  _notesDateClearerRegistered = true;
+  registerDateViewSelectionClearer('notes', function() {
+    _memoSelected.clear();
+    _todoSelected.clear();
+  });
+}
+function setNotesSelectionBar(html, active) {
+  if (typeof setDateViewSelectionBar === 'function') setDateViewSelectionBar('notes', html, active);
+}
+function memoSelectionBarHtml(count) {
+  return '<span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ' + count + '건 선택됨</span>' +
+    '<button class="btn btn-sm" onclick="editSelectedMemo()" ' + (count === 1 ? '' : 'style="display:none;"') + '><i class="ti ti-edit"></i>수정</button>' +
+    '<button class="btn btn-sm" onclick="markSelectedMemosImportant(true)"><i class="ti ti-star"></i>중요</button>' +
+    '<button class="btn btn-sm" onclick="moveSelectedMemosToTodos()"><i class="ti ti-arrow-right"></i>할 일로 이동</button>' +
+    '<button class="btn btn-sm btn-danger" onclick="deleteSelectedMemos()"><i class="ti ti-trash"></i>삭제</button>' +
+    '<button class="btn btn-sm date-view-clear-selection" onclick="clearMemoSelection()"><i class="ti ti-x"></i>해제</button>';
+}
+function todoSelectionBarHtml(count) {
+  return '<span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ' + count + '건 선택됨</span>' +
+    '<button class="btn btn-sm" onclick="editSelectedTodo()" ' + (count === 1 ? '' : 'style="display:none;"') + '><i class="ti ti-edit"></i>수정</button>' +
+    '<button class="btn btn-sm btn-danger" onclick="deleteSelectedTodos()"><i class="ti ti-trash"></i>삭제</button>' +
+    '<button class="btn btn-sm date-view-clear-selection" onclick="clearTodoSelection()"><i class="ti ti-x"></i>해제</button>';
+}
 
 function _memoEsc(value) {
   return String(value == null ? '' : value)
@@ -19,9 +48,25 @@ function _memoAuthor() {
 function _memoTags(value) {
   return String(value || '').split(',').map(function(x) { return x.trim(); }).filter(Boolean);
 }
+function _memoAutoTitle(content, summary) {
+  var source = String(content || '').trim() || String(summary || '').trim();
+  if (!source) return '제목 없는 메모';
+  var line = source.split(/\r?\n/).map(function(value) { return value.trim(); }).find(Boolean) || source;
+  line = line
+    .replace(/^#{1,6}\s*/, '')
+    .replace(/^[-*+]\s+/, '')
+    .replace(/^\d+[.)]\s+/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  var sentence = line.match(/^(.{1,80}?)(?:[.!?。]|$)/);
+  var title = (sentence && sentence[1] ? sentence[1] : line).trim();
+  if (title.length > 60) title = title.slice(0, 60).trim() + '…';
+  return title || '제목 없는 메모';
+}
 
 function switchMemoTab(tab) {
   memoTab = tab || 'memos';
+  syncCurrentSubRoute('notes', memoTab);
   document.querySelectorAll('[data-memotab]').forEach(function(btn) {
     btn.classList.toggle('btn-primary', btn.dataset.memotab === memoTab);
   });
@@ -39,6 +84,20 @@ function updateTodoBadge() {
 function renderNotes() {
   var content = inp('memo-content');
   if (!content) return;
+  ensureNotesDateSelectionClearer();
+  var viewKey = [memoTab, v('memo-search'), v('memo-filter')].join('|');
+  if (_notesLastViewKey && _notesLastViewKey !== viewKey) {
+    _memoSelected.clear();
+    _todoSelected.clear();
+    setNotesSelectionBar('', false);
+  }
+  _notesLastViewKey = viewKey;
+  var noteDates = memoTab === 'memos'
+    ? memoList.map(function(m) { return m.updatedAt || m.createdAt; })
+    : todoList.map(function(t) { return t.dueDate || t.startDate || t.createdAt; });
+  ensureDateView('notes', 'memo-content', noteDates, renderNotes);
+  var dateBar = inp('date-view-notes');
+  if (dateBar) dateBar.style.display = memoTab === 'report' ? 'none' : 'flex';
   updateTodoBadge();
   scanTodoReminders();
   renderMemoKpi();
@@ -46,8 +105,8 @@ function renderNotes() {
     btn.classList.toggle('btn-primary', btn.dataset.memotab === memoTab);
   });
   if (memoTab === 'todos') renderTodoList();
-  else if (memoTab === 'board') renderTodoBoard();
-  else if (memoTab === 'report') renderWeeklyReportPanel();
+  else if (memoTab === 'board') { setNotesSelectionBar('', false); renderTodoBoard(); }
+  else if (memoTab === 'report') { setNotesSelectionBar('', false); renderWeeklyReportPanel(); }
   else renderMemoCards();
 }
 
@@ -65,7 +124,11 @@ function renderMemoKpi() {
 }
 
 function _memoQueryMatch(item, q) {
-  return !q || [item.title, item.content, item.owner, (item.tags || []).join(' '), item.summary]
+  var attachmentNames = (item.attachments || []).map(function(file) { return file.name || ''; }).join(' ');
+  var checklist = (item.checklist || []).map(function(entry) {
+    return typeof entry === 'string' ? entry : (entry.text || entry.title || '');
+  }).join(' ');
+  return !q || [item.title, item.content, item.owner, item.author, (item.tags || []).join(' '), item.summary, attachmentNames, checklist]
     .join(' ').toLowerCase().includes(q);
 }
 
@@ -74,24 +137,31 @@ function renderMemoCards() {
   var filter = v('memo-filter');
   var list = memoList.filter(function(m) {
     if (!_memoQueryMatch(m, q)) return false;
+    if (!dateViewMatch('notes', m.updatedAt || m.createdAt)) return false;
     return filter !== 'important' || m.important;
   }).sort(function(a, b) {
     return Number(!!b.important) - Number(!!a.important) || String(b.updatedAt).localeCompare(String(a.updatedAt));
   });
   var content = inp('memo-content');
   if (!list.length) {
+    _memoSelected.clear();
+    setNotesSelectionBar('', false);
     content.innerHTML = '<div class="card"><div class="empty"><i class="ti ti-notes"></i>등록된 메모가 없습니다.</div></div>';
     return;
   }
+  var validIds = new Set(memoList.map(function(m) { return m.id; }));
+  _memoSelected.forEach(function(id) { if (!validIds.has(id)) _memoSelected.delete(id); });
+  setNotesSelectionBar(memoSelectionBarHtml(_memoSelected.size), _memoSelected.size > 0);
   content.innerHTML = '<div class="memo-grid">' + list.map(function(m) {
     var tags = (m.tags || []).map(function(tag) { return '<span class="memo-tag">#' + _memoEsc(tag) + '</span>'; }).join('');
     var linked = m.entityType ? '<span><i class="ti ti-link"></i>' + _memoEsc(m.entityType + ' ' + (m.entityId || '')) + '</span>' : '';
     var attachmentCount = (m.attachments || []).length;
-    return '<div class="memo-card">' +
-      '<div style="display:flex;align-items:center;gap:8px;"><div class="memo-card-title" style="flex:1;">' +
-      (m.important ? '<i class="ti ti-pin" style="color:var(--tx-w);"></i> ' : '') + _memoEsc(m.title) + '</div>' +
-      '<button class="btn btn-sm btn-icon" onclick="openMemoEditor(\'' + m.id + '\')" title="수정"><i class="ti ti-edit"></i></button>' +
-      '<button class="btn btn-sm btn-icon" onclick="deleteMemo(\'' + m.id + '\')" title="삭제"><i class="ti ti-trash"></i></button></div>' +
+    var selected = _memoSelected.has(m.id);
+    return '<div class="memo-card ' + (selected ? 'memo-selected' : '') + '" onclick="onMemoCardClick(event,\'' + m.id + '\')">' +
+      '<div class="memo-card-head"><input type="checkbox" class="memo-select" ' + (selected ? 'checked ' : '') +
+      'onclick="event.stopPropagation()" onchange="toggleMemoSelection(\'' + m.id + '\',this.checked)">' +
+      '<div class="memo-card-title" style="flex:1;">' + _memoEsc(m.title) + '</div>' +
+      '<button class="memo-star ' + (m.important ? 'active' : '') + '" onclick="toggleMemoImportant(event,\'' + m.id + '\')" title="중요 표시"><i class="ti ' + (m.important ? 'ti-star-filled' : 'ti-star') + '"></i></button></div>' +
       '<div class="memo-card-body">' + _memoEsc(m.content) + '</div>' +
       (m.summary ? '<div style="font-size:11px;padding:8px;border-left:3px solid var(--tx-i);background:var(--bg-i);margin-bottom:9px;"><b>AI 요약</b><br>' + _memoEsc(m.summary) + '</div>' : '') +
       '<div class="memo-meta">' + tags + linked +
@@ -106,11 +176,110 @@ function _filteredTodos() {
   var filter = v('memo-filter');
   return todoList.filter(function(t) {
     if (!_memoQueryMatch(t, q)) return false;
+    if (!dateViewMatch('notes', t.dueDate || t.startDate || t.createdAt)) return false;
     if (filter === 'important') return t.priority === '긴급' || t.priority === '높음';
     if (filter === 'overdue') return t.status !== '완료' && t.dueDate && t.dueDate < today();
     if (filter === 'today') return t.status !== '완료' && t.dueDate === today();
     return true;
   });
+}
+
+function onMemoCardClick(event, id) {
+  if (event.target.closest('button,input,select,textarea,a')) return;
+  toggleMemoSelection(id, !_memoSelected.has(id));
+}
+
+function toggleMemoSelection(id, checked) {
+  if (checked) _memoSelected.add(id);
+  else _memoSelected.delete(id);
+  renderMemoCards();
+}
+
+function clearMemoSelection() {
+  _memoSelected.clear();
+  renderMemoCards();
+}
+
+function editSelectedMemo() {
+  var ids = Array.from(_memoSelected);
+  if (ids.length !== 1) return;
+  openMemoEditor(ids[0]);
+}
+
+function markSelectedMemosImportant(on) {
+  var ids = Array.from(_memoSelected);
+  if (!ids.length) return;
+  memoList.forEach(function(memo) {
+    if (ids.includes(memo.id)) {
+      memo.important = !!on;
+      memo.updatedAt = _memoNow();
+    }
+  });
+  saveStorage('memoList', memoList);
+  renderNotes();
+  showToast(ids.length + '개의 메모를 중요 표시했습니다.', 'success');
+}
+
+function toggleMemoImportant(event, id) {
+  event.stopPropagation();
+  var memo = memoList.find(function(m) { return m.id === id; });
+  if (!memo) return;
+  memo.important = !memo.important;
+  memo.updatedAt = _memoNow();
+  saveStorage('memoList', memoList);
+  renderNotes();
+}
+
+function deleteSelectedMemos() {
+  var ids = Array.from(_memoSelected);
+  if (!ids.length) return;
+  confirm_('메모 일괄 삭제', ids.length + '개의 메모를 삭제하시겠습니까? 연결된 할 일은 유지됩니다.', function() {
+    memoList.filter(function(memo) { return ids.includes(memo.id); }).forEach(function(memo) {
+      (memo.attachments || []).forEach(function(a) { delete memoAttachmentData[a.id]; });
+    });
+    memoList = memoList.filter(function(memo) { return !ids.includes(memo.id); });
+    _memoSelected.clear();
+    saveStorage('memoAttachmentData', memoAttachmentData);
+    saveStorage('memoList', memoList);
+    renderNotes();
+    showToast(ids.length + '개의 메모를 삭제했습니다.', 'success');
+  });
+}
+
+function moveSelectedMemosToTodos() {
+  var ids = Array.from(_memoSelected);
+  if (!ids.length) return;
+  confirm_('할 일로 이동', ids.length + '개의 메모를 할 일로 이동하시겠습니까? 원본 메모는 삭제됩니다.', function() {
+    var moved = 0;
+    memoList.filter(function(memo) { return ids.includes(memo.id); }).forEach(function(memo) {
+      todoList.unshift({
+        id: nextCode('TODO', todoList),
+        title: memo.title || _memoAutoTitle(memo.content, memo.summary),
+        content: memo.content || '',
+        owner: memo.author || '',
+        dueDate: '',
+        startDate: today(),
+        reminderDate: '',
+        status: '대기',
+        priority: memo.important ? '높음' : '보통',
+        memoId: '',
+        checklist: [],
+        createdAt: _memoNow(),
+        updatedAt: _memoNow(),
+        author: _memoAuthor()
+      });
+      (memo.attachments || []).forEach(function(a) { delete memoAttachmentData[a.id]; });
+      moved++;
+    });
+    memoList = memoList.filter(function(memo) { return !ids.includes(memo.id); });
+    _memoSelected.clear();
+    saveStorage('memoAttachmentData', memoAttachmentData);
+    saveStorage('memoList', memoList);
+    saveStorage('todoList', todoList);
+    memoTab = 'todos';
+    renderNotes();
+    showToast(moved + '개의 메모를 할 일로 이동했습니다.', 'success');
+  }, 'btn-primary', 'ti-arrow-right');
 }
 
 function renderTodoList() {
@@ -121,33 +290,31 @@ function renderTodoList() {
   _todoSelected.forEach(function(id) { if (!validIds.has(id)) _todoSelected.delete(id); });
   var content = inp('memo-content');
   if (!list.length) {
+    _todoSelected.clear();
+    setNotesSelectionBar('', false);
     content.innerHTML = '<div class="card"><div class="empty"><i class="ti ti-list-check"></i>등록된 할 일이 없습니다.</div></div>';
     return;
   }
   var visibleSelected = list.filter(function(t) { return _todoSelected.has(t.id); }).length;
   var allVisibleSelected = list.length > 0 && visibleSelected === list.length;
-  var bulkBar = '<div id="todo-bulkbar" style="display:' + (_todoSelected.size ? 'flex' : 'none') +
-    ';align-items:center;gap:14px;margin:0 0 12px;padding:12px 18px;border-radius:9px;flex-wrap:wrap;">' +
-    '<span style="font-weight:700;font-size:13px;color:#85bceb;"><i class="ti ti-checkbox"></i> ' +
-    _todoSelected.size + '건 선택됨</span>' +
-    '<button class="btn btn-sm btn-danger" onclick="deleteSelectedTodos()"><i class="ti ti-trash"></i>선택 삭제</button></div>';
-  content.innerHTML = bulkBar + '<div class="card" style="overflow-x:auto;"><table style="min-width:900px;"><thead><tr>' +
+  setNotesSelectionBar(todoSelectionBarHtml(_todoSelected.size), _todoSelected.size > 0);
+  content.innerHTML = '<div class="card" style="overflow-x:auto;"><table style="min-width:900px;"><thead><tr>' +
     '<th style="width:34px;text-align:center;"><input type="checkbox" id="todo-check-all" title="현재 목록 전체 선택" ' +
     (allVisibleSelected ? 'checked ' : '') + (visibleSelected && !allVisibleSelected ? 'data-indeterminate="1" ' : '') +
     'onchange="toggleAllVisibleTodos(this.checked)"></th>' +
-    '<th>할 일</th><th>담당자</th><th>마감일</th><th>우선순위</th><th>상태</th><th style="width:82px;text-align:center;">관리</th></tr></thead><tbody>' +
+    '<th>할 일</th><th>담당자</th><th>마감일</th><th>우선순위</th><th>상태</th></tr></thead><tbody>' +
     list.map(function(t) {
       var late = t.status !== '완료' && t.dueDate && t.dueDate < today();
       var selected = _todoSelected.has(t.id);
-      return '<tr class="' + (selected ? 'todo-row-selected' : '') + '">' +
+      return '<tr class="' + (selected ? 'todo-row-selected' : '') + '" onclick="onTodoRowClick(event,\'' + t.id + '\')">' +
         '<td style="text-align:center;"><input type="checkbox" class="todo-select" ' + (selected ? 'checked ' : '') +
-        'onchange="toggleTodoSelection(\'' + t.id + '\',this.checked)"></td>' +
+        'onclick="event.stopPropagation()" onchange="toggleTodoSelection(\'' + t.id + '\',this.checked)"></td>' +
         '<td><b style="' + (t.status === '완료' ? 'text-decoration:line-through;color:var(--tx-t);' : '') + '">' + _memoEsc(t.title) + '</b>' +
         (t.content ? '<div style="font-size:10.5px;color:var(--tx-t);margin-top:3px;">' + _memoEsc(t.content) + '</div>' : '') + '</td>' +
         '<td>' + _memoEsc(t.owner || '미지정') + '</td><td style="color:' + (late ? 'var(--tx-d)' : 'inherit') + ';">' + _memoEsc(t.dueDate || '미설정') + '</td>' +
-        '<td>' + _memoEsc(t.priority || '보통') + '</td><td><select onchange="setTodoStatus(\'' + t.id + '\',this.value)" style="height:27px;">' +
+        '<td>' + _memoEsc(t.priority || '보통') + '</td><td><select onclick="event.stopPropagation()" onchange="setTodoStatus(\'' + t.id + '\',this.value)" style="height:27px;">' +
         ['대기','진행중','완료'].map(function(s) { return '<option' + (s === t.status ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select></td>' +
-        '<td style="text-align:center;"><button class="btn btn-sm" onclick="openTodoEditor(\'' + t.id + '\')" title="수정"><i class="ti ti-edit"></i>수정</button></td></tr>';
+        '</tr>';
     }).join('') + '</tbody></table></div>';
   var selectAll = content.querySelector('thead input[type=checkbox]');
   if (selectAll) selectAll.indeterminate = visibleSelected > 0 && !allVisibleSelected;
@@ -157,6 +324,17 @@ function toggleTodoSelection(id, checked) {
   if (checked) _todoSelected.add(id);
   else _todoSelected.delete(id);
   renderTodoList();
+}
+
+function onTodoRowClick(event, id) {
+  if (event.target.closest('button,input,select,textarea,a')) return;
+  toggleTodoSelection(id, !_todoSelected.has(id));
+}
+
+function editSelectedTodo() {
+  var ids = Array.from(_todoSelected);
+  if (ids.length !== 1) return;
+  openTodoEditor(ids[0]);
 }
 
 function toggleAllVisibleTodos(checked) {
@@ -221,7 +399,9 @@ function saveMemo(closeAfter) {
   if (closeAfter === undefined) closeAfter = true;
   var title = v('memo-title').trim();
   var content = v('memo-content-input').trim();
-  if (!title || !content) { showToast('제목과 내용을 입력하세요.', 'error'); return ''; }
+  if (!content) { showToast('메모 내용을 입력하세요.', 'error'); return ''; }
+  var autoTitle = !title;
+  title = title || _memoAutoTitle(content, _memoAiResult && _memoAiResult.summary);
   var id = v('memo-id');
   var memo = memoList.find(function(m) { return m.id === id; });
   if (!memo) {
@@ -237,6 +417,7 @@ function saveMemo(closeAfter) {
     memo.history = memo.history.slice(0, 20);
   }
   memo.title = title;
+  memo.autoTitle = autoTitle;
   memo.content = content;
   memo.tags = _memoTags(v('memo-tags'));
   memo.entityType = v('memo-entity');
@@ -244,7 +425,10 @@ function saveMemo(closeAfter) {
   memo.important = inp('memo-important').checked;
   memo.attachments = _memoAttachments.map(function(a) {
     if (a.dataUrl) memoAttachmentData[a.id] = a.dataUrl;
-    return { id:a.id, name:a.name, type:a.type, size:a.size };
+    return {
+      id:a.id, name:a.name, type:a.type, size:a.size,
+      driveFileId:a.driveFileId || '', driveUrl:a.driveUrl || ''
+    };
   });
   saveStorage('memoAttachmentData', memoAttachmentData);
   memo.updatedAt = _memoNow();
@@ -253,10 +437,16 @@ function saveMemo(closeAfter) {
     memo.summary = _memoAiResult.summary || '';
   }
   saveStorage('memoList', memoList);
+  if (_memoAttachments.some(function(a) { return !a.driveFileId && (a.dataUrl || memoAttachmentData[a.id]); }) &&
+      typeof autoUploadMemoAttachmentsToGoogleDrive === 'function') {
+    autoUploadMemoAttachmentsToGoogleDrive(memo.id, _memoAttachments.map(function(a) {
+      return Object.assign({}, a);
+    }));
+  }
   if (closeAfter) {
     closeModal('memo-editor');
     renderNotes();
-    showToast('메모가 저장되었습니다.', 'success');
+    showToast('메모가 저장되었습니다. 첨부파일은 Drive에 자동 저장됩니다.', 'success');
   }
   return memo.id;
 }
@@ -456,74 +646,6 @@ function addAiTodos() {
   showToast(created ? created + '개의 할 일이 등록되었습니다.' : '이미 등록된 할 일입니다.', created ? 'success' : 'info');
 }
 
-function addMemoApiSamples() {
-  var existing = new Set(memoList.filter(function(m) { return m.sampleKey; }).map(function(m) { return m.sampleKey; }));
-  var samples = [
-    {
-      sampleKey:'api-meeting',
-      title:'[API 테스트] 신제품 제작 회의록',
-      content:'오늘 신제품 내구성 시험기 제작 회의를 진행했다. 프레임 도면은 김대리가 6월 12일까지 수정하고, 구매팀은 감속기와 LM가이드 견적을 6월 13일까지 받아야 한다. 전장 부품 수급이 늦어질 가능성이 있어 납기 위험을 확인해야 한다. 조립 시작 목표일은 6월 17일이며 고객사 중간 점검은 6월 20일로 예정되어 있다.',
-      tags:['API 테스트','회의록','신제품'],
-      important:true
-    },
-    {
-      sampleKey:'api-purchase',
-      title:'[API 테스트] 자재 구매 및 납기 확인',
-      content:'프로파일은 예주산업에 발주 완료했고 6월 14일 입고 예정이다. 감속기는 기존 견적보다 단가가 8% 상승하여 대체 공급처 검토가 필요하다. 베어링은 재고 2개를 우선 사용하고 부족한 4개를 추가 발주한다. 모든 자재의 확정 납기를 금요일 오전까지 생산팀에 공유한다.',
-      tags:['API 테스트','구매','납기'],
-      important:false
-    },
-    {
-      sampleKey:'api-as',
-      title:'[API 테스트] 고객 A/S 접수 내용',
-      content:'고객사에서 장비 작동 중 반복 소음과 위치 오차가 발생한다고 연락했다. 우선 원격으로 센서 영점과 체결 상태를 확인하고 해결되지 않으면 6월 15일 현장 방문한다. 담당자는 박지호이며 보증 기간 내 접수 건이다. 방문 전 교체용 베어링과 센서를 준비해야 한다.',
-      tags:['API 테스트','A/S','고객'],
-      important:true
-    },
-    {
-      sampleKey:'api-risk',
-      title:'[API 테스트] 생산 지연 위험 보고',
-      content:'현재 제작 진행률은 65%이다. 레이저 가공품 입고가 이틀 지연되었고 배선 작업 담당자가 다른 긴급 프로젝트를 지원 중이다. 계획 납기일을 맞추려면 조립 인원을 한 명 추가 배치하고 검사 일정을 하루 앞당겨야 한다. 고객에게는 현재 상황과 회복 계획을 내일까지 안내한다.',
-      tags:['API 테스트','생산','위험'],
-      important:true
-    }
-  ];
-  var added = 0;
-  samples.forEach(function(sample) {
-    if (existing.has(sample.sampleKey)) return;
-    memoList.unshift({
-      id:nextCode('MEM', memoList), sampleKey:sample.sampleKey,
-      title:sample.title, content:sample.content, tags:sample.tags,
-      important:sample.important, entityType:'', entityId:'',
-      attachments:[], history:[], author:'API 테스트',
-      createdAt:_memoNow(), updatedAt:_memoNow()
-    });
-    added++;
-  });
-  saveStorage('memoList', memoList);
-  memoTab = 'memos';
-  sv('memo-search', 'API 테스트');
-  renderNotes();
-  showToast(added ? added + '개의 API 테스트 예문을 추가했습니다.' : '테스트 예문이 이미 등록되어 있습니다.', added ? 'success' : 'info');
-}
-
-function removeMemoApiSamples() {
-  var count = memoList.filter(function(m) { return !!m.sampleKey; }).length;
-  if (!count) { showToast('정리할 API 테스트 예문이 없습니다.', 'info'); return; }
-  confirm_('API 테스트 예문 정리', count + '개의 테스트 메모와 연결된 테스트 할 일을 삭제하시겠습니까?', function() {
-    var ids = new Set(memoList.filter(function(m) { return !!m.sampleKey; }).map(function(m) { return m.id; }));
-    memoList = memoList.filter(function(m) { return !m.sampleKey; });
-    todoList = todoList.filter(function(t) {
-      return !ids.has(t.memoId) && t.author !== 'API 테스트';
-    });
-    saveStorage('memoList', memoList);
-    saveStorage('todoList', todoList);
-    sv('memo-search', '');
-    renderNotes();
-    showToast('API 테스트 예문을 정리했습니다.', 'success');
-  }, 'btn-danger', 'ti-eraser');
-}
-
 function fillMemoEntityOptions() {
   var type = v('memo-entity');
   var list = [];
@@ -570,7 +692,8 @@ function renderMemoAttachments() {
   box.innerHTML = _memoAttachments.map(function(a) {
     return '<span class="memo-tag"><button type="button" onclick="downloadMemoAttachment(\'' + a.id +
       '\')" style="border:0;background:none;color:inherit;cursor:pointer;padding:0;"><i class="ti ti-paperclip"></i>' +
-      _memoEsc(a.name) + '</button> <button type="button" onclick="removeMemoAttachment(\'' + a.id +
+      _memoEsc(a.name) + (a.driveFileId ? ' <i class="ti ti-brand-google-drive" title="Google Drive 저장됨"></i>' : '') +
+      '</button> <button type="button" onclick="removeMemoAttachment(\'' + a.id +
       '\')" style="border:0;background:none;color:var(--tx-d);cursor:pointer;">×</button></span>';
   }).join('');
 }
@@ -582,7 +705,7 @@ function removeMemoAttachment(id) {
   renderMemoAttachments();
 }
 
-function downloadMemoAttachment(id) {
+async function downloadMemoAttachment(id) {
   var pending = _memoAttachments.find(function(a) { return a.id === id; });
   var saved = null;
   memoList.some(function(m) {
@@ -590,7 +713,16 @@ function downloadMemoAttachment(id) {
     return !!saved;
   });
   var dataUrl = memoAttachmentData[id] || (pending && pending.dataUrl);
-  if (!dataUrl) { showToast('이 첨부파일은 현재 기기에 저장되어 있지 않습니다.', 'error'); return; }
+  if (!dataUrl) {
+    var driveAttachment = pending || saved;
+    if (driveAttachment && driveAttachment.driveFileId && typeof downloadMemoAttachmentFromDrive === 'function') {
+      try { await downloadMemoAttachmentFromDrive(driveAttachment); }
+      catch (error) { showToast(error.message || 'Drive 첨부파일을 내려받지 못했습니다.', 'error'); }
+      return;
+    }
+    showToast('이 첨부파일은 현재 기기 또는 Drive에 저장되어 있지 않습니다.', 'error');
+    return;
+  }
   var link = document.createElement('a');
   link.href = dataUrl;
   link.download = (pending && pending.name) || (saved && saved.name) || 'attachment';

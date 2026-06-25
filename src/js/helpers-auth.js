@@ -116,13 +116,36 @@ function getProductById(id) { return products.find(p => p.id === id); }
 function getProductName(id) { return getProductById(id)?.name || id; }
 function getMatAmt(m) { return m.unitPrice * m.qty; }
 
+function normalizeTimeValue(value, fallback='') {
+  const raw = String(value == null ? '' : value).trim();
+  if (!raw) return fallback;
+  let hour, minute;
+  if (/^\d{1,2}$/.test(raw)) {
+    hour = Number(raw);
+    minute = 0;
+  } else if (/^\d{3,4}$/.test(raw)) {
+    const padded = raw.padStart(4, '0');
+    hour = Number(padded.slice(0, 2));
+    minute = Number(padded.slice(2));
+  } else {
+    const match = raw.match(/^(\d{1,2}):(\d{1,2})$/);
+    if (!match) return fallback || raw;
+    hour = Number(match[1]);
+    minute = Number(match[2]);
+  }
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return fallback || raw;
+  return String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+}
+
 function statusBadge(s) {
   const m = {
     '생산중': 'bd-info', '진행중': 'bd-info', '발주': 'bd-info', '접수': 'bd-info', '처리중': 'bd-info',
     '완료': 'bd-ok', '입고완료': 'bd-ok', '합격': 'bd-ok', '근무중': 'bd-ok',
     '자재준비': 'bd-warn', '대기': 'bd-neu', '발주전': 'bd-neu', '견적': 'bd-neu', '설계중': 'bd-neu',
     '조치중': 'bd-warn', '지연': 'bd-err', '납기지연': 'bd-err', '결근': 'bd-err', '불합격': 'bd-err',
-    '조건부합격': 'bd-warn', '정비지원': 'bd-warn', '휴가': 'bd-neu', '보류': 'bd-neu'
+    '조건부합격': 'bd-warn', '정비지원': 'bd-warn', '휴가': 'bd-neu', '반차': 'bd-neu', '보류': 'bd-neu',
+    '정상': 'bd-ok', '외근': 'bd-info', '연장근무': 'bd-info', '휴일근무': 'bd-info',
+    '지각': 'bd-warn', '조퇴': 'bd-warn'
   };
   return `<span class="bd ${m[s] || 'bd-neu'}">${esc(s)}</span>`;
 }
@@ -149,110 +172,16 @@ const STAGE_COLORS = {
 };
 function stageColor(s) { return STAGE_COLORS[s] || '#868e96'; }
 
-/* ════════ 관리자 권한 제어 코어 프로세스 ════════ */
-function promptAdmin(callback = null) {
-  pendingAdminCallback = callback;
-  sv('adminPasswordInput', '');
-  inp('adminAuthError').style.display = 'none';
-  inp('adminAuthModal').classList.add('open');
-  setTimeout(() => inp('adminPasswordInput')?.focus(), 150);
-}
-
-function closeAdminAuth() {
-  inp('adminAuthModal').classList.remove('open');
-  pendingAdminCallback = null;
-}
-
-function verifyAdminPassword() {
-  const pw = v('adminPasswordInput');
-  if (pw === adminPassword) {
-    isAdmin = true;
-    saveStorage('isAdmin', true);
-    showToast('관리자 인증에 성공하였습니다.', 'success');
-    closeAdminAuth();
-    updateAdminUI();
-    if (pendingAdminCallback) {
-      const cb = pendingAdminCallback;
-      pendingAdminCallback = null;
-      cb();
-    }
-  } else {
-    inp('adminAuthError').style.display = 'block';
-    inp('adminPasswordInput').focus();
-    showToast('비밀번호가 올바르지 않습니다.', 'error');
-  }
-}
-
-function lockAdmin() {
-  isAdmin = false;
-  saveStorage('isAdmin', false);
-  showToast('관리자 모드가 해제(잠금)되었습니다.', 'info');
-  updateAdminUI();
-}
-
-// 관리자 비밀번호 변경 처리
-function openAdminPasswordChange() {
-  sv('currentPasswordInput', '');
-  sv('newPasswordInput', '');
-  sv('newPasswordConfirmInput', '');
-  inp('adminPasswordChangeModal').classList.add('open');
-  setTimeout(() => inp('currentPasswordInput')?.focus(), 150);
-}
-
-function closeAdminPasswordChange() {
-  inp('adminPasswordChangeModal').classList.remove('open');
-}
-
-function submitAdminPasswordChange() {
-  const currentPw = v('currentPasswordInput');
-  const newPw = v('newPasswordInput').trim();
-  const confirmPw = v('newPasswordConfirmInput').trim();
-
-  if (currentPw !== adminPassword) {
-    showToast('현재 비밀번호가 일치하지 않습니다.', 'error');
-    return;
-  }
-  if (!newPw) {
-    showToast('새 비밀번호를 입력해주세요.', 'error');
-    return;
-  }
-  if (newPw !== confirmPw) {
-    showToast('새 비밀번호와 확인용 비밀번호가 일치하지 않습니다.', 'error');
-    return;
-  }
-
-  adminPassword = newPw;
-  saveStorage('adminPassword', adminPassword);
-  showToast('관리자 비밀번호가 성공적으로 업데이트되었습니다.', 'success');
-  closeAdminPasswordChange();
-}
-
+/* ════════ 권한 제어 ════════
+   관리자 비밀번호 인증 기능 제거됨 — 클라우드 로그인(추후 구글 로그인 연동)이 인증 담당.
+   세부 권한은 역할 기반(RBAC)으로 관리. */
 function updateAdminUI() {
-  const topbarRight = inp('topbar-admin-area');
-  if (topbarRight) {
-    if (_cloudActive) {   // 클라우드 로그인 시: 역할 텍스트 숨기고 로그아웃 버튼만 상단에 표시
-      topbarRight.innerHTML = `<button class="btn btn-sm btn-danger" onclick="cloudLogout()" title="로그아웃" style="height:26px;padding:0 8px;"><i class="ti ti-logout"></i> 로그아웃</button>`;
-    } else if (isAdmin) {
-      topbarRight.innerHTML = `
-        <span class="pill pill-ok" style="border-radius: 6px;"><i class="ti ti-lock-open"></i> 관리자</span>
-        <button class="btn btn-sm" onclick="openAdminPasswordChange()" title="비밀번호 변경" style="height: 26px; padding: 0 8px; margin-right: 4px;"><i class="ti ti-key"></i> 변경</button>
-        <button class="btn btn-sm btn-danger" onclick="lockAdmin()" title="관리자 권한 잠금" style="height: 26px; padding: 0 8px;"><i class="ti ti-lock"></i> 잠금</button>
-      `;
-    } else {
-      topbarRight.innerHTML = `
-        <button class="btn btn-sm btn-primary" onclick="promptAdmin()" title="관리자 모드 활성화" style="height: 26px; padding: 0 8px;"><i class="ti ti-shield-lock"></i> 관리자 인증</button>
-      `;
-    }
-  }
+  const logoutItem = inp('topbar-logout-item');
+  if (logoutItem) logoutItem.style.display = _cloudActive ? 'flex' : 'none';
   refreshPage(currentPage);
 }
 
 function checkAdminAction(fn = null) {
-  if (_cloudActive) { if (fn) fn(); return true; }   // 클라우드 로그인 시: 역할/페이지 접근(RBAC)이 권한 관리 — 별도 비밀번호 불필요
-  if (!isAdmin) {
-    promptAdmin(fn);
-    return false;
-  }
   if (fn) fn();
   return true;
 }

@@ -162,7 +162,7 @@ function renderDashProjects() {
   const stageColors = STAGE_COLORS;
   const activeClients = clients.filter(c => !c.closed);
   inp('dash-project-summary').innerHTML = activeClients.length ? `
-    <table style="min-width:860px;">
+    <table data-managed-table="false" style="min-width:860px;">
       <thead>
         <tr>
           <th>고객사</th><th>담당자</th><th>제품명</th><th>납기일</th><th>D-Day</th>

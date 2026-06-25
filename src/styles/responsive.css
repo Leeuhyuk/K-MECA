@@ -3,10 +3,15 @@
    더 좁은 폭 규칙이 뒤에 와서 우선 적용됨(단계적으로 더 작아짐). */
 /* zoom 으로 축소하면 height:100vh 가 함께 줄어 화면 하단에 빈 여백이 생김 →
    100vh 를 zoom 비율로 나눠 보정해 뷰포트를 꽉 채운다. */
-@media screen and (min-width: 681px) and (max-width: 1600px) { body { zoom: .95; height: calc(100vh / .95); } }
-@media screen and (min-width: 681px) and (max-width: 1366px) { body { zoom: .90; height: calc(100vh / .90); } }
-@media screen and (min-width: 681px) and (max-width: 1100px) { body { zoom: .85; height: calc(100vh / .85); } }
-@media screen and (min-width: 681px) and (max-width: 900px)  { body { zoom: .80; height: calc(100vh / .80); } }
+/* 화면 폭별 자동 배율과 사용자 배율은 applyUiScale()에서 함께 계산합니다. */
+
+@media screen and (min-width: 901px) and (max-width: 1180px) {
+  .topnav-category { padding: 0 7px; font-size: 11px; }
+  .topbar .tb-title { display: none; }
+}
+@media screen and (max-width: 900px) {
+  .topnav { display: none !important; }
+}
 
 @media(max-width: 1024px) {
   .metrics, .row2, .row3, .sum-row, .fg4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -17,6 +22,17 @@
 @media(min-width: 681px) {
   .content:not(#pg-dashboard) .metrics {
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+  }
+  #emp-tab-att .attendance-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  #emp-tab-att .attendance-metrics .mc {
+    padding: 9px 11px;
+  }
+}
+@media(min-width: 1100px) {
+  #emp-tab-att .attendance-metrics {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
   }
 }
 /* ── 데스크톱 표 목록 페이지(.list-page): 마지막 표 카드를 창 바닥까지 채워
@@ -88,6 +104,83 @@
   }
   /* 페이지 내부 탭 바(직원·재무·견적/수주 등) 가로 스크롤 허용 */
   .toolbar { flex-wrap: wrap; gap: 6px; }
+  .att-quick-card { padding: 11px; }
+  .att-quick-head { display: block; }
+  .att-quick-filters { margin-top: 9px; display: grid; grid-template-columns: 32px minmax(120px,1fr) 32px 48px; }
+  .att-quick-filters input[type="date"] { width: 100%; }
+  .att-quick-filters select,
+  .att-quick-filters input[type="search"] { width: 100%; grid-column: span 2; }
+  .att-quick-table-wrap { max-height: none !important; overflow: visible !important; }
+  .att-quick-table,
+  .att-quick-table tbody { display: block; }
+  .att-quick-table thead { display: none; }
+  .att-quick-table tr {
+    margin-bottom: 8px;
+    padding: 9px;
+    display: grid;
+    grid-template-columns: 28px minmax(0,1fr) 100px;
+    gap: 7px;
+    border: 1px solid var(--br);
+    border-radius: var(--rm);
+    background: var(--bg-p);
+  }
+  .att-quick-table td {
+    padding: 0 !important;
+    display: flex;
+    align-items: center;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  .att-quick-table td:last-child { position: static !important; right: auto !important; }
+  .att-quick-table td:nth-child(1) { grid-column: 1; grid-row: 1; }
+  .att-quick-table td:nth-child(2) { grid-column: 2; grid-row: 1; }
+  .att-quick-table td:nth-child(3) { grid-column: 3; grid-row: 1; }
+  .att-quick-table td:nth-child(4) { grid-column: 1 / span 2; grid-row: 2; }
+  .att-quick-table td:nth-child(5) { grid-column: 3; grid-row: 2; }
+  .att-quick-table td:nth-child(6) { grid-column: 1; grid-row: 3; }
+  .att-quick-table td:nth-child(7) { grid-column: 2 / span 2; grid-row: 3; }
+  .att-quick-table td:nth-child(8) { grid-column: 1 / -1; grid-row: 4; justify-content: flex-end; }
+  .att-quick-time,
+  .att-quick-extra,
+  .att-quick-note,
+  .att-quick-status { width: 100% !important; min-width: 0 !important; }
+  [id^="date-view-"] {
+    align-items: center !important;
+    gap: 5px !important;
+  }
+  .date-view-period {
+    flex: 1 1 100%;
+    order: 10;
+  }
+  .date-view-period input {
+    flex: 1 1 125px;
+    min-width: 0;
+    width: auto;
+  }
+  .date-view-quick {
+    flex: 1 1 100%;
+    order: 11;
+    overflow-x: auto;
+  }
+  .date-view-selected-mode,
+  .selection-action-bar {
+    align-items: stretch !important;
+  }
+  .date-view-selected-mode .btn,
+  .selection-action-bar .btn,
+  .date-view-selected-mode select,
+  .selection-action-bar select {
+    min-width: max-content;
+  }
+  .date-view-clear-selection {
+    margin-left: 0;
+  }
+  .toolbar > .drive-save-btn {
+    display: inline-flex !important;
+    width: auto !important;
+    min-width: max-content;
+  }
   /* 모바일 목록 툴바의 신규 등록 버튼은 필터·검색 바로 다음 위치에 표시 */
   .toolbar > .btn:has(> .ti-plus) {
     order: initial;
@@ -108,15 +201,27 @@
   .xls-btn {
     display: none !important;
   }
-  #clock {
-    display: none !important;
-  }
   #menu-toggle-btn {
     display: flex !important;
   }
-  #topbar-admin-area {
-    display: flex !important; /* 모바일 탑바에 로그아웃 버튼 노출 */
-    align-items: center;
+  #sb-show-btn { display: none !important; }   /* 모바일은 햄버거(드로어)만 사용 */
+  /* 데스크톱에서 숨김(sb-collapsed) 상태였어도 모바일 드로어는 열리도록 보장 */
+  body.sb-collapsed .sidebar.mobile-open { display: flex !important; }
+  .topbar-alert-btn,
+  .topbar-more-btn { width: 42px; height: 42px; }
+  .topbar-alert-popup {
+    position: fixed;
+    top: 50px;
+    right: 8px;
+    left: 8px;
+    width: auto;
+    max-height: calc(100vh - 112px);
+  }
+  .topbar-more-menu {
+    position: fixed;
+    top: 50px;
+    right: 8px;
+    min-width: 150px;
   }
   .tb-title {
     white-space: nowrap !important; /* 세로줄 바꿈 원천 차단 */
@@ -138,12 +243,22 @@
     border-bottom: none !important;
     background: none !important;
   }
+  /* 검색창은 사이드바(드로어) 로고 하단에 전체 폭으로 표시 */
   .global-search-wrapper {
     width: auto !important;
-    flex: 1;
-    min-width: 120px;
-    margin: 0 10px !important;
+    margin: 10px 12px 4px !important;
   }
+  .global-search-wrapper.topbar-search-compact {
+    width: 42px !important;
+    height: 42px;
+    margin: 0 !important;
+  }
+  .global-search-wrapper.topbar-search-compact.search-open {
+    width: auto !important;
+    height: 36px;
+    margin: 0 !important;
+  }
+  body.sb-mini .sidebar .global-search-wrapper { display: block !important; }
   #global-search-input {
     padding: 6px 74px 6px 14px !important;
   }
@@ -163,6 +278,13 @@
   }
   
   /* 모바일 테이블 최적화 */
+  /* 표 내부 세로 스크롤 제거 — 페이지 스크롤(.content) 하나로 동작.
+     중첩 스크롤로 스크롤이 갇히고 핀치 확대·축소가 어려운 문제 해결.
+     가로 스크롤(넓은 표)은 유지. 컬럼 헤더 고정은 모바일에서 비활성화됨. */
+  .content div:has(> table) {
+    max-height: none !important;
+    overflow-y: visible !important;
+  }
   th, td {
     padding: 6px 8px !important;
     font-size: 11.5px !important;
@@ -191,34 +313,10 @@
 
   /* 2) 상단 탑바 가로 넘침으로 인한 우측 잘림 방지 */
   .topbar { padding: 8px 10px !important; gap: 6px; }
-  #back-btn { display: none !important; }           /* 하단 탭/드로어로 이동 가능하므로 제거 */
-  /* 모바일 기본 상태는 돋보기만 표시하고, 클릭하면 검색 입력창을 탑바 위에 펼침 */
-  .global-search-wrapper {
-    width: 40px !important; min-width: 40px !important; height: 36px;
-    flex: 0 0 40px !important; margin: 0 2px !important; overflow: visible !important;
-  }
-  .global-search-wrapper > #global-search-input,
-  .global-search-wrapper > #global-search-clear { display: none !important; }
-  .global-search-wrapper .global-search-btn {
-    display: inline-flex !important; width: 40px; border-radius: 20px;
-  }
-  .global-search-wrapper.search-open {
-    position: fixed !important; left: 50px; right: 8px; top: 8px;
-    width: auto !important; min-width: 0 !important; z-index: 10000;
-  }
-  .global-search-wrapper.search-open > #global-search-input {
-    display: block !important; padding: 6px 74px 6px 14px !important;
-    background: var(--bg-p);
-  }
-  .global-search-wrapper.search-open > #global-search-clear[style*="display: flex"] {
-    display: flex !important;
-  }
-  .global-search-wrapper.search-open .global-search-btn {
-    width: 42px; border-radius: 0 20px 20px 0;
-  }
+  .topnav { display: none !important; }
+  .topnav-back,
+  .topnav-home { width: 42px; height: 42px; flex-basis: 42px; }
   .tb-right { gap: 6px !important; flex-shrink: 0; }
-  #topbar-admin-area .pill,
-  #topbar-admin-area button[onclick^="openAdminPasswordChange"] { display: none !important; } /* 관리자 라벨·변경 버튼 숨김, 잠금/로그아웃만 유지 */
 
   /* 3) 수주(고객사) 카드 헤더 세로 글자 깨짐 해결: 이름 최소폭 확보 + 버튼 줄바꿈 */
   #pg-clients .client-hd { flex-wrap: wrap; row-gap: 8px; }
@@ -244,4 +342,100 @@
   @page { size: A4; margin: 20mm; }
   .sidebar, .main > .topbar { display: none !important; }
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}
+
+/* 햄버거 메가 메뉴 반응형 */
+@media screen and (max-width: 900px) {
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 8px 10px !important;
+  }
+  .topbar-left { min-width: 0; }
+  .topnav.mega-menu {
+    display: none !important;
+    top: 56px;
+    left: 8px;
+    right: auto;
+    bottom: auto;
+    width: min(380px, calc(100vw - 16px));
+    max-height: 52vh;
+    padding: 9px 11px 11px;
+    grid-template-columns: 1fr;
+  }
+  .topnav.mega-menu.mega-open { display: grid !important; }
+  .topnav.mega-menu .topnav-menu,
+  .topnav.mega-menu .topnav-menu-wide { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media screen and (max-width: 560px) {
+  #menu-toggle-btn { width:38px; height:38px; flex-basis:38px; font-size:23px !important; }
+  .topnav-back,
+  .topbar-alert-btn,
+  .topbar-more-btn {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+  }
+  .topnav-back i,
+  .topbar-search-compact .global-search-btn i,
+  .topbar-alert-btn i,
+  .topbar-more-btn i { font-size: 23px !important; }
+  .global-search-wrapper.topbar-search-compact {
+    width: 38px !important;
+    height: 38px;
+    flex-basis: 38px;
+  }
+  .topbar-search-compact .global-search-btn {
+    width: 38px;
+    height: 38px;
+  }
+  .topnav-home { display: none; }
+  .tb-title { font-size: 13px !important; }
+  .topnav.mega-menu {
+    top: 54px;
+    left: 10px;
+    right: auto;
+    bottom: auto;
+    width: min(360px, calc(100vw - 20px));
+    max-height: 52vh;
+    grid-template-columns: 1fr;
+    border-radius: 12px;
+  }
+  .topnav.mega-menu::before { left: 22px; }
+  .topnav.mega-menu .topnav-menu,
+  .topnav.mega-menu .topnav-menu-wide { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .topnav.mega-menu .topnav-menu button { min-height: 62px; font-size: 8.5px; gap:3px; }
+  .topnav.mega-menu .topnav-menu button i { width: 42px; height: 42px; flex-basis: 42px; font-size: 27px; border-radius:13px; }
+  .mega-menu-head { position: sticky; top: -12px; z-index: 2; padding: 10px 0; background: var(--bg-p); }
+  .topbar-search-compact.search-open {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    width: auto !important;
+    transform: none;
+  }
+}
+@media screen and (max-width: 680px) {
+  .ui-color-fields { grid-template-columns: 1fr; }
+  .ui-color-row { grid-template-columns: minmax(82px,1fr) 34px minmax(88px,1fr) 32px; }
+}
+
+@media screen and (max-width: 900px) {
+  .system-shell { grid-template-columns: 1fr; gap: 12px; }
+  .system-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .system-kpi-row { grid-template-columns: 1fr; }
+  .system-check-head, .system-check-row { grid-template-columns: 90px 160px minmax(260px, 1fr); min-width: 560px; }
+  .table-display-layout { grid-template-columns: 1fr; }
+  .table-display-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: none; overflow: visible; padding-right: 0; }
+  .table-display-head, .table-display-row { grid-template-columns: 36px max(58px, calc((var(--base-max-ch, 6) * 1.05ch) + 26px)) minmax(150px, 1fr); min-width: 320px; }
+  .permission-section { min-height: 0; }
+}
+
+@media screen and (max-width: 560px) {
+  .system-nav { grid-template-columns: 1fr; }
+  .system-hero, .system-action-card, .system-check-card, .table-display-card { padding: 18px; }
+  .table-display-title { flex-direction: column; }
+  .table-display-tabs { grid-template-columns: 1fr; }
+  .permission-section { padding: 12px; }
+  .permission-info-row { align-items: flex-start; flex-direction: column; }
 }

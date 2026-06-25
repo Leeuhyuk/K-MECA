@@ -3,20 +3,30 @@
   <style>
     .memo-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
     .memo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
-    .memo-card{border:1px solid var(--br);border-radius:var(--rl);background:var(--bg-p);padding:14px;min-width:0}
+    .memo-card{border:1px solid var(--br);border-radius:var(--rl);background:var(--bg-p);padding:12px;min-width:0;cursor:pointer;transition:border-color .15s,background .15s}
+    .memo-card.memo-selected{background:var(--bg-i);border-color:var(--br-i)}
+    .memo-card-head{display:flex;align-items:center;gap:8px}
+    .memo-select{width:14px;height:14px;accent-color:var(--tx-i);cursor:pointer;flex:0 0 auto}
     .memo-card-title{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .memo-star{width:28px;height:28px;border:0;background:transparent;color:var(--tx-t);display:inline-flex;align-items:center;justify-content:center;border-radius:var(--rm);cursor:pointer;flex:0 0 auto}
+    .memo-star:hover{background:var(--bg-s);color:var(--tx-w)}
+    .memo-star.active{color:var(--tx-w)}
     .memo-card-body{font-size:12px;line-height:1.65;color:var(--tx-s);white-space:pre-wrap;margin:10px 0;max-height:115px;overflow:hidden}
     .memo-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:10.5px;color:var(--tx-t)}
     .memo-tag{padding:2px 7px;border-radius:999px;background:var(--bg-s);border:1px solid var(--br)}
+    #memo-bulkbar{display:none;align-items:center;gap:8px;margin:0 0 12px;padding:9px 14px;background:var(--bg-i);border:1px solid var(--br-i);border-radius:8px;flex-wrap:wrap;color:var(--tx-i)}
+    #memo-bulkbar>span{font-weight:700;font-size:12.5px}
     .todo-board{display:grid;grid-template-columns:repeat(3,minmax(250px,1fr));gap:12px;overflow-x:auto}
     .todo-col{background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rl);padding:10px;min-height:250px}
     .todo-item{background:var(--bg-p);border:1px solid var(--br);border-radius:var(--rm);padding:11px;margin-top:8px}
-    #todo-bulkbar{background:#062f55!important;border-color:#0d5c96!important;color:#85bceb!important}
+    #todo-bulkbar{background:var(--bg-i)!important;border:1px solid var(--br-i)!important;color:var(--tx-i)!important}
+    #todo-bulkbar>span{color:var(--tx-i)!important}
     #todo-bulkbar .btn-danger{background:#681010;border-color:#a62a2a;color:#ff9b9b}
     #todo-bulkbar .btn-danger:hover{background:#821717}
-    .todo-row-selected td{background:#06375f!important}
-    .todo-row-selected:hover td{background:#084875!important}
-    .todo-select,#todo-check-all{accent-color:#2388df;cursor:pointer}
+    .todo-row-selected td{background:var(--bg-i)!important;color:var(--tx)!important;border-top:1px solid var(--br-i);border-bottom:1px solid var(--br-i)}
+    .todo-row-selected:hover td{background:var(--bg-i)!important}
+    .todo-row-selected select{background:var(--bg-p);color:var(--tx);border-color:var(--br-i)}
+    .todo-select,#todo-check-all{accent-color:var(--tx-i);cursor:pointer}
     @media(max-width:780px){.todo-board{grid-template-columns:1fr}.memo-grid{grid-template-columns:1fr}}
   </style>
 
@@ -38,8 +48,6 @@
     </select>
     <button class="btn btn-primary btn-icon" onclick="openMemoEditor()" title="새 메모"><i class="ti ti-plus"></i></button>
     <button class="btn btn-icon" onclick="openTodoEditor()" title="새 할 일"><i class="ti ti-list-check"></i></button>
-    <button class="btn btn-icon" onclick="addMemoApiSamples()" title="Gemini API 테스트 예문 추가"><i class="ti ti-flask"></i></button>
-    <button class="btn btn-icon" onclick="removeMemoApiSamples()" title="API 테스트 예문 정리"><i class="ti ti-eraser"></i></button>
   </div>
   <div id="memo-content"></div>
 </div>
@@ -49,7 +57,7 @@
     <div class="dlg-title"><i class="ti ti-notes"></i><span id="memo-editor-title">메모 작성</span></div>
     <input type="hidden" id="memo-id">
     <div style="display:grid;gap:12px;">
-      <div class="ff"><label>제목</label><input id="memo-title" maxlength="120" placeholder="메모 제목"></div>
+      <div class="ff"><label>제목 <span style="font-weight:400;color:var(--tx-t);">(선택 · 비워두면 내용에서 자동 생성)</span></label><input id="memo-title" maxlength="120" placeholder="선택 입력"></div>
       <div class="ff"><label>내용</label><textarea id="memo-content-input" rows="9" placeholder="업무 내용, 회의 기록, 확인 사항을 입력하세요."></textarea></div>
       <div style="display:grid;grid-template-columns:1fr 160px;gap:10px;">
         <div class="ff"><label>태그</label><input id="memo-tags" placeholder="납기, 구매, 고객 (쉼표 구분)"></div>
@@ -65,6 +73,7 @@
         <label>첨부파일 <span style="font-weight:400;color:var(--tx-t);">(파일당 1MB, 최대 5개)</span></label>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <button class="btn btn-sm" type="button" onclick="inp('memo-attachment-input').click()"><i class="ti ti-paperclip"></i>파일 추가</button>
+          <button class="btn btn-sm drive-save-btn" id="memo-drive-upload-btn" type="button" onclick="uploadMemoAttachmentsToGoogleDrive()"><i class="ti ti-cloud-upload"></i>첨부파일 Drive 저장</button>
           <input id="memo-attachment-input" type="file" multiple style="display:none;" onchange="addMemoAttachments(this)">
           <div id="memo-attachment-list" class="memo-meta"></div>
         </div>

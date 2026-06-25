@@ -137,8 +137,12 @@ function reloadAllData() {
   if (!financeData.entries) financeData.entries = [];
   if (!financeData.paidReceivable) financeData.paidReceivable = {};
   if (!financeData.paidPayable) financeData.paidPayable = {};
+  if (!financeData.closedMonths) financeData.closedMonths = [];
+  if (!financeData.auditLog) financeData.auditLog = [];
+  if (!financeData.payrollSettings) financeData.payrollSettings = {};
   attendance   = loadStorage('attendance',   []);
   leaves       = loadStorage('leaves',       []);
+  payrollRecords = loadStorage('payrollRecords', []);
   memoList     = loadStorage('memoList',      []);
   todoList     = loadStorage('todoList',      []);
   memoAttachmentData = loadStorage('memoAttachmentData', {});
@@ -160,12 +164,12 @@ function reloadAllData() {
 const DATA_KEYS = [
   'clients','products','materials','workOrders','workers','defects','claims',
   'checkRecords','alerts','inventory','deliveries','stages','trash','rfqList',
-  'poList','partners','financeData','attendance','leaves','statementList',
+  'poList','partners','financeData','attendance','leaves','payrollRecords','statementList',
   'taxList','quoteList','orderList','inventoryLedger','alimtalkSettings','memoList','todoList','memoAttachmentData',
-  'docXlsxTemplates'
+  'asList','bomList','companyInfo','docXlsxTemplates','driveOAuthSettings'
 ];
 
-function exportDataJSON() {
+function buildDataBackupPayload() {
   const out = { _savedAt: new Date().toISOString() };
   DATA_KEYS.forEach(k => {
     const raw = localStorage.getItem('mes_' + k);
@@ -173,6 +177,29 @@ function exportDataJSON() {
       try { out[k] = JSON.parse(raw); } catch(e) { /* 손상 키는 건너뜀 */ }
     }
   });
+  return out;
+}
+
+function applyDataBackupPayload(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error('올바른 데이터 백업 형식이 아닙니다.');
+  }
+  let applied = 0;
+  DATA_KEYS.forEach(k => {
+    if (data[k] != null) {
+      localStorage.setItem('mes_' + k, JSON.stringify(data[k]));
+      applied++;
+      if (typeof cloudQueueSave === 'function') cloudQueueSave(k);
+    }
+  });
+  if (!applied) throw new Error('복원할 MES 데이터 항목이 없습니다.');
+  localStorage.setItem('mes__savedAt', new Date().toISOString());
+  reloadAllData();
+  return applied;
+}
+
+function exportDataJSON() {
+  const out = buildDataBackupPayload();
   const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -194,19 +221,9 @@ function importDataJSON(input) {
         let data;
         try { data = JSON.parse(e.target.result); }
         catch(err) { showToast('JSON 파싱 실패: ' + err.message, 'error'); return; }
-        if (!data || typeof data !== 'object' || Array.isArray(data)) {
-          showToast('올바른 데이터 파일이 아닙니다.', 'error'); return;
-        }
         let applied = 0;
-        DATA_KEYS.forEach(k => {
-          if (data[k] != null) {
-            localStorage.setItem('mes_' + k, JSON.stringify(data[k]));
-            applied++;
-            if (typeof cloudQueueSave === 'function') cloudQueueSave(k);
-          }
-        });
-        localStorage.setItem('mes__savedAt', new Date().toISOString());
-        reloadAllData();
+        try { applied = applyDataBackupPayload(data); }
+        catch(err) { showToast(err.message || '데이터 복원에 실패했습니다.', 'error'); return; }
         if (typeof _goTo === 'function') _goTo(currentPage || 'dashboard', null);
         showToast(`데이터 가져오기 완료 — ${applied}개 항목 복원`, 'success');
       };
@@ -393,8 +410,12 @@ let financeData = loadStorage('financeData', { entries: [], paidReceivable: {}, 
 if (!financeData.entries) financeData.entries = [];
 if (!financeData.paidReceivable) financeData.paidReceivable = {};
 if (!financeData.paidPayable) financeData.paidPayable = {};
+if (!financeData.closedMonths) financeData.closedMonths = [];
+if (!financeData.auditLog) financeData.auditLog = [];
+if (!financeData.payrollSettings) financeData.payrollSettings = {};
 let attendance = loadStorage('attendance', []);
 let leaves = loadStorage('leaves', []);
+let payrollRecords = loadStorage('payrollRecords', []);
 
 rfqList = loadStorage('rfqList', defaultRfqList);
 poList = loadStorage('poList', defaultPoList);

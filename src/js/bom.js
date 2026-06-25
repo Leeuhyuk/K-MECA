@@ -3,6 +3,8 @@ let editBomId = null;
 let bomMaterialImportRows = [];
 let bomViewTab = 'bom';
 let bomMaterialQuery = '';
+let finPnlDetailMonth = '';
+let finCostDetailProductId = '';
 function bomFor(pid){ return bomList.filter(b=>b.productId===pid); }
 /* 라인 단위원가: 반제품(subProductId)이면 하위 BOM 재료비를 롤업, 아니면 단가 */
 function bomLineUnitCost(b, seen){ return b.subProductId ? bomMaterialCost(b.subProductId, seen) : (Number(b.unitPrice)||0); }
@@ -426,17 +428,50 @@ function deleteBom(id){
 }
 
 /* ── 손익(P&L) ── */
+function toggleFinPnlDetail(ym) {
+  finPnlDetailMonth = finPnlDetailMonth === ym ? '' : ym;
+  renderFinance();
+}
+function finPnlDetailHtml(ym) {
+  if (!ym) return '';
+  const revRows = deliveries.filter(d=>(d.deliveredAt||'').slice(0,7)===ym);
+  const purRows = poList.filter(p=>(p.date||'').slice(0,7)===ym);
+  const etcRows = financeData.entries.filter(e=>(e.date||'').slice(0,7)===ym);
+  const smallRows = (rows, emptyText) => rows.length ? rows.slice(0,8).map(row => row).join('') : `<tr><td colspan="4">${empty(emptyText)}</td></tr>`;
+  return `
+    <div class="card" style="margin-top:16px;border-color:var(--br-i);">
+      <div class="card-hd"><span class="card-ttl"><i class="ti ti-list-search"></i>${ym} 상세 내역</span>
+        <span style="font-size:11px;color:var(--tx-t);">각 표는 최대 8건 미리보기</span></div>
+      <div class="row2" style="margin-bottom:12px;">
+        <div style="overflow-x:auto;">
+          <div style="font-size:12px;font-weight:800;margin-bottom:8px;color:var(--tx-i);">매출</div>
+          <table><thead><tr><th>일자</th><th>거래처</th><th>품목</th><th style="text-align:right;">금액</th></tr></thead>
+            <tbody>${smallRows(revRows.map(d=>`<tr><td>${d.deliveredAt||'—'}</td><td>${getClientName(d.clientId)}</td><td>${d.productName||getProductName(d.productId)}</td><td style="text-align:right;">${fmtW((d.price||0)*(d.qty||0))}</td></tr>`),'매출 내역이 없습니다.')}</tbody></table>
+        </div>
+        <div style="overflow-x:auto;">
+          <div style="font-size:12px;font-weight:800;margin-bottom:8px;color:#e8590c;">매입/지출</div>
+          <table><thead><tr><th>일자</th><th>공급처</th><th>품목</th><th style="text-align:right;">금액</th></tr></thead>
+            <tbody>${smallRows(purRows.map(p=>`<tr><td>${p.date||'—'}</td><td>${esc(p.supplier)||'—'}</td><td>${esc(p.itemName)||'—'}</td><td style="text-align:right;">${fmtW((p.unitPrice||0)*(p.qty||0))}</td></tr>`),'매입 내역이 없습니다.')}</tbody></table>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <div style="font-size:12px;font-weight:800;margin-bottom:8px;">기타 수입/비용</div>
+        <table><thead><tr><th>일자</th><th>구분</th><th>내용</th><th style="text-align:right;">금액</th></tr></thead>
+          <tbody>${smallRows(etcRows.map(e=>`<tr><td>${e.date||'—'}</td><td>${esc(e.type)}</td><td>${esc(e.title)}</td><td style="text-align:right;">${fmtW(e.amount)}</td></tr>`),'기타 수입/비용이 없습니다.')}</tbody></table>
+      </div>
+    </div>`;
+}
 function _finPnl() {
-  const months = finMonthList(6);
-  const payroll = finPayrollMonthly();
+  const months = finMonthList(finPnlMonths);
   let tRev=0, tPur=0, tLab=0, tInc=0, tExp=0, tNet=0;
   const rows = months.map(m => {
     const rev = finRevenueMonth(m.ym), pur = finPurchaseMonth(m.ym);
+    const payroll = finPayrollMonthly(m.ym);
     const inc = finEntryMonth(m.ym,'수입'), exp = finEntryMonth(m.ym,'비용');
     const net = rev - pur - payroll - exp + inc;
     tRev+=rev; tPur+=pur; tLab+=payroll; tInc+=inc; tExp+=exp; tNet+=net;
     return `
-      <tr>
+      <tr onclick="toggleFinPnlDetail('${m.ym}')" style="cursor:pointer;${finPnlDetailMonth===m.ym?'outline:2px solid var(--br-i);':''}">
         <td style="font-weight:700;">${m.ym}</td>
         <td class="amt-blue">${fmtW(rev)}</td>
         <td style="color:#e8590c;">${fmtW(pur)}</td>
@@ -447,8 +482,13 @@ function _finPnl() {
       </tr>`;
   }).join('');
   return `
+    <div class="toolbar" style="margin-bottom:10px;">
+      <span style="font-size:11px;font-weight:700;color:var(--tx-s);">조회 범위</span>
+      ${[6,12,24,36].map(n=>`<button class="btn btn-sm ${finPnlMonths===n?'btn-primary':''}" onclick="finPnlMonths=${n};renderFinance()">${n}개월</button>`).join('')}
+      <button class="btn btn-sm" onclick="exportPnlXLS()" title="손익 엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
+    </div>
     <div class="card">
-      <div class="card-hd"><span class="card-ttl"><i class="ti ti-report-money"></i>월별 손익계산 (최근 6개월)</span></div>
+      <div class="card-hd"><span class="card-ttl"><i class="ti ti-report-money"></i>월별 손익계산 (최근 ${finPnlMonths}개월)</span></div>
       <div style="overflow-x:auto;"><table>
         <thead><tr><th>월</th><th>매출</th><th>매입/지출</th><th>인건비</th><th>기타수입</th><th>기타비용</th><th>순이익</th></tr></thead>
         <tbody>${rows}</tbody>
@@ -458,87 +498,164 @@ function _finPnl() {
           <td style="color:${tNet>=0?'var(--tx-ok)':'var(--tx-err)'};">${fmtW(tNet)}</td>
         </tr></tfoot>
       </table></div>
-      <div style="font-size:11px;color:var(--tx-t);margin-top:8px;">※ 인건비는 현재 등록된 직원 월 급여 합계를 매월 동일하게 반영한 추정치입니다.</div>
-    </div>`;
+      <div style="font-size:11px;color:var(--tx-t);margin-top:8px;">※ 인건비는 각 월의 저장된 급여명세서와 자동 계산 결과를 반영합니다.</div>
+    </div>
+    ${finPnlDetailHtml(finPnlDetailMonth)}`;
 }
 
 /* ── 미수금 / 미지급 ── */
 function _finAR() {
-  const arList = [...deliveries].sort((a,b)=>(b.deliveredAt||'').localeCompare(a.deliveredAt||''));
+  const state=finState('ar'), query=state.query.trim().toLowerCase();
+  let arList=deliveries.filter(d=>{
+    const total=(d.price||0)*(d.qty||0), payment=finPaymentRecord('ar',d.id,total);
+    return finMatchDate(d.deliveredAt,state) && finMatchAmount(total,state) &&
+      (!state.status || payment.status===state.status) &&
+      (!query || [d.id,getClientName(d.clientId),d.productName,getProductName(d.productId)].join(' ').toLowerCase().includes(query));
+  });
+  arList=finSort(arList,state,d=>d.deliveredAt,d=>(d.price||0)*(d.qty||0));
   let arUnpaid = 0;
-  const arBody = arList.length ? arList.map(d => {
+  arList.forEach(d=>{const total=(d.price||0)*(d.qty||0); arUnpaid+=finPaymentRecord('ar',d.id,total).remaining;});
+  const arPage=finPaged(arList,state);
+  const arBody = arPage.rows.length ? arPage.rows.map(d => {
     const amt = (d.price||0)*(d.qty||0);
-    const paid = !!financeData.paidReceivable[d.id];
-    if (!paid) arUnpaid += amt;
+    const payment = finPaymentRecord('ar', d.id, amt);
     return `
-      <tr style="${paid?'opacity:.55;':''}">
+      <tr style="${payment.done?'opacity:.65;':''}">
         <td>${d.deliveredAt||'—'}</td>
         <td>${getClientName(d.clientId)}</td>
         <td>${d.productName||getProductName(d.productId)}</td>
-        <td style="font-weight:700;">${fmtW(amt)}</td>
-        <td>${paid?'<span class="bd bd-ok">수금완료</span>':'<span class="bd bd-warn">미수금</span>'}</td>
-        <td><button class="btn btn-sm" onclick="toggleReceivable('${d.id}')">${paid?'미수금 처리':'수금 처리'}</button></td>
+        <td style="font-weight:700;text-align:right;">${fmtW(amt)}</td>
+        <td style="text-align:right;color:var(--tx-ok);">${fmtW(payment.amount)}</td>
+        <td style="text-align:right;color:${payment.remaining?'var(--tx-d)':'var(--tx-s)'};">${fmtW(payment.remaining)}</td>
+        <td>${finPaymentStatusBadge('ar',payment)}</td>
+        <td style="white-space:nowrap;">${payment.date ? esc(payment.date) : '—'}</td>
+        <td>${payment.method ? esc(payment.method) : '—'}</td>
+        <td><button class="btn btn-sm" onclick="openFinancePaymentModal('ar','${d.id}')"><i class="ti ti-cash-banknote"></i>${payment.amount?'수정':'수금 처리'}</button></td>
       </tr>`;
-  }).join('') : `<tr><td colspan="6">${empty('매출(납품) 내역이 없습니다.')}</td></tr>`;
+  }).join('') : `<tr><td colspan="10">${empty('매출(납품) 내역이 없습니다.')}</td></tr>`;
 
-  const apList = [...poList].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  let apList=poList.filter(p=>{
+    const total=(p.unitPrice||0)*(p.qty||0), payment=finPaymentRecord('ap',p.id,total);
+    return finMatchDate(p.date,state) && finMatchAmount(total,state) &&
+      (!state.status || payment.status===state.status) &&
+      (!query || [p.id,p.supplier,p.itemName].join(' ').toLowerCase().includes(query));
+  });
+  apList=finSort(apList,state,p=>p.date,p=>(p.unitPrice||0)*(p.qty||0));
   let apUnpaid = 0;
-  const apBody = apList.length ? apList.map(p => {
+  apList.forEach(p=>{const total=(p.unitPrice||0)*(p.qty||0); apUnpaid+=finPaymentRecord('ap',p.id,total).remaining;});
+  const apPage=finPaged(apList,Object.assign({},state));
+  const apBody = apPage.rows.length ? apPage.rows.map(p => {
     const amt = (p.unitPrice||0)*(p.qty||0);
-    const paid = !!financeData.paidPayable[p.id];
-    if (!paid) apUnpaid += amt;
+    const payment = finPaymentRecord('ap', p.id, amt);
     return `
-      <tr style="${paid?'opacity:.55;':''}">
+      <tr style="${payment.done?'opacity:.65;':''}">
         <td>${esc(p.date)||'—'}</td>
         <td>${esc(p.supplier)||'—'}</td>
         <td>${esc(p.itemName)||'—'}</td>
-        <td style="font-weight:700;">${fmtW(amt)}</td>
-        <td>${paid?'<span class="bd bd-ok">지급완료</span>':'<span class="bd bd-warn">미지급</span>'}</td>
-        <td><button class="btn btn-sm" onclick="togglePayable('${p.id}')">${paid?'미지급 처리':'지급 처리'}</button></td>
+        <td style="font-weight:700;text-align:right;">${fmtW(amt)}</td>
+        <td style="text-align:right;color:var(--tx-ok);">${fmtW(payment.amount)}</td>
+        <td style="text-align:right;color:${payment.remaining?'var(--tx-d)':'var(--tx-s)'};">${fmtW(payment.remaining)}</td>
+        <td>${finPaymentStatusBadge('ap',payment)}</td>
+        <td style="white-space:nowrap;">${payment.date ? esc(payment.date) : '—'}</td>
+        <td>${payment.method ? esc(payment.method) : '—'}</td>
+        <td><button class="btn btn-sm" onclick="openFinancePaymentModal('ap','${p.id}')"><i class="ti ti-cash-banknote"></i>${payment.amount?'수정':'지급 처리'}</button></td>
       </tr>`;
-  }).join('') : `<tr><td colspan="6">${empty('매입(발주) 내역이 없습니다.')}</td></tr>`;
+  }).join('') : `<tr><td colspan="10">${empty('매입(발주) 내역이 없습니다.')}</td></tr>`;
 
   return `
+    ${finFilterBar('ar',{placeholder:'거래처·제품·품목·번호 검색',statuses:['미처리','부분','완료']})}
     <div class="metrics" style="grid-template-columns:repeat(2,1fr);">
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-receipt"></i>미수금 합계 (받을 돈)</div><div class="mc-val" style="color:var(--tx-i);">${fmtW(arUnpaid)}</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-receipt-off"></i>미지급금 합계 (줄 돈)</div><div class="mc-val" style="color:#e8590c;">${fmtW(apUnpaid)}</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-receipt"></i>미수 잔액 (받을 돈)</div><div class="mc-val" style="color:var(--tx-i);">${fmtW(arUnpaid)}</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-receipt-off"></i>미지급 잔액 (줄 돈)</div><div class="mc-val" style="color:#e8590c;">${fmtW(apUnpaid)}</div></div>
     </div>
     <div class="card" style="margin-bottom:16px;">
       <div class="card-hd"><span class="card-ttl"><i class="ti ti-receipt"></i>미수금 관리 (매출 채권)</span></div>
       <div style="overflow-x:auto;"><table>
-        <thead><tr><th>납품일</th><th>고객사</th><th>제품</th><th>금액</th><th>수금상태</th><th>처리</th></tr></thead>
+        <thead><tr><th>납품일</th><th>고객사</th><th>제품</th><th style="text-align:right;">총액</th><th style="text-align:right;">수금액</th><th style="text-align:right;">잔액</th><th>수금상태</th><th>수금일</th><th>방법</th><th>처리</th></tr></thead>
         <tbody>${arBody}</tbody>
-      </table></div>
+      </table></div>${finPager('ar',arPage)}
     </div>
     <div class="card">
       <div class="card-hd"><span class="card-ttl"><i class="ti ti-receipt-off"></i>미지급금 관리 (매입 채무)</span></div>
       <div style="overflow-x:auto;"><table>
-        <thead><tr><th>발주일</th><th>공급처</th><th>품목</th><th>금액</th><th>지급상태</th><th>처리</th></tr></thead>
+        <thead><tr><th>발주일</th><th>공급처</th><th>품목</th><th style="text-align:right;">총액</th><th style="text-align:right;">지급액</th><th style="text-align:right;">잔액</th><th>지급상태</th><th>지급일</th><th>방법</th><th>처리</th></tr></thead>
         <tbody>${apBody}</tbody>
       </table></div>
     </div>`;
 }
 
-function toggleReceivable(id) {
+function openFinancePaymentModal(kind, id) {
   if (!checkAdminAction()) return;
-  financeData.paidReceivable[id] = !financeData.paidReceivable[id];
-  if (!financeData.paidReceivable[id]) delete financeData.paidReceivable[id];
-  saveStorage('financeData', financeData);
-  renderFinance();
+  const isPayable = kind === 'ap';
+  const item = isPayable ? poList.find(x=>x.id===id) : deliveries.find(x=>x.id===id);
+  if (!item) return;
+  const sourceDate = isPayable ? item.date : item.deliveredAt;
+  if (!guardFinanceMonth(sourceDate)) return;
+  const total = isPayable ? (item.unitPrice||0)*(item.qty||0) : (item.price||0)*(item.qty||0);
+  const payment = finPaymentRecord(kind, id, total);
+  const targetName = isPayable ? `${item.supplier || '공급처'} · ${item.itemName || ''}` : `${getClientName(item.clientId)} · ${item.productName || getProductName(item.productId)}`;
+  inp('payment-kind').value = kind;
+  inp('payment-id').value = id;
+  inp('payment-modal-ttl').innerHTML = `<i class="ti ti-cash-banknote" style="color:var(--tx-i);"></i>${isPayable?'지급 처리':'수금 처리'}`;
+  inp('payment-source-summary').innerHTML = `
+    <div style="font-size:12px;font-weight:800;">${esc(targetName)}</div>
+    <div style="margin-top:5px;color:var(--tx-s);font-size:11px;">총액 ${fmtW(total)} · 처리액 ${fmtW(payment.amount)} · 잔액 <b style="color:${payment.remaining?'var(--tx-d)':'var(--tx-ok)'};">${fmtW(payment.remaining)}</b></div>`;
+  sv('payment-date', payment.date || today());
+  sv('payment-amount', payment.remaining ? payment.remaining : payment.amount || total);
+  sv('payment-method', payment.method || '계좌이체');
+  sv('payment-note', payment.note || '');
+  inp('payment-clear-btn').style.display = payment.amount ? '' : 'none';
+  inp('payment-modal').classList.add('open');
 }
-function togglePayable(id) {
+
+function saveFinancePayment() {
   if (!checkAdminAction()) return;
-  financeData.paidPayable[id] = !financeData.paidPayable[id];
-  if (!financeData.paidPayable[id]) delete financeData.paidPayable[id];
+  const kind = v('payment-kind'), id = v('payment-id');
+  const isPayable = kind === 'ap';
+  const item = isPayable ? poList.find(x=>x.id===id) : deliveries.find(x=>x.id===id);
+  if (!item) return;
+  const sourceDate = isPayable ? item.date : item.deliveredAt;
+  if (!guardFinanceMonth(sourceDate)) return;
+  const total = isPayable ? (item.unitPrice||0)*(item.qty||0) : (item.price||0)*(item.qty||0);
+  const amount = Math.min(total, Math.max(0, Number(v('payment-amount')) || 0));
+  if (amount <= 0) { showToast('처리 금액을 입력하세요.', 'error'); return; }
+  finPaymentMap(kind)[id] = {
+    amount,
+    date:v('payment-date') || today(),
+    method:v('payment-method') || '계좌이체',
+    note:v('payment-note') || '',
+    updatedAt:new Date().toISOString()
+  };
+  finAudit((isPayable?'지급':'수금') + (amount >= total ? ' 완료' : ' 부분 처리'), `${id} · ${amount.toLocaleString()}원`);
   saveStorage('financeData', financeData);
+  closeModal('payment-modal');
   renderFinance();
 }
 
+function clearFinancePayment() {
+  if (!checkAdminAction()) return;
+  const kind = v('payment-kind'), id = v('payment-id');
+  const isPayable = kind === 'ap';
+  delete finPaymentMap(kind)[id];
+  finAudit(isPayable?'지급 취소':'수금 취소', id);
+  saveStorage('financeData', financeData);
+  closeModal('payment-modal');
+  renderFinance();
+}
+
+function toggleReceivable(id) { openFinancePaymentModal('ar', id); }
+function togglePayable(id) { openFinancePaymentModal('ap', id); }
+
 /* ── 기타 수입/비용 ── */
 function _finEtc() {
-  const list = [...financeData.entries].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  const inc = finEntriesSum('수입'), exp = finEntriesSum('비용');
-  const body = list.length ? list.map(e => `
+  const state=finState('etc'), query=state.query.trim().toLowerCase();
+  let list=financeData.entries.filter(e=>finMatchDate(e.date,state) && finMatchAmount(e.amount,state) && (!state.status || e.type===state.status) &&
+    (!query || [e.id,e.category,e.title,e.note].join(' ').toLowerCase().includes(query)));
+  list=finSort(list,state,e=>e.date,e=>Number(e.amount)||0);
+  const inc=list.filter(e=>e.type==='수입').reduce((s,e)=>s+(Number(e.amount)||0),0);
+  const exp=list.filter(e=>e.type==='비용').reduce((s,e)=>s+(Number(e.amount)||0),0);
+  const page=finPaged(list,state);
+  const body = page.rows.length ? page.rows.map(e => `
     <tr>
       <td>${esc(e.date)||'—'}</td>
       <td>${e.type==='수입'?'<span class="bd bd-ok">수입</span>':'<span class="bd bd-err">비용</span>'}</td>
@@ -546,26 +663,35 @@ function _finEtc() {
       <td>${esc(e.title)||''}</td>
       <td style="font-weight:700;color:${e.type==='수입'?'var(--tx-ok)':'var(--tx-err)'};">${fmtW(Number(e.amount)||0)}</td>
       <td>${esc(e.note)||''}</td>
-      <td><button class="del-btn" onclick="deleteFinanceEntry('${e.id}')"><i class="ti ti-trash"></i></button></td>
+      <td style="white-space:nowrap;"><button class="btn btn-sm" onclick="openFinanceEdit('${e.id}')" title="수정"><i class="ti ti-edit"></i></button> <button class="del-btn" onclick="deleteFinanceEntry('${e.id}')" title="삭제"><i class="ti ti-trash"></i></button></td>
     </tr>`).join('') : `<tr><td colspan="7">${empty('등록된 기타 수입/비용 항목이 없습니다. 우측 상단 [기타 항목 등록] 버튼으로 추가하세요.')}</td></tr>`;
   return `
+    ${finFilterBar('etc',{placeholder:'분류·내용·비고 검색',statuses:['수입','비용']})}
     <div class="card">
       <div class="card-hd"><span class="card-ttl"><i class="ti ti-list-details"></i>기타 수입/비용 (직접 입력)</span>
         <span style="font-size:13px;">수입 <b style="color:var(--tx-ok);">${fmtW(inc)}</b> · 비용 <b style="color:var(--tx-err);">${fmtW(exp)}</b></span></div>
       <div style="overflow-x:auto;"><table>
-        <thead><tr><th>일자</th><th>구분</th><th>분류</th><th>내용</th><th>금액</th><th>비고</th><th>삭제</th></tr></thead>
+        <thead><tr><th>일자</th><th>구분</th><th>분류</th><th>내용</th><th>금액</th><th>비고</th><th>관리</th></tr></thead>
         <tbody>${body}</tbody>
-      </table></div>
+      </table></div>${finPager('etc',page)}
     </div>`;
 }
 
 function openFinanceAdd() {
+  delete inp('finance-modal').dataset.editId;
   sv('fin-type', '비용');
   sv('fin-date', today());
   sv('fin-cat', '임대료');
   sv('fin-amount', '');
   sv('fin-title', '');
   sv('fin-note', '');
+  inp('finance-modal').classList.add('open');
+}
+function openFinanceEdit(id){
+  const item=financeData.entries.find(x=>x.id===id);if(!item)return;
+  if(!guardFinanceMonth(item.date))return;
+  inp('finance-modal').dataset.editId=id;
+  sv('fin-type',item.type);sv('fin-date',item.date);sv('fin-cat',item.category);sv('fin-amount',item.amount);sv('fin-title',item.title);sv('fin-note',item.note||'');
   inp('finance-modal').classList.add('open');
 }
 
@@ -575,14 +701,20 @@ function saveFinanceEntry() {
   const amount = Number(v('fin-amount')) || 0;
   if (!title)    { showToast('내용을 입력하세요.', 'error'); return; }
   if (amount <= 0) { showToast('금액을 입력하세요.', 'error'); return; }
-  financeData.entries.push({
-    id: nextCode('FIN', financeData.entries),
+  if (!guardFinanceMonth(v('fin-date') || today())) return;
+  const editId=inp('finance-modal').dataset.editId;
+  const duplicate=financeData.entries.find(e=>e.id!==editId&&e.date===(v('fin-date')||today())&&e.title===title&&Number(e.amount)===amount);
+  if(duplicate&&!confirm('같은 날짜·내용·금액의 항목이 이미 있습니다. 그래도 저장하시겠습니까?'))return;
+  const data={
     type: v('fin-type') || '비용',
     date: v('fin-date') || today(),
     category: v('fin-cat') || '기타',
     title, amount,
     note: v('fin-note') || ''
-  });
+  };
+  if(editId){const item=financeData.entries.find(x=>x.id===editId);if(item)Object.assign(item,data);delete inp('finance-modal').dataset.editId;}
+  else financeData.entries.push(Object.assign({id:nextCode('FIN',financeData.entries)},data));
+  finAudit('기타 '+(v('fin-type')||'비용')+(editId?' 수정':' 등록'),`${title} · ${amount.toLocaleString()}원`);
   saveStorage('financeData', financeData);
   closeModal('finance-modal');
   if (currentPage === 'finance') { financeTab = 'etc'; renderFinance(); }
@@ -593,8 +725,10 @@ function deleteFinanceEntry(id) {
   if (!checkAdminAction()) return;
   const e = financeData.entries.find(x => x.id === id);
   if (!e) return;
+  if (!guardFinanceMonth(e.date)) return;
   confirm_('기타 항목 삭제', `<strong>[${e.title}]</strong> 항목을 삭제하시겠습니까?`, () => {
     financeData.entries = financeData.entries.filter(x => x.id !== id);
+    finAudit('기타 항목 삭제',`${e.title} · ${e.amount}`);
     saveStorage('financeData', financeData);
     renderFinance();
     showToast('항목이 삭제되었습니다.');

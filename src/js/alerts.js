@@ -148,8 +148,8 @@ function renderAlerts() {
   });
 
   inp('alerts-list').innerHTML = finalFil.length ? finalFil.map((a, i) => {
-    // 본래 alertsList 상의 실제 인덱스를 구해서 delAlert 파라미터로 넘깁니다.
-    const realIdx = alertsList.indexOf(a);
+    // 인덱스 대신 알림 고유 식별자(title)를 넘겨 stale-index 삭제를 방지합니다.
+    const ref = encodeURIComponent(a.title);
     return `
     <div class="al al-${a.type}">
       <i class="ti ${im[a.type]||'ti-info-circle'}"></i>
@@ -157,13 +157,70 @@ function renderAlerts() {
         <div class="al-t">${esc(a.title)}</div>
         <div class="al-s">${esc(a.sub)}${a.createdAt ? ` · ${esc(a.createdAt)}` : ''}</div>
       </div>
-      <button class="del-btn" onclick="delAlert(${realIdx})"><i class="ti ti-x" style="font-size:12px;"></i>확인</button>
+      <button class="del-btn" onclick="delAlert('${ref}')"><i class="ti ti-x" style="font-size:12px;"></i>확인</button>
     </div>`;
   }).join('') : empty('수신 및 보존된 알림 내역이 비어있습니다.');
 
   // 안 읽은 긴급 알림 배지 수량은 필터링(활성화된 것만) 기준으로 갱신합니다.
-  const activeErrCount = alertsList.filter(a => a.type === 'err' && (a.auto === false || !a.category || alertSettings[a.category] !== false)).length;
-  inp('alertBadge').textContent = activeErrCount;
+  const activeAlerts = alertsList.filter(a => a.auto === false || !a.category || alertSettings[a.category] !== false);
+  const activeErrCount = activeAlerts.filter(a => a.type === 'err').length;
+  const sidebarBadge = inp('alertBadge');
+  if (sidebarBadge) sidebarBadge.textContent = activeErrCount;
+  const topbarBadge = inp('topbar-alert-badge');
+  if (topbarBadge) {
+    topbarBadge.textContent = activeAlerts.length > 99 ? '99+' : activeAlerts.length;
+    topbarBadge.style.display = activeAlerts.length ? 'flex' : 'none';
+  }
+  renderTopbarAlerts(false);
+}
+
+function renderTopbarAlerts(scan) {
+  const listEl = inp('topbar-alert-list');
+  if (!listEl) return;
+  if (scan && typeof scanAndGenerateAlerts === 'function') scanAndGenerateAlerts();
+
+  const activeAlerts = alertsList.filter(a =>
+    a.auto === false || !a.category || alertSettings[a.category] !== false
+  );
+  const icons = { err: 'ti-alert-circle', warn: 'ti-alert-triangle', info: 'ti-info-circle' };
+  const countEl = inp('topbar-alert-count');
+  const badgeEl = inp('topbar-alert-badge');
+
+  if (countEl) countEl.textContent = `${activeAlerts.length}건`;
+  if (badgeEl) {
+    badgeEl.textContent = activeAlerts.length > 99 ? '99+' : activeAlerts.length;
+    badgeEl.style.display = activeAlerts.length ? 'flex' : 'none';
+  }
+
+  listEl.innerHTML = activeAlerts.length ? activeAlerts.map(a => {
+    const ref = encodeURIComponent(a.title);
+    return `<div class="topbar-alert-item ${a.type || 'info'}">
+      <i class="ti ${icons[a.type] || icons.info}"></i>
+      <div>
+        <div class="topbar-alert-item-title">${esc(a.title)}</div>
+        <div class="topbar-alert-item-sub">${esc(a.sub)}${a.createdAt ? ` · ${esc(a.createdAt)}` : ''}</div>
+      </div>
+      <button type="button" class="topbar-alert-confirm" onclick="confirmTopbarAlert(event,'${ref}')">확인</button>
+    </div>`;
+  }).join('') : '<div class="topbar-alert-empty"><i class="ti ti-bell-off"></i><br>새로운 알림이 없습니다.</div>';
+}
+
+function confirmTopbarAlert(event, token) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  const wrap = inp('topbar-alert');
+  const list = inp('topbar-alert-list');
+  const scrollTop = list ? list.scrollTop : 0;
+  delAlert(token);
+  if (wrap) wrap.classList.add('open');
+  const button = inp('topbar-alert-btn');
+  if (button) button.setAttribute('aria-expanded', 'true');
+  requestAnimationFrame(() => {
+    const refreshedList = inp('topbar-alert-list');
+    if (refreshedList) refreshedList.scrollTop = scrollTop;
+  });
 }
 
 function filterAlerts(type) {
@@ -178,18 +235,21 @@ function filterAlerts(type) {
   renderAlerts();
 }
 
-function delAlert(i) {
-  if (i >= 0 && i < alertsList.length) {
-    const a = alertsList[i];
-    // 만약 자동 알림(auto: true)이면 dismissedAlerts 리스트에 제목을 기록하여 재발 방지
-    if (a.auto !== false) {
-      if (!dismissedAlerts.includes(a.title)) {
-        dismissedAlerts.push(a.title);
-        saveStorage('dismissedAlerts', dismissedAlerts);
-      }
+function delAlert(token) {
+  // 렌더 시점 인덱스 대신 알림 고유 식별자(title)로 삭제 — 팝업이 열린 채 목록이
+  // 갱신돼도 엉뚱한 알림이 지워지지 않도록 한다. (title은 generateAlert의 중복 판정 키)
+  const title = decodeURIComponent(String(token));
+  const i = alertsList.findIndex(a => a.title === title);
+  if (i < 0) return;
+  const a = alertsList[i];
+  // 만약 자동 알림(auto: true)이면 dismissedAlerts 리스트에 제목을 기록하여 재발 방지
+  if (a.auto !== false) {
+    if (!dismissedAlerts.includes(a.title)) {
+      dismissedAlerts.push(a.title);
+      saveStorage('dismissedAlerts', dismissedAlerts);
     }
-    alertsList.splice(i, 1);
-    saveStorage('alerts', alertsList);
-    renderAlerts();
   }
+  alertsList.splice(i, 1);
+  saveStorage('alerts', alertsList);
+  renderAlerts();
 }

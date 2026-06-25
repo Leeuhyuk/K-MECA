@@ -43,6 +43,7 @@
     if (order && order.length === N && isValidOrder(order, N)) {
       applyOrderToTable(table, order, N);
     }
+    if (typeof applyTableDisplaySettings === 'function') applyTableDisplaySettings();
 
     // 드래그 핸들러 부착
     attachDragHandlers(container, table);
@@ -152,6 +153,7 @@
     moveColumn(table, dragSrc.index, target);
     const container = table.closest('[data-reorderable]');
     if (container) persistOrder(container, table);
+    if (typeof applyTableDisplaySettings === 'function') applyTableDisplaySettings();
   }
   function onDragEnd(e) {
     e.currentTarget.classList.remove('col-dragging');

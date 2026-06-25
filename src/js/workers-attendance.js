@@ -1,5 +1,19 @@
 /* ════════ 7. 작업 인력 및 출석 관리 ════════ */
+function repairWorkerTimeValues() {
+  let changed = false;
+  workers.forEach(worker => {
+    const normalized = normalizeTimeValue(worker.tin, '08:00');
+    if (worker.tin !== normalized) {
+      worker.tin = normalized;
+      changed = true;
+    }
+  });
+  if (changed) saveStorage('workers', workers);
+  return changed;
+}
+
 function renderWorkers() {
+  ensureDateView('workersHire', 'workers-table', workers.map(w => w.hireDate), renderWorkers);
   const att = workers.filter(w => w.status !== '결근' && w.status !== '휴가').length;
   inp('w-total').textContent = workers.length + '명';
   inp('w-att').textContent = att + '명';
@@ -15,6 +29,7 @@ function renderWorkers() {
   const _wq = (v('workers-q')||'').toLowerCase();
   const _wfs = v('workers-fs');
   const filteredWorkers = workers.filter(w => {
+    if (!dateViewMatch('workersHire', w.hireDate)) return false;
     if (_wq && ![w.id, w.name, w.dept||'', w.position||'', w.line, w.role||''].join(' ').toLowerCase().includes(_wq)) return false;
     if (_wfs && w.status !== _wfs) return false;
     return true;
@@ -125,18 +140,6 @@ function enrollWorkerFromUser(uid){
 }
 
 function changeWorkerStatus(id, val) {
-  if (!isAdmin) {
-    promptAdmin(() => {
-      const w = workers.find(x => x.id === id);
-      if (w) {
-        w.status = val;
-        saveStorage('workers', workers);
-        renderWorkers();
-      }
-    });
-    refreshPage(currentPage);
-    return;
-  }
   const w = workers.find(x => x.id === id);
   if (w) {
     w.status = val;
@@ -151,7 +154,7 @@ function openWorkerAdd() {
   inp('worker-modal-ttl').innerHTML = '<i class="ti ti-user-plus" style="color:var(--tx-i);"></i>직원 등록';
   inp('wa-save-btn').innerHTML = '<i class="ti ti-check"></i>등록';
   sv('wa-id', nextCode('E', workers));
-  ['wa-name', 'wa-position', 'wa-phone', 'wa-salary', 'wa-role', 'wa-in', 'wa-ot', 'wa-email'].forEach(id => sv(id, ''));
+  ['wa-name', 'wa-position', 'wa-phone', 'wa-salary', 'wa-fixed-allowance', 'wa-meal-allowance', 'wa-role', 'wa-in', 'wa-ot', 'wa-email'].forEach(id => sv(id, ''));
   sv('wa-dept', '생산부');
   sv('wa-emptype', '정규직');
   sv('wa-hire', today());
@@ -177,11 +180,13 @@ function openWorkerEdit(id) {
   sv('wa-hire', w.hireDate || '');
   sv('wa-phone', w.phone || '');
   sv('wa-salary', w.salary || '');
+  sv('wa-fixed-allowance', w.fixedAllowance || '');
+  sv('wa-meal-allowance', w.mealAllowance || '');
   sv('wa-annual', w.annualLeave != null ? w.annualLeave : 15);
   sv('wa-line', w.line || 'A');
   sv('wa-role', w.role || '');
   sv('wa-status', w.status || '근무중');
-  sv('wa-in', w.tin || '');
+  sv('wa-in', normalizeTimeValue(w.tin, '08:00'));
   sv('wa-ot', w.ot || '');
   sv('wa-email', w.email || '');
   modal.classList.add('open');
@@ -201,10 +206,12 @@ function saveWorkerForm() {
     hireDate: v('wa-hire') || today(),
     phone: v('wa-phone') || '',
     salary: Number(v('wa-salary')) || 0,
+    fixedAllowance: Number(v('wa-fixed-allowance')) || 0,
+    mealAllowance: Number(v('wa-meal-allowance')) || 0,
     annualLeave: v('wa-annual') !== '' ? Number(v('wa-annual')) : 15,
     line: v('wa-line'),
     role: v('wa-role') || '조립',
-    tin: v('wa-in') || '08:00',
+    tin: normalizeTimeValue(v('wa-in'), '08:00'),
     ot: v('wa-ot') || '0h',
     email: v('wa-email').trim(),
     status: v('wa-status')
@@ -243,8 +250,8 @@ function deleteWorker(id) {
 function exportWorkersCSV() {
   if (typeof XLSX === 'undefined') { showToast('SheetJS 로딩 중...', 'error'); return; }
   const wb = XLSX.utils.book_new();
-  const h = ['사번','성명','부서','직급','고용형태','입사일','연락처','담당','배정라인','월급여','출근시간','연장근무','상태'];
-  const rows = workers.map(w => [w.id, w.name, w.dept||'', w.position||'', w.empType||'정규직', w.hireDate||'', w.phone||'', w.role||'', w.line?`라인 ${w.line}`:'', Number(w.salary)||0, w.tin||'', w.ot||'0h', w.status]);
+  const h = ['사번','성명','부서','직급','고용형태','입사일','연락처','담당','배정라인','월급여','고정수당','식대·비과세수당','출근시간','연장근무','상태'];
+  const rows = workers.map(w => [w.id, w.name, w.dept||'', w.position||'', w.empType||'정규직', w.hireDate||'', w.phone||'', w.role||'', w.line?`라인 ${w.line}`:'', Number(w.salary)||0, Number(w.fixedAllowance)||0, Number(w.mealAllowance)||0, w.tin||'', w.ot||'0h', w.status]);
   const ws = XLSX.utils.aoa_to_sheet([h,...rows]);
   ws['!cols'] = h.map(c => ({ wch: Math.max(c.length+2, 12) }));
   XLSX.utils.book_append_sheet(wb, ws, '직원현황');

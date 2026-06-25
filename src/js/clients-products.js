@@ -352,7 +352,10 @@ function updateProdCostPreview() {
   const price = parseInt(v('pra-price'))||0;
   const margin = price - cost;
   const rate = price>0 ? Math.round(cost/price*1000)/10 : 0;
-  box.innerHTML = `제조원가 <b>${fmtW(cost)}</b> · 원가율 <b style="color:${rate>90?'var(--tx-err)':'var(--tx-s)'};">${rate}%</b> · 공헌이익 <b style="color:${margin>=0?'var(--tx-ok)':'var(--tx-err)'};">${fmtW(margin)}</b>`;
+  box.innerHTML = `
+    <span><em>제조원가</em><b>${fmtW(cost)}</b></span>
+    <span><em>원가율</em><b style="color:${rate>90?'var(--tx-d)':'var(--tx-s)'};">${rate}%</b></span>
+    <span><em>공헌이익</em><b style="color:${margin>=0?'var(--tx-ok)':'var(--tx-d)'};">${fmtW(margin)}</b></span>`;
 }
 function saveProdModal() {
   const clientId = inp('prod-modal').dataset.clientId;

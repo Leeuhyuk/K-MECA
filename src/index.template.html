@@ -7,12 +7,14 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js" integrity="sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4.4.1/dist/email.min.js" integrity="sha384-SALc35EccAf6RzGw4iNsyj7kTPr33K7RoGzYu+7heZhT8s0GZouafRiCg1qy44AS" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha384-Yv5O+t3uE3hunW8uyrbpPW3iw6/5/Y7HitWJBLgqfMoA36NogMmy+8wWZMpn3HWc" crossorigin="anonymous"></script>
 <!-- Firebase (클라우드 공유 동기화) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js" integrity="sha384-mLD+wdwynYnAhgHAkdPP5hroWJXJTNy5C2OhPKM55zuiV2vjzFD1LtBohaHq2Ex8" crossorigin="anonymous"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js" integrity="sha384-NiuRnBs5Z0OgJ12kYJLSeWxANeJN369zH3+Zn0TGVPaCH/TKmbPFqfOmmLtrj+wg" crossorigin="anonymous"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js" integrity="sha384-/SBCyt0JELVRyyrOp+QG5CdnpVoAry+uw9hdherLgyZxxePtHjOvQmJU5CHymUhT" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-functions-compat.js" integrity="sha384-dl8gTN2pDiuvgHrzW5Zb1btHv3Y2g2RAGe+oZPnyV8yqolnsEg/TBN/fKf97tmac" crossorigin="anonymous"></script>
 <style>
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   .animate-spin { display: inline-block; animation: spin 1s linear infinite; }
@@ -43,6 +45,7 @@
 <!--#include html/pages/rfq.html-->
 <!--#include html/pages/po.html-->
 <!--#include html/pages/pg-calendar.html-->
+<!--#include html/pages/popbill.html-->
 <script>
 <!--#include js/data-storage.js-->
 <!--#include js/state-search.js-->
@@ -73,8 +76,11 @@
 <!--#include js/as.js-->
 <!--#include js/alimtalk.js-->
 <!--#include js/api-settings.js-->
+<!--#include js/google-drive.js-->
 <!--#include js/notes.js-->
+<!--#include js/popbill.js-->
 <!--#include js/table-reorder.js-->
+<!--#include js/table-selection.js-->
 <!--#include js/mobile.js-->
 </script>
 
@@ -314,7 +320,7 @@
       <div class="ff"><label>노무비 / 단위 (원)</label><input id="pra-laborcost" type="number" value="0" min="0" oninput="updateProdCostPreview()"></div>
       <div class="ff"><label>경비 / 단위 (원)</label><input id="pra-ovhcost" type="number" value="0" min="0" oninput="updateProdCostPreview()"></div>
       <div class="ff"><label>제조원가 / 공헌이익 (자동)</label>
-        <div id="pra-cost-preview" style="height:32px;display:flex;align-items:center;padding:0 10px;background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rm);font-size:11.5px;"></div>
+        <div id="pra-cost-preview" class="prod-cost-preview"></div>
       </div>
       <div class="ff" style="grid-column:span 2;"><label>자동 파생 상태</label>
         <div id="pra-status-preview" style="height:32px;display:flex;align-items:center;padding:0 10px;background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rm);font-size:12px;"></div>
@@ -618,6 +624,8 @@
       <div class="ff" style="grid-column:span 2;"><label>연락처</label><input id="wa-phone" placeholder="010-0000-0000"></div>
       <div class="ff" style="grid-column:span 4;"><label>이메일 (로그인 계정 연결용)</label><input id="wa-email" type="email" placeholder="직원 로그인 이메일과 동일하게"></div>
       <div class="ff"><label>월 급여 (원)</label><input id="wa-salary" type="number" min="0" placeholder="3000000"></div>
+      <div class="ff"><label>고정수당 (원)</label><input id="wa-fixed-allowance" type="number" min="0" placeholder="0"></div>
+      <div class="ff"><label>식대·비과세수당 (원)</label><input id="wa-meal-allowance" type="number" min="0" placeholder="200000"></div>
       <div class="ff"><label>연차 부여일수</label><input id="wa-annual" type="number" min="0" step="0.5" placeholder="15"></div>
       <div class="ff"><label>배정 라인</label>
         <select id="wa-line"><option>A</option><option>B</option><option>C</option></select>
@@ -639,15 +647,16 @@
 <!-- ══ 근태 기록 등록/수정 모달 ══ -->
 <div class="overlay" id="att-modal">
   <div class="dlg" style="max-width:480px;width:96%;">
-    <div class="dlg-title" id="att-modal-ttl"><i class="ti ti-clock-check" style="color:var(--tx-i);"></i>근태 기록 등록</div>
+    <div class="dlg-title" id="att-modal-ttl"><i class="ti ti-clock-check" style="color:var(--tx-i);"></i>예외 근태 등록</div>
     <div class="fg fg2" style="gap:10px;margin-bottom:14px;">
       <div class="ff" style="grid-column:span 2;"><label>직원 *</label><select id="at-worker"></select></div>
       <div class="ff"><label>일자 *</label><input id="at-date" type="date"></div>
       <div class="ff"><label>근태 상태</label>
-        <select id="at-status"><option>정상</option><option>지각</option><option>조퇴</option><option>연장근무</option><option>외근</option><option>결근</option><option>휴가</option></select>
+        <select id="at-status" onchange="onAttendanceStatusChange()"><option>지각</option><option>조퇴</option><option>외근</option><option>결근</option><option>연장근무</option><option>휴일근무</option><option>휴가</option><option>정상</option></select>
       </div>
       <div class="ff"><label>출근 시간</label><input id="at-in" type="time"></div>
       <div class="ff"><label>퇴근 시간</label><input id="at-out" type="time"></div>
+      <div class="ff" style="grid-column:span 2;"><label>추가·휴일 근무시간</label><input id="at-extra-hours" type="number" min="0" step="0.5" placeholder="예: 2"></div>
       <div class="ff" style="grid-column:span 2;"><label>비고</label><input id="at-note" placeholder="특이사항"></div>
     </div>
     <div class="dlg-actions">
@@ -700,6 +709,29 @@
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('finance-modal')">취소</button>
       <button class="btn btn-primary" onclick="saveFinanceEntry()"><i class="ti ti-check"></i>저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 수금/지급 처리 모달 ══ -->
+<div class="overlay" id="payment-modal">
+  <div class="dlg" style="max-width:560px;width:96%;">
+    <div class="dlg-title" id="payment-modal-ttl"><i class="ti ti-cash-banknote" style="color:var(--tx-i);"></i>수금/지급 처리</div>
+    <input type="hidden" id="payment-kind">
+    <input type="hidden" id="payment-id">
+    <div id="payment-source-summary" class="card" style="padding:12px;margin-bottom:14px;background:var(--bg-s);"></div>
+    <div class="fg fg3" style="gap:10px;margin-bottom:14px;">
+      <div class="ff"><label>처리일 *</label><input id="payment-date" type="date"></div>
+      <div class="ff"><label>처리금액 *</label><input id="payment-amount" type="number" min="0" step="10" inputmode="numeric"></div>
+      <div class="ff"><label>처리방법</label>
+        <select id="payment-method"><option>계좌이체</option><option>현금</option><option>카드</option><option>어음</option><option>기타</option></select>
+      </div>
+      <div class="ff" style="grid-column:span 3;"><label>메모</label><input id="payment-note" maxlength="200" placeholder="입금자명, 지급 계좌, 부분 처리 사유 등"></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" id="payment-clear-btn" onclick="clearFinancePayment()"><i class="ti ti-rotate-clockwise"></i>미처리로 되돌리기</button>
+      <button class="btn" onclick="closeModal('payment-modal')">취소</button>
+      <button class="btn btn-primary" onclick="saveFinancePayment()"><i class="ti ti-check"></i>저장</button>
     </div>
   </div>
 </div>
