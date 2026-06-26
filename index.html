@@ -1142,8 +1142,10 @@ textarea { height: auto; resize: vertical; }
 .dlg-msg { font-size: 12.5px; color: var(--tx-s); margin-bottom: 20px; line-height: 1.6; }
 .dlg-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
-.field-search { position: relative; }
+.ff { position: relative; }
+.field-search { position: relative; width: 100%; }
 .field-search input { padding-right: 36px; }
+.field-search select.linked-hidden-select { display: none; }
 .field-search-btn {
   position: absolute;
   right: 4px;
@@ -1164,6 +1166,8 @@ textarea { height: auto; resize: vertical; }
   background: var(--bg-i);
   color: var(--tx-i);
 }
+#ca-name-wrap,
+.entity-search-wrap { position: relative; }
 .inline-search-results {
   display: none;
   position: absolute;
@@ -1178,7 +1182,6 @@ textarea { height: auto; resize: vertical; }
   background: var(--bg-p);
   box-shadow: var(--shadow);
 }
-#ca-name-wrap { position: relative; }
 .inline-search-item {
   width: 100%;
   border: 0;
@@ -1260,6 +1263,10 @@ textarea { height: auto; resize: vertical; }
   table-layout: fixed;
 }
 .batch-entry-grid table { min-width: 960px; }
+.batch-entry-grid table:has(colgroup[data-bulk-colgroup]),
+.batch-entry-grid table.batch-entry-sized-table {
+  width: 100%;
+}
 .doc-item-grid th,
 .batch-entry-grid th {
   height: 30px;
@@ -1307,12 +1314,12 @@ textarea { height: auto; resize: vertical; }
   background: var(--bg);
 }
 .doc-item-spec { width: 150px; }
-.doc-item-qty { width: 72px; }
-.doc-item-unit { width: 74px; }
+.doc-item-qty { width: 48px; }
+.doc-item-unit { width: 48px; }
 .doc-item-price { width: 104px; }
 .doc-item-qty input,
 .doc-item-price input { text-align: right; }
-.doc-item-action { width: 44px; text-align: center; }
+.doc-item-action { width: 28px; text-align: center; }
 .doc-item-add,
 .doc-add-row {
   width: 28px;
@@ -1333,11 +1340,38 @@ textarea { height: auto; resize: vertical; }
   font-size: 17px;
   line-height: 1;
 }
+.doc-item-action .doc-item-add {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  margin: 2px 3px;
+}
+.doc-item-action .doc-item-add i { font-size: 15px; }
+.doc-item-grid .doc-item-qty input,
+.doc-item-grid .doc-item-unit input {
+  padding-left: 4px;
+  padding-right: 4px;
+}
 .batch-entry-actions {
-  width: 44px;
+  width: 28px;
   text-align: center;
   vertical-align: middle;
 }
+.batch-entry-actions .doc-add-row {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  margin: 2px 3px;
+}
+.batch-entry-actions .doc-add-row i { font-size: 15px; }
+.batch-entry-grid td[style*="width:52px"] input,
+.batch-entry-grid td[style*="width:52px"] select,
+.batch-entry-field-qty input,
+.batch-entry-field-unit select {
+  padding-left: 4px;
+  padding-right: 4px;
+}
+.batch-entry-field-qty input { text-align: right; }
 .doc-item-add:hover {
   border-color: var(--tx-i);
   background: var(--tx-i);
@@ -1346,6 +1380,9 @@ textarea { height: auto; resize: vertical; }
 
 /* 커스텀 설정 모달 */
 .custom-modal { max-width: 500px !important; }
+.bulk-entry-dialog {
+  max-width: min(1500px, 96vw) !important;
+}
 
 .sum-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
 .sum-box { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: 10px 14px; display: flex; align-items: center; gap: 10px; box-shadow: var(--shadow); min-width: 0; }
@@ -1514,24 +1551,51 @@ textarea { height: auto; resize: vertical; }
 #pg-trash .trash-table-card {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   min-height: 0;
+  overflow: hidden;
+}
+#system-panel-trash {
+  display: flex;
+  height: calc(100vh - 120px);
+  min-height: 520px;
+  flex-direction: column;
+}
+#pg-trash.active {
+  display: flex;
+  min-height: calc(100vh - 120px);
+  flex-direction: column;
+}
+#system-panel-trash .metrics,
+#system-panel-trash .toolbar,
+#system-panel-trash .trash-selection-bar,
+#pg-trash .metrics,
+#pg-trash .toolbar,
+#pg-trash .trash-selection-bar {
+  flex: 0 0 auto;
 }
 #system-panel-trash .trash-table-card {
-  max-height: min(560px, calc(100vh - 330px));
+  max-height: none;
+  min-height: 0;
 }
 #pg-trash .trash-table-card {
-  max-height: min(680px, calc(100vh - 230px));
+  max-height: none;
+  min-height: calc(100vh - 260px);
 }
 #system-panel-trash .trash-table-scroll,
 #pg-trash .trash-table-scroll {
   flex: 1 1 auto;
-  min-height: 160px;
+  min-height: 0;
   overflow: auto !important;
 }
 #system-panel-trash .trash-table-scroll table,
 #pg-trash .trash-table-scroll table {
   min-width: 900px;
   margin-bottom: 0;
+}
+#system-panel-trash .trash-data-row,
+#pg-trash .trash-data-row {
+  cursor: pointer;
 }
 .system-section-title { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; color: var(--tx); font-size: 14px; font-weight: 900; }
 .system-section-title i { color: var(--tx-i); font-size: 18px; }
@@ -3599,6 +3663,12 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
         </select>
         <input type="text" id="trash-q" placeholder="항목명 또는 식별 코드 검색..." style="min-width:220px;" oninput="renderTrash()">
         <button class="btn btn-danger" onclick="emptyTrash()"><i class="ti ti-trash-x"></i>휴지통 비우기</button>
+      </div>
+      <div class="selection-action-bar trash-selection-bar" id="trash-selection-bar" style="display:none;">
+        <span class="date-view-selection-count"><i class="ti ti-checkbox"></i> <span class="trash-selected-count">0</span>건 선택됨</span>
+        <button class="btn btn-sm" onclick="trashRestoreSelected()"><i class="ti ti-rotate-clockwise"></i>선택 복구</button>
+        <button class="btn btn-sm btn-danger" onclick="trashDeleteSelected()"><i class="ti ti-trash"></i>영구 삭제</button>
+        <button class="btn btn-sm date-view-clear-selection" onclick="trashClearSelection()"><i class="ti ti-x"></i>해제</button>
       </div>
       <div class="card trash-table-card"><div id="trash-table" class="trash-table-scroll" style="overflow-x:auto;"></div></div>
     </div>
@@ -6056,9 +6126,49 @@ function refreshPage(id) {
 
 /* Excel-like batch entry tables for operational records. */
 const BULK_ENTRY_TABLES = {};
+const BULK_ENTRY_WIDE_FIELDS = { name: '280px', itemName: '280px', materialName: '280px', productName: '280px', productId: '260px' };
+const BULK_ENTRY_COMPACT_FIELDS = { qty: '48px', unit: '48px' };
 
 function registerBulkEntryTable(key, config) {
   BULK_ENTRY_TABLES[key] = config;
+}
+
+function _bulkFieldClass(name) {
+  return 'batch-entry-field-' + String(name || '').replace(/[^a-zA-Z0-9_-]/g, '-');
+}
+
+function _bulkFieldWidth(field) {
+  return BULK_ENTRY_COMPACT_FIELDS[field.name] || BULK_ENTRY_WIDE_FIELDS[field.name] || field.width || '';
+}
+
+function _bulkWidthPx(width) {
+  const match = String(width || '').trim().match(/^(\d+(?:\.\d+)?)px$/);
+  return match ? Number(match[1]) : 0;
+}
+
+function syncBulkEntryColumnWidths(key) {
+  const config = BULK_ENTRY_TABLES[key];
+  const body = config && inp(config.body);
+  const table = body && body.closest('table');
+  if (!config || !table) return;
+  table.classList.add('batch-entry-sized-table');
+  table.querySelector('colgroup[data-bulk-colgroup]')?.remove();
+  const colgroup = document.createElement('colgroup');
+  colgroup.dataset.bulkColgroup = key;
+  let minWidth = 0;
+  config.fields.forEach(field => {
+    const col = document.createElement('col');
+    const width = _bulkFieldWidth(field);
+    if (width) col.style.width = width;
+    minWidth += _bulkWidthPx(width) || 120;
+    colgroup.appendChild(col);
+  });
+  const actionCol = document.createElement('col');
+  actionCol.style.width = '28px';
+  minWidth += 28;
+  colgroup.appendChild(actionCol);
+  table.style.minWidth = minWidth + 'px';
+  table.insertBefore(colgroup, table.firstChild);
 }
 
 function _bulkFieldDefault(field) {
@@ -6111,8 +6221,9 @@ function addBulkEntryRow(key, values = {}) {
   const tr = document.createElement('tr');
   tr.innerHTML = config.fields.map(field => {
     const value = values[field.name] ?? _bulkFieldDefault(field);
-    const style = field.width ? ` style="width:${esc(field.width)}"` : '';
-    return `<td${style}>${_bulkInputHtml(field, value)}</td>`;
+    const width = _bulkFieldWidth(field);
+    const style = width ? ` style="width:${esc(width)}"` : '';
+    return `<td class="${esc(_bulkFieldClass(field.name))}"${style}>${_bulkInputHtml(field, value)}</td>`;
   }).join('') +
     `<td class="batch-entry-actions"><button type="button" class="doc-add-row" title="행 추가" onclick="addBulkEntryRow('${esc(key)}')"><i class="ti ti-plus"></i></button></td>`;
   body.appendChild(tr);
@@ -6122,6 +6233,7 @@ function initBulkEntryTable(key, rows) {
   const config = BULK_ENTRY_TABLES[key];
   const body = config && inp(config.body);
   if (!body) return;
+  syncBulkEntryColumnWidths(key);
   body.innerHTML = '';
   const seed = Array.isArray(rows) && rows.length ? rows : Array.from({ length: config.minRows || 3 }, () => ({}));
   seed.forEach(row => addBulkEntryRow(key, row));
@@ -7931,16 +8043,10 @@ function _clientRegisterText(c) {
   return [c.name || '', c.id || '', c.manager || '', c.tel || '', c.email || '', c.bizNo || ''].join(' ').toLowerCase();
 }
 function _clientRegisterMatches(query) {
+  if (typeof _clientSearchCandidates === 'function') return _clientSearchCandidates(query, 8, false);
   const q = String(query || '').trim().toLowerCase();
   if (!q) return [];
-  return clients
-    .filter(c => _clientRegisterText(c).includes(q))
-    .sort((a, b) => {
-      const an = String(a.name || '').toLowerCase(), bn = String(b.name || '').toLowerCase();
-      const ap = an.startsWith(q) ? 0 : 1, bp = bn.startsWith(q) ? 0 : 1;
-      return (ap - bp) || an.localeCompare(bn, 'ko');
-    })
-    .slice(0, 6);
+  return clients.filter(c => _clientRegisterText(c).includes(q)).slice(0, 6);
 }
 function hideClientRegisterMatches() {
   const box = inp('ca-client-results');
@@ -8000,7 +8106,9 @@ function setClientRegisterSelection(clientId) {
     hideClientRegisterMatches();
     return;
   }
-  const c = clients.find(x => x.id === clientId);
+  const c = typeof ensureClientFromAnyPartner === 'function'
+    ? ensureClientFromAnyPartner(clientId)
+    : clients.find(x => x.id === clientId);
   if (!c) return;
   modal.dataset.existingId = c.id;
   sv('ca-id', c.id);
@@ -8385,16 +8493,18 @@ function onAddMatClientChange() {
   const cid = v('ma-client');
   const sel = inp('ma-product');
   if (sel) sel.innerHTML = '<option value="">-- 품목 선택 --</option>' + products.filter(p=>!cid||p.clientId===cid).map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('');
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('ma-client', 'ma-client-search');
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('ma-product', 'ma-product-search');
 }
 registerBulkEntryTable('mat', {
   body: 'mat-bulk-body',
   minRows: 3,
   fields: [
-    { name: 'name', type: 'text', placeholder: '자재명', width: '170px', required: true },
+    { name: 'name', type: 'text', placeholder: '자재명', width: '280px', required: true },
     { name: 'spec', type: 'text', placeholder: '규격/사양', width: '120px' },
     { name: 'supplier', type: 'text', placeholder: '공급처', width: '140px' },
-    { name: 'qty', type: 'number', min: 0, step: '0.01', default: '1', width: '82px' },
-    { name: 'unit', type: 'select', default: 'EA', options: ['EA','대','SET','kg','M','L','BOX','ton'], width: '78px' },
+    { name: 'qty', type: 'number', min: 0, step: '0.01', default: '1', width: '48px' },
+    { name: 'unit', type: 'select', default: 'EA', options: ['EA','대','SET','kg','M','L','BOX','ton'], width: '48px' },
     { name: 'unitPrice', type: 'number', min: 0, step: 1, placeholder: '0', width: '104px' },
     { name: 'expectedDate', type: 'date', width: '126px' },
     { name: 'status', type: 'select', default: '발주전', options: ['발주전','발주중','입고완료','지연'], width: '96px' },
@@ -8512,6 +8622,7 @@ function openMatAdd() {
   sv('ma-client', v('mat-fc') || clients[0]?.id || '');
   onAddMatClientChange();
   if (v('mat-fp')) sv('ma-product', v('mat-fp'));
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('ma-product', 'ma-product-search');
   ['ma-name','ma-spec','ma-supplier','ma-price','ma-qty','ma-note'].forEach(x=>sv(x,''));
   sv('ma-unit','EA'); sv('ma-status','발주전'); sv('ma-odate', today()); sv('ma-edate','');
   initBulkEntryTable('mat');
@@ -8530,6 +8641,7 @@ function openMatEdit(id) {
   sv('ma-client', prod?prod.clientId:'');
   onAddMatClientChange();
   sv('ma-product', m.productId);
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('ma-product', 'ma-product-search');
   sv('ma-name', m.name); sv('ma-spec', m.spec||''); sv('ma-supplier', m.supplier||'');
   sv('ma-price', m.unitPrice||0); sv('ma-qty', m.qty||0);
   sv('ma-unit', m.unit||'EA'); sv('ma-status', m.status);
@@ -8549,6 +8661,7 @@ function cloneMat(id) {
   sv('ma-client', prod?prod.clientId:'');
   onAddMatClientChange();
   sv('ma-product', m.productId);
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('ma-product', 'ma-product-search');
   sv('ma-name', m.name); sv('ma-spec', m.spec||''); sv('ma-supplier', m.supplier||'');
   sv('ma-price', m.unitPrice||0); sv('ma-qty', m.qty||0);
   sv('ma-unit', m.unit||'EA'); sv('ma-status', '발주전');
@@ -8678,11 +8791,11 @@ registerBulkEntryTable('inv', {
   body: 'inv-bulk-body',
   minRows: 3,
   fields: [
-    { name: 'name', type: 'text', placeholder: '품목명', width: '180px', required: true },
+    { name: 'name', type: 'text', placeholder: '품목명', width: '280px', required: true },
     { name: 'category', type: 'select', default: () => invCategory || '생산부품', options: ['완제품','생산부품','사무비품'], width: '110px' },
     { name: 'type', type: 'select', default: () => invCategory === '완제품' ? '완제품' : invCategory === '사무비품' ? '소모품' : '자재', options: ['자재','반제품','완제품','비품','소모품','기타'], width: '104px' },
-    { name: 'qty', type: 'number', min: 0, step: 1, default: '0', width: '90px' },
-    { name: 'unit', type: 'select', default: 'EA', options: ['EA','대','SET','kg','M','L','BOX','ton'], width: '78px' },
+    { name: 'qty', type: 'number', min: 0, step: 1, default: '0', width: '48px' },
+    { name: 'unit', type: 'select', default: 'EA', options: ['EA','대','SET','kg','M','L','BOX','ton'], width: '48px' },
     { name: 'minQty', type: 'number', min: 0, step: 1, default: '10', width: '92px' },
     { name: 'location', type: 'text', placeholder: '예: A-4 선반', width: '160px' },
     { name: 'note', type: 'text', placeholder: '비고', width: '180px' }
@@ -9104,9 +9217,9 @@ registerBulkEntryTable('order', {
   body: 'order-bulk-body',
   minRows: 3,
   fields: [
-    { name: 'productId', type: 'select', options: () => bulkProductOptions(v('oa-client')), width: '190px', required: true },
+    { name: 'productId', type: 'select', options: () => bulkProductOptions(v('oa-client')), width: '260px', required: true },
     { name: 'line', type: 'select', default: '라인 A', options: ['라인 A','라인 B','라인 C'], width: '92px' },
-    { name: 'qty', type: 'number', min: 1, step: 1, default: '1', width: '86px' },
+    { name: 'qty', type: 'number', min: 1, step: 1, default: '1', width: '48px' },
     { name: 'start', type: 'date', default: today, width: '126px' },
     { name: 'due', type: 'date', width: '126px' },
     { name: 'status', type: 'select', default: '대기', options: ['대기','진행중','완료','지연'], width: '92px' },
@@ -9132,6 +9245,8 @@ function openOrderAdd() {
   fillClientSelect('oa-client', false);
   sv('oa-client', clients[0]?.id || '');
   fillProductSelect('oa-product', clients[0]?.id || '');
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('oa-client', 'oa-client-search');
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('oa-product', 'oa-product-search');
   fillWorkerSelect('oa-mgr');
   sv('oa-start', today());
   ['oa-due','oa-qty','oa-done','oa-note'].forEach(id => sv(id, ''));
@@ -9153,6 +9268,8 @@ function openOrderEdit(id) {
   fillClientSelect('oa-client', false);
   sv('oa-client', o.clientId);
   fillProductSelect('oa-product', o.clientId, o.productId);
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('oa-client', 'oa-client-search');
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('oa-product', 'oa-product-search');
   sv('oa-line', o.line);
   sv('oa-qty', o.qty); sv('oa-done', o.done);
   sv('oa-start', o.start); sv('oa-due', o.due);
@@ -9174,6 +9291,8 @@ function cloneOrder(id) {
   sv('oa-id', nextCode('WO', workOrders));
   fillClientSelect('oa-client', false); sv('oa-client', o.clientId);
   fillProductSelect('oa-product', o.clientId, o.productId);
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('oa-client', 'oa-client-search');
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('oa-product', 'oa-product-search');
   sv('oa-line', o.line); sv('oa-qty', o.qty); sv('oa-done', 0);
   sv('oa-start', today()); sv('oa-due', o.due||''); sv('oa-status', '대기');
   fillWorkerSelect('oa-mgr', o.manager); sv('oa-note', o.note||'');
@@ -9184,10 +9303,14 @@ function cloneOrder(id) {
 
 function onAddOrderClientChange() {
   fillProductSelect('oa-product', v('oa-client'));
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('oa-client', 'oa-client-search');
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('oa-product', 'oa-product-search');
   if (isBulkEntryMode('order')) refreshBulkEntryTable('order');
 }
 function onQcClientChange() {
   fillProductSelect('df-product', v('df-client'));
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('df-client', 'df-client-search');
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('df-product', 'df-product-search');
   if (isBulkEntryMode('df')) refreshBulkEntryTable('df');
 }
 
@@ -10189,10 +10312,10 @@ registerBulkEntryTable('df', {
   body: 'df-bulk-body',
   minRows: 3,
   fields: [
-    { name: 'productId', type: 'select', options: () => bulkProductOptions(v('df-client')), width: '190px', required: true },
+    { name: 'productId', type: 'select', options: () => bulkProductOptions(v('df-client')), width: '260px', required: true },
     { name: 'stage', type: 'select', default: () => processStages[0] || '', options: () => processStages, width: '130px' },
     { name: 'type', type: 'text', placeholder: '불량 유형', width: '160px', required: true },
-    { name: 'qty', type: 'number', min: 1, step: 1, default: '1', width: '82px' },
+    { name: 'qty', type: 'number', min: 1, step: 1, default: '1', width: '48px' },
     { name: 'cause', type: 'text', placeholder: '원인', width: '150px' },
     { name: 'action', type: 'text', placeholder: '조치', width: '150px' },
     { name: 'status', type: 'select', default: '조치중', options: ['조치중','완료','보류'], width: '90px' },
@@ -10216,7 +10339,7 @@ registerBulkEntryTable('ck', {
   body: 'ck-bulk-body',
   minRows: 3,
   fields: [
-    { name: 'productId', type: 'select', options: () => bulkProductOptions(v('ck-client')), width: '220px', required: true },
+    { name: 'productId', type: 'select', options: () => bulkProductOptions(v('ck-client')), width: '260px', required: true },
     { name: 'visual', type: 'select', default: '합격', options: ['합격','불합격','조건부합격'], width: '110px' },
     { name: 'dim', type: 'select', default: '합격', options: ['합격','불합격','조건부합격'], width: '110px' },
     { name: 'func', type: 'select', default: '합격', options: ['합격','불합격','조건부합격'], width: '110px' },
@@ -10252,6 +10375,8 @@ function onClaimClientChange() {
 
 function onCheckClientChange() {
   fillProductSelect('ck-product', v('ck-client'));
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('ck-client', 'ck-client-search');
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('ck-product', 'ck-product-search');
   if (isBulkEntryMode('ck')) refreshBulkEntryTable('ck');
 }
 
@@ -10275,6 +10400,8 @@ function openDefectAdd() {
   sv('df-date', today());
   sv('df-client', clients[0]?.id || '');
   fillProductSelect('df-product', clients[0]?.id || '');
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('df-client', 'df-client-search');
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('df-product', 'df-product-search');
   sv('df-stage', processStages[0]);
   sv('df-type', '');
   sv('df-qty', '1');
@@ -10300,6 +10427,8 @@ function openDefectEdit(id) {
   sv('df-date', d.date);
   sv('df-client', pr?.clientId || clients[0]?.id);
   fillProductSelect('df-product', pr?.clientId || clients[0]?.id, d.productId);
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('df-client', 'df-client-search');
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('df-product', 'df-product-search');
   sv('df-stage', d.stage);
   sv('df-type', d.type);
   sv('df-qty', d.qty);
@@ -10525,6 +10654,8 @@ function openCheckAdd() {
   sv('ck-date', today());
   sv('ck-client', clients[0]?.id || '');
   fillProductSelect('ck-product', clients[0]?.id || '');
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('ck-client', 'ck-client-search');
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('ck-product', 'ck-product-search');
   sv('ck-inspector', '');
   sv('ck-visual', '합격');
   sv('ck-dim', '합격');
@@ -10547,6 +10678,8 @@ function openCheckEdit(id) {
   sv('ck-date', r.date);
   sv('ck-client', r.clientId);
   fillProductSelect('ck-product', r.clientId, r.productId);
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('ck-client', 'ck-client-search');
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('ck-product', 'ck-product-search');
   sv('ck-inspector', r.inspector || '');
   sv('ck-visual', r.visual);
   sv('ck-dim', r.dim);
@@ -11402,6 +11535,10 @@ function trashRowChecks() {
   return Array.from(document.querySelectorAll('#trash-table .trash-row-check'));
 }
 
+function trashSelectedIds() {
+  return trashRowChecks().filter(chk => chk.checked).map(chk => chk.value);
+}
+
 function trashUpdateSelection() {
   const checks = trashRowChecks();
   const selected = checks.filter(chk => chk.checked);
@@ -11414,11 +11551,50 @@ function trashUpdateSelection() {
     const row = chk.closest('tr');
     if (row) row.classList.toggle('table-row-selected', chk.checked);
   });
+  document.querySelectorAll('.trash-selection-bar').forEach(bar => {
+    bar.style.display = selected.length ? 'flex' : 'none';
+  });
+  document.querySelectorAll('.trash-selected-count').forEach(el => {
+    el.textContent = selected.length;
+  });
 }
 
 function trashToggleAll(checked) {
   trashRowChecks().forEach(chk => { chk.checked = checked; });
   trashUpdateSelection();
+}
+
+function trashToggleRowFromClick(event) {
+  const target = event.target;
+  if (target && target.closest && target.closest('input, button, select, a, label')) return;
+  const row = target && target.closest ? target.closest('tr') : null;
+  const chk = row ? row.querySelector('.trash-row-check') : null;
+  if (!chk) return;
+  chk.checked = !chk.checked;
+  trashUpdateSelection();
+}
+
+function trashClearSelection() {
+  trashRowChecks().forEach(chk => { chk.checked = false; });
+  trashUpdateSelection();
+}
+
+function trashRestoreSelected() {
+  const ids = trashSelectedIds();
+  if (!ids.length) return;
+  ids.slice().forEach(id => restoreTrash(id));
+}
+
+function trashDeleteSelected() {
+  const ids = trashSelectedIds();
+  if (!ids.length) return;
+  confirm_('선택 항목 영구 삭제', `선택한 <strong>${ids.length}건</strong>을 휴지통에서 완전히 삭제하시겠습니까?<br><span style="color:var(--tx-d);font-weight:700;">이 작업은 복구할 수 없습니다.</span>`, () => {
+    trash = trash.filter(x => !ids.includes(x.id));
+    saveStorage('trash', trash);
+    updateTrashBadge();
+    renderTrash();
+    showToast(`선택한 휴지통 항목 ${ids.length}건을 영구 삭제했습니다.`, 'info');
+  });
 }
 
 function renderTrash() {
@@ -11435,7 +11611,11 @@ function renderTrash() {
 
   const tableContainer = inp('trash-table');
   if (!tableContainer) return;
-  if (!filtered.length) { tableContainer.innerHTML = empty('휴지통에 삭제 및 대기 상태인 데이터가 존재하지 않습니다.'); return; }
+  if (!filtered.length) {
+    tableContainer.innerHTML = empty('휴지통에 삭제 및 대기 상태인 데이터가 존재하지 않습니다.');
+    trashUpdateSelection();
+    return;
+  }
 
   const typeLabels = {
     client: '고객사',
@@ -11460,7 +11640,6 @@ function renderTrash() {
           <th>기존 데이터 개요</th>
           <th>삭제 일시</th>
           <th>연쇄 복구 유무</th>
-          <th>동작</th>
         </tr>
       </thead>
       <tbody>
@@ -11474,7 +11653,7 @@ function renderTrash() {
             sizeLabel = parts.length > 0 ? `하위 데이터 동시복구 (${parts.join(', ')})` : '단일 항목';
           }
           return `
-            <tr>
+            <tr class="trash-data-row" onclick="trashToggleRowFromClick(event)">
               <td style="text-align:center;"><input type="checkbox" class="trash-row-check table-row-select" value="${esc(i.id)}" title="행 선택" onchange="trashUpdateSelection()"></td>
               <td>${esc(i.id)}</td>
               <td><span class="bd bd-neu">${esc(typeLabels[i.type] || i.type)}</span></td>
@@ -11482,10 +11661,6 @@ function renderTrash() {
               <td style="font-weight:700; color:var(--tx-s);">${esc(i.name)}</td>
               <td>${esc(i.deletedAt)}</td>
               <td><span style="font-size:11px; font-weight:600; color:var(--tx-i);">${sizeLabel}</span></td>
-              <td>
-                <button class="restore-btn" onclick="restoreTrash('${i.id}')"><i class="ti ti-rotate-clockwise"></i>복구</button>
-                <button class="del-btn" onclick="deleteTrashPermanently('${i.id}')" style="margin-left:4px;"><i class="ti ti-trash"></i>영구 삭제</button>
-              </td>
             </tr>`;
         }).join('')}
       </tbody>
@@ -11495,6 +11670,7 @@ function renderTrash() {
 
 /* ════════ 키보드 ESC 종료 및 엔터 승인 단축기 ════════ */
 document.addEventListener('keydown', e => {
+  if (e.defaultPrevented) return;
   const confirmDlg = inp('confirmDlg');
   const kanbanModal = inp('kanbanEditModal');
 
@@ -14021,6 +14197,8 @@ function onRfqClientChange() {
   const cid = v('rq-client');
   inp('rq-product').innerHTML = '<option value="">-- 선택 --</option>' +
     products.filter(p => !cid || p.clientId === cid).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('rq-client', 'rq-client-search');
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('rq-product', 'rq-product-search');
 }
 
 function saveRfqForm() {
@@ -14069,6 +14247,7 @@ function openRfqEdit(id) {
   _syncRfqClientDropdown(r.clientId);
   inp('rq-client').value = r.clientId; onRfqClientChange();
   inp('rq-product').value = r.productId||'';
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('rq-product', 'rq-product-search');
   inp('rq-supplier').value = r.supplier; inp('rq-semail').value = r.supplierEmail||'';
   _initDocItemTable('rq', _docItems(r));
   inp('rq-spec').value = r.spec||'';
@@ -14089,6 +14268,7 @@ function cloneRfq(id) {
   _syncRfqClientDropdown(r.clientId);
   inp('rq-client').value = r.clientId; onRfqClientChange();
   inp('rq-product').value = r.productId||'';
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('rq-product', 'rq-product-search');
   inp('rq-supplier').value = r.supplier||''; inp('rq-semail').value = r.supplierEmail||'';
   _initDocItemTable('rq', _docItems(r));
   inp('rq-spec').value = r.spec||'';
@@ -14465,6 +14645,8 @@ function onPoClientChange() {
   const cid = v('po-client-sel');
   inp('po-product-sel').innerHTML = '<option value="">-- 선택 --</option>' +
     products.filter(p => !cid || p.clientId === cid).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('po-client-sel', 'po-client-search');
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('po-product-sel', 'po-product-search');
 }
 
 function savePoForm() {
@@ -14513,6 +14695,7 @@ function openPoEdit(id) {
   _syncPoClientDropdown(p.clientId);
   inp('po-client-sel').value = p.clientId; onPoClientChange();
   inp('po-product-sel').value = p.productId||'';
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('po-product-sel', 'po-product-search');
   inp('po-supplier').value = p.supplier; inp('po-semail').value = p.supplierEmail||'';
   _initDocItemTable('po', _docItems(p));
   inp('po-spec').value = p.spec||'';
@@ -14534,6 +14717,7 @@ function clonePo(id) {
   _syncPoClientDropdown(p.clientId);
   inp('po-client-sel').value = p.clientId; onPoClientChange();
   inp('po-product-sel').value = p.productId||'';
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('po-product-sel', 'po-product-search');
   inp('po-supplier').value = p.supplier||''; inp('po-semail').value = p.supplierEmail||'';
   _initDocItemTable('po', _docItems(p));
   inp('po-spec').value = p.spec||'';
@@ -15626,6 +15810,7 @@ function onSalesDocClientChange() {
   const c = clients.find(x => x.id === cid);
   if (c && c.email && !v('sd-email')) sv('sd-email', c.email);
   sv('sd-bizno', _docClientBizNo({ clientId: cid }));
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('sd-client', 'sd-client-search');
 }
 
 function openSalesDocAdd(type) {
@@ -15640,6 +15825,7 @@ function openSalesDocAdd(type) {
   sv('sd-date', today());
   sv('sd-status', cfg.statuses[0]);
   inp('sd-client').innerHTML = '<option value="">-- 선택 --</option>' + clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('sd-client', 'sd-client-search');
   ['sd-product','sd-email','sd-bizno','sd-note-common'].forEach(id=>sv(id,''));
   _initDocItemTable('sd');
   modal.classList.add('open');
@@ -15658,6 +15844,7 @@ function openSalesDocEdit(type, id) {
   sv('sd-id', d.id);
   sv('sd-date', d.date);
   inp('sd-client').innerHTML = '<option value="">-- 선택 --</option>' + clients.map(c=>`<option value="${c.id}"${c.id===d.clientId?' selected':''}>${c.name}</option>`).join('');
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('sd-client', 'sd-client-search');
   sv('sd-product', d.productId || '');
   sv('sd-email', d.clientEmail||'');
   sv('sd-bizno', _docClientBizNo(d));
@@ -15680,6 +15867,7 @@ function cloneSalesDoc(type, id) {
   sv('sd-id', nextDocCode(cfg.prefix, salesList(type)));
   sv('sd-date', today());
   inp('sd-client').innerHTML = '<option value="">-- 선택 --</option>' + clients.map(c=>`<option value="${c.id}"${c.id===d.clientId?' selected':''}>${c.name}</option>`).join('');
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('sd-client', 'sd-client-search');
   sv('sd-product', d.productId || '');
   sv('sd-email', d.clientEmail||'');
   sv('sd-bizno', _docClientBizNo(d));
@@ -16113,6 +16301,7 @@ function onSODocClientChange() {
   const c = clients.find(x => x.id === cid);
   if (c && c.email && !v('so2-email')) sv('so2-email', c.email);
   sv('so2-bizno', _docClientBizNo({ clientId: cid }));
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('so2-client', 'so2-client-search');
 }
 
 function openSODocAdd(type) {
@@ -16127,6 +16316,7 @@ function openSODocAdd(type) {
   sv('so2-date', today());
   sv('so2-status', cfg.statuses[0]);
   inp('so2-client').innerHTML = '<option value="">-- 선택 --</option>' + clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('so2-client', 'so2-client-search');
   ['so2-email','so2-bizno','so2-spec','so2-note-common','so2-due'].forEach(id=>sv(id,''));
   _initDocItemTable('so2');
   sv('so2-unit','대'); sv('so2-price','');
@@ -16147,6 +16337,7 @@ function openSODocEdit(type, id) {
   sv('so2-date', d.date);
   const clientId = _soDocClientId(d);
   inp('so2-client').innerHTML = '<option value="">-- 선택 --</option>' + clients.map(c=>`<option value="${c.id}"${c.id===clientId?' selected':''}>${c.name}</option>`).join('');
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('so2-client', 'so2-client-search');
   sv('so2-email', d.clientEmail||'');
   sv('so2-bizno', _docClientBizNo(d));
   _initDocItemTable('so2', _docItems(d));
@@ -16173,6 +16364,7 @@ function cloneSODoc(type, id) {
   sv('so2-date', today());
   const clientId = _soDocClientId(d);
   inp('so2-client').innerHTML = '<option value="">-- 선택 --</option>' + clients.map(c=>`<option value="${c.id}"${c.id===clientId?' selected':''}>${c.name}</option>`).join('');
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('so2-client', 'so2-client-search');
   sv('so2-email', d.clientEmail||''); sv('so2-bizno', _docClientBizNo(d));
   _initDocItemTable('so2', _docItems(d));
   sv('so2-spec', d.spec||'');
@@ -16580,6 +16772,76 @@ function selectPartner(id) {
   closeModal('partner-picker-modal');
 }
 
+function _partnerFieldText(p) {
+  return [
+    p.name || '',
+    p.id || '',
+    normalizePartnerType(p.type) || '',
+    p.manager || '',
+    p.tel || '',
+    p.mobile || '',
+    p.email || '',
+    p.bizNo || ''
+  ].join(' ').toLowerCase();
+}
+function _partnerFieldMatches(query) {
+  const q = String(query || '').trim().toLowerCase();
+  if (!q) return [];
+  return partners
+    .filter(p => _partnerFieldText(p).includes(q))
+    .sort((a, b) => {
+      const an = String(a.name || '').toLowerCase();
+      const bn = String(b.name || '').toLowerCase();
+      const ap = an.startsWith(q) ? 0 : 1;
+      const bp = bn.startsWith(q) ? 0 : 1;
+      return (ap - bp) || an.localeCompare(bn, 'ko');
+    })
+    .slice(0, 8);
+}
+function hidePartnerFieldMatches(resultsId) {
+  const box = inp(resultsId);
+  if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+}
+function selectPartnerField(inputId, resultsId, partnerId, emailId) {
+  const p = partners.find(x => x.id === partnerId);
+  if (!p) return;
+  sv(inputId, p.name || '');
+  if (emailId) sv(emailId, p.email || '');
+  hidePartnerFieldMatches(resultsId);
+}
+function renderPartnerFieldMatches(inputId, resultsId, emailId) {
+  const box = inp(resultsId);
+  if (!box) return;
+  const q = v(inputId).trim();
+  const rows = _partnerFieldMatches(q);
+  if (!q || !rows.length) { hidePartnerFieldMatches(resultsId); return; }
+  box.innerHTML = rows.map(p => `
+    <button type="button" class="inline-search-item" onmousedown="selectPartnerField('${esc(inputId)}','${esc(resultsId)}','${esc(p.id)}','${esc(emailId || '')}')">
+      <strong>${esc(p.name || p.id)}</strong>
+      <span>${esc(normalizePartnerType(p.type))} · ${esc(p.manager || '담당 미지정')} · ${esc(p.tel || p.mobile || p.email || '연락처 미지정')}</span>
+    </button>
+  `).join('');
+  box.style.display = 'block';
+}
+function onPartnerFieldSearchInput(inputId, resultsId, emailId) {
+  renderPartnerFieldMatches(inputId, resultsId, emailId);
+}
+function onPartnerFieldSearchKey(e, inputId, resultsId, emailId) {
+  if (e.key === 'Escape') { hidePartnerFieldMatches(resultsId); return; }
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  e.stopPropagation();
+  const first = _partnerFieldMatches(v(inputId))[0];
+  if (first) selectPartnerField(inputId, resultsId, first.id, emailId);
+}
+function openPartnerFieldPicker(inputId, resultsId, emailId) {
+  openPartnerPicker(function(p){
+    sv(inputId, p.name || '');
+    if (emailId) sv(emailId, p.email || '');
+    hidePartnerFieldMatches(resultsId);
+  });
+}
+
 /* ── 고객사 피커 (거래명세표·세금계산서 등 고객사 선택용) ── */
 let _clientPickerCb = null;
 let _clientPickerCreatePending = false;
@@ -16611,7 +16873,7 @@ function consumeClientPickerCreatedClient(c) {
 }
 function renderClientPickerList(){
   const q = (v('cp-q')||'').toLowerCase();
-  const list = clients.filter(c => !q || [c.name, c.manager||'', c.tel||'', c.email||''].join(' ').toLowerCase().includes(q));
+  const list = _clientSearchCandidates(q, 80, true);
   const cont = inp('cp-list');
   if (!list.length){ cont.innerHTML = '<div style="padding:20px;text-align:center;color:var(--tx-t);font-size:12px;">검색 결과가 없습니다.<br>아래 버튼으로 새 고객사를 등록하세요.</div>'; return; }
   cont.innerHTML = list.map(c => `
@@ -16625,10 +16887,221 @@ function renderClientPickerList(){
     </div>`).join('');
 }
 function selectClientPick(id){
-  const c = clients.find(x => x.id === id);
+  const c = ensureClientFromAnyPartner(id);
   if (!c || !_clientPickerCb) return;
   _clientPickerCb(c);
   closeModal('client-picker-modal');
+}
+
+function _clientFieldText(c) {
+  return [c.name || '', c.id || '', c.manager || '', c.tel || '', c.email || '', c.bizNo || ''].join(' ').toLowerCase();
+}
+function _partnerAsClientCandidate(p) {
+  return {
+    id: p.id,
+    name: p.name || p.id,
+    manager: p.manager || '',
+    tel: p.tel || p.mobile || '',
+    mobile: p.mobile || '',
+    email: p.email || '',
+    bizNo: p.bizNo || '',
+    note: p.note || '',
+    _source: 'partner',
+    _typeLabel: normalizePartnerType(p.type) || '거래처'
+  };
+}
+function ensureClientFromAnyPartner(id) {
+  let c = clients.find(x => x.id === id);
+  if (c) return c;
+  const p = partners.find(x => x.id === id);
+  if (!p) return null;
+  c = {
+    id: p.id,
+    name: p.name || p.id,
+    manager: p.manager || '',
+    tel: p.tel || p.mobile || '',
+    email: p.email || '',
+    bizNo: p.bizNo || '',
+    date: today(),
+    note: p.note || '',
+    closed: false
+  };
+  clients.push(c);
+  saveStorage('clients', clients);
+  return c;
+}
+function _clientSearchCandidates(query, limit, includeEmpty) {
+  const q = String(query || '').trim().toLowerCase();
+  if (!q && !includeEmpty) return [];
+  const usedIds = new Set();
+  const usedNames = new Set();
+  const rows = [];
+  clients.forEach(c => {
+    if (q && !_clientFieldText(c).includes(q)) return;
+    rows.push(Object.assign({_source:'client', _typeLabel:'고객사'}, c));
+    usedIds.add(c.id);
+    usedNames.add(String(c.name || '').trim().toLowerCase());
+  });
+  partners.forEach(p => {
+    if (!p || usedIds.has(p.id)) return;
+    const nameKey = String(p.name || '').trim().toLowerCase();
+    if (nameKey && usedNames.has(nameKey)) return;
+    const row = _partnerAsClientCandidate(p);
+    if (q && !_clientFieldText(row).includes(q)) return;
+    rows.push(row);
+  });
+  return rows.sort((a, b) => {
+    const an = String(a.name || '').toLowerCase();
+    const bn = String(b.name || '').toLowerCase();
+    const ap = q && an.startsWith(q) ? 0 : 1;
+    const bp = q && bn.startsWith(q) ? 0 : 1;
+    const as = a._source === 'client' ? 0 : 1;
+    const bs = b._source === 'client' ? 0 : 1;
+    return (ap - bp) || (as - bs) || an.localeCompare(bn, 'ko');
+  }).slice(0, limit || 8);
+}
+function _clientFieldMatches(query) {
+  return _clientSearchCandidates(query, 8, false);
+}
+function _runClientFieldChange(changeFnName) {
+  if (changeFnName && typeof window[changeFnName] === 'function') window[changeFnName]();
+}
+function syncClientFieldDisplay(selectId, inputId) {
+  const sel = inp(selectId);
+  const input = inp(inputId);
+  if (!sel || !input) return;
+  const c = clients.find(x => x.id === sel.value);
+  input.value = c ? (c.name || '') : '';
+}
+function hideClientFieldMatches(resultsId) {
+  const box = inp(resultsId);
+  if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+}
+function selectClientField(selectId, inputId, resultsId, clientId, changeFnName, emailId) {
+  const c = ensureClientFromAnyPartner(clientId);
+  if (!c) return;
+  setClientSelectValue(selectId, c);
+  sv(inputId, c.name || '');
+  hideClientFieldMatches(resultsId);
+  _runClientFieldChange(changeFnName);
+  if (emailId && c.email && !v(emailId)) sv(emailId, c.email);
+}
+function renderClientFieldMatches(selectId, inputId, resultsId, changeFnName, emailId) {
+  const box = inp(resultsId);
+  if (!box) return;
+  const q = v(inputId).trim();
+  const rows = _clientFieldMatches(q);
+  if (!q || !rows.length) { hideClientFieldMatches(resultsId); return; }
+  box.innerHTML = rows.map(c => `
+    <button type="button" class="inline-search-item" onmousedown="selectClientField('${esc(selectId)}','${esc(inputId)}','${esc(resultsId)}','${esc(c.id)}','${esc(changeFnName || '')}','${esc(emailId || '')}')">
+      <strong>${esc(c.name || c.id)}</strong>
+      <span>${esc(c.id)} · 담당 ${esc(c.manager || '미지정')} · ${esc(c.tel || c.email || '연락처 미지정')}</span>
+    </button>
+  `).join('');
+  box.style.display = 'block';
+}
+function onClientFieldSearchInput(selectId, inputId, resultsId, changeFnName) {
+  const sel = inp(selectId);
+  if (sel) {
+    const c = clients.find(x => x.id === sel.value);
+    if (c && String(v(inputId)).trim() !== String(c.name || '').trim()) {
+      sel.value = '';
+      _runClientFieldChange(changeFnName);
+    }
+  }
+  renderClientFieldMatches(selectId, inputId, resultsId, changeFnName);
+}
+function onClientFieldSearchKey(e, selectId, inputId, resultsId, changeFnName, emailId) {
+  if (e.key === 'Escape') { hideClientFieldMatches(resultsId); return; }
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  e.stopPropagation();
+  const first = _clientFieldMatches(v(inputId))[0];
+  if (first) {
+    selectClientField(selectId, inputId, resultsId, first.id, changeFnName, emailId);
+  }
+}
+function openClientFieldPicker(selectId, inputId, resultsId, changeFnName, emailId) {
+  openClientPicker(function(c){
+    selectClientField(selectId, inputId, resultsId, c.id, changeFnName, emailId);
+  });
+}
+
+function _productFieldText(p) {
+  return [p.name || '', p.id || '', p.spec || '', getClientName(p.clientId) || ''].join(' ').toLowerCase();
+}
+function _productFieldMatches(query, clientId) {
+  const q = String(query || '').trim().toLowerCase();
+  const list = clientId ? products.filter(p => p.clientId === clientId) : products;
+  return list
+    .filter(p => !q || _productFieldText(p).includes(q))
+    .sort((a, b) => {
+      const an = String(a.name || '').toLowerCase();
+      const bn = String(b.name || '').toLowerCase();
+      const ap = q && an.startsWith(q) ? 0 : 1;
+      const bp = q && bn.startsWith(q) ? 0 : 1;
+      return (ap - bp) || an.localeCompare(bn, 'ko');
+    })
+    .slice(0, 8);
+}
+function syncProductFieldDisplay(selectId, inputId) {
+  const sel = inp(selectId);
+  const input = inp(inputId);
+  if (!sel || !input) return;
+  const p = products.find(x => x.id === sel.value);
+  input.value = p ? (p.name || '') : '';
+}
+function hideProductFieldMatches(resultsId) {
+  const box = inp(resultsId);
+  if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+}
+function selectProductField(selectId, inputId, resultsId, productId, changeFnName) {
+  const p = products.find(x => x.id === productId);
+  const sel = inp(selectId);
+  if (!p || !sel) return;
+  if (![...sel.options].some(opt => opt.value === p.id)) {
+    sel.insertAdjacentHTML('beforeend', `<option value="${esc(p.id)}">${esc(p.name)}</option>`);
+  }
+  sel.value = p.id;
+  sv(inputId, p.name || '');
+  hideProductFieldMatches(resultsId);
+  if (changeFnName && typeof window[changeFnName] === 'function') window[changeFnName]();
+}
+function renderProductFieldMatches(selectId, inputId, resultsId, clientSelectId, changeFnName) {
+  const box = inp(resultsId);
+  if (!box) return;
+  const rows = _productFieldMatches(v(inputId), clientSelectId ? v(clientSelectId) : '');
+  if (!rows.length) { hideProductFieldMatches(resultsId); return; }
+  box.innerHTML = rows.map(p => `
+    <button type="button" class="inline-search-item" onmousedown="selectProductField('${esc(selectId)}','${esc(inputId)}','${esc(resultsId)}','${esc(p.id)}','${esc(changeFnName || '')}')">
+      <strong>${esc(p.name || p.id)}</strong>
+      <span>${esc(p.id)} · ${esc(getClientName(p.clientId) || '고객사 미지정')}${p.spec ? ' · ' + esc(p.spec) : ''}</span>
+    </button>
+  `).join('');
+  box.style.display = 'block';
+}
+function onProductFieldSearchInput(selectId, inputId, resultsId, clientSelectId, changeFnName) {
+  const sel = inp(selectId);
+  if (sel) {
+    const p = products.find(x => x.id === sel.value);
+    if (p && String(v(inputId)).trim() !== String(p.name || '').trim()) sel.value = '';
+  }
+  renderProductFieldMatches(selectId, inputId, resultsId, clientSelectId, changeFnName);
+}
+function onProductFieldSearchKey(e, selectId, inputId, resultsId, clientSelectId, changeFnName) {
+  if (e.key === 'Escape') { hideProductFieldMatches(resultsId); return; }
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  e.stopPropagation();
+  const first = _productFieldMatches(v(inputId), clientSelectId ? v(clientSelectId) : '')[0];
+  if (first) {
+    selectProductField(selectId, inputId, resultsId, first.id, changeFnName);
+  }
+}
+function openProductFieldSearch(selectId, inputId, resultsId, clientSelectId, changeFnName) {
+  const input = inp(inputId);
+  if (input) input.focus();
+  renderProductFieldMatches(selectId, inputId, resultsId, clientSelectId, changeFnName);
 }
 
 function openPartnerModalFromPicker() {
@@ -19245,6 +19718,7 @@ function openAsAdd(){
   inp('as-modal-ttl').innerHTML = '<i class="ti ti-tool" style="color:var(--tx-i);"></i>A/S 접수 등록';
   sv('asa-id', nextCode('AS', asList));
   inp('asa-client').innerHTML = _asClientOptions();
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('asa-client', 'asa-client-search');
   inp('asa-owner').innerHTML = _asWorkerOptions();
   sv('asa-product',''); sv('asa-recv', today()); sv('asa-symptom','');
   sv('asa-warranty','보증'); sv('asa-status','접수'); sv('asa-action','');
@@ -19257,6 +19731,7 @@ function openAsEdit(id){
   inp('as-modal-ttl').innerHTML = '<i class="ti ti-edit" style="color:var(--tx-w);"></i>A/S 정보 수정';
   sv('asa-id', a.id);
   inp('asa-client').innerHTML = _asClientOptions(a.clientId);
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('asa-client', 'asa-client-search');
   inp('asa-owner').innerHTML = _asWorkerOptions(a.owner);
   sv('asa-product', a.productName||''); sv('asa-recv', a.recvDate||''); sv('asa-symptom', a.symptom||'');
   sv('asa-warranty', a.warranty||'보증'); sv('asa-status', a.status||'접수'); sv('asa-action', a.action||'');
@@ -22758,13 +23233,28 @@ window.addEventListener('resize', () => {
       <div class="ff"><label>상태</label>
         <select id="rq-status"><option>요청전</option><option>요청중</option><option>회신완료</option><option>채택</option><option>미채택</option></select>
       </div>
-      <div class="ff"><label>연결 고객사</label><select id="rq-client" onchange="onRfqClientChange()"><option value="">-- 선택 --</option></select></div>
-      <div class="ff"><label>연결 제품</label><select id="rq-product"><option value="">-- 선택 --</option></select></div>
-      <div class="ff" style="grid-column:span 2;"><label>공급처/협력사 *</label>
-        <div style="display:flex;gap:4px;">
-          <input id="rq-supplier" placeholder="공급처명" style="flex:1;">
-          <button type="button" class="btn btn-sm" onclick="openPartnerPicker(function(p){inp('rq-supplier').value=p.name;inp('rq-semail').value=p.email||'';})" style="white-space:nowrap;"><i class="ti ti-search"></i>찾기</button>
+      <div class="ff"><label>연결 고객사</label>
+        <div class="field-search">
+          <input id="rq-client-search" placeholder="고객사명 검색" autocomplete="off" oninput="onClientFieldSearchInput('rq-client','rq-client-search','rq-client-results','onRfqClientChange')" onfocus="renderClientFieldMatches('rq-client','rq-client-search','rq-client-results','onRfqClientChange')" onblur="setTimeout(function(){hideClientFieldMatches('rq-client-results');},160)" onkeydown="onClientFieldSearchKey(event,'rq-client','rq-client-search','rq-client-results','onRfqClientChange')">
+          <button type="button" class="field-search-btn" onclick="openClientFieldPicker('rq-client','rq-client-search','rq-client-results','onRfqClientChange')" title="고객사 찾기"><i class="ti ti-search"></i></button>
+          <select id="rq-client" class="linked-hidden-select" onchange="onRfqClientChange(); syncClientFieldDisplay('rq-client','rq-client-search');"><option value="">-- 선택 --</option></select>
         </div>
+        <div class="inline-search-results" id="rq-client-results"></div>
+      </div>
+      <div class="ff"><label>연결 제품</label>
+        <div class="field-search">
+          <input id="rq-product-search" placeholder="제품명 검색" autocomplete="off" oninput="onProductFieldSearchInput('rq-product','rq-product-search','rq-product-results','rq-client')" onfocus="renderProductFieldMatches('rq-product','rq-product-search','rq-product-results','rq-client')" onblur="setTimeout(function(){hideProductFieldMatches('rq-product-results');},160)" onkeydown="onProductFieldSearchKey(event,'rq-product','rq-product-search','rq-product-results','rq-client')">
+          <button type="button" class="field-search-btn" onclick="openProductFieldSearch('rq-product','rq-product-search','rq-product-results','rq-client')" title="제품 찾기"><i class="ti ti-search"></i></button>
+          <select id="rq-product" class="linked-hidden-select" onchange="syncProductFieldDisplay('rq-product','rq-product-search');"><option value="">-- 선택 --</option></select>
+        </div>
+        <div class="inline-search-results" id="rq-product-results"></div>
+      </div>
+      <div class="ff" style="grid-column:span 2;"><label>공급처/협력사 *</label>
+        <div class="field-search">
+          <input id="rq-supplier" placeholder="공급처명" autocomplete="off" oninput="onPartnerFieldSearchInput('rq-supplier','rq-supplier-results','rq-semail')" onfocus="renderPartnerFieldMatches('rq-supplier','rq-supplier-results','rq-semail')" onblur="setTimeout(function(){hidePartnerFieldMatches('rq-supplier-results');},160)" onkeydown="onPartnerFieldSearchKey(event,'rq-supplier','rq-supplier-results','rq-semail')">
+          <button type="button" class="field-search-btn" onclick="openPartnerFieldPicker('rq-supplier','rq-supplier-results','rq-semail')" title="공급처 찾기"><i class="ti ti-search"></i></button>
+        </div>
+        <div class="inline-search-results" id="rq-supplier-results"></div>
       </div>
       <div class="ff" style="grid-column:span 2;"><label>공급처 이메일</label><input id="rq-semail" type="email" placeholder="supplier@example.com"></div>
       <div class="doc-item-grid">
@@ -22793,13 +23283,28 @@ window.addEventListener('resize', () => {
       <div class="ff"><label>발주 상태</label>
         <select id="po-status"><option>작성중</option><option>발송완료</option><option>확인완료</option><option>입고완료</option></select>
       </div>
-      <div class="ff"><label>연결 고객사</label><select id="po-client-sel" onchange="onPoClientChange()"><option value="">-- 선택 --</option></select></div>
-      <div class="ff"><label>연결 제품</label><select id="po-product-sel"><option value="">-- 선택 --</option></select></div>
-      <div class="ff" style="grid-column:span 2;"><label>공급처/협력사 *</label>
-        <div style="display:flex;gap:4px;">
-          <input id="po-supplier" placeholder="발주할 공급처명" style="flex:1;">
-          <button type="button" class="btn btn-sm" onclick="openPartnerPicker(function(p){inp('po-supplier').value=p.name;inp('po-semail').value=p.email||'';})" style="white-space:nowrap;"><i class="ti ti-search"></i>찾기</button>
+      <div class="ff"><label>연결 고객사</label>
+        <div class="field-search">
+          <input id="po-client-search" placeholder="고객사명 검색" autocomplete="off" oninput="onClientFieldSearchInput('po-client-sel','po-client-search','po-client-results','onPoClientChange')" onfocus="renderClientFieldMatches('po-client-sel','po-client-search','po-client-results','onPoClientChange')" onblur="setTimeout(function(){hideClientFieldMatches('po-client-results');},160)" onkeydown="onClientFieldSearchKey(event,'po-client-sel','po-client-search','po-client-results','onPoClientChange')">
+          <button type="button" class="field-search-btn" onclick="openClientFieldPicker('po-client-sel','po-client-search','po-client-results','onPoClientChange')" title="고객사 찾기"><i class="ti ti-search"></i></button>
+          <select id="po-client-sel" class="linked-hidden-select" onchange="onPoClientChange(); syncClientFieldDisplay('po-client-sel','po-client-search');"><option value="">-- 선택 --</option></select>
         </div>
+        <div class="inline-search-results" id="po-client-results"></div>
+      </div>
+      <div class="ff"><label>연결 제품</label>
+        <div class="field-search">
+          <input id="po-product-search" placeholder="제품명 검색" autocomplete="off" oninput="onProductFieldSearchInput('po-product-sel','po-product-search','po-product-results','po-client-sel')" onfocus="renderProductFieldMatches('po-product-sel','po-product-search','po-product-results','po-client-sel')" onblur="setTimeout(function(){hideProductFieldMatches('po-product-results');},160)" onkeydown="onProductFieldSearchKey(event,'po-product-sel','po-product-search','po-product-results','po-client-sel')">
+          <button type="button" class="field-search-btn" onclick="openProductFieldSearch('po-product-sel','po-product-search','po-product-results','po-client-sel')" title="제품 찾기"><i class="ti ti-search"></i></button>
+          <select id="po-product-sel" class="linked-hidden-select" onchange="syncProductFieldDisplay('po-product-sel','po-product-search');"><option value="">-- 선택 --</option></select>
+        </div>
+        <div class="inline-search-results" id="po-product-results"></div>
+      </div>
+      <div class="ff" style="grid-column:span 2;"><label>공급처/협력사 *</label>
+        <div class="field-search">
+          <input id="po-supplier" placeholder="발주할 공급처명" autocomplete="off" oninput="onPartnerFieldSearchInput('po-supplier','po-supplier-results','po-semail')" onfocus="renderPartnerFieldMatches('po-supplier','po-supplier-results','po-semail')" onblur="setTimeout(function(){hidePartnerFieldMatches('po-supplier-results');},160)" onkeydown="onPartnerFieldSearchKey(event,'po-supplier','po-supplier-results','po-semail')">
+          <button type="button" class="field-search-btn" onclick="openPartnerFieldPicker('po-supplier','po-supplier-results','po-semail')" title="공급처 찾기"><i class="ti ti-search"></i></button>
+        </div>
+        <div class="inline-search-results" id="po-supplier-results"></div>
       </div>
       <div class="ff" style="grid-column:span 2;"><label>공급처 이메일</label><input id="po-semail" type="email" placeholder="supplier@example.com"></div>
       <div class="doc-item-grid">
@@ -22834,10 +23339,12 @@ window.addEventListener('resize', () => {
       <div class="ff"><label>발행일자 *</label><input id="sd-date" type="date"></div>
       <div class="ff"><label>상태</label><select id="sd-status"></select></div>
       <div class="ff"><label>공급받는 고객사 *</label>
-        <div style="display:flex;gap:4px;">
-          <select id="sd-client" onchange="onSalesDocClientChange()" style="flex:1;"><option value="">-- 선택 --</option></select>
-          <button type="button" class="btn btn-sm" onclick="openClientPicker(function(c){ setClientSelectValue('sd-client', c); onSalesDocClientChange(); if(c.email && !v('sd-email')) sv('sd-email', c.email); })" style="white-space:nowrap;"><i class="ti ti-search"></i>찾기</button>
+        <div class="field-search">
+          <input id="sd-client-search" placeholder="고객사명 검색 또는 신규 등록" autocomplete="off" oninput="onClientFieldSearchInput('sd-client','sd-client-search','sd-client-results','onSalesDocClientChange')" onfocus="renderClientFieldMatches('sd-client','sd-client-search','sd-client-results','onSalesDocClientChange','sd-email')" onblur="setTimeout(function(){hideClientFieldMatches('sd-client-results');},160)" onkeydown="onClientFieldSearchKey(event,'sd-client','sd-client-search','sd-client-results','onSalesDocClientChange','sd-email')">
+          <button type="button" class="field-search-btn" onclick="openClientFieldPicker('sd-client','sd-client-search','sd-client-results','onSalesDocClientChange','sd-email')" title="고객사 찾기"><i class="ti ti-search"></i></button>
+          <select id="sd-client" class="linked-hidden-select" onchange="onSalesDocClientChange(); syncClientFieldDisplay('sd-client','sd-client-search');"><option value="">-- 선택 --</option></select>
         </div>
+        <div class="inline-search-results" id="sd-client-results"></div>
       </div>
       <div class="ff"><label>사업자번호</label><input id="sd-bizno" placeholder="123-45-67890"></div>
       <div class="ff" style="grid-column:span 3;"><label>고객 이메일</label><input id="sd-email" type="email" placeholder="client@example.com"></div>
@@ -22867,10 +23374,12 @@ window.addEventListener('resize', () => {
       <div class="ff"><label>발행일자 *</label><input id="so2-date" type="date"></div>
       <div class="ff"><label>상태</label><select id="so2-status"></select></div>
       <div class="ff"><label>고객사 *</label>
-        <div style="display:flex;gap:4px;">
-          <select id="so2-client" onchange="onSODocClientChange()" style="flex:1;"><option value="">-- 선택 --</option></select>
-          <button type="button" class="btn btn-sm" onclick="openClientPicker(function(c){ setClientSelectValue('so2-client', c); onSODocClientChange(); if(c.email && !v('so2-email')) sv('so2-email', c.email); })" style="white-space:nowrap;"><i class="ti ti-search"></i>찾기</button>
+        <div class="field-search">
+          <input id="so2-client-search" placeholder="고객사명 검색 또는 신규 등록" autocomplete="off" oninput="onClientFieldSearchInput('so2-client','so2-client-search','so2-client-results','onSODocClientChange')" onfocus="renderClientFieldMatches('so2-client','so2-client-search','so2-client-results','onSODocClientChange','so2-email')" onblur="setTimeout(function(){hideClientFieldMatches('so2-client-results');},160)" onkeydown="onClientFieldSearchKey(event,'so2-client','so2-client-search','so2-client-results','onSODocClientChange','so2-email')">
+          <button type="button" class="field-search-btn" onclick="openClientFieldPicker('so2-client','so2-client-search','so2-client-results','onSODocClientChange','so2-email')" title="고객사 찾기"><i class="ti ti-search"></i></button>
+          <select id="so2-client" class="linked-hidden-select" onchange="onSODocClientChange(); syncClientFieldDisplay('so2-client','so2-client-search');"><option value="">-- 선택 --</option></select>
         </div>
+        <div class="inline-search-results" id="so2-client-results"></div>
       </div>
       <div class="ff"><label>고객 이메일</label><input id="so2-email" type="email" placeholder="client@example.com"></div>
       <div class="ff"><label>사업자번호</label><input id="so2-bizno" placeholder="123-45-67890"></div>
@@ -22962,7 +23471,14 @@ window.addEventListener('resize', () => {
     <div class="fg fg4" style="gap:10px;margin-bottom:14px;">
       <div class="ff"><label>접수번호</label><input id="asa-id" readonly></div>
       <div class="ff"><label>접수일</label><input id="asa-recv" type="date"></div>
-      <div class="ff"><label>고객사 *</label><select id="asa-client"></select></div>
+      <div class="ff"><label>고객사 *</label>
+        <div class="field-search">
+          <input id="asa-client-search" placeholder="고객사명 검색" autocomplete="off" oninput="onClientFieldSearchInput('asa-client','asa-client-search','asa-client-results')" onfocus="renderClientFieldMatches('asa-client','asa-client-search','asa-client-results')" onblur="setTimeout(function(){hideClientFieldMatches('asa-client-results');},160)" onkeydown="onClientFieldSearchKey(event,'asa-client','asa-client-search','asa-client-results')">
+          <button type="button" class="field-search-btn" onclick="openClientFieldPicker('asa-client','asa-client-search','asa-client-results')" title="고객사 찾기"><i class="ti ti-search"></i></button>
+          <select id="asa-client" class="linked-hidden-select" onchange="syncClientFieldDisplay('asa-client','asa-client-search');"></select>
+        </div>
+        <div class="inline-search-results" id="asa-client-results"></div>
+      </div>
       <div class="ff"><label>대상 제품</label><input id="asa-product" placeholder="예: 내구성 시험기"></div>
       <div class="ff" style="grid-column:span 4;"><label>증상 / 접수 내용 *</label><input id="asa-symptom" placeholder="고객이 접수한 고장/요청 내용"></div>
       <div class="ff"><label>보증 구분</label>
@@ -23000,10 +23516,11 @@ window.addEventListener('resize', () => {
         <select id="bma-sub" onchange="onBmaSubChange()"></select>
       </div>
       <div class="ff" style="grid-column:span 4;"><label>공급처 (발주처)</label>
-        <div style="display:flex;gap:4px;">
-          <input id="bma-supplier" placeholder="발주할 공급처명 (발주서 자동생성에 사용)" style="flex:1;">
-          <button type="button" class="btn btn-sm" onclick="openPartnerPicker(function(p){inp('bma-supplier').value=p.name;})" style="white-space:nowrap;"><i class="ti ti-search"></i>찾기</button>
+        <div class="field-search">
+          <input id="bma-supplier" placeholder="발주할 공급처명 (발주서 자동생성에 사용)" autocomplete="off" oninput="onPartnerFieldSearchInput('bma-supplier','bma-supplier-results')" onfocus="renderPartnerFieldMatches('bma-supplier','bma-supplier-results')" onblur="setTimeout(function(){hidePartnerFieldMatches('bma-supplier-results');},160)" onkeydown="onPartnerFieldSearchKey(event,'bma-supplier','bma-supplier-results')">
+          <button type="button" class="field-search-btn" onclick="openPartnerFieldPicker('bma-supplier','bma-supplier-results')" title="공급처 찾기"><i class="ti ti-search"></i></button>
         </div>
+        <div class="inline-search-results" id="bma-supplier-results"></div>
       </div>
     </div>
     <div class="dlg-actions">
@@ -23042,7 +23559,7 @@ window.addEventListener('resize', () => {
 
 <!-- ══ 자재 발주 등록 모달 ══ -->
 <div class="overlay" id="mat-modal">
-  <div class="dlg" style="max-width:1040px;width:96%;">
+  <div class="dlg bulk-entry-dialog" style="max-width:1040px;width:96%;">
     <div class="dlg-title" id="mat-modal-ttl"><i class="ti ti-package-import" style="color:var(--tx-i);"></i>자재 수급/발주 등록</div>
     <div class="entry-mode-switch" id="mat-mode-switch">
       <button type="button" id="mat-mode-single" onclick="setMaterialEntryMode('single')">단건 입력</button>
@@ -23050,18 +23567,33 @@ window.addEventListener('resize', () => {
     </div>
     <div class="fg fg4" style="gap:10px;margin-bottom:10px;">
       <div class="ff"><label>자재 코드</label><input id="ma-id" readonly></div>
-      <div class="ff"><label>연결 고객사 *</label><select id="ma-client" onchange="onAddMatClientChange()"></select></div>
-      <div class="ff" style="grid-column:span 2;"><label>해당 품목 제품 *</label><select id="ma-product"></select></div>
+      <div class="ff"><label>연결 고객사 *</label>
+        <div class="field-search">
+          <input id="ma-client-search" placeholder="고객사명 검색" autocomplete="off" oninput="onClientFieldSearchInput('ma-client','ma-client-search','ma-client-results','onAddMatClientChange')" onfocus="renderClientFieldMatches('ma-client','ma-client-search','ma-client-results','onAddMatClientChange')" onblur="setTimeout(function(){hideClientFieldMatches('ma-client-results');},160)" onkeydown="onClientFieldSearchKey(event,'ma-client','ma-client-search','ma-client-results','onAddMatClientChange')">
+          <button type="button" class="field-search-btn" onclick="openClientFieldPicker('ma-client','ma-client-search','ma-client-results','onAddMatClientChange')" title="고객사 찾기"><i class="ti ti-search"></i></button>
+          <select id="ma-client" class="linked-hidden-select" onchange="onAddMatClientChange(); syncClientFieldDisplay('ma-client','ma-client-search');"></select>
+        </div>
+        <div class="inline-search-results" id="ma-client-results"></div>
+      </div>
+      <div class="ff" style="grid-column:span 2;"><label>해당 품목 제품 *</label>
+        <div class="field-search">
+          <input id="ma-product-search" placeholder="제품명 검색" autocomplete="off" oninput="onProductFieldSearchInput('ma-product','ma-product-search','ma-product-results','ma-client')" onfocus="renderProductFieldMatches('ma-product','ma-product-search','ma-product-results','ma-client')" onblur="setTimeout(function(){hideProductFieldMatches('ma-product-results');},160)" onkeydown="onProductFieldSearchKey(event,'ma-product','ma-product-search','ma-product-results','ma-client')">
+          <button type="button" class="field-search-btn" onclick="openProductFieldSearch('ma-product','ma-product-search','ma-product-results','ma-client')" title="제품 찾기"><i class="ti ti-search"></i></button>
+          <select id="ma-product" class="linked-hidden-select" onchange="syncProductFieldDisplay('ma-product','ma-product-search');"></select>
+        </div>
+        <div class="inline-search-results" id="ma-product-results"></div>
+      </div>
       <div class="ff"><label>발주 일자</label><input id="ma-odate" type="date"></div>
     </div>
     <div class="fg fg4" id="mat-single-fields" style="gap:10px;margin-bottom:14px;">
       <div class="ff" style="grid-column:span 2;"><label>자재명 *</label><input id="ma-name" placeholder="예: 서보모터용 하우징"></div>
       <div class="ff"><label>규격</label><input id="ma-spec" placeholder="예: SFU1605"></div>
       <div class="ff" style="grid-column:span 2;"><label>구매 공급처 *</label>
-        <div style="display:flex;gap:4px;">
-          <input id="ma-supplier" placeholder="공급 협력사명" style="flex:1;">
-          <button type="button" class="btn btn-sm" onclick="openPartnerPicker(function(p){inp('ma-supplier').value=p.name;})" style="white-space:nowrap;"><i class="ti ti-search"></i>찾기</button>
+        <div class="field-search">
+          <input id="ma-supplier" placeholder="공급 협력사명" autocomplete="off" oninput="onPartnerFieldSearchInput('ma-supplier','ma-supplier-results')" onfocus="renderPartnerFieldMatches('ma-supplier','ma-supplier-results')" onblur="setTimeout(function(){hidePartnerFieldMatches('ma-supplier-results');},160)" onkeydown="onPartnerFieldSearchKey(event,'ma-supplier','ma-supplier-results')">
+          <button type="button" class="field-search-btn" onclick="openPartnerFieldPicker('ma-supplier','ma-supplier-results')" title="공급처 찾기"><i class="ti ti-search"></i></button>
         </div>
+        <div class="inline-search-results" id="ma-supplier-results"></div>
       </div>
       <div class="ff"><label>매입 단가 (원)</label><input id="ma-price" type="number" placeholder="0" min="0"></div>
       <div class="ff"><label>수량</label><input id="ma-qty" type="number" placeholder="0" min="0"></div>
@@ -23090,7 +23622,7 @@ window.addEventListener('resize', () => {
 
 <!-- ══ 재고 등록 모달 ══ -->
 <div class="overlay" id="inv-modal">
-  <div class="dlg" style="max-width:1040px;width:96%;">
+  <div class="dlg bulk-entry-dialog" style="max-width:1040px;width:96%;">
     <div class="dlg-title" id="inv-modal-ttl"><i class="ti ti-package" style="color:var(--tx-i);"></i>재고 품목 등록</div>
     <div class="entry-mode-switch" id="inv-mode-switch">
       <button type="button" id="inv-mode-single" onclick="setInventoryEntryMode('single')">단건 입력</button>
@@ -23129,7 +23661,7 @@ window.addEventListener('resize', () => {
 
 <!-- ══ 생산 지시 등록 모달 ══ -->
 <div class="overlay" id="order-modal">
-  <div class="dlg" style="max-width:1040px;width:96%;">
+  <div class="dlg bulk-entry-dialog" style="max-width:1040px;width:96%;">
     <div class="dlg-title" id="order-modal-ttl"><i class="ti ti-clipboard-plus" style="color:var(--tx-i);"></i>생산 지시 등록</div>
     <div class="entry-mode-switch" id="order-mode-switch">
       <button type="button" id="order-mode-single" onclick="setOrderEntryMode('single')">단건 입력</button>
@@ -23137,10 +23669,24 @@ window.addEventListener('resize', () => {
     </div>
     <div class="fg fg4" style="gap:10px;margin-bottom:10px;">
       <div class="ff"><label>지시 번호</label><input id="oa-id" readonly></div>
-      <div class="ff"><label>연결 고객사</label><select id="oa-client" onchange="onAddOrderClientChange()"></select></div>
+      <div class="ff"><label>연결 고객사</label>
+        <div class="field-search">
+          <input id="oa-client-search" placeholder="고객사명 검색" autocomplete="off" oninput="onClientFieldSearchInput('oa-client','oa-client-search','oa-client-results','onAddOrderClientChange')" onfocus="renderClientFieldMatches('oa-client','oa-client-search','oa-client-results','onAddOrderClientChange')" onblur="setTimeout(function(){hideClientFieldMatches('oa-client-results');},160)" onkeydown="onClientFieldSearchKey(event,'oa-client','oa-client-search','oa-client-results','onAddOrderClientChange')">
+          <button type="button" class="field-search-btn" onclick="openClientFieldPicker('oa-client','oa-client-search','oa-client-results','onAddOrderClientChange')" title="고객사 찾기"><i class="ti ti-search"></i></button>
+          <select id="oa-client" class="linked-hidden-select" onchange="onAddOrderClientChange(); syncClientFieldDisplay('oa-client','oa-client-search');"></select>
+        </div>
+        <div class="inline-search-results" id="oa-client-results"></div>
+      </div>
     </div>
     <div class="fg fg4" id="order-single-fields" style="gap:10px;margin-bottom:14px;">
-      <div class="ff" style="grid-column:span 2;"><label>생산 대상 제품</label><select id="oa-product"></select></div>
+      <div class="ff" style="grid-column:span 2;"><label>생산 대상 제품</label>
+        <div class="field-search">
+          <input id="oa-product-search" placeholder="제품명 검색" autocomplete="off" oninput="onProductFieldSearchInput('oa-product','oa-product-search','oa-product-results','oa-client')" onfocus="renderProductFieldMatches('oa-product','oa-product-search','oa-product-results','oa-client')" onblur="setTimeout(function(){hideProductFieldMatches('oa-product-results');},160)" onkeydown="onProductFieldSearchKey(event,'oa-product','oa-product-search','oa-product-results','oa-client')">
+          <button type="button" class="field-search-btn" onclick="openProductFieldSearch('oa-product','oa-product-search','oa-product-results','oa-client')" title="제품 찾기"><i class="ti ti-search"></i></button>
+          <select id="oa-product" class="linked-hidden-select" onchange="syncProductFieldDisplay('oa-product','oa-product-search');"></select>
+        </div>
+        <div class="inline-search-results" id="oa-product-results"></div>
+      </div>
       <div class="ff"><label>투입 설비 라인</label>
         <select id="oa-line"><option>라인 A</option><option>라인 B</option><option>라인 C</option></select>
       </div>
@@ -23170,7 +23716,7 @@ window.addEventListener('resize', () => {
 
 <!-- ══ 불량 등록 모달 ══ -->
 <div class="overlay" id="defect-modal">
-  <div class="dlg" style="max-width:1040px;width:96%;">
+  <div class="dlg bulk-entry-dialog" style="max-width:1040px;width:96%;">
     <div class="dlg-title" id="defect-modal-ttl"><i class="ti ti-alert-triangle" style="color:var(--tx-d);"></i>불량 리포트 등록</div>
     <div class="entry-mode-switch" id="df-mode-switch">
       <button type="button" id="df-mode-single" onclick="setDefectEntryMode('single')">단건 입력</button>
@@ -23179,10 +23725,24 @@ window.addEventListener('resize', () => {
     <div class="fg fg3" style="gap:10px;margin-bottom:10px;">
       <div class="ff"><label>식별 코드</label><input id="df-id" readonly></div>
       <div class="ff"><label>발생일자</label><input id="df-date" type="date"></div>
-      <div class="ff"><label>고객사</label><select id="df-client" onchange="onQcClientChange()"></select></div>
+      <div class="ff"><label>고객사</label>
+        <div class="field-search">
+          <input id="df-client-search" placeholder="고객사명 검색" autocomplete="off" oninput="onClientFieldSearchInput('df-client','df-client-search','df-client-results','onQcClientChange')" onfocus="renderClientFieldMatches('df-client','df-client-search','df-client-results','onQcClientChange')" onblur="setTimeout(function(){hideClientFieldMatches('df-client-results');},160)" onkeydown="onClientFieldSearchKey(event,'df-client','df-client-search','df-client-results','onQcClientChange')">
+          <button type="button" class="field-search-btn" onclick="openClientFieldPicker('df-client','df-client-search','df-client-results','onQcClientChange')" title="고객사 찾기"><i class="ti ti-search"></i></button>
+          <select id="df-client" class="linked-hidden-select" onchange="onQcClientChange(); syncClientFieldDisplay('df-client','df-client-search');"></select>
+        </div>
+        <div class="inline-search-results" id="df-client-results"></div>
+      </div>
     </div>
     <div class="fg fg3" id="df-single-fields" style="gap:10px;margin-bottom:14px;">
-      <div class="ff"><label>발생 제품</label><select id="df-product"></select></div>
+      <div class="ff"><label>발생 제품</label>
+        <div class="field-search">
+          <input id="df-product-search" placeholder="제품명 검색" autocomplete="off" oninput="onProductFieldSearchInput('df-product','df-product-search','df-product-results','df-client')" onfocus="renderProductFieldMatches('df-product','df-product-search','df-product-results','df-client')" onblur="setTimeout(function(){hideProductFieldMatches('df-product-results');},160)" onkeydown="onProductFieldSearchKey(event,'df-product','df-product-search','df-product-results','df-client')">
+          <button type="button" class="field-search-btn" onclick="openProductFieldSearch('df-product','df-product-search','df-product-results','df-client')" title="제품 찾기"><i class="ti ti-search"></i></button>
+          <select id="df-product" class="linked-hidden-select" onchange="syncProductFieldDisplay('df-product','df-product-search');"></select>
+        </div>
+        <div class="inline-search-results" id="df-product-results"></div>
+      </div>
       <div class="ff"><label>발생 공정</label><select id="df-stage"></select></div>
       <div class="ff"><label>불량 유형 *</label><input id="df-type" placeholder="예: 조립 결합 유격"></div>
       <div class="ff"><label>부적합 수량 *</label><input id="df-qty" type="number" placeholder="1" min="1"></div>
@@ -23209,7 +23769,7 @@ window.addEventListener('resize', () => {
 
 <!-- ══ 클레임 등록 모달 ══ -->
 <div class="overlay" id="claim-modal">
-  <div class="dlg" style="max-width:1040px;width:96%;">
+  <div class="dlg bulk-entry-dialog" style="max-width:1040px;width:96%;">
     <div class="dlg-title" id="claim-modal-ttl"><i class="ti ti-message-report" style="color:var(--tx-w);"></i>고객 클레임 등록</div>
     <div class="entry-mode-switch" id="cl-mode-switch">
       <button type="button" id="cl-mode-single" onclick="setClaimEntryMode('single')">단건 입력</button>
@@ -23262,7 +23822,7 @@ window.addEventListener('resize', () => {
 
 <!-- ══ 검사 기록 모달 ══ -->
 <div class="overlay" id="check-modal">
-  <div class="dlg" style="max-width:1040px;width:96%;">
+  <div class="dlg bulk-entry-dialog" style="max-width:1040px;width:96%;">
     <div class="dlg-title" id="check-modal-ttl"><i class="ti ti-clipboard-check" style="color:var(--tx-ok);"></i>납품 검사 기록</div>
     <div class="entry-mode-switch" id="ck-mode-switch">
       <button type="button" id="ck-mode-single" onclick="setCheckEntryMode('single')">단건 입력</button>
@@ -23271,11 +23831,25 @@ window.addEventListener('resize', () => {
     <div class="fg fg3" style="gap:10px;margin-bottom:10px;">
       <div class="ff"><label>검사 코드</label><input id="ck-id" readonly></div>
       <div class="ff"><label>검사 일자</label><input id="ck-date" type="date"></div>
-      <div class="ff"><label>고객사</label><select id="ck-client" onchange="onCheckClientChange()"></select></div>
+      <div class="ff"><label>고객사</label>
+        <div class="field-search">
+          <input id="ck-client-search" placeholder="고객사명 검색" autocomplete="off" oninput="onClientFieldSearchInput('ck-client','ck-client-search','ck-client-results','onCheckClientChange')" onfocus="renderClientFieldMatches('ck-client','ck-client-search','ck-client-results','onCheckClientChange')" onblur="setTimeout(function(){hideClientFieldMatches('ck-client-results');},160)" onkeydown="onClientFieldSearchKey(event,'ck-client','ck-client-search','ck-client-results','onCheckClientChange')">
+          <button type="button" class="field-search-btn" onclick="openClientFieldPicker('ck-client','ck-client-search','ck-client-results','onCheckClientChange')" title="고객사 찾기"><i class="ti ti-search"></i></button>
+          <select id="ck-client" class="linked-hidden-select" onchange="onCheckClientChange(); syncClientFieldDisplay('ck-client','ck-client-search');"></select>
+        </div>
+        <div class="inline-search-results" id="ck-client-results"></div>
+      </div>
       <div class="ff"><label>검사원 *</label><input id="ck-inspector" placeholder="검사 담당자"></div>
     </div>
     <div class="fg fg3" id="ck-single-fields" style="gap:10px;margin-bottom:14px;">
-      <div class="ff" style="grid-column:span 2;"><label>검사 제품</label><select id="ck-product"></select></div>
+      <div class="ff" style="grid-column:span 2;"><label>검사 제품</label>
+        <div class="field-search">
+          <input id="ck-product-search" placeholder="제품명 검색" autocomplete="off" oninput="onProductFieldSearchInput('ck-product','ck-product-search','ck-product-results','ck-client')" onfocus="renderProductFieldMatches('ck-product','ck-product-search','ck-product-results','ck-client')" onblur="setTimeout(function(){hideProductFieldMatches('ck-product-results');},160)" onkeydown="onProductFieldSearchKey(event,'ck-product','ck-product-search','ck-product-results','ck-client')">
+          <button type="button" class="field-search-btn" onclick="openProductFieldSearch('ck-product','ck-product-search','ck-product-results','ck-client')" title="제품 찾기"><i class="ti ti-search"></i></button>
+          <select id="ck-product" class="linked-hidden-select" onchange="syncProductFieldDisplay('ck-product','ck-product-search');"></select>
+        </div>
+        <div class="inline-search-results" id="ck-product-results"></div>
+      </div>
       <div class="ff"><label>외관 검사</label>
         <select id="ck-visual"><option>합격</option><option>불합격</option><option>조건부합격</option></select>
       </div>
