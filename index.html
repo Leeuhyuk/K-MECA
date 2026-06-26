@@ -1389,6 +1389,70 @@ textarea { height: auto; resize: vertical; }
   height: 16px;
   margin: 8px auto;
 }
+.fixed-cost-month-table {
+  min-width: 980px;
+  table-layout: fixed;
+}
+.fixed-cost-month-table th:nth-child(1) { width: 44px; }
+.fixed-cost-month-table th:nth-child(2) { width: 190px; }
+.fixed-cost-month-table th:nth-child(3) { width: 92px; }
+.fixed-cost-month-table th:nth-child(4) { width: 130px; }
+.fixed-cost-month-table th:nth-child(5) { width: 110px; }
+.fixed-cost-month-table th:nth-child(6) { width: 120px; }
+.fixed-cost-month-table th:nth-child(7) { width: 94px; }
+.fixed-cost-month-table th:nth-child(8) { width: 170px; }
+.fixed-cost-month-table tbody tr {
+  cursor: pointer;
+}
+.fixed-cost-month-table tbody tr.fixed-cost-selected-row td {
+  background: var(--bg-i);
+}
+.fixed-cost-check-cell {
+  text-align: center;
+  vertical-align: middle;
+}
+.fixed-cost-check {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--tx-i);
+}
+.fixed-cost-month-note {
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fixed-cost-actions {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+  align-items: center;
+  white-space: nowrap;
+}
+.fixed-cost-actions .btn {
+  min-width: 26px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  justify-content: center;
+}
+.fixed-cost-month-summary {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--br);
+  border-radius: var(--rm);
+  background: var(--bg-s);
+}
+.fixed-cost-month-summary b,
+.fixed-cost-month-summary span {
+  display: block;
+}
+.fixed-cost-month-summary span {
+  margin-top: 3px;
+  color: var(--tx-t);
+  font-size: 11px;
+}
 .doc-item-add:hover {
   border-color: var(--tx-i);
   background: var(--tx-i);
@@ -18084,6 +18148,7 @@ function deleteLeave(id) {
 let financeTab = 'dashboard';
 const financeView = {};
 const payrollSelected = new Set();
+const fixedCostSelected = new Set();
 let finPnlMonths = 6;
 let finClosingMonth = today().slice(0,7);
 let finInputTimer = null;
@@ -18482,9 +18547,9 @@ function fixedCostExpenseMonth(ym) {
 function finFixedCostRange(rangeInfo) {
   return finRangeMonths(rangeInfo).reduce((sum, ym) => sum + fixedCostExpenseMonth(ym), 0);
 }
-function fixedCostSavePayment(itemId, ym, patch) {
-  if (!checkAdminAction()) return false;
-  if (!guardFinanceMonth(`${ym}-01`)) return false;
+function fixedCostSavePayment(itemId, ym, patch, options={}) {
+  if (!options.skipGuard && !checkAdminAction()) return false;
+  if (!options.skipGuard && !guardFinanceMonth(`${ym}-01`)) return false;
   const item = fixedCostItems().find(x => x.id === itemId);
   if (!item) return false;
   let rec = fixedCostPayment(itemId, ym);
@@ -18515,11 +18580,23 @@ function shiftFixedCostMonth(amount) {
   const parts = fixedCostMonth.split('-').map(Number);
   const date = new Date(parts[0], (parts[1] || 1) - 1 + amount, 1);
   fixedCostMonth = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
+  fixedCostSelected.clear();
   renderFinance();
 }
 function setFixedCostMonth(value) {
   fixedCostMonth = value || today().slice(0,7);
+  fixedCostSelected.clear();
   renderFinance();
+}
+function fixedCostMonthToolbarHtml() {
+  return `<div class="toolbar fixed-cost-month-toolbar" style="margin-bottom:12px;">
+    <button class="btn btn-sm" onclick="shiftFixedCostMonth(-1)"><i class="ti ti-chevron-left"></i></button>
+    <input type="month" value="${fixedCostMonth}" onchange="setFixedCostMonth(this.value)" style="width:130px;">
+    <button class="btn btn-sm" onclick="shiftFixedCostMonth(1)"><i class="ti ti-chevron-right"></i></button>
+    <button class="btn btn-sm" onclick="setFixedCostMonth(today().slice(0,7))">이번 달</button>
+    <button class="btn btn-sm ${fixedCostShowInactive?'btn-primary':''}" onclick="fixedCostShowInactive=!fixedCostShowInactive;renderFinance()"><i class="ti ti-eye"></i>미사용 포함</button>
+    <button class="btn btn-sm btn-primary" onclick="openFixedCostAdd()"><i class="ti ti-plus"></i>항목 등록</button>
+  </div>`;
 }
 function fixedCostBlankRow() {
   return { category:'기타', dueDay:25, method:'계좌이체', active:true };
@@ -18763,6 +18840,162 @@ function requestFixedCostPayment(itemId) {
 function holdFixedCostPayment(itemId) {
   if (fixedCostSavePayment(itemId, fixedCostMonth, { status:'보류', paidDate:'' })) {
     finAudit('고정비 보류', `${fixedCostMonth} · ${itemId}`);
+    renderFinance();
+  }
+}
+function fixedCostPruneSelection(validIds) {
+  const valid = new Set(validIds || []);
+  let changed = false;
+  fixedCostSelected.forEach(id => {
+    if (!valid.has(id)) {
+      fixedCostSelected.delete(id);
+      changed = true;
+    }
+  });
+  return changed;
+}
+function fixedCostToggleSelected(itemId, checked) {
+  if (!itemId) return;
+  if (checked) fixedCostSelected.add(itemId);
+  else fixedCostSelected.delete(itemId);
+  renderFinance();
+}
+function fixedCostToggleRow(event, itemId) {
+  const target = event?.target;
+  if (target?.closest?.('button,a,input,select,textarea,label')) return;
+  fixedCostToggleSelected(itemId, !fixedCostSelected.has(itemId));
+}
+function fixedCostTogglePage(ids, checked) {
+  (ids || []).forEach(id => checked ? fixedCostSelected.add(id) : fixedCostSelected.delete(id));
+  renderFinance();
+}
+function clearFixedCostSelection() {
+  fixedCostSelected.clear();
+  renderFinance();
+}
+function selectedFixedCostId() {
+  return [...fixedCostSelected][0] || '';
+}
+function openSelectedFixedCostMonthEdit() {
+  if (fixedCostSelected.size !== 1) { showToast('고정비 항목 한 건만 선택하세요.', 'info'); return; }
+  openFixedCostMonthEdit(selectedFixedCostId());
+}
+function openSelectedFixedCostItemEdit() {
+  if (fixedCostSelected.size !== 1) { showToast('고정비 항목 한 건만 선택하세요.', 'info'); return; }
+  openFixedCostEdit(selectedFixedCostId());
+}
+function fixedCostSelectedIds() {
+  const itemIds = new Set(fixedCostItems().map(item => item.id));
+  return [...fixedCostSelected].filter(id => itemIds.has(id));
+}
+function fixedCostBulkPatch(label, patchFactory) {
+  const ids = fixedCostSelectedIds();
+  if (!ids.length) { showToast('선택된 고정비 항목이 없습니다.', 'info'); return; }
+  if (!checkAdminAction()) return;
+  if (!guardFinanceMonth(`${fixedCostMonth}-01`)) return;
+  let count = 0;
+  ids.forEach(id => {
+    const patch = typeof patchFactory === 'function' ? patchFactory(id) : patchFactory;
+    if (fixedCostSavePayment(id, fixedCostMonth, patch, { skipGuard:true })) count++;
+  });
+  finAudit(label, `${fixedCostMonth} · ${count}건`);
+  fixedCostSelected.clear();
+  renderFinance();
+  showToast(`${count}건을 처리했습니다.`, 'success');
+}
+function fixedCostBulkStatus(status) {
+  if (status === '지급완료') {
+    fixedCostBulkPatch('고정비 선택 지급완료', { status, paidDate:today() });
+  } else if (status === '결제요청') {
+    fixedCostBulkPatch('고정비 선택 결제요청', { status, paidDate:'' });
+  } else if (status === '보류') {
+    fixedCostBulkPatch('고정비 선택 보류', { status, paidDate:'' });
+  }
+}
+function fixedCostBulkDelete() {
+  const ids = fixedCostSelectedIds();
+  if (!ids.length) { showToast('선택된 고정비 항목이 없습니다.', 'info'); return; }
+  if (!checkAdminAction()) return;
+  confirm_('고정비 항목 삭제', `선택한 고정비 ${ids.length}건과 월별 처리 이력을 삭제하시겠습니까?`, () => {
+    const set = new Set(ids);
+    financeData.fixedCosts = fixedCostItems().filter(item => !set.has(item.id));
+    financeData.fixedCostPayments = fixedCostPayments().filter(pay => !set.has(pay.itemId));
+    finAudit('고정비 선택 삭제', `${ids.length}건`);
+    fixedCostSelected.clear();
+    saveStorage('financeData', financeData);
+    renderFinance();
+  }, 'btn-danger', 'ti-trash');
+}
+function fixedCostSelectionBarHtml() {
+  const count = fixedCostSelected.size;
+  if (!count) return '';
+  const single = count === 1;
+  return `<div class="selection-action-bar fixed-cost-selection-bar" style="display:flex;">
+    <span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${count}건 선택됨</span>
+    <button class="btn btn-sm" onclick="fixedCostBulkStatus('지급완료')"><i class="ti ti-check"></i>지급완료</button>
+    <button class="btn btn-sm" onclick="fixedCostBulkStatus('결제요청')"><i class="ti ti-send"></i>결제요청</button>
+    <button class="btn btn-sm" onclick="fixedCostBulkStatus('보류')"><i class="ti ti-player-pause"></i>보류</button>
+    <button class="btn btn-sm" onclick="openSelectedFixedCostMonthEdit()" ${single?'':'disabled'} title="${single?'선택한 월 고정비 수정':'한 건만 선택하면 수정할 수 있습니다.'}"><i class="ti ti-calendar-cog"></i>월별 수정</button>
+    <button class="btn btn-sm" onclick="openSelectedFixedCostItemEdit()" ${single?'':'disabled'} title="${single?'선택한 항목 수정':'한 건만 선택하면 수정할 수 있습니다.'}"><i class="ti ti-edit"></i>항목 수정</button>
+    <button class="btn btn-sm btn-danger" onclick="fixedCostBulkDelete()"><i class="ti ti-trash"></i>삭제</button>
+    <button class="btn btn-sm date-view-clear-selection" onclick="clearFixedCostSelection()"><i class="ti ti-x"></i>해제</button>
+  </div>`;
+}
+function ensureFixedCostMonthModal() {
+  if (inp('fixed-cost-month-modal')) return;
+  document.body.insertAdjacentHTML('beforeend', `
+    <div class="overlay" id="fixed-cost-month-modal">
+      <div class="dlg" style="max-width:560px;width:96%;">
+        <div class="dlg-title"><i class="ti ti-calendar-cog" style="color:var(--tx-i);"></i>월 고정비 수정</div>
+        <input type="hidden" id="fcm-item-id">
+        <div id="fcm-summary" class="fixed-cost-month-summary"></div>
+        <div class="fg fg2">
+          <div><label>예정일</label><input id="fcm-due-date" type="date"></div>
+          <div><label>금액</label><input id="fcm-amount" type="number" min="0" step="10" inputmode="numeric"></div>
+          <div><label>상태</label><select id="fcm-status"><option>예정</option><option>결제요청</option><option>지급완료</option><option>보류</option></select></div>
+          <div><label>지급일</label><input id="fcm-paid-date" type="date"></div>
+          <div><label>결제방법</label><select id="fcm-method">${fixedCostMethodOptions('계좌이체')}</select></div>
+          <div style="grid-column:span 2;"><label>비고</label><input id="fcm-note" maxlength="200" placeholder="월별 특이사항"></div>
+        </div>
+        <div class="dlg-actions" style="margin-top:16px;">
+          <button class="btn" onclick="closeModal('fixed-cost-month-modal')">취소</button>
+          <button class="btn btn-primary" onclick="saveFixedCostMonthEdit()"><i class="ti ti-check"></i>저장</button>
+        </div>
+      </div>
+    </div>`);
+}
+function openFixedCostMonthEdit(itemId) {
+  const item = fixedCostItems().find(x => x.id === itemId);
+  if (!item) return;
+  ensureFixedCostMonthModal();
+  const row = fixedCostEffectiveRow(item, fixedCostMonth);
+  sv('fcm-item-id', itemId);
+  sv('fcm-due-date', row.dueDate || fixedCostPayDate(fixedCostMonth, item.dueDay));
+  sv('fcm-amount', Number(row.amount) || 0);
+  sv('fcm-status', row.status || '예정');
+  sv('fcm-paid-date', row.paidDate || '');
+  sv('fcm-method', row.method || item.method || '계좌이체');
+  sv('fcm-note', row.note || '');
+  const summary = inp('fcm-summary');
+  if (summary) {
+    summary.innerHTML = `<b>${esc(row.name)}</b><span>${esc(monthLabel(fixedCostMonth))} · ${esc(row.category || '기타')} · ${esc(row.vendor || '지급처 미지정')}</span>`;
+  }
+  inp('fixed-cost-month-modal')?.classList.add('open');
+}
+function saveFixedCostMonthEdit() {
+  const itemId = v('fcm-item-id');
+  const status = v('fcm-status') || '예정';
+  const patch = {
+    dueDate: v('fcm-due-date') || fixedCostPayDate(fixedCostMonth, 25),
+    amount: Math.max(0, Number(v('fcm-amount')) || 0),
+    status,
+    paidDate: status === '지급완료' ? (v('fcm-paid-date') || today()) : '',
+    method: v('fcm-method') || '계좌이체',
+    note: v('fcm-note') || ''
+  };
+  if (fixedCostSavePayment(itemId, fixedCostMonth, patch)) {
+    finAudit('월 고정비 수정', `${fixedCostMonth} · ${itemId}`);
+    closeModal('fixed-cost-month-modal');
     renderFinance();
   }
 }
@@ -19519,39 +19752,33 @@ function _finFixedCost() {
   const monthTotal = monthRows.filter(row => row.status !== '보류').reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
   const paidTotal = monthRows.filter(row => row.status === '지급완료').reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
   const requestTotal = monthRows.filter(row => row.status === '결제요청').reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+  fixedCostPruneSelection(list.map(row => row.itemId));
   const page = finPaged(list, state);
-  const statusOptions = ['예정','결제요청','지급완료','보류'];
-  const methodOptions = ['계좌이체','자동이체','카드','현금','기타'];
+  const pageIds = page.rows.map(row => row.itemId);
+  const pageIdsJson = JSON.stringify(pageIds);
+  const allPageSelected = !!pageIds.length && pageIds.every(id => fixedCostSelected.has(id));
   const body = page.rows.length ? page.rows.map(row => {
     const inactive = row.active ? '' : '<span class="bd bd-neu" style="margin-left:6px;">미사용</span>';
-    return `<tr>
+    const payInfo = row.status === '지급완료'
+      ? `${esc(row.paidDate || '지급일 미입력')} · ${esc(row.method || '계좌이체')}`
+      : esc(row.method || '계좌이체');
+    const noteTitle = esc(row.note || '');
+    const checked = fixedCostSelected.has(row.itemId);
+    const itemIdJson = JSON.stringify(row.itemId);
+    return `<tr class="${checked?'fixed-cost-selected-row':''}" onclick='fixedCostToggleRow(event, ${itemIdJson})'>
+      <td class="fixed-cost-check-cell"><input class="fixed-cost-check" type="checkbox" ${checked?'checked':''} onclick="event.stopPropagation()" onchange='fixedCostToggleSelected(${itemIdJson}, this.checked)'></td>
       <td style="font-weight:800;">${esc(row.name)}${inactive}<div style="font-size:10px;color:var(--tx-t);font-weight:600;">${esc(row.itemId)}</div></td>
       <td>${esc(row.category || '기타')}</td>
       <td>${esc(row.vendor || '—')}</td>
-      <td><input type="date" value="${esc(row.dueDate)}" onchange="updateFixedCostPayment('${esc(row.itemId)}','dueDate',this.value)" style="width:132px;"></td>
-      <td style="text-align:right;"><input type="number" min="0" step="10" value="${Number(row.amount)||0}" onchange="updateFixedCostPayment('${esc(row.itemId)}','amount',this.value)" style="width:120px;text-align:right;"></td>
-      <td><select onchange="updateFixedCostPayment('${esc(row.itemId)}','status',this.value)" style="min-width:104px;">${statusOptions.map(status=>`<option value="${status}"${row.status===status?' selected':''}>${status}</option>`).join('')}</select></td>
-      <td><input type="date" value="${esc(row.paidDate || '')}" onchange="updateFixedCostPayment('${esc(row.itemId)}','paidDate',this.value)" style="width:132px;"></td>
-      <td><select onchange="updateFixedCostPayment('${esc(row.itemId)}','method',this.value)" style="min-width:104px;">${methodOptions.map(method=>`<option value="${method}"${row.method===method?' selected':''}>${method}</option>`).join('')}</select></td>
-      <td><input value="${esc(row.note || '')}" maxlength="200" onblur="updateFixedCostPayment('${esc(row.itemId)}','note',this.value)" placeholder="비고" style="min-width:180px;"></td>
-      <td style="white-space:nowrap;">
-        <button class="btn btn-sm" onclick="markFixedCostPaid('${esc(row.itemId)}')" title="지급완료"><i class="ti ti-check"></i></button>
-        <button class="btn btn-sm" onclick="requestFixedCostPayment('${esc(row.itemId)}')" title="결제요청"><i class="ti ti-send"></i></button>
-        <button class="btn btn-sm" onclick="holdFixedCostPayment('${esc(row.itemId)}')" title="보류"><i class="ti ti-player-pause"></i></button>
-        <button class="btn btn-sm" onclick="openFixedCostEdit('${esc(row.itemId)}')" title="항목 수정"><i class="ti ti-edit"></i></button>
-        <button class="btn btn-sm btn-danger" onclick="deleteFixedCostItem('${esc(row.itemId)}')" title="삭제"><i class="ti ti-trash"></i></button>
-      </td>
+      <td>${esc(row.dueDate || '—')}</td>
+      <td style="text-align:right;font-weight:800;color:#e8590c;">${fmtW(row.amount)}</td>
+      <td>${fixedCostStatusBadge(row.status)}</td>
+      <td>${payInfo}</td>
+      <td class="fixed-cost-month-note" title="${noteTitle}">${row.note ? esc(row.note) : '—'}</td>
     </tr>`;
-  }).join('') : `<tr><td colspan="10">${empty('등록된 고정비 항목이 없습니다.')}</td></tr>`;
+  }).join('') : `<tr><td colspan="9">${empty('등록된 고정비 항목이 없습니다.')}</td></tr>`;
   return `
-    <div class="toolbar" style="margin-bottom:12px;">
-      <button class="btn btn-sm" onclick="shiftFixedCostMonth(-1)"><i class="ti ti-chevron-left"></i></button>
-      <input type="month" value="${fixedCostMonth}" onchange="setFixedCostMonth(this.value)" style="width:130px;">
-      <button class="btn btn-sm" onclick="shiftFixedCostMonth(1)"><i class="ti ti-chevron-right"></i></button>
-      <button class="btn btn-sm" onclick="setFixedCostMonth(today().slice(0,7))">이번 달</button>
-      <button class="btn btn-sm ${fixedCostShowInactive?'btn-primary':''}" onclick="fixedCostShowInactive=!fixedCostShowInactive;renderFinance()"><i class="ti ti-eye"></i>미사용 포함</button>
-      <button class="btn btn-sm btn-primary" onclick="openFixedCostAdd()"><i class="ti ti-plus"></i>항목 등록</button>
-    </div>
+    <div id="fixed-cost-top-action-row">${fixedCostSelected.size ? fixedCostSelectionBarHtml() : fixedCostMonthToolbarHtml()}</div>
     ${finFilterBar('fixed',{noDate:true,placeholder:'항목·분류·지급처 검색',statuses:['예정','결제요청','지급완료','보류']})}
     <div class="metrics">
       <div class="mc"><div class="mc-lbl"><i class="ti ti-repeat"></i>사용 중 항목</div><div class="mc-val">${activeItems.length}건</div></div>
@@ -19564,8 +19791,8 @@ function _finFixedCost() {
         <span class="card-ttl"><i class="ti ti-repeat"></i>${monthLabel(fixedCostMonth)} 월 고정비</span>
         <span style="font-size:13px;">월 합계 <b style="color:#e8590c;">${fmtW(monthTotal)}</b></span>
       </div>
-      <div style="overflow-x:auto;"><table style="min-width:1240px;">
-        <thead><tr><th>항목</th><th>분류</th><th>지급처</th><th>예정일</th><th style="text-align:right;">금액</th><th>상태</th><th>지급일</th><th>결제방법</th><th>비고</th><th>관리</th></tr></thead>
+      <div style="overflow-x:auto;"><table class="fixed-cost-month-table" data-no-managed-table>
+        <thead><tr><th class="fixed-cost-check-cell"><input class="fixed-cost-check" type="checkbox" ${allPageSelected?'checked':''} ${pageIds.length?'':'disabled'} onclick="event.stopPropagation()" onchange='fixedCostTogglePage(${pageIdsJson}, this.checked)'></th><th>항목</th><th>분류</th><th>지급처</th><th>예정일</th><th style="text-align:right;">금액</th><th>상태</th><th>지급/결제</th><th>비고</th></tr></thead>
         <tbody>${body}</tbody>
       </table></div>${finPager('fixed',page)}
     </div>`;
