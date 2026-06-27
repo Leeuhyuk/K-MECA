@@ -4337,6 +4337,14 @@ const DEFAULT_ENTITY_VISIBILITY = {
   clients: 'company',
   products: 'company',
   partners: 'company',
+  as: 'company',
+  bom: 'company',
+  delivery: 'company',
+  finance: 'company',
+  financePayment: 'company',
+  order: 'company',
+  quote: 'company',
+  worker: 'company',
   rfq: 'assignee',
   po: 'assignee',
   material: 'department',
@@ -4800,6 +4808,12 @@ const DATA_KEYS = [
   'taxList','quoteList','orderList','inventoryLedger','alimtalkSettings','memoList','todoList','memoAttachmentData','auditLog',
   'asList','bomList','companyInfo','docXlsxTemplates','driveOAuthSettings'
 ];
+const LOCAL_ONLY_DATA_KEYS = ['alimtalkSettings','memoAttachmentData','auditLog'];
+
+function cloudDataKeysFromBackupKeys() {
+  const localOnly = new Set(LOCAL_ONLY_DATA_KEYS);
+  return DATA_KEYS.filter(k => !localOnly.has(k));
+}
 
 function buildDataBackupPayload() {
   const out = { _savedAt: new Date().toISOString() };
@@ -4831,6 +4845,7 @@ function applyDataBackupPayload(data) {
 }
 
 function exportDataJSON() {
+  if (typeof requireAdminAction === 'function' && !requireAdminAction('전체 데이터 백업')) return;
   const out = buildDataBackupPayload();
   const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json;charset=utf-8' });
   const a = document.createElement('a');
@@ -4842,6 +4857,7 @@ function exportDataJSON() {
 }
 
 function importDataJSON(input) {
+  if (typeof requireAdminAction === 'function' && !requireAdminAction('전체 데이터 복원')) return;
   const file = input.files[0];
   if (!file) return;
   confirm_('데이터 파일 가져오기',
@@ -4866,6 +4882,7 @@ function importDataJSON(input) {
 
 /* ════════ XLS 전체 데이터 내보내기 ════════ */
 function exportAllXLS() {
+  if (typeof requireAdminAction === 'function' && !requireAdminAction('전체 데이터 엑셀 내보내기')) return;
   if (typeof XLSX === 'undefined') {
     showToast('SheetJS 라이브러리 로딩 중입니다. 잠시 후 다시 시도해주세요.', 'error');
     return;
@@ -4912,6 +4929,7 @@ function exportAllXLS() {
 
 /* ════════ XLS 전체 데이터 가져오기 ════════ */
 function importAllXLS(input) {
+  if (typeof requireAdminAction === 'function' && !requireAdminAction('전체 데이터 엑셀 가져오기')) return;
   const file = input.files[0];
   if (!file) return;
   if (typeof XLSX === 'undefined') {
@@ -6217,7 +6235,45 @@ function updateAdminUI() {
   refreshPage(currentPage);
 }
 
-function checkAdminAction(fn = null) {
+function actionDeniedMessage(label) {
+  return (label || '해당 기능') + ' 권한이 없습니다.';
+}
+
+function requireFeatureAction(key, label) {
+  if (!key) return true;
+  const allowed = typeof roleFeatureAllowed === 'function' ? roleFeatureAllowed(key) : true;
+  if (allowed) return true;
+  if (typeof showToast === 'function') showToast(actionDeniedMessage(label), 'error');
+  return false;
+}
+
+function requireAdminAction(label) {
+  if (typeof currentRole === 'undefined' || currentRole === 'admin') return true;
+  if (typeof showToast === 'function') showToast(actionDeniedMessage(label || '관리자 기능'), 'error');
+  return false;
+}
+
+function requireCreateAction(tableKeys = null, label = '등록') {
+  const keys = Array.isArray(tableKeys) ? tableKeys : (tableKeys ? [tableKeys] : []);
+  if (typeof registrationActionAllowed === 'function') {
+    if (registrationActionAllowed(keys)) return true;
+    if (typeof showToast === 'function') showToast(actionDeniedMessage(label), 'error');
+    return false;
+  }
+  return requireFeatureAction('create', label);
+}
+
+function requireCsvAction(label = '엑셀 내보내기') {
+  return requireFeatureAction('csv', label);
+}
+
+function requirePdfAction(label = 'PDF/인쇄 출력') {
+  return requireFeatureAction('pdf', label);
+}
+
+function checkAdminAction(fn = null, options = null) {
+  if (options && options.adminOnly && !requireAdminAction(options.label)) return false;
+  if (options && options.feature && !requireFeatureAction(options.feature, options.label)) return false;
   if (fn) fn();
   return true;
 }
@@ -7536,6 +7592,7 @@ function deleteDelivery(id) {
 }
 
 function exportDeliveriesCSV() {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('납품 현황 엑셀 내보내기')) return;
   if (typeof XLSX === 'undefined') { showToast('SheetJS 로딩 중...', 'error'); return; }
   const wb = XLSX.utils.book_new();
   const h = ['납품번호','납품일자','고객사','제품명','규격','수량','단위','단가','납품금액','비고'];
@@ -8568,42 +8625,68 @@ function deleteFinanceEntry(id) {
 }
 
 /* 현재 페이지에 알맞는 신규 등록 팝업 창 호출 컨트롤러 */
-function openCurrentPageRegistration() {
-  if (typeof roleFeatureAllowed === 'function' && !roleFeatureAllowed('create')) {
-    showToast('등록 권한이 없습니다.', 'error');
-    return;
+function registrationFn(name, args = []) {
+  return function() {
+    const fn = (typeof window !== 'undefined' ? window[name] : globalThis[name]);
+    if (typeof fn !== 'function') {
+      if (typeof showToast === 'function') showToast('등록 기능을 찾을 수 없습니다.', 'error');
+      return;
+    }
+    return fn.apply(null, args);
+  };
+}
+function currentPageRegistrationConfig() {
+  const statementType = currentPage === 'taxinvoice' ? 'tax' : 'statement';
+  const salesType = typeof salesTab !== 'undefined' ? salesTab : 'quote';
+  const configs = {
+    clients:   { fnName: 'openClientAdd', tableKeys: ['clients'] },
+    materials: { fnName: 'openMatAdd', tableKeys: ['materials'] },
+    orders:    { fnName: 'openOrderAdd', tableKeys: ['orders'] },
+    inventory: { fnName: 'openInvAdd', tableKeys: ['inventory'] },
+    quality:   { fnName: 'openDefectAdd', tableKeys: ['defects'] },
+    claims:    { fnName: 'openClaimAdd', tableKeys: ['claims'] },
+    as:        { fnName: 'openAsAdd', tableKeys: ['as'] },
+    workers:   { fnName: 'openEmployeeAdd', tableKeys: [] },
+    rfq:       { fnName: 'openRfqAdd', tableKeys: ['rfq'] },
+    po:        { fnName: 'openPoAdd', tableKeys: ['po'] },
+    statement: { fnName: 'openSalesDocAdd', args: [statementType], tableKeys: ['statement'] },
+    taxinvoice:{ fnName: 'openSalesDocAdd', args: [statementType], tableKeys: ['tax'] },
+    salesdoc:  { fnName: 'openSODocAdd', args: [salesType], tableKeys: [salesType === 'order' ? 'order' : 'quote'] },
+    partners:  { fnName: 'openPartnerModal', tableKeys: ['partners'] },
+    alerts:    { fnName: 'openAlertAdd', tableKeys: [] },
+    finance:   { fnName: 'openFinancePrimaryAction', tableKeys: [] }
+  };
+  if (currentPage === 'finance') {
+    const activeFinanceTab = typeof financeTab !== 'undefined' ? financeTab : '';
+    if (!['etc','fixed'].includes(activeFinanceTab)) return null;
   }
+  const cfg = configs[currentPage];
+  return cfg ? Object.assign({}, cfg, { fn: registrationFn(cfg.fnName, cfg.args || []) }) : null;
+}
+function canOpenCurrentPageRegistration(config) {
   if (typeof pageAllowed === 'function' && !pageAllowed(currentPage)) {
     showToast('현재 화면 접근 권한이 없습니다.', 'error');
-    return;
+    return false;
   }
-  // 각 탭별 등록 창 매핑. 자체 등록 폼이 없는 화면(대시보드/공정/납품/휴지통)은
-  // 대표 등록인 '생산지시 등록'으로 연결하여 어떤 탭에서든 N키가 동작하도록 함.
-  const REG = {
-    clients:   openClientAdd,
-    materials: openMatAdd,
-    orders:    openOrderAdd,
-    inventory: openInvAdd,
-    quality:   openDefectAdd, // 품질 탭은 대표로 공정 불량 등록 창 호출
-    claims:    openClaimAdd,
-    as:        openAsAdd,
-    workers:   openEmployeeAdd,
-    rfq:       openRfqAdd,
-    po:        openPoAdd,
-    statement: () => openSalesDocAdd('statement'),
-    taxinvoice:() => openSalesDocAdd('tax'),
-    salesdoc:  () => openSODocAdd(salesTab),
-    partners:  openPartnerModal,
-    alerts:    openAlertAdd,
-    finance:   openFinanceAdd,
-    dashboard:   openOrderAdd,
-    process:     openOrderAdd,
-    deliveries:  openOrderAdd,
-    trash:       openOrderAdd
-  };
-  const fn = REG[currentPage] || openOrderAdd; // 미정의 탭도 기본 등록창 호출
-  fn();
-  focusFirstModalField(); // 등록창의 첫 입력칸에 자동 포커스
+  if (!config || typeof config.fn !== 'function') {
+    showToast('현재 화면에는 등록 단축키가 없습니다.', 'info');
+    return false;
+  }
+  if (typeof registrationActionAllowed === 'function' && !registrationActionAllowed(config.tableKeys)) {
+    showToast('등록 권한이 없습니다.', 'error');
+    return false;
+  }
+  if (typeof registrationActionAllowed !== 'function' && typeof roleFeatureAllowed === 'function' && !roleFeatureAllowed('create')) {
+    showToast('등록 권한이 없습니다.', 'error');
+    return false;
+  }
+  return true;
+}
+function openCurrentPageRegistration() {
+  const registration = currentPageRegistrationConfig();
+  if (!canOpenCurrentPageRegistration(registration)) return;
+  registration.fn();
+  focusFirstModalField();
 }
 
 /* 방금 열린 오버레이 모달의 첫 입력칸에 포커스 (readonly/hidden 제외) */
@@ -8922,6 +9005,7 @@ function saveClient() {
     const exact = clients.find(c => String(c.name || '').trim().toLowerCase() === name.toLowerCase());
     if (exact) existingId = exact.id;
   }
+  if (!editId && !existingId && typeof requireCreateAction === 'function' && !requireCreateAction('clients', '고객사 등록')) return;
   if (editId) {
     const c = clients.find(x => x.id === editId);
     if (c) {
@@ -9051,6 +9135,7 @@ function deleteClient(id) {
   showToast('고객사가 휴지통으로 이동되었습니다.');
 }
 function exportClientsCSV() {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('고객사 엑셀 내보내기')) return;
   if (typeof XLSX === 'undefined') { showToast('SheetJS 로딩 중...', 'error'); return; }
   const wb = XLSX.utils.book_new();
   const h = ['거래처코드','고객사명','담당자','연락처','이메일','사업자번호','수주일','상태','비고'];
@@ -9192,7 +9277,7 @@ function saveProdForm(clientId) {
 }
 function saveProd(clientId) {
   if (!checkAdminAction()) return;
-  if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+  if (typeof requireCreateAction === 'function' && !requireCreateAction('clients', '제품 등록')) return;
   const name = v('pra-name').trim();
   if (!name) { showToast('제품 품목명은 필수입니다.', 'error'); return; }
   const stage = v('pra-stage');
@@ -9531,7 +9616,7 @@ function cloneMat(id) {
 function saveMaterialForm() {
   if (!checkAdminAction()) return;
   if (!editMatId && isBulkEntryMode('mat')) {
-    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('materials', '자재 발주 등록')) return;
     const productId = v('ma-product');
     if (!productId) { showToast('해당 품목 제품을 선택해주세요.', 'error'); return; }
     const rows = readBulkEntryTable('mat');
@@ -9582,7 +9667,7 @@ function saveMaterialForm() {
     }
   }
   else {
-    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('materials', '자재 발주 등록')) return;
     const item = stampRecordCreate(obj, 'material');
     materials.unshift(item);
     writeAuditLog('material', item.id, 'create', null, item, { summary:'자재 발주 등록' });
@@ -9635,6 +9720,7 @@ function deleteMat(id) {
   showToast('자재 발주가 휴지통으로 이동되었습니다.');
 }
 function exportMatCSV() {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('자재 발주 엑셀 내보내기')) return;
   if (typeof XLSX === 'undefined') { showToast('SheetJS 로딩 중...', 'error'); return; }
   const wb = XLSX.utils.book_new();
   const h = ['자재코드','제품','자재명','규격','공급처','단가','수량','총액','주문일','입고예정','상태','비고'];
@@ -9830,7 +9916,7 @@ function openInvEdit(id) {
 function saveInventoryForm() {
   if (!checkAdminAction()) return;
   if (!editInvId && isBulkEntryMode('inv')) {
-    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('inventory', '재고 등록')) return;
     const rows = readBulkEntryTable('inv');
     if (!rows.length) { showToast('등록할 재고 행을 입력해주세요.', 'error'); return; }
     const invalid = rows.find(r => !r.name.trim() || (parseInt(r.qty) || 0) < 0 || (parseInt(r.minQty) || 0) < 0);
@@ -9874,7 +9960,7 @@ function saveInventoryForm() {
     }
   }
   else {
-    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('inventory', '재고 등록')) return;
     const item = stampRecordCreate(obj, 'inventory');
     inventory.unshift(item);
     writeAuditLog('inventory', item.id, 'create', null, item, { summary:'재고 품목 등록' });
@@ -9897,6 +9983,7 @@ function deleteInventory(id) {
   showToast('재고가 휴지통으로 이동되었습니다.');
 }
 function exportInvCSV() {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('재고 엑셀 내보내기')) return;
   if (typeof XLSX === 'undefined') { showToast('SheetJS 로딩 중...', 'error'); return; }
   const wb = XLSX.utils.book_new();
   const h = ['재고코드','품목명','재고구분','세부유형','현재고','단위','안전재고','보관위치','비고'];
@@ -10295,7 +10382,7 @@ function saveOrderForm() {
   if (!editOrderId && isBulkEntryMode('order')) {
     const clientId = v('oa-client');
     if (!clientId) { showToast('연결 고객사를 먼저 선택해주십시오.', 'error'); return; }
-    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('orders', '생산 지시 등록')) return;
     const rows = readBulkEntryTable('order');
     if (!rows.length) { showToast('발행할 생산 지시 행을 입력해주세요.', 'error'); return; }
     const invalid = rows.find(r => !r.productId || (parseInt(r.qty) || 0) <= 0);
@@ -10357,7 +10444,7 @@ function saveOrderForm() {
     writeAuditLog('workOrder', o.id, 'update', before, o, { summary:'생산 지시 수정' });
     syncProductOnOrderChange(productId);
   } else {
-    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('orders', '생산 지시 등록')) return;
     const order = stampRecordCreate({
       id: nextCode('WO', workOrders),
       clientId: singleClientId, productId, line: v('oa-line'),
@@ -10466,6 +10553,7 @@ function deleteOrder(id) {
 }
 
 function exportOrdersCSV() {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('생산 지시 엑셀 내보내기')) return;
   const h = ['지시번호','고객사명','생산제품','배정라인','목표계획량','실적달성량','불량검출량','작업개시일','납기마감일','달성률','상태','감독담당자','메모'];
   const rows = workOrders.map(o => [
     o.id, getClientName(o.clientId), getProductName(o.productId), o.line, o.qty, o.done, o.defect,
@@ -10946,6 +11034,7 @@ function saveStages() {
 }
 
 function exportProcessCSV() {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('공정 현황 엑셀 내보내기')) return;
   if (typeof XLSX === 'undefined') { showToast('SheetJS 로딩 중...', 'error'); return; }
   const wb = XLSX.utils.book_new();
   const h = ['고객사','제품명','납기','D-Day','공정단계','상태','메모'];
@@ -11445,7 +11534,7 @@ function openDefectEdit(id) {
 function addDefect() {
   if (!checkAdminAction()) return;
   if (!editDefectId && isBulkEntryMode('df')) {
-    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('defects', '불량 기록 등록')) return;
     const rows = readBulkEntryTable('df');
     if (!rows.length) { showToast('등록할 불량 행을 입력해주세요.', 'error'); return; }
     const invalid = rows.find(r => !r.productId || !r.type.trim() || (parseInt(r.qty) || 0) <= 0);
@@ -11496,7 +11585,7 @@ function addDefect() {
     stampRecordUpdate(d, before, 'defect');
     writeAuditLog('defect', d.id, 'update', before, d, { summary:'불량 리포트 수정' });
   } else {
-    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('defects', '불량 기록 등록')) return;
     const rec = stampRecordCreate({
       id: nextCode('DF', defects),
       productId: v('df-product'),
@@ -11611,7 +11700,7 @@ function openClaimEdit(id) {
 function addClaim() {
   if (!checkAdminAction()) return;
   if (!editClaimId && isBulkEntryMode('cl')) {
-    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('claims', '고객 클레임 등록')) return;
     const clientId = v('cl-client');
     const clientName = claimClientInputName();
     if (!clientId && !clientName) { showToast('고객사를 선택하거나 직접 입력하세요.', 'error'); return; }
@@ -11668,7 +11757,7 @@ function addClaim() {
     stampRecordUpdate(c, before, 'claim');
     writeAuditLog('claim', c.id, 'update', before, c, { summary:'클레임 / AS 수정' });
   } else {
-    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('claims', '고객 클레임 등록')) return;
     const rec = stampRecordCreate({ id: nextCode('CLM', claims), ...fields }, 'claim');
     claims.unshift(rec);
     writeAuditLog('claim', rec.id, 'create', null, rec, { summary:'클레임 / AS 접수' });
@@ -11749,7 +11838,7 @@ function addCheckRecord() {
   const inspector = v('ck-inspector').trim();
   if (!inspector) { showToast('검사 실무자의 성함(사인)이 필요합니다.', 'error'); return; }
   if (!editCheckId && isBulkEntryMode('ck')) {
-    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('checks', '검사 기록 등록')) return;
     const rows = readBulkEntryTable('ck');
     if (!rows.length) { showToast('등록할 검사 행을 입력해주세요.', 'error'); return; }
     const invalid = rows.find(r => !r.productId);
@@ -11794,7 +11883,7 @@ function addCheckRecord() {
     stampRecordUpdate(r, before, 'checkRecord');
     writeAuditLog('checkRecord', r.id, 'update', before, r, { summary:'검사 기록 수정' });
   } else {
-    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('checks', '검사 기록 등록')) return;
     const rec = stampRecordCreate({
       id: nextCode('CHK', checkRecords),
       date: v('ck-date'),
@@ -11883,6 +11972,7 @@ function deleteCheck(id) {
 }
 
 function exportDefectsCSV() {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('불량 기록 엑셀 내보내기')) return;
   const h = ['코드','발생일자','완제품모델','공정단계','하자유형','수량','원인파악','조치사항','상태','비고'];
   const rows = defects.map(d => [
     d.id, d.date, getProductName(d.productId), d.stage, d.type, d.qty, d.cause || '', d.action || '', d.status, d.note || ''
@@ -11896,6 +11986,7 @@ function exportDefectsCSV() {
 }
 
 function exportClaimsCSV() {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('고객 클레임 엑셀 내보내기')) return;
   const h = ['클레임코드','접수일자','의뢰고객사','완제품모델','클레임사양','불만및피드백사항','조치방안','처리상태'];
   const rows = claims.map(c => [
     c.id, c.date, claimClientLabel(c), claimProductLabel(c), c.spec || '', c.content, c.response || '', c.status
@@ -11909,6 +12000,7 @@ function exportClaimsCSV() {
 }
 
 function exportChecksCSV() {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('검사 기록 엑셀 내보내기')) return;
   const h = ['검사코드','출하검사일','고객사명','완성품명','인스펙터','외관테스트','치수계측','기능검사','종합판정','비고'];
   const rows = checkRecords.map(r => [
     r.id, r.date, getClientName(r.clientId), getProductName(r.productId), r.inspector, r.visual, r.dim, r.func, r.result, r.note || ''
@@ -12182,6 +12274,7 @@ function deleteWorker(id) {
 }
 
 function exportWorkersCSV() {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('직원 현황 엑셀 내보내기')) return;
   if (typeof XLSX === 'undefined') { showToast('SheetJS 로딩 중...', 'error'); return; }
   const wb = XLSX.utils.book_new();
   const h = ['사번','성명','부서','직급','고용형태','입사일','연락처','담당','배정라인','월급여','고정수당','식대·비과세수당','출근시간','연장근무','상태'];
@@ -13292,7 +13385,9 @@ const FIREBASE_CONFIG = Object.assign(
   loadStorage('firebaseConfig', {})
 );
 /* 클라우드로 공유할 데이터 키(테마/관리자비번 등 기기·보안 로컬값은 제외) */
-const CLOUD_KEYS = ['clients','products','materials','workOrders','workers','defects','claims','checkRecords','alerts','inventory','inventoryLedger','deliveries','stages','trash','rfqList','poList','partners','statementList','taxList','quoteList','orderList','financeData','attendance','leaves','payrollRecords','asList','bomList','memoList','todoList','companyInfo','docXlsxTemplates','driveOAuthSettings'];
+const CLOUD_KEYS = (typeof cloudDataKeysFromBackupKeys === 'function')
+  ? cloudDataKeysFromBackupKeys()
+  : ['clients','products','materials','workOrders','workers','defects','claims','checkRecords','alerts','inventory','inventoryLedger','deliveries','stages','trash','rfqList','poList','partners','statementList','taxList','quoteList','orderList','financeData','attendance','leaves','payrollRecords','asList','bomList','memoList','todoList','companyInfo','docXlsxTemplates','driveOAuthSettings'];
 var _fbAuth=null, _fbDb=null, _cloudUser=null;   // 초기 데이터 마이그레이션에서도 안전하게 참조되도록 var 사용
 const _cloudQueue=new Set(); let _cloudTimer=null; let _cloudUnsub=null;
 
@@ -13396,6 +13491,19 @@ const COLUMN_TABLES = {
   inventory:  { sel:'#inventory-table',   label:'재고',             addBtn:'openInvAdd',    cols:['재고코드','품목명','분류','현재고','안전재고','보관위치','참고','관리'] }
 };
 function roleColumnsConfig(){ return loadStorage('roleColumns', {}); }   // { 역할:{ 테이블:[숨길컬럼...] } }
+function tableActionAllowed(tableKey, action = 'create') {
+  if (!tableKey) return true;
+  if (currentRole === 'admin') return true;
+  if (action === 'create' && typeof canUseFeature === 'function' && !canUseFeature('create')) return false;
+  const hidden = ((roleColumnsConfig()[currentRole] || {})[tableKey]) || [];
+  if (action === 'create' && hidden.includes(ADD_KEY)) return false;
+  return true;
+}
+function registrationActionAllowed(tableKeys) {
+  if (typeof roleFeatureAllowed === 'function' && !roleFeatureAllowed('create')) return false;
+  const keys = (tableKeys || []).filter(Boolean);
+  return !keys.length || keys.some(key => tableActionAllowed(key, 'create'));
+}
 /* 현재 역할의 숨김 컬럼을 nth-child CSS로 주입 (admin은 전체 표시) */
 function applyColumnGating(){
   let css='';
@@ -13442,6 +13550,7 @@ function applyFeatureGating(){
     const f = roleFeaturesConfig()[currentRole] || {};
     if (f.csv===false) css += `[onclick^="export"],[onclick^="poBulkExport"]{display:none!important;}\n`;   // 모든 내보내기 버튼
     if (f.pdf===false) css += `${PDF_BTN_SEL}{display:none!important;}\n`;            // 모든 PDF/인쇄 버튼
+    if (f.csv===false || f.pdf===false) css += `[onclick^="saveDocumentBundleToGoogleDrive"],[onclick^="poBulkDrive"],[onclick^="bulkSavePayrollDrive"],[onclick*="bulkRun"][onclick*="drive"]{display:none!important;}\n`;
     if (f.delete===false) css += `.del-btn,[onclick^="delete"],[onclick*="bulkRun"][onclick*="delete"]{display:none!important;}\n`;
   }
   let st=document.getElementById('feat-gating');
@@ -15627,7 +15736,7 @@ function saveRfqForm() {
     }
     delete modal.dataset.editId;
   } else {
-    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('rfq', '견적요청서 등록')) return;
     const next = stampRecordCreate(buildRfqObj(v('rq-id')), 'rfq');
     rfqList.unshift(next);
     writeAuditLog('rfq', next.id, 'create', null, next, { summary:'견적요청서 등록' });
@@ -15774,6 +15883,7 @@ function deleteRfq(id) {
 }
 
 function openRfqPrint(id) {
+  if (typeof requirePdfAction === 'function' && !requirePdfAction('견적요청서 PDF 출력')) return;
   const targets = id ? [rfqList.find(x=>x.id===id)].filter(Boolean)
                      : rfqList.filter(r => r.status !== '미채택');
   if (!targets.length) { showToast('출력할 견적요청서가 없습니다.', 'error'); return; }
@@ -15850,6 +15960,7 @@ function openRfqPrint(id) {
 }
 
 function exportRfqXLS(id = null) {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('견적요청서 엑셀 내보내기')) return;
   const targets = id ? rfqList.filter(r => r.id === id) : rfqList;
   if (!targets.length) { showToast('내보낼 데이터가 없습니다.', 'error'); return; }
   const ci = getCompanyInfo();
@@ -16026,10 +16137,10 @@ function poUpdateBulkBar(){
   if(all){ const total=document.querySelectorAll('#po-table .po-check').length;
     all.checked = total>0 && ids.length===total; all.indeterminate = ids.length>0 && ids.length<total; }
 }
-function poBulkPrint(){ const ids=poCheckedIds(); if(!ids.length) return; openPoPrint(ids, true); }   // 선택 건은 건별 개별 출력
+function poBulkPrint(){ if (typeof requirePdfAction === 'function' && !requirePdfAction('구매발주서 PDF 출력')) return; const ids=poCheckedIds(); if(!ids.length) return; openPoPrint(ids, true); }   // 선택 건은 건별 개별 출력
 function poBulkEdit(){ const ids=poCheckedIds(); if(ids.length===1) openPoEdit(ids[0]); }
 function poBulkClone(){ const ids=poCheckedIds(); if(ids.length===1) clonePo(ids[0]); }
-function poBulkExport(){ const ids=poCheckedIds(); if(!ids.length) return; exportPoXLS(ids); }
+function poBulkExport(){ if (typeof requireCsvAction === 'function' && !requireCsvAction('구매발주서 엑셀 내보내기')) return; const ids=poCheckedIds(); if(!ids.length) return; exportPoXLS(ids); }
 function poBulkDrive(){ const ids=poCheckedIds(); if(!ids.length) return; saveDocumentBundleToGoogleDrive('po', ids); }
 function poBulkEmail(){ const ids=poCheckedIds(); if(ids.length!==1){ showToast('이메일은 한 건만 선택해 발송하세요.','info'); return; } openEmailModal(poList.find(x=>x.id===ids[0]),'po'); }
 function poBulkPaymentRequest(){ const ids=poCheckedIds(); if(ids.length===1 && typeof openPaymentRequestFromPo === 'function') openPaymentRequestFromPo(ids[0]); }
@@ -16104,7 +16215,7 @@ function savePoForm() {
     }
     delete modal.dataset.editId;
   } else {
-    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('po', '구매발주서 등록')) return;
     const next = stampRecordCreate(buildPoObj(v('po-id')), 'po');
     poList.unshift(next);
     writeAuditLog('po', next.id, 'create', null, next, { summary:'구매발주서 등록' });
@@ -16199,6 +16310,7 @@ function deletePo(id) {
 }
 
 function openPoPrint(id, individual=false) {
+  if (typeof requirePdfAction === 'function' && !requirePdfAction('구매발주서 PDF 출력')) return;
   const ids = Array.isArray(id) ? id : (id ? [id] : null);
   const targetList = ids ? ids.map(i=>poList.find(x=>x.id===i)).filter(Boolean)
                         : poList;   // 전체 출력: 입고완료 포함 모든 발주서
@@ -16279,6 +16391,7 @@ function openPoPrint(id, individual=false) {
 }
 
 function exportPoXLS(id = null) {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('구매발주서 엑셀 내보내기')) return;
   const ids = Array.isArray(id) ? id : (id ? [id] : null);
   const targets = ids ? poList.filter(p => ids.includes(p.id)) : poList;
   if (!targets.length) { showToast('내보낼 데이터가 없습니다.', 'error'); return; }
@@ -17405,6 +17518,7 @@ function deleteSalesDoc(type, id) {
 }
 
 function exportSalesDocCSV(type) {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('판매 문서 엑셀 내보내기')) return;
   if (typeof XLSX === 'undefined') { showToast('SheetJS 로딩 중...', 'error'); return; }
   const cfg = SALES[type], list = salesList(type);
   if (!list.length) { showToast('내보낼 데이터가 없습니다.', 'error'); return; }
@@ -17614,6 +17728,7 @@ function _salesDocBodyHtml(d, type, ci) {
 }
 
 function openSalesDocPrint(type, id) {
+  if (typeof requirePdfAction === 'function' && !requirePdfAction('판매 문서 PDF 출력')) return;
   const cfg = SALES[type], list = salesList(type);
   const targets = Array.isArray(id) ? list.filter(x=>id.includes(x.id)) : (id ? list.filter(x => x.id === id) : list);
   if (!targets.length) { showToast('출력할 문서가 없습니다.', 'error'); return; }
@@ -17917,6 +18032,7 @@ function deleteSODoc(type, id) {
 }
 
 function exportSODocCSV(type) {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('견적/수주 문서 엑셀 내보내기')) return;
   if (typeof XLSX === 'undefined') { showToast('SheetJS 로딩 중...', 'error'); return; }
   const cfg = SODOCS[type], list = soDocList(type);
   if (!list.length) { showToast('내보낼 데이터가 없습니다.', 'error'); return; }
@@ -17934,6 +18050,7 @@ function exportSODocCSV(type) {
 }
 
 function openSODocPrint(type, id) {
+  if (typeof requirePdfAction === 'function' && !requirePdfAction('견적/수주 문서 PDF 출력')) return;
   const cfg = SODOCS[type], list = soDocList(type);
   const targets = Array.isArray(id) ? list.filter(x=>id.includes(x.id)) : (id ? list.filter(x=>x.id===id) : list);
   if (!targets.length) { showToast('출력할 문서가 없습니다.', 'error'); return; }
@@ -18193,7 +18310,7 @@ function savePartnerForm() {
       writeAuditLog('partners', editId, 'update', before, partners[idx], { summary:'거래처 수정' });
     }
   } else {
-    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('partners', '거래처 등록')) return;
     stampRecordCreate(obj, 'partners', { visibility:'company' });
     partners.unshift(obj);
     writeAuditLog('partners', obj.id, 'create', null, obj, { summary:'거래처 등록' });
@@ -18224,6 +18341,7 @@ function deletePartner(id) {
 }
 
 function exportPartnersXLS() {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('거래처 엑셀 내보내기')) return;
   if (!partners.length) { showToast('내보낼 거래처 데이터가 없습니다.', 'error'); return; }
   const wb = XLSX.utils.book_new();
   const hdr = ['코드','거래처명','유형','담당자','전화번호','휴대폰','이메일','팩스','사업자번호','주소','비고'];
@@ -20475,6 +20593,7 @@ function financeFilteredRows(tab) {
   return [];
 }
 function exportFinanceViewXLS(tab){
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('재무 엑셀 내보내기')) return;
   if(tab==='cost' && !financeCostInfoAllowed()){showToast('원가 내보내기 권한이 없습니다.','error');return;}
   if(typeof XLSX==='undefined'){showToast('엑셀 생성 라이브러리가 준비되지 않았습니다.','error');return;}
   if(tab==='ar'){
@@ -20507,6 +20626,7 @@ function exportFinanceViewXLS(tab){
   const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet([header,...rows]);XLSX.utils.book_append_sheet(wb,ws,'재무조회');XLSX.writeFile(wb,`재무_${tab}_${today()}.xlsx`);
 }
 function exportPnlXLS(){
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('손익 엑셀 내보내기')) return;
   if(typeof XLSX==='undefined'){showToast('엑셀 생성 라이브러리가 준비되지 않았습니다.','error');return;}
   const rows=finMonthList(finPnlMonths).map(m=>{const r=finRevenueMonth(m.ym),p=finPurchaseMonth(m.ym),l=finPayrollMonthly(m.ym),f=fixedCostExpenseMonth(m.ym),i=finEntryMonth(m.ym,'수입'),e=finEntryMonth(m.ym,'비용');return[m.ym,r,p,l,f,i,e,r-p-l-f-e+i];});
   const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet([['월','매출','매입/지출','인건비','고정비','기타수입','기타비용','순이익'],...rows]);XLSX.utils.book_append_sheet(wb,ws,'손익');XLSX.writeFile(wb,`손익계산_${finPnlMonths}개월_${today()}.xlsx`);
@@ -21994,6 +22114,7 @@ function payrollSheetRows(worker, ym) {
 }
 
 function exportPayslipXLS(docKey) {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('급여명세서 엑셀 내보내기')) return;
   if (typeof XLSX === 'undefined') { showToast('엑셀 생성 라이브러리가 준비되지 않았습니다.', 'error'); return; }
   const { workerId, month } = parsePayrollDocKey(docKey);
   const worker = workers.find(item => item.id === workerId);
@@ -22006,6 +22127,7 @@ function exportPayslipXLS(docKey) {
 }
 
 function exportPayrollXLS() {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('급여대장 엑셀 내보내기')) return;
   if (typeof XLSX === 'undefined') { showToast('엑셀 생성 라이브러리가 준비되지 않았습니다.', 'error'); return; }
   const exportWorkers = financeTab==='labor' ? financeFilteredRows('labor') : workers;
   const rows = exportWorkers.map(worker => {
@@ -22026,6 +22148,7 @@ function exportPayrollXLS() {
 
 /* 직원별 급여명세서 인쇄 */
 function printPayslip(docKey){
+  if (typeof requirePdfAction === 'function' && !requirePdfAction('급여명세서 인쇄')) return;
   const { workerId, month:ym } = parsePayrollDocKey(docKey);
   const w = workers.find(x=>x.id===workerId); if(!w){ showToast('직원 정보를 찾을 수 없습니다.','error'); return; }
   const p = calcPayroll(w, ym);
@@ -22148,6 +22271,7 @@ function renderAS(){
 function _asClientOptions(sel){ return clients.map(c=>`<option value="${esc(c.id)}"${c.id===sel?' selected':''}>${esc(c.name)}</option>`).join(''); }
 function _asWorkerOptions(sel){ return '<option value="">미배정</option>'+workers.map(w=>`<option value="${esc(w.id)}"${w.id===sel?' selected':''}>${esc(w.name)}${w.dept?' · '+esc(w.dept):''}</option>`).join(''); }
 function openAsAdd(){
+  if (typeof requireCreateAction === 'function' && !requireCreateAction('as', 'A/S 등록')) return;
   editAsId = null;
   inp('as-modal-ttl').innerHTML = '<i class="ti ti-tool" style="color:var(--tx-i);"></i>A/S 접수 등록';
   sv('asa-id', nextCode('AS', asList));
@@ -22160,6 +22284,7 @@ function openAsAdd(){
   inp('as-modal').classList.add('open');
 }
 function openAsEdit(id){
+  if (typeof requireFeatureAction === 'function' && !requireFeatureAction('edit', 'A/S 수정')) return;
   const a = asList.find(x=>x.id===id); if(!a) return;
   editAsId = id;
   inp('as-modal-ttl').innerHTML = '<i class="ti ti-edit" style="color:var(--tx-w);"></i>A/S 정보 수정';
@@ -22174,6 +22299,11 @@ function openAsEdit(id){
 }
 function saveAsModal(){
   if (!checkAdminAction()) return;
+  if (editAsId) {
+    if (typeof requireFeatureAction === 'function' && !requireFeatureAction('edit', 'A/S 수정')) return;
+  } else if (typeof requireCreateAction === 'function' && !requireCreateAction('as', 'A/S 등록')) {
+    return;
+  }
   const clientId = v('asa-client');
   const symptom = v('asa-symptom').trim();
   if (!symptom) { showToast('증상/접수 내용은 필수입니다.', 'error'); return; }
@@ -22204,6 +22334,7 @@ function saveAsModal(){
 }
 function deleteAS(id){
   if (!checkAdminAction()) return;
+  if (typeof requireFeatureAction === 'function' && !requireFeatureAction('delete', 'A/S 삭제')) return;
   if (!confirm('이 A/S 기록을 삭제하시겠습니까?')) return;
   const target = asList.find(x=>x.id===id);
   asList = asList.filter(x=>x.id!==id);
@@ -22955,6 +23086,7 @@ function _driveBackupName() {
 }
 
 async function backupDataToGoogleDrive() {
+  if (typeof requireAdminAction === 'function' && !requireAdminAction('Google Drive 전체 백업')) return;
   const button = inp('drive-backup-btn');
   if (button) { button.disabled = true; button.innerHTML = '<i class="ti ti-loader animate-spin"></i>백업 중'; }
   try {
@@ -23303,6 +23435,8 @@ function captureDocumentXlsxBlob(callback) {
 }
 
 async function saveDocumentToGoogleDrive(type, id, format) {
+  if (format === 'pdf' && typeof requirePdfAction === 'function' && !requirePdfAction('Google Drive PDF 저장')) return;
+  if (format !== 'pdf' && typeof requireCsvAction === 'function' && !requireCsvAction('Google Drive 엑셀 저장')) return;
   const config = _driveDocumentConfig(type);
   if (!config) { showToast('지원하지 않는 문서입니다.', 'error'); return; }
   try {
@@ -23334,6 +23468,8 @@ async function _uploadDocumentBundleToGoogleDrive(type, id) {
 }
 
 async function saveDocumentBundleToGoogleDrive(type, id) {
+  if (typeof requirePdfAction === 'function' && !requirePdfAction('Google Drive PDF 저장')) return;
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('Google Drive 엑셀 저장')) return;
   const config = _driveDocumentConfig(type);
   if (!config) { showToast('지원하지 않는 문서입니다.', 'error'); return; }
   try {
@@ -23479,11 +23615,13 @@ function renderDriveBackupList() {
 }
 
 function restoreGoogleDriveBackupByIndex(index) {
+  if (typeof requireAdminAction === 'function' && !requireAdminAction('Google Drive 백업 복원')) return;
   const file = _driveBackups[index];
   if (file) restoreGoogleDriveBackup(file.id, file.name);
 }
 
 async function restoreGoogleDriveBackup(fileId, fileName) {
+  if (typeof requireAdminAction === 'function' && !requireAdminAction('Google Drive 백업 복원')) return;
   confirm_('Google Drive 백업 복원',
     '<strong>' + _driveEsc(fileName) + '</strong> 파일로 현재 데이터를 교체합니다.<br>' +
     '<span style="color:var(--tx-d);font-size:12px;">복원 전에 현재 데이터를 Drive에 백업하는 것을 권장합니다.</span>',
