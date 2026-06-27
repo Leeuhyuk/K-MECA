@@ -4360,6 +4360,46 @@ const DEFAULT_ENTITY_VISIBILITY = {
   claim: 'assignee',
   trash: 'department'
 };
+const DATA_SCOPE_ENTITY_GROUPS = {
+  clients: 'clients',
+  products: 'clients',
+  process: 'process',
+  processClient: 'process',
+  workOrder: 'process',
+  processProduct: 'process',
+  processMaterial: 'process',
+  material: 'materials',
+  materials: 'materials',
+  inventory: 'inventory',
+  inventoryMove: 'inventory',
+  memo: 'notes',
+  todo: 'notes',
+  notes: 'notes',
+  rfq: 'rfq',
+  po: 'po',
+  quote: 'salesdoc',
+  order: 'salesdoc',
+  statement: 'salesdoc',
+  tax: 'salesdoc',
+  delivery: 'deliveries',
+  deliveries: 'deliveries',
+  defect: 'quality',
+  checkRecord: 'quality',
+  claim: 'claims',
+  as: 'as',
+  partners: 'partners',
+  partner: 'partners',
+  finance: 'finance',
+  financePayment: 'finance',
+  paymentRequest: 'finance',
+  financeEntry: 'finance',
+  fixedCost: 'finance',
+  fixedCostPayment: 'finance',
+  bom: 'bom',
+  worker: 'workers',
+  trash: 'trash'
+};
+const DEFAULT_SHARED_DATA_SCOPE_GROUPS = new Set(['inventory', 'process', 'notes']);
 const AUDIT_META_FIELDS = new Set([
   'createdBy','createdByName','createdAt','updatedBy','updatedByName','updatedAt',
   'ownerUserId','ownerUserName','ownerDeptId','ownerDeptName','visibility',
@@ -4483,6 +4523,26 @@ function _recordAssigneeNames(record) {
 }
 function defaultVisibilityForEntity(entityType) {
   return DEFAULT_ENTITY_VISIBILITY[entityType] || 'company';
+}
+function dataScopeGroupForEntity(entityType) {
+  return DATA_SCOPE_ENTITY_GROUPS[entityType] || entityType || 'general';
+}
+function defaultDataScopeForGroup(group) {
+  return DEFAULT_SHARED_DATA_SCOPE_GROUPS.has(group) ? 'shared' : 'own';
+}
+function dataScopeForEntity(entityType, actor = getCurrentActor()) {
+  const role = ((actor && actor.role) || '').trim();
+  if (!role || role === 'admin') return 'shared';
+  const group = dataScopeGroupForEntity(entityType);
+  const cfg = (typeof roleDataScopeConfig === 'function')
+    ? roleDataScopeConfig()
+    : (loadStorage('roleDataScope', {}) || {});
+  const roleCfg = (cfg && cfg[role]) || {};
+  const scope = roleCfg[group] || defaultDataScopeForGroup(group);
+  return scope === 'shared' ? 'shared' : 'own';
+}
+function dataScopeSharedForEntity(entityType, actor = getCurrentActor()) {
+  return dataScopeForEntity(entityType, actor) === 'shared';
 }
 function enrichRecordAccess(record, entityType, options = {}) {
   if (!record || typeof record !== 'object' || Array.isArray(record)) return record;
@@ -4639,6 +4699,19 @@ function userRefMatches(record, refs, actor) {
   if (!set.size) return false;
   return [actor.userId, actor.uid, actor.email, actor.name].some(v => set.has(String(v || '').trim()));
 }
+function personalDataOnlyRole(actor, entityType) {
+  const role = ((actor && actor.role) || '').trim();
+  return !!role && role !== 'admin' && !dataScopeSharedForEntity(entityType, actor);
+}
+function recordOwnedByActor(record, actor) {
+  if (!record || !actor) return false;
+  return userRefMatches(record, [
+    record.createdBy,
+    record.ownerUserId,
+    record.createdByName,
+    record.ownerUserName
+  ], actor);
+}
 function roleFeatureAllowed(key) {
   if ((typeof currentRole !== 'undefined' && currentRole === 'admin') || !key) return true;
   if (typeof canUseFeature === 'function') return canUseFeature(key);
@@ -4650,6 +4723,8 @@ function roleFeatureAllowed(key) {
 function canViewRecord(record, entityType, actor = getCurrentActor()) {
   if (!record || typeof record !== 'object') return true;
   if (actor.role === 'admin') return true;
+  if (dataScopeSharedForEntity(entityType, actor)) return true;
+  if (personalDataOnlyRole(actor, entityType)) return recordOwnedByActor(record, actor);
   const visibility = record.visibility || defaultVisibilityForEntity(entityType);
   if (visibility === 'company') return true;
   if (record.createdBy && userRefMatches(record, [record.createdBy], actor)) return true;
@@ -4670,7 +4745,7 @@ function canEditRecord(record, entityType, actor = getCurrentActor()) {
   if (!roleFeatureAllowed('edit')) return false;
   const locked = ['입고완료','지급완료','완료','수주전환','발행완료','전송완료'];
   if (locked.includes(record && record.status)) return false;
-  if (!record || record.visibility === 'company') return actor.role === 'manager';
+  if (!record || record.visibility === 'company') return actor.role === 'manager' || recordOwnedByActor(record, actor);
   return userRefMatches(record, [record.createdBy, record.ownerUserId], actor) ||
     userRefMatches(record, record.sharedWith, actor) ||
     _recordAssigneeNames(record).some(v => _actorMatchesName(actor, v));
@@ -4690,6 +4765,10 @@ function requireRecordPermission(action, record, entityType) {
   if (fn(record, entityType)) return true;
   if (typeof showToast === 'function') showToast('이 데이터에 대한 권한이 없습니다.', 'error');
   return false;
+}
+function visibleRecords(list, entityType) {
+  if (!Array.isArray(list)) return [];
+  return list.filter(record => canViewRecord(record, entityType));
 }
 
 /* 파일에 내장된 데이터를 localStorage로 로드 (파일 열 때 한 번만 실행) */
@@ -5661,9 +5740,19 @@ function onGlobalSearch(q) {
   
   let html = '';
   let matchCount = 0;
+  const searchClients = typeof visibleRecords === 'function' ? visibleRecords(clients, 'clients') : clients;
+  const searchProducts = typeof visibleRecords === 'function' ? visibleRecords(products, 'products') : products;
+  const searchMaterials = typeof visibleRecords === 'function' ? visibleRecords(materials, 'material') : materials;
+  const searchOrders = typeof visibleRecords === 'function' ? visibleRecords(workOrders, 'workOrder') : workOrders;
+  const searchInventory = typeof visibleRecords === 'function' ? visibleRecords(inventory, 'inventory') : inventory;
+  const searchDefects = typeof visibleRecords === 'function' ? visibleRecords(defects, 'defect') : defects;
+  const searchClaims = typeof visibleRecords === 'function' ? visibleRecords(claims, 'claim') : claims;
+  const searchWorkers = typeof visibleRecords === 'function' ? visibleRecords(workers, 'worker') : workers;
+  const searchMemos = typeof visibleRecords === 'function' ? visibleRecords((typeof memoList !== 'undefined' ? memoList : []), 'memo') : (typeof memoList !== 'undefined' ? memoList : []);
+  const searchTodos = typeof visibleRecords === 'function' ? visibleRecords((typeof todoList !== 'undefined' ? todoList : []), 'todo') : (typeof todoList !== 'undefined' ? todoList : []);
   
   // 1. 고객사
-  const matchingClients = clients.filter(c => 
+  const matchingClients = searchClients.filter(c => 
     c.name.toLowerCase().includes(q) || 
     (c.manager || '').toLowerCase().includes(q) ||
     (c.tel || '').toLowerCase().includes(q)
@@ -5680,7 +5769,7 @@ function onGlobalSearch(q) {
   }
   
   // 2. 수주 제품
-  const matchingProducts = products.filter(p => 
+  const matchingProducts = searchProducts.filter(p => 
     p.name.toLowerCase().includes(q) || 
     (p.spec || '').toLowerCase().includes(q) ||
     p.id.toLowerCase().includes(q)
@@ -5698,7 +5787,7 @@ function onGlobalSearch(q) {
   }
   
   // 3. 자재 발주
-  const matchingMaterials = materials.filter(m => 
+  const matchingMaterials = searchMaterials.filter(m => 
     m.name.toLowerCase().includes(q) || 
     (m.supplier || '').toLowerCase().includes(q) ||
     m.id.toLowerCase().includes(q)
@@ -5716,7 +5805,7 @@ function onGlobalSearch(q) {
   }
   
   // 4. 생산 지시
-  const matchingOrders = workOrders.filter(o => 
+  const matchingOrders = searchOrders.filter(o => 
     o.id.toLowerCase().includes(q) || 
     (o.manager || '').toLowerCase().includes(q) ||
     getProductName(o.productId).toLowerCase().includes(q)
@@ -5734,7 +5823,7 @@ function onGlobalSearch(q) {
   }
   
   // 5. 실시간 재고
-  const matchingInv = inventory.filter(i => 
+  const matchingInv = searchInventory.filter(i => 
     i.name.toLowerCase().includes(q) || 
     (i.location || '').toLowerCase().includes(q) ||
     i.id.toLowerCase().includes(q)
@@ -5751,12 +5840,12 @@ function onGlobalSearch(q) {
   }
   
   // 6. 품질 및 클레임
-  const matchingDefects = defects.filter(d => 
+  const matchingDefects = searchDefects.filter(d => 
     d.type.toLowerCase().includes(q) || 
     (d.cause || '').toLowerCase().includes(q) ||
     d.id.toLowerCase().includes(q)
   );
-  const matchingClaims = claims.filter(c => 
+  const matchingClaims = searchClaims.filter(c => 
     c.content.toLowerCase().includes(q) || 
     (c.response || '').toLowerCase().includes(q) ||
     c.id.toLowerCase().includes(q)
@@ -5780,7 +5869,7 @@ function onGlobalSearch(q) {
   }
   
   // 7. 직원
-  const matchingWorkers = workers.filter(w =>
+  const matchingWorkers = searchWorkers.filter(w =>
     (w.name || '').toLowerCase().includes(q) ||
     (w.id || '').toLowerCase().includes(q) ||
     (w.dept || '').toLowerCase().includes(q) ||
@@ -5800,7 +5889,7 @@ function onGlobalSearch(q) {
   }
 
   // 8. 메모
-  const matchingMemos = (typeof memoList !== 'undefined' ? memoList : []).filter(m => {
+  const matchingMemos = searchMemos.filter(m => {
     const attachments = (m.attachments || []).map(file => file.name || '').join(' ');
     return [m.title, m.content, m.summary, m.author, m.owner, (m.tags || []).join(' '), attachments]
       .join(' ').toLowerCase().includes(q);
@@ -5822,7 +5911,7 @@ function onGlobalSearch(q) {
   }
 
   // 9. 할 일
-  const matchingTodos = (typeof todoList !== 'undefined' ? todoList : []).filter(t => {
+  const matchingTodos = searchTodos.filter(t => {
     const checklist = (t.checklist || []).map(entry =>
       typeof entry === 'string' ? entry : (entry.text || entry.title || '')
     ).join(' ');
@@ -6271,6 +6360,28 @@ function requirePdfAction(label = 'PDF/인쇄 출력') {
   return requireFeatureAction('pdf', label);
 }
 
+function pageDataAllowed(pageKey) {
+  if (!pageKey || pageKey === 'dashboard') return true;
+  if (typeof pageAllowed === 'function') return pageAllowed(pageKey);
+  return true;
+}
+
+function purchaseOrderDataAllowed() {
+  return pageDataAllowed('po');
+}
+
+function requirePurchaseOrderData(label = '구매발주서') {
+  if (purchaseOrderDataAllowed()) return true;
+  if (typeof showToast === 'function') showToast(actionDeniedMessage(label), 'error');
+  return false;
+}
+
+function visiblePurchaseOrderList(records = null) {
+  const source = records || (typeof poList !== 'undefined' && Array.isArray(poList) ? poList : []);
+  if (!purchaseOrderDataAllowed()) return [];
+  return source.filter(record => typeof canViewRecord !== 'function' || canViewRecord(record, 'po'));
+}
+
 function checkAdminAction(fn = null, options = null) {
   if (options && options.adminOnly && !requireAdminAction(options.label)) return false;
   if (options && options.feature && !requireFeatureAction(options.feature, options.label)) return false;
@@ -6430,11 +6541,15 @@ function closeDlg() { inp('confirmDlg').classList.remove('open'); _cfn = null; }
 
 function fillClientSelect(elId, includeAll=false) {
   const el = inp(elId); if (!el) return;
-  el.innerHTML = (includeAll ? '<option value="">전체 의뢰 고객사</option>' : '') + clients.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+  const entityType = String(elId || '').indexOf('proc-') === 0 ? 'processClient' : 'clients';
+  const list = typeof visibleRecords === 'function' ? visibleRecords(clients, entityType) : clients;
+  el.innerHTML = (includeAll ? '<option value="">전체 의뢰 고객사</option>' : '') + list.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
 }
 function fillProductSelect(elId, clientId, selected='') {
   const el = inp(elId); if (!el) return;
-  const list = clientId ? products.filter(p => p.clientId === clientId) : products;
+  const entityType = String(elId || '').indexOf('proc-') === 0 ? 'processProduct' : 'products';
+  const source = typeof visibleRecords === 'function' ? visibleRecords(products, entityType) : products;
+  const list = clientId ? source.filter(p => p.clientId === clientId) : source;
   el.innerHTML = '<option value="">-- 품목 선택 --</option>' + list.map(p => `<option value="${esc(p.id)}"${p.id===selected?' selected':''}>${esc(p.name)}</option>`).join('');
 }
 function fillStageSelect(elId) {
@@ -7090,6 +7205,9 @@ document.addEventListener('paste', function(e) {
 
 /* ════════ 대시보드 탭 제어 ════════ */
 let currentDashTab = 'overview';
+function dashRecords(list, entityType) {
+  return typeof visibleRecords === 'function' ? visibleRecords(list || [], entityType) : (list || []);
+}
 
 function switchDashTab(tab, el) {
   currentDashTab = tab;
@@ -7146,21 +7264,27 @@ function renderDashboard() {
 }
 
 function renderDashOverview() {
-  const pending    = materials.filter(m => m.status === '발주전').length;
-  const orderMats  = materials.filter(m => m.status === '발주중').length;
-  const arrived    = materials.filter(m => m.status === '입고완료').length;
-  const totalAmt   = materials.reduce((s, m) => s + getMatAmt(m), 0);
-  const lowStockCount = inventory.filter(i => i.qty <= i.minQty).length;
-  const activeProds   = products.filter(p => p.status !== '견적').length;
-  const doneProds     = products.filter(p => ['완료','납품'].includes(p.processStage)).length;
-  const openDefects   = defects.filter(d => d.status !== '완료').length;
+  const dashMaterials = dashRecords(materials, 'material');
+  const dashInventory = dashRecords(inventory, 'inventory');
+  const dashProducts  = dashRecords(products, 'processProduct');
+  const dashDefects   = dashRecords(defects, 'defect');
+  const dashClaims    = dashRecords(claims, 'claim');
+  const dashDeliveries= dashRecords(deliveries, 'delivery');
+  const pending    = dashMaterials.filter(m => m.status === '발주전').length;
+  const orderMats  = dashMaterials.filter(m => m.status === '발주중').length;
+  const arrived    = dashMaterials.filter(m => m.status === '입고완료').length;
+  const totalAmt   = dashMaterials.reduce((s, m) => s + getMatAmt(m), 0);
+  const lowStockCount = dashInventory.filter(i => i.qty <= i.minQty).length;
+  const activeProds   = dashProducts.filter(p => p.status !== '견적').length;
+  const doneProds     = dashProducts.filter(p => ['완료','납품'].includes(p.processStage)).length;
+  const openDefects   = dashDefects.filter(d => d.status !== '완료').length;
 
   /* ── KPI 카드 ── */
   inp('dash-kpi').innerHTML = `
     <div class="mc clickable" onclick="go('clients')">
       <div class="mc-lbl"><i class="ti ti-box" style="color:var(--tx-i);"></i>진행 중 프로젝트</div>
       <div class="mc-val" style="color:var(--tx-i);">${activeProds}건</div>
-      <div class="mc-sub">완료 ${doneProds}건 포함 전체 ${products.length}종</div>
+      <div class="mc-sub">완료 ${doneProds}건 포함 전체 ${dashProducts.length}종</div>
     </div>
     <div class="mc clickable" onclick="go('materials')">
       <div class="mc-lbl"><i class="ti ti-circle-dashed" style="color:var(--tx-t);"></i>발주 대기 자재</div>
@@ -7170,27 +7294,27 @@ function renderDashOverview() {
     <div class="mc clickable" onclick="go('inventory')">
       <div class="mc-lbl"><i class="ti ti-packages" style="color:${lowStockCount>0?'var(--tx-d)':'var(--tx-ok)'}"></i>안전재고 미달</div>
       <div class="mc-val" style="color:${lowStockCount>0?'var(--tx-d)':'var(--tx-ok)'};">${lowStockCount}개 품목</div>
-      <div class="mc-sub">전체 재고 ${inventory.length}종 관리 중</div>
+      <div class="mc-sub">전체 재고 ${dashInventory.length}종 관리 중</div>
     </div>
     <div class="mc clickable" onclick="go('quality')">
       <div class="mc-lbl"><i class="ti ti-shield-alert" style="color:${openDefects>0?'var(--tx-w)':'var(--tx-ok)'}"></i>미처리 품질장애</div>
       <div class="mc-val" style="color:${openDefects>0?'var(--tx-w)':'var(--tx-ok)'};">${openDefects}건</div>
-      <div class="mc-sub">클레임 ${claims.filter(c=>c.status!=='완료').length}건 처리중</div>
+      <div class="mc-sub">클레임 ${dashClaims.filter(c=>c.status!=='완료').length}건 처리중</div>
     </div>`;
 
   /* ── 조치 현황 ── */
   const actions = [];
-  materials.filter(m => m.status === '발주전').slice(0, 3).forEach(m => {
+  dashMaterials.filter(m => m.status === '발주전').slice(0, 3).forEach(m => {
     const pr = getProductById(m.productId);
     actions.push({ cls:'urgent', icon:'ti-alert-circle', txt:`[자재발주 요청] ${esc(m.name)}`, sub:`${esc(pr?.name)||''} 공정자재 · 미발주`, page:'materials' });
   });
-  materials.filter(m => m.status==='발주중' && m.expectedDate && daysUntil(m.expectedDate)<=7).slice(0,2).forEach(m => {
+  dashMaterials.filter(m => m.status==='발주중' && m.expectedDate && daysUntil(m.expectedDate)<=7).slice(0,2).forEach(m => {
     actions.push({ cls:'warn', icon:'ti-truck-delivery', txt:`[입고임박] ${esc(m.name)}`, sub:`${esc(m.supplier)} · ${esc(m.expectedDate)} 예정`, page:'materials' });
   });
-  defects.filter(d => d.status !== '완료').slice(0,2).forEach(d => {
+  dashDefects.filter(d => d.status !== '완료').slice(0,2).forEach(d => {
     actions.push({ cls:'urgent', icon:'ti-shield-alert', txt:`[미처리 불량] ${esc(d.type)}`, sub:`${esc(getProductName(d.productId))} · ${esc(d.stage)}`, page:'quality' });
   });
-  inventory.filter(i => i.qty <= i.minQty).slice(0,2).forEach(i => {
+  dashInventory.filter(i => i.qty <= i.minQty).slice(0,2).forEach(i => {
     actions.push({ cls:'warn', icon:'ti-package-off', txt:`[안전재고 미달] ${esc(i.name)}`, sub:`현재고 ${esc(i.qty)}${esc(i.unit)} / 안전 ${esc(i.minQty)}${esc(i.unit)}`, page:'inventory' });
   });
   inp('dash-actions').innerHTML = actions.length ? actions.map(a => `
@@ -7208,7 +7332,7 @@ function renderDashOverview() {
     </div>`;
 
   /* ── 납기 현황 ── */
-  const dl = products.filter(p => p.deliveryDate && p.status !== '견적' && !['완료','납품'].includes(p.processStage))
+  const dl = dashProducts.filter(p => p.deliveryDate && p.status !== '견적' && !['완료','납품'].includes(p.processStage))
     .sort((a,b) => a.deliveryDate.localeCompare(b.deliveryDate));
   inp('dash-deadlines').innerHTML = dl.length ? `
     <table>
@@ -7229,9 +7353,9 @@ function renderDashOverview() {
   /* 납품 요약 (종합현황 탭) */
   const dlvEl = inp('dash-dlv-summary');
   if (dlvEl) {
-    const dlvCnt = deliveries.length;
-    const dlvAmt = deliveries.reduce((s,d)=>s+d.price*d.qty,0);
-    const dlvMonth = deliveries.filter(d=>d.deliveredAt?.slice(0,7)===today().slice(0,7)).length;
+    const dlvCnt = dashDeliveries.length;
+    const dlvAmt = dashDeliveries.reduce((s,d)=>s+d.price*d.qty,0);
+    const dlvMonth = dashDeliveries.filter(d=>d.deliveredAt?.slice(0,7)===today().slice(0,7)).length;
     dlvEl.innerHTML = dlvCnt === 0
       ? `<div style="padding:10px 4px;color:var(--tx-t);font-size:11px;"><i class="ti ti-truck-delivery" style="opacity:.3;"></i> 납품 기록 없음</div>`
       : `<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:4px 0;">
@@ -7241,7 +7365,7 @@ function renderDashOverview() {
           <div style="width:1px;height:30px;background:var(--br);"></div>
           <div><div style="font-size:15px;font-weight:700;color:var(--tx-i);">${dlvMonth}건</div><div style="font-size:10px;color:var(--tx-t);">이번달</div></div>
           <div style="margin-left:auto;">
-            ${deliveries.slice(0,2).map(d=>`<div style="font-size:10px;margin-bottom:2px;"><b>${esc(d.productName)}</b> · ${esc(getClientName(d.clientId))} · ${esc(d.deliveredAt)}</div>`).join('')}
+            ${dashDeliveries.slice(0,2).map(d=>`<div style="font-size:10px;margin-bottom:2px;"><b>${esc(d.productName)}</b> · ${esc(getClientName(d.clientId))} · ${esc(d.deliveredAt)}</div>`).join('')}
           </div>
         </div>`;
   }
@@ -7251,8 +7375,8 @@ function renderDashOverview() {
 function renderDashProjects() {
   const stageColors = STAGE_COLORS;
   const canView = (typeof canViewRecord === 'function') ? canViewRecord : function(){ return true; };
-  const visibleClients = clients.filter(c => canView(c, 'clients'));
-  const visibleProducts = products.filter(p => canView(p, 'products'));
+  const visibleClients = clients.filter(c => canView(c, 'processClient'));
+  const visibleProducts = products.filter(p => canView(p, 'processProduct'));
   const activeClients = visibleClients.filter(c => !c.closed);
   const knownClientIds = new Set(visibleClients.map(c => c.id));
   const projectGroups = activeClients.map(c => ({
@@ -7277,11 +7401,11 @@ function renderDashProjects() {
           const prods = group.products;
           if (!prods.length) return [`<tr><td style="font-weight:700;">${esc(c.name)}</td><td style="font-size:11px;color:var(--tx-t);">${esc(c.manager)||'—'}</td><td colspan="8" style="color:var(--tx-t);font-size:11px;font-style:italic;">등록된 제품 없음</td></tr>`];
           return prods.map((p, i) => {
-            const pMats  = materials.filter(m => m.productId === p.id);
+            const pMats  = dashRecords(materials, 'processMaterial').filter(m => m.productId === p.id);
             const matPre = pMats.filter(m => m.status==='발주전').length;
             const matOrd = pMats.filter(m => m.status==='발주중').length;
             const matDone= pMats.filter(m => m.status==='입고완료').length;
-            const relOrder = workOrders.find(o => o.productId === p.id);
+            const relOrder = dashRecords(workOrders, 'workOrder').find(o => o.productId === p.id);
             const sc = stageColors[p.processStage] || '#495057';
             return `
               <tr style="cursor:pointer;" onclick="navToProduct('${p.clientId || c.id}','${p.id}')">
@@ -7309,11 +7433,16 @@ function renderDashProjects() {
 
 function renderDashResources() {
   /* 제품별 자재 발주율 */
-  const prodList = products.filter(p => materials.some(m => m.productId === p.id));
+  const visibleProducts = dashRecords(products, 'processProduct');
+  const visibleMaterials = dashRecords(materials, 'material');
+  const visibleDefects = dashRecords(defects, 'defect');
+  const visibleClaims = dashRecords(claims, 'claim');
+  const visibleInventory = dashRecords(inventory, 'inventory');
+  const prodList = visibleProducts.filter(p => visibleMaterials.some(m => m.productId === p.id));
   inp('dash-mat-by-product').innerHTML = prodList.length ? `
     <div class="thin-scroll" style="display:flex;flex-direction:column;gap:10px;max-height:280px;overflow-y:auto;padding-right:6px;">
       ${prodList.map(p => {
-        const pMats = materials.filter(m => m.productId === p.id);
+        const pMats = visibleMaterials.filter(m => m.productId === p.id);
         const pre=pMats.filter(m=>m.status==='발주전').length;
         const ord=pMats.filter(m=>m.status==='발주').length;
         const done=pMats.filter(m=>m.status==='입고완료').length;
@@ -7346,8 +7475,8 @@ function renderDashResources() {
     </div>` : empty('자재가 등록된 제품이 없습니다.');
 
   /* 품질 요약 */
-  const openDefects = defects.filter(d => d.status !== '완료').length;
-  const openClaims  = claims.filter(c => c.status !== '완료');
+  const openDefects = visibleDefects.filter(d => d.status !== '완료').length;
+  const openClaims  = visibleClaims.filter(c => c.status !== '완료');
   inp('dash-quality-summary').innerHTML = `
     <div style="display:flex;flex-direction:column;gap:6px;">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;">
@@ -7360,7 +7489,7 @@ function renderDashResources() {
           <div style="font-size:18px;font-weight:700;color:var(--tx-d);">${openClaims.length}건</div>
         </div>
       </div>
-      ${defects.filter(d=>d.status!=='완료').slice(0,2).map(d=>`
+      ${visibleDefects.filter(d=>d.status!=='완료').slice(0,2).map(d=>`
         <div class="action-item warn" style="cursor:pointer;padding:7px 10px;" onclick="go('quality')">
           <i class="ti ti-alert-triangle" style="font-size:12px;"></i>
           <div style="flex:1;"><div style="font-size:10px;font-weight:700;">${esc(d.type)}</div>
@@ -7371,13 +7500,13 @@ function renderDashResources() {
     </div>`;
 
   /* 재고 현황 */
-  const lowItems = inventory.filter(i => i.qty <= i.minQty);
+  const lowItems = visibleInventory.filter(i => i.qty <= i.minQty);
   inp('dash-inventory-summary').innerHTML = `
     <div style="display:flex;flex-direction:column;gap:6px;">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;">
         <div style="background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rm);padding:9px 12px;">
           <div style="font-size:9px;color:var(--tx-s);font-weight:600;margin-bottom:2px;"><i class="ti ti-box"></i> 전체 재고</div>
-          <div style="font-size:18px;font-weight:700;">${inventory.length}종</div>
+          <div style="font-size:18px;font-weight:700;">${visibleInventory.length}종</div>
         </div>
         <div style="background:${lowItems.length>0?'var(--bg-d)':'var(--bg-ok)'};border:1px solid ${lowItems.length>0?'var(--br-d)':'var(--br-ok)'};border-radius:var(--rm);padding:9px 12px;cursor:pointer;" onclick="go('inventory')">
           <div style="font-size:9px;color:${lowItems.length>0?'var(--tx-d)':'var(--tx-ok)'};font-weight:600;margin-bottom:2px;"><i class="ti ti-package-off"></i> 안전재고 미달</div>
@@ -7483,15 +7612,17 @@ function renderClosedProjects() {
 
 function renderDeliveries() {
   ensureDateView('deliveries', 'dlv-table', deliveries.map(d=>d.deliveredAt), renderDeliveries);
+  const visibleDeliveries = typeof visibleRecords === 'function' ? visibleRecords(deliveries, 'delivery') : deliveries;
+  const visibleClients = typeof visibleRecords === 'function' ? visibleRecords(clients, 'clients') : clients;
   const fc = inp('dlv-filter-client');
   if (fc) {
     const cur = fc.value;
     fc.innerHTML = '<option value="">전체 고객사</option>' +
-      clients.map(c=>`<option value="${esc(c.id)}"${c.id===cur?' selected':''}>${esc(c.name)}</option>`).join('');
+      visibleClients.map(c=>`<option value="${esc(c.id)}"${c.id===cur?' selected':''}>${esc(c.name)}</option>`).join('');
   }
   const fcVal = v('dlv-filter-client');
   const q = (v('dlv-q')||'').toLowerCase();
-  let fil = deliveries.filter(d=>
+  let fil = visibleDeliveries.filter(d=>
     dateViewMatch('deliveries', d.deliveredAt) &&
     (!fcVal || d.clientId===fcVal) &&
     (!q || [d.productName,getClientName(d.clientId),d.id].join(' ').toLowerCase().includes(q))
@@ -7519,10 +7650,10 @@ function renderDeliveries() {
     });
   }
 
-  const totalCnt = deliveries.length;
-  const totalAmt = deliveries.reduce((s,d)=>s+d.price*d.qty,0);
-  const thisMonth = deliveries.filter(d=>d.deliveredAt?.slice(0,7)===today().slice(0,7)).length;
-  const clientCnt = new Set(deliveries.map(d=>d.clientId)).size;
+  const totalCnt = visibleDeliveries.length;
+  const totalAmt = visibleDeliveries.reduce((s,d)=>s+d.price*d.qty,0);
+  const thisMonth = visibleDeliveries.filter(d=>d.deliveredAt?.slice(0,7)===today().slice(0,7)).length;
+  const clientCnt = new Set(visibleDeliveries.map(d=>d.clientId)).size;
   const kpi = inp('dlv-kpi');
   if (kpi) kpi.innerHTML = `
     <div class="mc"><div class="mc-lbl"><i class="ti ti-package-export"></i>전체 납품</div><div class="mc-val">${totalCnt}건</div><div class="mc-sub">전체 납품 기록</div></div>
@@ -7685,7 +7816,10 @@ function renderCalendar() {
 
   var todayStr = today();
 
-  (products || []).filter(function(p) {
+  var calProducts = typeof visibleRecords === 'function' ? visibleRecords(products || [], 'processProduct') : (products || []);
+  var calMaterials = typeof visibleRecords === 'function' ? visibleRecords(materials || [], 'material') : (materials || []);
+
+  calProducts.filter(function(p) {
     return p.deliveryDate && p.status !== '완료' && p.status !== '납품';
   }).forEach(function(p) {
     var d = daysUntil(p.deliveryDate);
@@ -7693,7 +7827,7 @@ function renderCalendar() {
     addEvent(p.deliveryDate, '📦 ' + getClientName(p.clientId) + ' — ' + p.name, color);
   });
 
-  (materials || []).filter(function(m) {
+  calMaterials.filter(function(m) {
     return m.expectedDate && m.status !== '입고완료';
   }).forEach(function(m) {
     addEvent(m.expectedDate, '🔩 ' + m.name + ' (' + m.id + ')', '#40c057');
@@ -7708,8 +7842,8 @@ function renderCalendar() {
         var prefix = calYear + '-' + String(month + 1).padStart(2,'0');
         var dates = Object.keys(events).filter(function(d){ return d.slice(0,7) === prefix; });
         var count = dates.reduce(function(s,d){ return s + events[d].length; }, 0);
-        var productCount = (products||[]).filter(function(p){ return (p.deliveryDate||'').slice(0,7)===prefix && p.status!=='완료' && p.status!=='납품'; }).length;
-        var materialCount = (materials||[]).filter(function(m){ return (m.expectedDate||'').slice(0,7)===prefix && m.status!=='입고완료'; }).length;
+        var productCount = calProducts.filter(function(p){ return (p.deliveryDate||'').slice(0,7)===prefix && p.status!=='완료' && p.status!=='납품'; }).length;
+        var materialCount = calMaterials.filter(function(m){ return (m.expectedDate||'').slice(0,7)===prefix && m.status!=='입고완료'; }).length;
         return '<button onclick="calOpenMonth(' + month + ')" style="text-align:left;padding:16px;border:1px solid var(--br);border-radius:var(--rl);background:var(--bg-p);color:var(--tx);cursor:pointer;">' +
           '<div style="font-size:15px;font-weight:800;margin-bottom:10px;">' + name + '</div>' +
           '<div style="font-size:22px;font-weight:800;color:' + (count?'var(--tx-i)':'var(--tx-t)') + ';">' + count + '건</div>' +
@@ -8727,14 +8861,16 @@ function productCostInfoAllowed() {
 }
 function renderClients() {
   const showCostInfo = productCostInfoAllowed();
-  const totAmt = products.reduce((s, p) => s + (p.price * p.qty), 0);
-  const activeClients = clients.filter(c => !c.closed);
-  const closedClients = clients.filter(c => c.closed);
+  const visibleClients = typeof visibleRecords === 'function' ? visibleRecords(clients, 'clients') : clients;
+  const visibleProducts = typeof visibleRecords === 'function' ? visibleRecords(products, 'products') : products;
+  const totAmt = visibleProducts.reduce((s, p) => s + (p.price * p.qty), 0);
+  const activeClients = visibleClients.filter(c => !c.closed);
+  const closedClients = visibleClients.filter(c => c.closed);
 
   inp('client-summary').innerHTML = `
     <div class="sum-box"><i class="ti ti-building-community si" style="color:var(--tx-i);"></i><div><div class="sn">${activeClients.length}</div><div class="sl">진행 고객사</div></div></div>
     <div class="sum-box"><i class="ti ti-archive si" style="color:#868e96;"></i><div><div class="sn">${closedClients.length}</div><div class="sl">종료 프로젝트</div></div></div>
-    <div class="sum-box"><i class="ti ti-loader si" style="color:#e8590c;"></i><div><div class="sn">${products.filter(p=>p.status==='생산중'&&!clients.find(c=>c.id===p.clientId)?.closed).length}</div><div class="sl">실시간 조업</div></div></div>
+    <div class="sum-box"><i class="ti ti-loader si" style="color:#e8590c;"></i><div><div class="sn">${visibleProducts.filter(p=>p.status==='생산중'&&!visibleClients.find(c=>c.id===p.clientId)?.closed).length}</div><div class="sl">실시간 조업</div></div></div>
     <div class="sum-box"><i class="ti ti-coin si" style="color:var(--tx-i);"></i><div><div class="sn">${fmtW(totAmt)}</div><div class="sl">전체 수주 총계</div></div></div>`;
 
   // 종료 보기 모드에서는 종료된 고객사만, 아니면 진행 중만
@@ -8743,7 +8879,7 @@ function renderClients() {
     .filter(c => {
       if (!_cq) return true;
       if ([c.name, c.manager||'', c.tel||'', c.note||''].join(' ').toLowerCase().includes(_cq)) return true;
-      const prods = products.filter(p => p.clientId === c.id);
+      const prods = visibleProducts.filter(p => p.clientId === c.id);
       return prods.some(p => p.name.toLowerCase().includes(_cq) || (p.spec||'').toLowerCase().includes(_cq) || p.id.toLowerCase().includes(_cq));
     });
 
@@ -8763,7 +8899,7 @@ function renderClients() {
   }
 
   inp('client-list').innerHTML = viewList.map(c => {
-    const prods  = products.filter(p => p.clientId === c.id);
+    const prods  = visibleProducts.filter(p => p.clientId === c.id);
     const isExp  = expandedClients.has(c.id);
     const editPanelId = `cedit-${c.id}`;
     const isClosed = !!c.closed;
@@ -9413,21 +9549,24 @@ function renderClient360(clientId) {
 
 /* ════════ [복구] 자재 수급/발주 (materials) ════════ */
 function syncFilterDropdowns() {
+  const visibleClients = typeof visibleRecords === 'function' ? visibleRecords(clients, 'clients') : clients;
+  const visibleProducts = typeof visibleRecords === 'function' ? visibleRecords(products, 'products') : products;
   const fc = inp('mat-fc');
   if (fc) {
     const cur = fc.value;
-    fc.innerHTML = '<option value="">전체 의뢰 고객사</option>' + clients.map(c=>'<option value="'+esc(c.id)+'"'+(c.id===cur?' selected':'')+'>'+esc(c.name)+'</option>').join('');
+    fc.innerHTML = '<option value="">전체 의뢰 고객사</option>' + visibleClients.map(c=>'<option value="'+esc(c.id)+'"'+(c.id===cur?' selected':'')+'>'+esc(c.name)+'</option>').join('');
   }
   const fp = inp('mat-fp');
   if (fp) {
     const cur = fp.value;
-    fp.innerHTML = '<option value="">전체 제품 목록</option>' + products.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===cur?' selected':'')+'>'+esc(p.name)+'</option>').join('');
+    fp.innerHTML = '<option value="">전체 제품 목록</option>' + visibleProducts.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===cur?' selected':'')+'>'+esc(p.name)+'</option>').join('');
   }
 }
 function onMatClientChange() {
   const cid = v('mat-fc');
+  const visibleProducts = typeof visibleRecords === 'function' ? visibleRecords(products, 'products') : products;
   const fp = inp('mat-fp');
-  if (fp) fp.innerHTML = '<option value="">전체 제품 목록</option>' + products.filter(p=>!cid||p.clientId===cid).map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('');
+  if (fp) fp.innerHTML = '<option value="">전체 제품 목록</option>' + visibleProducts.filter(p=>!cid||p.clientId===cid).map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('');
   renderMaterials();
 }
 function onAddMatClientChange() {
@@ -10594,6 +10733,15 @@ function statusToStage(status, currentStage) {
 }
 
 let procStageFilter = null; // 파이프라인 클릭 필터
+function processVisibleProducts() {
+  return (products || []).filter(p => typeof canViewRecord !== 'function' || canViewRecord(p, 'processProduct'));
+}
+function processVisibleMaterials() {
+  return (materials || []).filter(m => typeof canViewRecord !== 'function' || canViewRecord(m, 'processMaterial'));
+}
+function processVisibleOrders() {
+  return (workOrders || []).filter(o => typeof canViewRecord !== 'function' || canViewRecord(o, 'workOrder'));
+}
 
 function renderProcess() {
   const fc = v('proc-fc');
@@ -10602,12 +10750,14 @@ function renderProcess() {
   setTimeout(() => { sv('proc-fc', fc); }, 0);
   inp('stage-input').value = processStages.join(', ');
 
-  const all = products.filter(p => !fc || p.clientId === fc);
+  const visibleProducts = processVisibleProducts();
+  const visibleMaterials = processVisibleMaterials();
+  const all = visibleProducts.filter(p => !fc || p.clientId === fc);
   const total    = all.length;
   const inProg   = all.filter(p => !['완료','납품','설계/도면'].includes(p.processStage)).length;
   const done     = all.filter(p => ['완료','납품'].includes(p.processStage)).length;
   const nearDue  = all.filter(p => p.deliveryDate && daysUntil(p.deliveryDate) <= 14 && !['완료','납품'].includes(p.processStage)).length;
-  const matWait  = materials.filter(m => m.status === '발주전' && all.some(p => p.id === m.productId)).length;
+  const matWait  = visibleMaterials.filter(m => m.status === '발주전' && all.some(p => p.id === m.productId)).length;
 
   inp('proc-kpi').innerHTML = `
     <div class="mc"><div class="mc-lbl"><i class="ti ti-box"></i>전체 제품</div>
@@ -10685,7 +10835,7 @@ function togglePipeFilter(stage) {
 function renderKanban() {
   const fc = v('proc-fc');
   const closedClientIds = new Set(clients.filter(c => c.closed).map(c => c.id));
-  let allProd = products.filter(p => p.processStage !== '납품' && !closedClientIds.has(p.clientId) && (!fc || p.clientId === fc));
+  let allProd = processVisibleProducts().filter(p => p.processStage !== '납품' && !closedClientIds.has(p.clientId) && (!fc || p.clientId === fc));
   if (procStageFilter) allProd = allProd.filter(p => p.processStage === procStageFilter);
 
   const unmatched = allProd.filter(p => !processStages.includes(p.processStage));
@@ -10709,11 +10859,11 @@ function renderKanban() {
     const prioText = d < 0 ? 'High' : d <= 14 ? 'Med' : 'Low';
     const prioColor = d < 0 ? '#f03e3e' : d <= 14 ? '#ff7b00' : '#10b981';
     
-    const pMats = materials.filter(m => m.productId === p.id);
+    const pMats = processVisibleMaterials().filter(m => m.productId === p.id);
     const matDone = pMats.filter(m => m.status === '입고완료').length;
     const matPct  = pMats.length ? Math.round(matDone / pMats.length * 100) : 100;
     
-    const wo = workOrders.find(o => o.productId === p.id && o.status !== '완료');
+    const wo = processVisibleOrders().find(o => o.productId === p.id && o.status !== '완료');
     const workerName = wo?.manager || '미배정';
     const progressPercent = wo && wo.qty > 0 ? Math.round(wo.done / wo.qty * 100) : (['완료','납품'].includes(p.processStage) ? 100 : 0);
     const progressColor = progressPercent === 100 ? '#10b981' : neon.color;
@@ -10845,8 +10995,8 @@ function openKanbanEditModal(productId) {
   inp('km-memo').value = p.processMemo || '';
 
   // 연관 정보 컨텍스트
-  const pMats = materials.filter(m => m.productId === p.id);
-  const wo    = workOrders.find(o => o.productId === p.id);
+  const pMats = processVisibleMaterials().filter(m => m.productId === p.id);
+  const wo    = processVisibleOrders().find(o => o.productId === p.id);
   const d     = daysUntil(p.deliveryDate);
   inp('km-context-row').innerHTML = `
     <div style="background:var(--bg-s); border:1px solid var(--br); border-radius:var(--rm); padding:8px 10px;">
@@ -10901,7 +11051,7 @@ function renderProcDetail() {
   const q  = (inp('proc-q')?.value || '').toLowerCase();
   // 납품 완료 제품은 공정 현황표에서 제외
   const closedIds = new Set(clients.filter(c => c.closed).map(c => c.id));
-  let allProd = products.filter(p =>
+  let allProd = processVisibleProducts().filter(p =>
     p.processStage !== '납품' &&
     !closedIds.has(p.clientId) &&
     (!fc || p.clientId === fc) &&
@@ -10921,16 +11071,16 @@ function renderProcDetail() {
         va = a.deliveryDate ? daysUntil(a.deliveryDate) : 999999;
         vb = b.deliveryDate ? daysUntil(b.deliveryDate) : 999999;
       } else if (k === 'matPct') {
-        const aMats = materials.filter(m => m.productId === a.id);
+        const aMats = processVisibleMaterials().filter(m => m.productId === a.id);
         const aDone = aMats.filter(m => m.status==='입고완료').length;
         va = aMats.length ? aDone/aMats.length : 1;
-        const bMats = materials.filter(m => m.productId === b.id);
+        const bMats = processVisibleMaterials().filter(m => m.productId === b.id);
         const bDone = bMats.filter(m => m.status==='입고완료').length;
         vb = bMats.length ? bDone/bMats.length : 1;
       } else if (k === 'woPct') {
-        const aWo = workOrders.find(o => o.productId === a.id);
+        const aWo = processVisibleOrders().find(o => o.productId === a.id);
         va = aWo && aWo.qty > 0 ? aWo.done/aWo.qty : (['완료','납품'].includes(a.processStage)?1:0);
-        const bWo = workOrders.find(o => o.productId === b.id);
+        const bWo = processVisibleOrders().find(o => o.productId === b.id);
         vb = bWo && bWo.qty > 0 ? bWo.done/bWo.qty : (['완료','납품'].includes(b.processStage)?1:0);
       } else {
         va = a[k] == null ? '' : a[k];
@@ -10967,10 +11117,10 @@ function renderProcDetail() {
       </thead>
       <tbody>
         ${allProd.map(p => {
-          const pMats   = materials.filter(m => m.productId === p.id);
+          const pMats   = processVisibleMaterials().filter(m => m.productId === p.id);
           const matDone = pMats.filter(m => m.status==='입고완료').length;
           const matPct  = pMats.length ? Math.round(matDone/pMats.length*100) : 100;
-          const wo      = workOrders.find(o => o.productId === p.id);
+          const wo      = processVisibleOrders().find(o => o.productId === p.id);
           const woPct   = wo && wo.qty > 0 ? Math.round(wo.done/wo.qty*100) : (['완료','납품'].includes(p.processStage)?100:0);
           const d       = daysUntil(p.deliveryDate);
           const rowBg   = p.deliveryDate && d < 0 ? 'background:rgba(240,62,62,.04);' : '';
@@ -11039,7 +11189,7 @@ function exportProcessCSV() {
   const wb = XLSX.utils.book_new();
   const h = ['고객사','제품명','납기','D-Day','공정단계','상태','메모'];
   const fc = v('proc-fc');
-  const rows = products.filter(p => !clients.find(c=>c.id===p.clientId)?.closed && p.processStage !== '납품' && (!fc || p.clientId === fc))
+  const rows = processVisibleProducts().filter(p => !clients.find(c=>c.id===p.clientId)?.closed && p.processStage !== '납품' && (!fc || p.clientId === fc))
     .map(p => [getClientName(p.clientId), p.name, p.deliveryDate||'—', p.deliveryDate?`D-${daysUntil(p.deliveryDate)}`:'—', p.processStage, p.status, p.processMemo||'']);
   const ws = XLSX.utils.aoa_to_sheet([h,...rows]);
   ws['!cols'] = h.map(c => ({ wch: Math.max(c.length+2, 14) }));
@@ -13460,8 +13610,43 @@ const DEFAULT_ROLE_PAGES = {
   staff:   ['dashboard','orders','quality','inventory','deliveries','calendar','notes']
 };
 const ROLE_LABEL = { admin:'관리자', manager:'중간관리자', staff:'평사원' };
+const DATA_SCOPE_DEFS = [
+  { id:'clients', label:'수주/제품', desc:'고객사와 수주 제품 정보', defaultScope:'own' },
+  { id:'materials', label:'자재 수급/발주', desc:'자재 발주와 공급처 내용', defaultScope:'own' },
+  { id:'inventory', label:'재고 관리', desc:'완제품·부품 재고와 입출고', defaultScope:'shared' },
+  { id:'process', label:'공정 관리', desc:'공정 단계, 생산 지시, 공정 메모', defaultScope:'shared' },
+  { id:'notes', label:'메모/할 일', desc:'업무 메모와 체크리스트', defaultScope:'shared' },
+  { id:'quality', label:'품질/검사', desc:'불량 기록과 출하 검사', defaultScope:'own' },
+  { id:'claims', label:'고객 클레임', desc:'클레임 접수와 처리 내용', defaultScope:'own' },
+  { id:'as', label:'고객 A/S', desc:'A/S 접수와 처리 이력', defaultScope:'own' },
+  { id:'rfq', label:'견적요청서', desc:'견적 요청 문서', defaultScope:'own' },
+  { id:'po', label:'구매발주서', desc:'구매 발주 문서와 품목 내용', defaultScope:'own' },
+  { id:'salesdoc', label:'견적/수주/거래 문서', desc:'견적서, 수주서, 거래명세표, 세금계산서', defaultScope:'own' },
+  { id:'deliveries', label:'납품 현황', desc:'납품 기록과 금액', defaultScope:'own' },
+  { id:'partners', label:'거래처 관리', desc:'공급처와 거래처 정보', defaultScope:'own' },
+  { id:'finance', label:'재무 관리', desc:'지출, 지급 요청, 원가/정산 자료', defaultScope:'own' },
+  { id:'bom', label:'BOM/원가', desc:'자재명세와 원가 정보', defaultScope:'own' },
+  { id:'workers', label:'인사 관리', desc:'직원 명부와 근태/급여 자료', defaultScope:'own' },
+  { id:'trash', label:'휴지통', desc:'삭제된 데이터', defaultScope:'own' }
+];
 
 function rolePagesConfig(){ return loadStorage('rolePages', DEFAULT_ROLE_PAGES); }
+function defaultRoleDataScopeConfig(){
+  const cfg = { manager:{}, staff:{} };
+  DATA_SCOPE_DEFS.forEach(def => {
+    cfg.manager[def.id] = def.defaultScope;
+    cfg.staff[def.id] = def.defaultScope;
+  });
+  return cfg;
+}
+function roleDataScopeConfig(){
+  const defaults = defaultRoleDataScopeConfig();
+  const saved = loadStorage('roleDataScope', {});
+  ['manager','staff'].forEach(role => {
+    saved[role] = Object.assign({}, defaults[role], saved && saved[role] ? saved[role] : {});
+  });
+  return saved;
+}
 function roleAllowedSet(role){
   if (role==='admin') return null;                       // 전체 허용
   const cfg = rolePagesConfig();
@@ -13634,11 +13819,14 @@ async function cloudLoadRole(){
   try { const csnap=await _fbDb.collection('roles').doc('columns').get(); if(csnap.exists) roleColumns=csnap.data(); } catch(e){}
   let roleFeatures = {};
   try { const fsnap=await _fbDb.collection('roles').doc('features').get(); if(fsnap.exists) roleFeatures=fsnap.data(); } catch(e){}
+  let roleDataScope = defaultRoleDataScopeConfig();
+  try { const dsnap=await _fbDb.collection('roles').doc('dataScope').get(); if(dsnap.exists) roleDataScope=dsnap.data(); } catch(e){}
   localStorage.setItem('mes_myRole', role);
   localStorage.setItem('mes_myActive', active ? 'true':'false');
   saveStorageLocalOnly('rolePages', rolePages);
   saveStorageLocalOnly('roleColumns', roleColumns);
   saveStorageLocalOnly('roleFeatures', roleFeatures);
+  saveStorageLocalOnly('roleDataScope', roleDataScope);
 }
 /* 클라우드 동기화 없이 localStorage에만 저장(권한맵 캐시용) */
 function saveStorageLocalOnly(key,data){ localStorage.setItem('mes_'+key, JSON.stringify(data)); }
@@ -13680,9 +13868,6 @@ function cloudBootstrap(){
           showToast('이 페이지에 접근할 권한이 없습니다.', 'error');
           if (typeof writeAppRoute === 'function') writeAppRoute('dashboard', '', 'replace');
           if (typeof _goTo === 'function') _goTo('dashboard', null);
-        }
-        if (typeof autoConnectGoogleDriveAfterLogin === 'function') {
-          setTimeout(autoConnectGoogleDriveAfterLogin, 300);
         }
       } else {
         _cloudUser=null; _cloudActive=false;
@@ -13980,10 +14165,12 @@ function cloudSubscribe(){
       if (id==='config'){ saveStorageLocalOnly('rolePages', d); changed=true; }
       else if (id==='columns'){ saveStorageLocalOnly('roleColumns', d); changed=true; }
       else if (id==='features'){ saveStorageLocalOnly('roleFeatures', d); changed=true; }
+      else if (id==='dataScope'){ saveStorageLocalOnly('roleDataScope', d); changed=true; }
     });
     if (!changed) return;
     allowedPages = roleAllowedSet(currentRole);   // 페이지 권한 재계산 후 재적용
     applyRoleGating(); applyColumnGating(); applyFeatureGating();
+    if (!document.querySelector('.overlay.open')) { try{ refreshPage(currentPage); }catch(e){} }
     if (currentPage==='system' && systemTab==='permissions' && !document.querySelector('.overlay.open')) { try{ renderPermissions(); }catch(e){} }
     _cloudChip('synced'); setTimeout(()=>_cloudChip('online'), 1500);
   }, err=>{ console.warn('권한 실시간 동기화 오류', err); });
@@ -14369,6 +14556,7 @@ async function renderPermissions(){
     {key:'pages', icon:'ti-table-options', title:'페이지 접근 권한', desc:'역할별 메뉴 접근'},
     {key:'columns', icon:'ti-columns-3', title:'테이블 컬럼 권한', desc:'역할별 열 표시/숨김'},
     {key:'features', icon:'ti-tool', title:'기능 권한', desc:'내보내기와 출력 허용'},
+    {key:'data', icon:'ti-eye-cog', title:'데이터 노출 권한', desc:'공통/본인 데이터 기준'},
     {key:'audit', icon:'ti-history', title:'감사 로그', desc:'등록·수정·삭제 이력 조회'},
     {key:'backup', icon:'ti-database-cog', title:'데이터 백업/복구', desc:'파일 내보내기와 복구'}
   ];
@@ -14409,6 +14597,11 @@ async function renderPermissions(){
               <span style="font-size:11px;color:var(--tx-t);">엑셀 CSV 내보내기 / PDF·인쇄 출력 허용 여부 · 관리자는 항상 전체</span></div>
             <div id="perm-features"></div>
           </div>
+          <div class="permission-section" style="${permSection==='data'?'':'display:none;'}">
+            <div class="card-hd"><span class="card-ttl"><i class="ti ti-eye-cog"></i>역할별 데이터 노출 권한</span>
+              <span style="font-size:11px;color:var(--tx-t);">공통 공개 업무는 모두 보이고, 본인 전용 업무는 작성/소유한 데이터만 보입니다. 관리자는 항상 전체입니다.</span></div>
+            <div id="perm-data-scope"></div>
+          </div>
           <div class="permission-section" style="${permSection==='audit'?'':'display:none;'}">
             <div class="card-hd"><span class="card-ttl"><i class="ti ti-history"></i>감사 로그</span>
               <span style="font-size:11px;color:var(--tx-t);">최근 등록·수정·삭제·복구·상태 변경 이력</span></div>
@@ -14432,6 +14625,7 @@ async function renderPermissions(){
   renderPermMatrix();
   renderPermColumns();
   renderPermFeatures();
+  renderPermDataScope();
   renderPermAuditLog();
 }
 function renderPermUsers(users){
@@ -14484,7 +14678,7 @@ async function permSetAllPages(role, all){
   try{ await _fbDb.collection('roles').doc('config').set(cfg); }catch(e){ showToast('저장 실패: '+e.message,'error'); }
 }
 let permColRole = 'manager';   // 권한 화면에서 현재 편집 중인 역할(페이지·컬럼 공유)
-function setPermRole(r){ permColRole = r; renderPermMatrix(); renderPermColumns(); renderPermFeatures(); }
+function setPermRole(r){ permColRole = r; renderPermMatrix(); renderPermColumns(); renderPermFeatures(); renderPermDataScope(); }
 function setPermColRole(r){ setPermRole(r); }
 function renderPermColumns(){
   const el=inp('perm-columns'); if(!el) return;
@@ -14537,6 +14731,39 @@ function renderPermFeatures(){
   const chip=(def)=>{ const on=(f[def.key]!==false); return `<span onclick="permToggleFeature('${role}','${def.key}',${!on})" style="display:inline-flex;align-items:center;padding:5px 10px;margin:2px;border-radius:12px;font-size:10.5px;cursor:pointer;user-select:none;border:1px solid ${on?'#1971c2':'var(--br)'};background:${on?'#1971c2':'transparent'};color:${on?'#fff':'var(--tx-t)'};font-weight:${on?'600':'400'};">${def.label}</span>`; };
   el.innerHTML = `<div style="font-size:11.5px;color:var(--tx-s);margin-bottom:8px;"><b>${RL[role]}</b> 에게 허용할 기능을 선택합니다. (앱 전체 공통 적용)</div>
     <div>${FEATURE_DEFS.map(chip).join('')}</div>`;
+}
+function renderPermDataScope(){
+  const el=inp('perm-data-scope'); if(!el) return;
+  const role=permColRole;
+  const cfg=roleDataScopeConfig();
+  const scopes=cfg[role]||{};
+  const RB='1px solid var(--br)';
+  const RL={manager:'중간관리자',staff:'평사원'};
+  const tab=(r,label)=>`<button onclick="setPermRole('${r}')" style="border:none;padding:8px 18px;font-size:12px;font-weight:700;cursor:pointer;background:${role===r?'#1971c2':'transparent'};color:${role===r?'#fff':'var(--tx-s)'};">${label}</button>`;
+  const rows=DATA_SCOPE_DEFS.map(def=>{
+    const scope=scopes[def.id] || def.defaultScope || 'own';
+    const shared=scope==='shared';
+    return `<div style="display:grid;grid-template-columns:minmax(130px,180px) minmax(220px,1fr) 150px;gap:10px;align-items:center;padding:10px 12px;border-top:${RB};">
+      <div style="font-weight:800;font-size:12.5px;">${def.label}</div>
+      <div style="font-size:11px;color:var(--tx-s);line-height:1.45;">${def.desc || ''}</div>
+      <button class="btn btn-sm ${shared?'btn-primary':''}" type="button" onclick="permToggleDataScope('${role}','${def.id}','${shared?'own':'shared'}')" title="${shared?'모든 사용자가 볼 수 있음':'작성/소유한 데이터만 볼 수 있음'}">
+        <i class="ti ${shared?'ti-users':'ti-user'}"></i>${shared?'공통 공개':'본인 전용'}
+      </button>
+    </div>`;
+  }).join('');
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+      <span style="font-size:12px;color:var(--tx-s);font-weight:700;">역할 선택</span>
+      <div style="display:inline-flex;border:${RB};border-radius:8px;overflow:hidden;">${tab('manager','중간관리자')}${tab('staff','평사원')}</div>
+      <span style="font-size:11px;color:var(--tx-t);"><b style="color:#1971c2;">공통 공개</b> = 같은 역할 사용자에게 모두 표시 · <b>본인 전용</b> = 작성/소유 데이터만 표시</span>
+      <span style="margin-left:auto;font-size:10.5px;white-space:nowrap;">
+        <a onclick="permSetAllDataScopes('${role}','shared')" style="color:var(--tx-i);cursor:pointer;">전체 공통</a>
+        <span style="color:var(--tx-t);"> · </span>
+        <a onclick="permSetAllDataScopes('${role}','own')" style="color:var(--tx-d);cursor:pointer;">전체 본인 전용</a>
+      </span>
+    </div>
+    <div style="font-size:11.5px;color:var(--tx-s);margin-bottom:10px;"><b>${RL[role]}</b> 에게 데이터가 노출되는 범위를 설정합니다. 기본값은 재고·공정·메모만 공통 공개입니다.</div>
+    <div style="border:${RB};border-radius:10px;background:var(--bg-p);overflow:hidden;">${rows}</div>`;
 }
 function allAuditLogRows(){
   const rows = [];
@@ -14732,6 +14959,22 @@ async function permToggleFeature(role, key, allowed){
   if(role===currentRole) applyFeatureGating();
   renderPermFeatures();
   try{ await _fbDb.collection('roles').doc('features').set(cfg); }catch(e){ showToast('저장 실패: '+e.message,'error'); }
+}
+async function permToggleDataScope(role, key, scope){
+  const cfg=roleDataScopeConfig(); cfg[role]=cfg[role]||{};
+  cfg[role][key]=scope === 'shared' ? 'shared' : 'own';
+  saveStorageLocalOnly('roleDataScope', cfg);
+  renderPermDataScope();
+  if(role===currentRole && !document.querySelector('.overlay.open')) { try{ refreshPage(currentPage); }catch(e){} }
+  try{ await _fbDb.collection('roles').doc('dataScope').set(cfg); }catch(e){ showToast('저장 실패: '+e.message,'error'); }
+}
+async function permSetAllDataScopes(role, scope){
+  const cfg=roleDataScopeConfig(); cfg[role]=cfg[role]||{};
+  DATA_SCOPE_DEFS.forEach(def => { cfg[role][def.id] = scope === 'shared' ? 'shared' : 'own'; });
+  saveStorageLocalOnly('roleDataScope', cfg);
+  renderPermDataScope();
+  if(role===currentRole && !document.querySelector('.overlay.open')) { try{ refreshPage(currentPage); }catch(e){} }
+  try{ await _fbDb.collection('roles').doc('dataScope').set(cfg); }catch(e){ showToast('저장 실패: '+e.message,'error'); }
 }
 /* 한 역할의 표 전체 컬럼/등록버튼 일괄 표시·해제 */
 async function permSetAllColumns(role, tk, visible){
@@ -15745,15 +15988,17 @@ function openRfqAdd() {
 }
 
 function _syncRfqClientDropdown(selId) {
+  const visibleClients = typeof visibleRecords === 'function' ? visibleRecords(clients, 'clients') : clients;
   inp('rq-client').innerHTML = '<option value="">-- 선택 --</option>' +
-    clients.map(c => `<option value="${c.id}"${c.id===selId?' selected':''}>${c.name}</option>`).join('');
+    visibleClients.map(c => `<option value="${c.id}"${c.id===selId?' selected':''}>${c.name}</option>`).join('');
   onRfqClientChange();
 }
 
 function onRfqClientChange() {
   const cid = v('rq-client');
+  const visibleProducts = typeof visibleRecords === 'function' ? visibleRecords(products, 'products') : products;
   inp('rq-product').innerHTML = '<option value="">-- 선택 --</option>' +
-    products.filter(p => !cid || p.clientId === cid).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    visibleProducts.filter(p => !cid || p.clientId === cid).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
   if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('rq-client', 'rq-client-search');
   if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('rq-product', 'rq-product-search');
 }
@@ -15858,6 +16103,8 @@ function changeRfqStatus(id, val) {
 
 function convertRfqToPo(ids) {
   if (!checkAdminAction()) return;
+  if (typeof requirePurchaseOrderData === 'function' && !requirePurchaseOrderData('구매발주서 생성')) return;
+  if (typeof requireCreateAction === 'function' && !requireCreateAction('po', '구매발주서 생성')) return;
   const idList = Array.isArray(ids) ? ids : [ids];
   const targets = idList.map(id => rfqList.find(r => r.id === id)).filter(Boolean);
   if (!targets.length) {
@@ -16029,11 +16276,14 @@ function exportRfqXLS(id = null) {
 
 /* ╦╦╦╦╦╦╦╦ 구매발주서 (PO) ╦╦╦╦╦╦╦╦ */
 function renderPo() {
-  ensureDateView('po', 'po-table', poList.map(p=>p.date), renderPo);
-  const total  = poList.length;
-  const sent   = poList.filter(p => p.status === '발송완료').length;
-  const done   = poList.filter(p => p.status === '입고완료').length;
-  const amt    = poList.reduce((s, p) => s + _docAmount(p, 'po'), 0);
+  const cont = inp('po-table');
+  const hasPoAccess = typeof purchaseOrderDataAllowed !== 'function' || purchaseOrderDataAllowed();
+  const sourceRows = typeof visiblePurchaseOrderList === 'function' ? visiblePurchaseOrderList() : poList;
+  ensureDateView('po', 'po-table', sourceRows.map(p=>p.date), renderPo);
+  const total  = sourceRows.length;
+  const sent   = sourceRows.filter(p => p.status === '발송완료').length;
+  const done   = sourceRows.filter(p => p.status === '입고완료').length;
+  const amt    = sourceRows.reduce((s, p) => s + _docAmount(p, 'po'), 0);
   inp('po-kpi-total').textContent = total + '건';
   inp('po-kpi-sent').textContent  = sent  + '건';
   inp('po-kpi-done').textContent  = done  + '건';
@@ -16042,10 +16292,16 @@ function renderPo() {
 
   const badge = inp('poBadge');
   if (badge) {
-    const pending = poList.filter(p => p.status === '작성중').length;
+    const pending = hasPoAccess ? sourceRows.filter(p => p.status === '작성중').length : 0;
     badge.textContent = pending; badge.style.display = pending ? '' : 'none';
   }
   if (typeof updatePaymentRequestBadge === 'function') updatePaymentRequestBadge();
+
+  if (!hasPoAccess) {
+    if (cont) cont.innerHTML = '<div class="empty"><i class="ti ti-lock"></i>구매발주서 접근 권한이 없습니다.</div>';
+    poUpdateBulkBar();
+    return;
+  }
 
   const fcSel = inp('po-fc');
   if (fcSel) {
@@ -16055,8 +16311,7 @@ function renderPo() {
   }
 
   const fc = v('po-fc'), fs = v('po-fs'), q = v('po-q').toLowerCase();
-  const rows = poList.filter(p => {
-    if (!canViewRecord(p, 'po')) return false;
+  const rows = sourceRows.filter(p => {
     if (!dateViewMatch('po', p.date)) return false;
     if (fc && p.clientId !== fc) return false;
     if (fs && p.status !== fs)   return false;
@@ -16078,8 +16333,6 @@ function renderPo() {
       return String(va).localeCompare(String(vb), 'ko-KR') * asc;
     });
   }
-
-  const cont = inp('po-table');
   if (!rows.length) {
     cont.innerHTML = '<div class="empty"><i class="ti ti-inbox"></i>해당 조건의 구매발주서가 없습니다.</div>';
     poUpdateBulkBar();
@@ -16182,12 +16435,13 @@ function poBulkEdit(){ const ids=poCheckedIds(); if(ids.length===1) openPoEdit(i
 function poBulkClone(){ const ids=poCheckedIds(); if(ids.length===1) clonePo(ids[0]); }
 function poBulkExport(){ if (typeof requireCsvAction === 'function' && !requireCsvAction('구매발주서 엑셀 내보내기')) return; const ids=poCheckedIds(); if(!ids.length) return; exportPoXLS(ids); }
 function poBulkDrive(){ const ids=poCheckedIds(); if(!ids.length) return; saveDocumentBundleToGoogleDrive('po', ids); }
-function poBulkEmail(){ const ids=poCheckedIds(); if(ids.length!==1){ showToast('이메일은 한 건만 선택해 발송하세요.','info'); return; } openEmailModal(poList.find(x=>x.id===ids[0]),'po'); }
+function poBulkEmail(){ const ids=poCheckedIds(); if(ids.length!==1){ showToast('이메일은 한 건만 선택해 발송하세요.','info'); return; } const rows=typeof visiblePurchaseOrderList==='function'?visiblePurchaseOrderList():poList; openEmailModal(rows.find(x=>x.id===ids[0]),'po'); }
 function poBulkPaymentRequest(){ const ids=poCheckedIds(); if(ids.length===1 && typeof openPaymentRequestFromPo === 'function') openPaymentRequestFromPo(ids[0]); }
 function poBulkDelete(){
   const ids=poCheckedIds(); if(!ids.length) return;
   if(!checkAdminAction()) return;
-  const targets = poList.filter(p=>ids.includes(p.id));
+  const rows=typeof visiblePurchaseOrderList==='function'?visiblePurchaseOrderList():poList;
+  const targets = rows.filter(p=>ids.includes(p.id));
   if (targets.some(p => !canDeleteRecord(p, 'po'))) { showToast('삭제 권한이 없는 구매발주서가 포함되어 있습니다.', 'error'); return; }
   if(!confirm(ids.length+'건의 구매발주서를 삭제하시겠습니까?')) return;
   targets.forEach(p => writeAuditLog('po', p.id, 'delete', p, null, { summary:'구매발주서 일괄 삭제', source:'bulkAction' }));
@@ -16202,6 +16456,8 @@ function poStatusColor(s) {
 }
 
 function openPoAdd() {
+  if (typeof requirePurchaseOrderData === 'function' && !requirePurchaseOrderData('구매발주서 등록')) return;
+  if (typeof requireCreateAction === 'function' && !requireCreateAction('po', '구매발주서 등록')) return;
   try {
     const modal = inp('po-modal');
       delete modal.dataset.editId;
@@ -16224,15 +16480,17 @@ function openPoAdd() {
 }
 
 function _syncPoClientDropdown(selId) {
+  const visibleClients = typeof visibleRecords === 'function' ? visibleRecords(clients, 'clients') : clients;
   inp('po-client-sel').innerHTML = '<option value="">-- 선택 --</option>' +
-    clients.map(c => `<option value="${c.id}"${c.id===selId?' selected':''}>${c.name}</option>`).join('');
+    visibleClients.map(c => `<option value="${c.id}"${c.id===selId?' selected':''}>${c.name}</option>`).join('');
   onPoClientChange();
 }
 
 function onPoClientChange() {
   const cid = v('po-client-sel');
+  const visibleProducts = typeof visibleRecords === 'function' ? visibleRecords(products, 'products') : products;
   inp('po-product-sel').innerHTML = '<option value="">-- 선택 --</option>' +
-    products.filter(p => !cid || p.clientId === cid).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    visibleProducts.filter(p => !cid || p.clientId === cid).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
   if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('po-client-sel', 'po-client-search');
   if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('po-product-sel', 'po-product-search');
 }
@@ -16306,7 +16564,10 @@ function openPoEdit(id) {
 
 function clonePo(id) {
   if (!checkAdminAction()) return;
+  if (typeof requirePurchaseOrderData === 'function' && !requirePurchaseOrderData('구매발주서 복제')) return;
+  if (typeof requireCreateAction === 'function' && !requireCreateAction('po', '구매발주서 복제')) return;
   const p = poList.find(x => x.id === id); if (!p) return;
+  if (typeof canViewRecord === 'function' && !canViewRecord(p, 'po')) { showToast('이 구매발주서에 접근할 권한이 없습니다.', 'error'); return; }
   const modal = inp('po-modal');
   delete modal.dataset.editId;
   inp('po-modal-ttl').innerHTML = '<i class="ti ti-copy" style="color:var(--tx-i);"></i>구매발주서 복제 등록';
@@ -16351,9 +16612,11 @@ function deletePo(id) {
 
 function openPoPrint(id, individual=false) {
   if (typeof requirePdfAction === 'function' && !requirePdfAction('구매발주서 PDF 출력')) return;
+  if (typeof requirePurchaseOrderData === 'function' && !requirePurchaseOrderData('구매발주서 PDF 출력')) return;
   const ids = Array.isArray(id) ? id : (id ? [id] : null);
-  const targetList = ids ? ids.map(i=>poList.find(x=>x.id===i)).filter(Boolean)
-                        : poList;   // 전체 출력: 입고완료 포함 모든 발주서
+  const visiblePo = typeof visiblePurchaseOrderList === 'function' ? visiblePurchaseOrderList() : poList;
+  const targetList = ids ? ids.map(i=>visiblePo.find(x=>x.id===i)).filter(Boolean)
+                        : visiblePo;   // 전체 출력: 입고완료 포함 모든 발주서
   if (!targetList.length) { showToast('출력할 발주서가 없습니다.', 'error'); return; }
   const ci = getCompanyInfo();
   const grouped = {};
@@ -16432,8 +16695,10 @@ function openPoPrint(id, individual=false) {
 
 function exportPoXLS(id = null) {
   if (typeof requireCsvAction === 'function' && !requireCsvAction('구매발주서 엑셀 내보내기')) return;
+  if (typeof requirePurchaseOrderData === 'function' && !requirePurchaseOrderData('구매발주서 엑셀 내보내기')) return;
   const ids = Array.isArray(id) ? id : (id ? [id] : null);
-  const targets = ids ? poList.filter(p => ids.includes(p.id)) : poList;
+  const sourceRows = typeof visiblePurchaseOrderList === 'function' ? visiblePurchaseOrderList() : poList;
+  const targets = ids ? sourceRows.filter(p => ids.includes(p.id)) : sourceRows;
   if (!targets.length) { showToast('내보낼 데이터가 없습니다.', 'error'); return; }
   const ci = getCompanyInfo();
   const wb = XLSX.utils.book_new();
@@ -17190,7 +17455,8 @@ function _docTemplateGroups(type, id) {
     const targets = ids ? list.filter(d => ids.includes(d.id)) : list;
     return targets.map(d => ({key:d.id,items:[d]}));
   }
-  const list = ids ? poList.filter(p => ids.includes(p.id)) : poList;
+  const rows = typeof visiblePurchaseOrderList === 'function' ? visiblePurchaseOrderList() : poList;
+  const list = ids ? rows.filter(p => ids.includes(p.id)) : rows;
   const grouped = {};
   list.forEach(p => {
     const key = ids && ids.length === 1 ? p.id : (p.supplier || p.id);
@@ -18206,7 +18472,8 @@ function migratePartnerCustomerType() {
 migratePartnerCustomerType();
 
 function getPartnerPerformance(partnerName) {
-  const pos = poList.filter(function(p) { return p.supplier === partnerName; });
+  const visiblePo = typeof visiblePurchaseOrderList === 'function' ? visiblePurchaseOrderList() : (typeof visibleRecords === 'function' ? visibleRecords(poList, 'po') : poList);
+  const pos = visiblePo.filter(function(p) { return p.supplier === partnerName; });
   if (!pos.length) return null;
   var completed = pos.filter(function(p) { return p.status === '입고완료'; }).length;
   var pending = pos.filter(function(p) { return p.status !== '입고완료'; });
@@ -18238,10 +18505,11 @@ function filterPartners(type) {
 }
 
 function renderPartners() {
-  const total = partners.length;
-  const sup   = partners.filter(p => p.type === '공급처').length;
-  const buy   = partners.filter(p => normalizePartnerType(p.type) === '고객사').length;
-  const out   = partners.filter(p => p.type === '외주처').length;
+  const visiblePartners = typeof visibleRecords === 'function' ? visibleRecords(partners, 'partners') : partners;
+  const total = visiblePartners.length;
+  const sup   = visiblePartners.filter(p => p.type === '공급처').length;
+  const buy   = visiblePartners.filter(p => normalizePartnerType(p.type) === '고객사').length;
+  const out   = visiblePartners.filter(p => p.type === '외주처').length;
   const setEl = (id, v) => { const el = inp(id); if(el) el.textContent = v; };
   setEl('bp-kpi-total', total + '개사');
   setEl('bp-kpi-sup',   sup);
@@ -18250,7 +18518,7 @@ function renderPartners() {
   _kpiActive('bp-ft', {'공급처':'bp-kpi-sup','고객사':'bp-kpi-buy','외주처':'bp-kpi-out'});
 
   const ft = v('bp-ft'), q = v('bp-q').toLowerCase();
-  const rows = partners.filter(p => {
+  const rows = visiblePartners.filter(p => {
     const type = normalizePartnerType(p.type);
     if (ft && type !== ft) return false;
     if (q && !p.name.toLowerCase().includes(q) && !(p.manager||'').toLowerCase().includes(q) && !(p.email||'').toLowerCase().includes(q)) return false;
@@ -18601,13 +18869,15 @@ function _clientSearchCandidates(query, limit, includeEmpty) {
   const usedIds = new Set();
   const usedNames = new Set();
   const rows = [];
-  clients.forEach(c => {
+  const visibleClients = typeof visibleRecords === 'function' ? visibleRecords(clients, 'clients') : clients;
+  const visiblePartners = typeof visibleRecords === 'function' ? visibleRecords(partners, 'partners') : partners;
+  visibleClients.forEach(c => {
     if (q && !_clientFieldText(c).includes(q)) return;
     rows.push(Object.assign({_source:'client', _typeLabel:'고객사'}, c));
     usedIds.add(c.id);
     usedNames.add(String(c.name || '').trim().toLowerCase());
   });
-  partners.forEach(p => {
+  visiblePartners.forEach(p => {
     if (!p || usedIds.has(p.id)) return;
     const nameKey = String(p.name || '').trim().toLowerCase();
     if (nameKey && usedNames.has(nameKey)) return;
@@ -18635,7 +18905,8 @@ function syncClientFieldDisplay(selectId, inputId) {
   const sel = inp(selectId);
   const input = inp(inputId);
   if (!sel || !input) return;
-  const c = clients.find(x => x.id === sel.value);
+  const visibleClients = typeof visibleRecords === 'function' ? visibleRecords(clients, 'clients') : clients;
+  const c = visibleClients.find(x => x.id === sel.value);
   input.value = c ? (c.name || '') : '';
 }
 function hideClientFieldMatches(resultsId) {
@@ -18697,7 +18968,8 @@ function _productFieldText(p) {
 }
 function _productFieldMatches(query, clientId) {
   const q = String(query || '').trim().toLowerCase();
-  const list = clientId ? products.filter(p => p.clientId === clientId) : products;
+  const visibleProducts = typeof visibleRecords === 'function' ? visibleRecords(products, 'products') : products;
+  const list = clientId ? visibleProducts.filter(p => p.clientId === clientId) : visibleProducts;
   return list
     .filter(p => !q || _productFieldText(p).includes(q))
     .sort((a, b) => {
@@ -18713,7 +18985,8 @@ function syncProductFieldDisplay(selectId, inputId) {
   const sel = inp(selectId);
   const input = inp(inputId);
   if (!sel || !input) return;
-  const p = products.find(x => x.id === sel.value);
+  const visibleProducts = typeof visibleRecords === 'function' ? visibleRecords(products, 'products') : products;
+  const p = visibleProducts.find(x => x.id === sel.value);
   input.value = p ? (p.name || '') : '';
 }
 function hideProductFieldMatches(resultsId) {
@@ -18721,7 +18994,8 @@ function hideProductFieldMatches(resultsId) {
   if (box) { box.style.display = 'none'; box.innerHTML = ''; }
 }
 function selectProductField(selectId, inputId, resultsId, productId, changeFnName) {
-  const p = products.find(x => x.id === productId);
+  const visibleProducts = typeof visibleRecords === 'function' ? visibleRecords(products, 'products') : products;
+  const p = visibleProducts.find(x => x.id === productId);
   const sel = inp(selectId);
   if (!p || !sel) return;
   if (![...sel.options].some(opt => opt.value === p.id)) {
@@ -18748,7 +19022,8 @@ function renderProductFieldMatches(selectId, inputId, resultsId, clientSelectId,
 function onProductFieldSearchInput(selectId, inputId, resultsId, clientSelectId, changeFnName) {
   const sel = inp(selectId);
   if (sel) {
-    const p = products.find(x => x.id === sel.value);
+    const visibleProducts = typeof visibleRecords === 'function' ? visibleRecords(products, 'products') : products;
+    const p = visibleProducts.find(x => x.id === sel.value);
     if (p && String(v(inputId)).trim() !== String(p.name || '').trim()) sel.value = '';
   }
   renderProductFieldMatches(selectId, inputId, resultsId, clientSelectId, changeFnName);
@@ -19735,6 +20010,16 @@ let finInputTimer = null;
 let finDashboardRange = 'month';
 let fixedCostMonth = today().slice(0,7);
 let fixedCostShowInactive = false;
+function financeVisiblePoList() {
+  if (typeof visiblePurchaseOrderList === 'function') return visiblePurchaseOrderList();
+  return typeof visibleRecords === 'function' ? visibleRecords(poList || [], 'po') : (poList || []);
+}
+function financeVisibleDeliveries() {
+  return typeof visibleRecords === 'function' ? visibleRecords(deliveries || [], 'delivery') : (deliveries || []);
+}
+function financeVisibleProducts() {
+  return typeof visibleRecords === 'function' ? visibleRecords(products || [], 'products') : (products || []);
+}
 
 function finState(tab) {
   if (!financeView[tab]) financeView[tab] = {
@@ -20623,11 +20908,11 @@ function finPoItemSummary(p) { return typeof _docItemSummary === 'function' ? _d
 function finPoItemSearchText(p) { return typeof _docItemsSearchText === 'function' ? _docItemsSearchText(p) : (p.itemName || '').toLowerCase(); }
 function financeFilteredRows(tab) {
   const s=finState(tab), q=s.query.trim().toLowerCase();
-  if(tab==='revenue')return deliveries.filter(d=>finMatchDate(d.deliveredAt,s)&&finMatchAmount((d.price||0)*(d.qty||0),s)&&(!q||[d.id,getClientName(d.clientId),d.productName,getProductName(d.productId)].join(' ').toLowerCase().includes(q)));
-  if(tab==='purchase')return poList.filter(p=>finMatchDate(p.date,s)&&finMatchAmount(finPoAmount(p),s)&&(!s.status||(p.status||'작성중')===s.status)&&(!q||[p.id,p.supplier,finPoItemSearchText(p)].join(' ').toLowerCase().includes(q)));
+  if(tab==='revenue')return financeVisibleDeliveries().filter(d=>finMatchDate(d.deliveredAt,s)&&finMatchAmount((d.price||0)*(d.qty||0),s)&&(!q||[d.id,getClientName(d.clientId),d.productName,getProductName(d.productId)].join(' ').toLowerCase().includes(q)));
+  if(tab==='purchase')return financeVisiblePoList().filter(p=>finMatchDate(p.date,s)&&finMatchAmount(finPoAmount(p),s)&&(!s.status||(p.status||'작성중')===s.status)&&(!q||[p.id,p.supplier,finPoItemSearchText(p)].join(' ').toLowerCase().includes(q)));
   if(tab==='payreq')return financePaymentRequests().filter(r=>canViewRecord(r,'paymentRequest')&&finMatchDate(r.requestDate,s)&&finMatchAmount(r.amount,s)&&(!s.status||r.status===s.status)&&(!q||[r.id,r.poId,r.supplier,r.itemSummary,r.assignee,r.requester,r.note].join(' ').toLowerCase().includes(q)));
   if(tab==='fixed')return fixedCostRows(fixedCostMonth, fixedCostShowInactive).filter(r=>finMatchAmount(r.amount,s)&&(!s.status||r.status===s.status)&&(!q||[r.name,r.category,r.vendor,r.method,r.note].join(' ').toLowerCase().includes(q)));
-  if(tab==='cost')return financeCostInfoAllowed() ? products.filter(p=>finMatchAmount(prodUnitCost(p),s)&&(!q||[p.id,p.name,getClientName(p.clientId)].join(' ').toLowerCase().includes(q))) : [];
+  if(tab==='cost')return financeCostInfoAllowed() ? financeVisibleProducts().filter(p=>finMatchAmount(prodUnitCost(p),s)&&(!q||[p.id,p.name,getClientName(p.clientId)].join(' ').toLowerCase().includes(q))) : [];
   if(tab==='labor')return workers.filter(w=>finMatchAmount(calcPayroll(w,payrollMonth).net,s)&&(!s.status||(calcPayroll(w,payrollMonth).confirmed?'확정':'작성중')===s.status)&&(!q||[w.id,w.name,w.dept,w.position].join(' ').toLowerCase().includes(q)));
   if(tab==='etc')return financeData.entries.filter(e=>canViewRecord(e,'financeEntry')&&finMatchDate(e.date,s)&&finMatchAmount(e.amount,s)&&(!s.status||e.type===s.status)&&(!q||[e.id,e.category,e.title,e.note].join(' ').toLowerCase().includes(q)));
   return [];
@@ -20638,14 +20923,14 @@ function exportFinanceViewXLS(tab){
   if(typeof XLSX==='undefined'){showToast('엑셀 생성 라이브러리가 준비되지 않았습니다.','error');return;}
   if(tab==='ar'){
     const s=finState('ar'),q=s.query.trim().toLowerCase(),rows=[];
-    deliveries.filter(d=>{
+    financeVisibleDeliveries().filter(d=>{
       const total=(d.price||0)*(d.qty||0), pay=finPaymentRecord('ar',d.id,total);
       return finMatchDate(d.deliveredAt,s)&&finMatchAmount(total,s)&&(!s.status||pay.status===s.status)&&(!q||[d.id,getClientName(d.clientId),d.productName].join(' ').toLowerCase().includes(q));
     }).forEach(d=>{
       const total=(d.price||0)*(d.qty||0), pay=finPaymentRecord('ar',d.id,total);
       rows.push(['미수금',d.deliveredAt,getClientName(d.clientId),d.productName||getProductName(d.productId),total,pay.amount,pay.remaining,pay.status,pay.date,pay.method,pay.note]);
     });
-    poList.filter(p=>{
+    financeVisiblePoList().filter(p=>{
       const total=finPoAmount(p), pay=finPaymentRecord('ap',p.id,total);
       return finMatchDate(p.date,s)&&finMatchAmount(total,s)&&(!s.status||pay.status===s.status)&&(!q||[p.id,p.supplier,finPoItemSearchText(p)].join(' ').toLowerCase().includes(q));
     }).forEach(p=>{
@@ -20697,8 +20982,8 @@ function guardFinanceMonth(date) {
 }
 
 /* ── 집계 헬퍼 ── */
-function finRevenueTotal()  { return deliveries.reduce((s,d)=>s+(d.price||0)*(d.qty||0),0); }
-function finPurchaseTotal() { return poList.reduce((s,p)=>s+finPoAmount(p),0); }
+function finRevenueTotal()  { return financeVisibleDeliveries().reduce((s,d)=>s+(d.price||0)*(d.qty||0),0); }
+function finPurchaseTotal() { return financeVisiblePoList().reduce((s,p)=>s+finPoAmount(p),0); }
 function finPayrollMonthly(ym=today().slice(0,7)){
   // 입사일 이후의 달만 인건비에 반영(입사 전 달을 현재 급여로 과대 계상하지 않도록).
   // 단, 해당 달에 저장된 급여기록이 있으면 입사일과 무관하게 그대로 반영.
@@ -20719,8 +21004,8 @@ function finMonthList(n) {
   }
   return arr;
 }
-function finRevenueMonth(ym)  { return deliveries.filter(d=>(d.deliveredAt||'').slice(0,7)===ym).reduce((s,d)=>s+(d.price||0)*(d.qty||0),0); }
-function finPurchaseMonth(ym) { return poList.filter(p=>(p.date||'').slice(0,7)===ym).reduce((s,p)=>s+finPoAmount(p),0); }
+function finRevenueMonth(ym)  { return financeVisibleDeliveries().filter(d=>(d.deliveredAt||'').slice(0,7)===ym).reduce((s,d)=>s+(d.price||0)*(d.qty||0),0); }
+function finPurchaseMonth(ym) { return financeVisiblePoList().filter(p=>(p.date||'').slice(0,7)===ym).reduce((s,p)=>s+finPoAmount(p),0); }
 function finEntryMonth(ym,type){ return financeData.entries.filter(e=>e.type===type && (e.date||'').slice(0,7)===ym).reduce((s,e)=>s+(Number(e.amount)||0),0); }
 function finRangeInfo(range = finDashboardRange) {
   const now = new Date(today());
@@ -20751,15 +21036,15 @@ function finMonthsBetween(from, to) {
 function finRangeMonths(rangeInfo) {
   if (rangeInfo.from || rangeInfo.to) return finMonthsBetween(rangeInfo.from, rangeInfo.to);
   const set = new Set();
-  deliveries.forEach(d => { if (d.deliveredAt) set.add(String(d.deliveredAt).slice(0,7)); });
-  poList.forEach(p => { if (p.date) set.add(String(p.date).slice(0,7)); });
+  financeVisibleDeliveries().forEach(d => { if (d.deliveredAt) set.add(String(d.deliveredAt).slice(0,7)); });
+  financeVisiblePoList().forEach(p => { if (p.date) set.add(String(p.date).slice(0,7)); });
   financeData.entries.forEach(e => { if (e.date) set.add(String(e.date).slice(0,7)); });
   payrollRecords.forEach(p => { if (p.month) set.add(p.month); });
   if (!set.size) set.add(today().slice(0,7));
   return [...set].sort();
 }
-function finRevenueRange(rangeInfo) { return deliveries.filter(d=>finDateInRange(d.deliveredAt, rangeInfo)).reduce((s,d)=>s+(d.price||0)*(d.qty||0),0); }
-function finPurchaseRange(rangeInfo) { return poList.filter(p=>finDateInRange(p.date, rangeInfo)).reduce((s,p)=>s+finPoAmount(p),0); }
+function finRevenueRange(rangeInfo) { return financeVisibleDeliveries().filter(d=>finDateInRange(d.deliveredAt, rangeInfo)).reduce((s,d)=>s+(d.price||0)*(d.qty||0),0); }
+function finPurchaseRange(rangeInfo) { return financeVisiblePoList().filter(p=>finDateInRange(p.date, rangeInfo)).reduce((s,p)=>s+finPoAmount(p),0); }
 function finEntryRange(rangeInfo,type) { return financeData.entries.filter(e=>e.type===type && finDateInRange(e.date, rangeInfo)).reduce((s,e)=>s+(Number(e.amount)||0),0); }
 function finPayrollRange(rangeInfo) { return finRangeMonths(rangeInfo).reduce((sum, ym)=>sum+finPayrollMonthly(ym),0); }
 
@@ -20897,7 +21182,7 @@ function _finDashboard() {
 /* ── 매출 ── */
 function _finRevenue() {
   const state=finState('revenue'), query=state.query.trim().toLowerCase();
-  let list=deliveries.filter(d=>finMatchDate(d.deliveredAt,state) && finMatchAmount((d.price||0)*(d.qty||0),state) &&
+  let list=financeVisibleDeliveries().filter(d=>finMatchDate(d.deliveredAt,state) && finMatchAmount((d.price||0)*(d.qty||0),state) &&
     (!query || [d.id,getClientName(d.clientId),d.productName,getProductName(d.productId)].join(' ').toLowerCase().includes(query)));
   list=finSort(list,state,d=>d.deliveredAt,d=>(d.price||0)*(d.qty||0));
   const total=list.reduce((sum,d)=>sum+(d.price||0)*(d.qty||0),0), page=finPaged(list,state);
@@ -20925,7 +21210,7 @@ function _finRevenue() {
 /* ── 매입/지출 ── */
 function _finPurchase() {
   const state=finState('purchase'), query=state.query.trim().toLowerCase();
-  let list=poList.filter(p=>finMatchDate(p.date,state) && finMatchAmount(finPoAmount(p),state) && (!state.status || (p.status||'작성중')===state.status) &&
+  let list=financeVisiblePoList().filter(p=>finMatchDate(p.date,state) && finMatchAmount(finPoAmount(p),state) && (!state.status || (p.status||'작성중')===state.status) &&
     (!query || [p.id,p.supplier,finPoItemSearchText(p)].join(' ').toLowerCase().includes(query)));
   list=finSort(list,state,p=>p.date,p=>finPoAmount(p));
   const total=list.reduce((sum,p)=>sum+finPoAmount(p),0), page=finPaged(list,state);
@@ -20953,11 +21238,11 @@ function _finPurchase() {
 
 function financePaymentSource(kind, id) {
   if (kind === 'ap') {
-    const p = poList.find(x => x.id === id);
+    const p = financeVisiblePoList().find(x => x.id === id);
     if (!p) return null;
     return { date:p.date, partner:p.supplier, item:finPoItemSummary(p), total:finPoAmount(p), title:'미지급금', po:p };
   }
-  const d = deliveries.find(x => x.id === id);
+  const d = financeVisibleDeliveries().find(x => x.id === id);
   if (!d) return null;
   return { date:d.deliveredAt, partner:getClientName(d.clientId), item:d.productName || getProductName(d.productId), total:(d.price||0)*(d.qty||0), title:'미수금', delivery:d };
 }
@@ -20966,7 +21251,7 @@ function openFinancePayment(kind, id) {
   const src = financePaymentSource(kind, id);
   if (!src) { showToast('처리할 항목을 찾을 수 없습니다.', 'error'); return; }
   if (kind === 'ap') {
-    const p = poList.find(x => x.id === id);
+    const p = financeVisiblePoList().find(x => x.id === id);
     if (p && !requireRecordPermission('edit', p, 'po')) return;
   }
   const pay = finPaymentRecord(kind, id, src.total);
@@ -21128,11 +21413,11 @@ function arSelectionBarHtml() {
 }
 function _finAR() {
   const state=finState('ar'), q=state.query.trim().toLowerCase(), rows=[];
-  deliveries.forEach(d => {
+  financeVisibleDeliveries().forEach(d => {
     const total=(d.price||0)*(d.qty||0), pay=finPaymentRecord('ar',d.id,total);
     rows.push({kind:'ar', id:d.id, date:d.deliveredAt, partner:getClientName(d.clientId), item:d.productName||getProductName(d.productId), total, pay});
   });
-  poList.forEach(p => {
+  financeVisiblePoList().forEach(p => {
     const total=finPoAmount(p), pay=finPaymentRecord('ap',p.id,total);
     rows.push({kind:'ap', id:p.id, date:p.date, partner:p.supplier, item:finPoItemSummary(p), total, pay});
   });
@@ -21175,7 +21460,7 @@ function _finAR() {
 }
 function openPaymentRequestFromPo(poId) {
   if (!checkAdminAction()) return;
-  const p = poList.find(x => x.id === poId);
+  const p = financeVisiblePoList().find(x => x.id === poId);
   if (!p) { showToast('구매발주서를 찾을 수 없습니다.', 'error'); return; }
   if (!canViewRecord(p, 'po')) { showToast('이 발주서에 접근할 권한이 없습니다.', 'error'); return; }
   const total = finPoAmount(p);
@@ -21203,7 +21488,7 @@ function openPaymentRequestFromPo(poId) {
 function savePaymentRequest() {
   if (!checkAdminAction()) return;
   const poId = v('payreq-po-id');
-  const p = poList.find(x => x.id === poId);
+  const p = financeVisiblePoList().find(x => x.id === poId);
   if (!p) { showToast('구매발주서를 찾을 수 없습니다.', 'error'); return; }
   const requestDate = v('payreq-date') || today();
   if (!guardFinanceMonth(requestDate)) return;
@@ -21267,7 +21552,7 @@ function deletePaymentRequest(id) {
   }, 'btn-danger', 'ti-trash');
 }
 function payreqIsPaidDone(req) {
-  const p = poList.find(x => x.id === req?.poId);
+  const p = financeVisiblePoList().find(x => x.id === req?.poId);
   const pay = p ? finPaymentRecord('ap', p.id, finPoAmount(p)) : null;
   return !!(pay && pay.done);
 }
@@ -21319,7 +21604,7 @@ function openSelectedPaymentRequestPayment() {
   if (payreqSelected.size !== 1) { showToast('결제 요청 한 건만 선택하세요.', 'info'); return; }
   const req = selectedPayreqRow();
   if (!req) return;
-  const p = poList.find(x => x.id === req.poId);
+  const p = financeVisiblePoList().find(x => x.id === req.poId);
   if (!p || payreqIsPaidDone(req)) { showToast('지급 처리할 수 없는 요청입니다.', 'info'); return; }
   openFinancePayment('ap', req.poId);
 }
@@ -21363,7 +21648,7 @@ function payreqSelectionBarHtml() {
   const single = count === 1;
   const singleReq = single ? selected[0] : null;
   const singleMutable = !!(singleReq && !payreqIsPaidDone(singleReq));
-  const canPay = !!(singleReq && !payreqIsPaidDone(singleReq) && poList.some(p => p.id === singleReq.poId));
+  const canPay = !!(singleReq && !payreqIsPaidDone(singleReq) && financeVisiblePoList().some(p => p.id === singleReq.poId));
   const auditBtn = (typeof managedAuditButtonHtml === 'function') ? `<button class="btn btn-sm" data-audit-detail-btn onclick="openAuditDetailsForRefs(payreqSelectedAuditRefs())"><i class="ti ti-history"></i>세부사항</button>` : '';
   return `<div class="selection-action-bar payreq-selection-bar" style="display:flex;">
     <span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${count}건 선택됨</span>
@@ -21390,7 +21675,7 @@ function _finPayRequests() {
   const pageIdsJson = JSON.stringify(pageIds);
   const allPageSelected = !!pageIds.length && pageIds.every(id => payreqSelected.has(id));
   const body=page.rows.length?page.rows.map(r=>{
-    const p=poList.find(x=>x.id===r.poId);
+    const p=financeVisiblePoList().find(x=>x.id===r.poId);
     const pay=p?finPaymentRecord('ap',p.id,finPoAmount(p)):null;
     const paidDone=!!(pay&&pay.done);
     const checked = payreqSelected.has(r.id);
@@ -21466,7 +21751,7 @@ function finCostDetailHtml(productId) {
 
 function _finCost() {
   const state=finState('cost'), query=state.query.trim().toLowerCase();
-  let list=products.filter(p=>finMatchAmount(prodUnitCost(p),state) && (!query || [p.id,p.name,getClientName(p.clientId)].join(' ').toLowerCase().includes(query)));
+  let list=financeVisibleProducts().filter(p=>finMatchAmount(prodUnitCost(p),state) && (!query || [p.id,p.name,getClientName(p.clientId)].join(' ').toLowerCase().includes(query)));
   list=finSort(list,state,()=>'',p=>prodUnitCost(p));
   const allList=list, page=finPaged(list,state);
   let tCost=0, tRev=0, tMargin=0;
@@ -22239,7 +22524,8 @@ function printPayslip(docKey){
 let editAsId = null;
 function asWorkerName(id){ const w = workers.find(x=>x.id===id); return w ? w.name : (id||'미배정'); }
 function updateAsBadge(){
-  const open = asList.filter(a => a.status==='접수' || a.status==='처리중').length;
+  const visibleAs = typeof visibleRecords === 'function' ? visibleRecords(asList, 'as') : asList;
+  const open = visibleAs.filter(a => a.status==='접수' || a.status==='처리중').length;
   const b = inp('asBadge'); if(!b) return;
   b.textContent = open; b.style.display = open>0 ? '' : 'none';
 }
@@ -22250,11 +22536,12 @@ function renderAS(){
   updateAsBadge();
   const fil = (inp('as-filter')?.value)||'';
   const q = ((inp('as-search')?.value)||'').toLowerCase();
-  const total = asList.length;
-  const open = asList.filter(a=>a.status==='접수'||a.status==='처리중').length;
-  const done = asList.filter(a=>a.status==='완료').length;
-  const paidCost = asList.reduce((s,a)=>s+(a.warranty==='유상'?(Number(a.cost)||0):0),0);
-  const list = asList.filter(a=>{
+  const visibleAs = typeof visibleRecords === 'function' ? visibleRecords(asList, 'as') : asList;
+  const total = visibleAs.length;
+  const open = visibleAs.filter(a=>a.status==='접수'||a.status==='처리중').length;
+  const done = visibleAs.filter(a=>a.status==='완료').length;
+  const paidCost = visibleAs.reduce((s,a)=>s+(a.warranty==='유상'?(Number(a.cost)||0):0),0);
+  const list = visibleAs.filter(a=>{
     if (!dateViewMatch('asRecords', a.recvDate)) return false;
     if (fil === 'open') { if (!(a.status==='접수'||a.status==='처리중')) return false; }
     else if (fil && a.status!==fil) return false;
@@ -22308,7 +22595,7 @@ function renderAS(){
       </table></div>
     </div>`;
 }
-function _asClientOptions(sel){ return clients.map(c=>`<option value="${esc(c.id)}"${c.id===sel?' selected':''}>${esc(c.name)}</option>`).join(''); }
+function _asClientOptions(sel){ const list=typeof visibleRecords==='function'?visibleRecords(clients,'clients'):clients; return list.map(c=>`<option value="${esc(c.id)}"${c.id===sel?' selected':''}>${esc(c.name)}</option>`).join(''); }
 function _asWorkerOptions(sel){ return '<option value="">미배정</option>'+workers.map(w=>`<option value="${esc(w.id)}"${w.id===sel?' selected':''}>${esc(w.name)}${w.dept?' · '+esc(w.dept):''}</option>`).join(''); }
 function openAsAdd(){
   if (typeof requireCreateAction === 'function' && !requireCreateAction('as', 'A/S 등록')) return;
@@ -22326,6 +22613,7 @@ function openAsAdd(){
 function openAsEdit(id){
   if (typeof requireFeatureAction === 'function' && !requireFeatureAction('edit', 'A/S 수정')) return;
   const a = asList.find(x=>x.id===id); if(!a) return;
+  if (typeof canViewRecord === 'function' && !canViewRecord(a, 'as')) { showToast('이 A/S에 접근할 권한이 없습니다.', 'error'); return; }
   editAsId = id;
   inp('as-modal-ttl').innerHTML = '<i class="ti ti-edit" style="color:var(--tx-w);"></i>A/S 정보 수정';
   sv('asa-id', a.id);
@@ -22843,7 +23131,7 @@ function getDriveConfig() {
     folderUrl: '',
     connectedEmail: '',
     lastBackupAt: '',
-    autoConnectEnabled: true,
+    autoConnectEnabled: false,
     autoBackupEnabled: false,
     autoBackupHours: 24
   };
@@ -23041,7 +23329,7 @@ async function connectGoogleDrive() {
     await requestDriveAccessToken(promptMode);
     await ensureDriveBackupFolder();
     const connectedConfig = getDriveConfig();
-    connectedConfig.autoConnectEnabled = true;
+    connectedConfig.autoConnectEnabled = false;
     saveDriveConfig(connectedConfig);
     try {
       const about = await driveApi('/drive/v3/about?fields=user(displayName,emailAddress)');
@@ -23060,18 +23348,11 @@ async function connectGoogleDrive() {
 }
 
 async function autoConnectGoogleDriveAfterLogin() {
-  if (_driveAutoConnectAttempted || _driveAccessToken) return;
-  const config = getDriveConfig();
-  if (!config.autoConnectEnabled || !config.clientId || !_driveHostedOriginAvailable()) return;
-  saveDriveOAuthSettings(config);
+  if (_driveAutoConnectAttempted) return;
   _driveAutoConnectAttempted = true;
-  try {
-    await requestDriveAccessToken('');
-    await ensureDriveBackupFolder();
+  if (isDriveTokenActive(0)) {
     scheduleGoogleDriveAutoBackup();
     if (currentPage === 'system' && systemTab === 'drive') renderGoogleDriveSettings();
-  } catch (error) {
-    console.info('Google Drive 자동 연결 대기:', error && error.message ? error.message : error);
   }
 }
 
@@ -23097,7 +23378,7 @@ function disconnectGoogleDrive() {
 function saveGoogleDriveSettings() {
   const config = getDriveConfig();
   config.clientId = v('drive-client-id').trim();
-  config.autoConnectEnabled = !!(inp('drive-auto-connect') && inp('drive-auto-connect').checked);
+  config.autoConnectEnabled = false;
   config.autoBackupEnabled = !!(inp('drive-auto-enabled') && inp('drive-auto-enabled').checked);
   config.autoBackupHours = Math.max(1, Number(v('drive-auto-hours')) || 24);
   saveDriveConfig(config);
@@ -23106,9 +23387,6 @@ function saveGoogleDriveSettings() {
   scheduleGoogleDriveAutoBackup();
   showToast('Google Drive OAuth 설정을 저장했습니다.', 'success');
   renderGoogleDriveSettings();
-  if (config.autoConnectEnabled && !_driveAccessToken) {
-    setTimeout(autoConnectGoogleDriveAfterLogin, 200);
-  }
 }
 
 function _driveBackupName() {
@@ -23691,7 +23969,7 @@ async function renderGoogleDriveSettings() {
   const currentOrigin = getDriveCurrentOrigin();
   const connected = isDriveTokenActive(0);
   const configured = !!(config.clientId && (config.folderId || config.folderUrl || config.connectedEmail));
-  const statusText = connected ? '연결됨' : (configured ? '자동 연결 대기' : '연결 필요');
+  const statusText = connected ? '연결됨' : '연결 필요';
   body.innerHTML =
     '<div class="card" style="margin-bottom:16px;">' +
       '<div class="card-hd"><span class="card-ttl"><i class="ti ti-brand-google-drive"></i>Google Drive 데이터 백업</span>' +
@@ -23706,9 +23984,7 @@ async function renderGoogleDriveSettings() {
         '<div class="form-row"><label class="form-lbl">OAuth 웹 클라이언트 ID</label>' +
           '<input class="form-inp" id="drive-client-id" value="' + _driveEsc(config.clientId) + '" placeholder="xxxxxxxx.apps.googleusercontent.com"></div>' +
         '<div style="font-size:11px;color:var(--tx-t);line-height:1.7;">Google Cloud Console에서 Drive API를 활성화하고 OAuth 웹 클라이언트를 만든 뒤 현재 HTTPS 주소를 승인된 JavaScript 원본에 등록하세요. 권한은 앱이 만든 파일만 접근하는 drive.file을 사용합니다.</div>' +
-        '<label style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;">' +
-          '<input type="checkbox" id="drive-auto-connect" ' + (config.autoConnectEnabled !== false ? 'checked' : '') + '>시스템 로그인 후 Google Drive 자동 연결</label>' +
-        '<div style="font-size:10px;color:var(--tx-t);line-height:1.6;">최초 1회 Drive 연결과 권한 승인이 필요합니다. 이후에는 시스템 로그인 후 자동 연결을 시도하며, Google 로그인 세션 또는 브라우저 정책에 따라 연결 버튼을 다시 눌러야 할 수 있습니다.</div>' +
+        '<div style="font-size:10px;color:var(--tx-t);line-height:1.6;">새로고침 후에는 Google Drive를 자동 연결하지 않습니다. Drive 연결, 백업, 문서 저장처럼 사용자가 직접 실행한 작업에서만 Google OAuth 창이 열립니다.</div>' +
         '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px;border:1px solid var(--br);border-radius:var(--rm);">' +
           '<label style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;"><input type="checkbox" id="drive-auto-enabled" ' + (config.autoBackupEnabled ? 'checked' : '') + '>자동 백업</label>' +
           '<label style="font-size:11px;color:var(--tx-s);">주기 <input id="drive-auto-hours" type="number" min="1" value="' + (Number(config.autoBackupHours)||24) + '" style="width:70px;height:30px;text-align:right;"> 시간</label>' +
@@ -23808,7 +24084,8 @@ function switchMemoTab(tab) {
 function updateTodoBadge() {
   var badge = inp('todoBadge');
   if (!badge || typeof todoList === 'undefined') return;
-  var count = todoList.filter(function(item) { return item.status !== '완료'; }).length;
+  var visibleTodos = typeof visibleRecords === 'function' ? visibleRecords(todoList, 'todo') : todoList;
+  var count = visibleTodos.filter(function(item) { return item.status !== '완료'; }).length;
   badge.textContent = count;
   badge.style.display = count ? '' : 'none';
 }
@@ -23824,9 +24101,11 @@ function renderNotes() {
     setNotesSelectionBar('', false);
   }
   _notesLastViewKey = viewKey;
+  var visibleMemos = typeof visibleRecords === 'function' ? visibleRecords(memoList, 'memo') : memoList;
+  var visibleTodos = typeof visibleRecords === 'function' ? visibleRecords(todoList, 'todo') : todoList;
   var noteDates = memoTab === 'memos'
-    ? memoList.map(function(m) { return m.updatedAt || m.createdAt; })
-    : todoList.map(function(t) { return t.dueDate || t.startDate || t.createdAt; });
+    ? visibleMemos.map(function(m) { return m.updatedAt || m.createdAt; })
+    : visibleTodos.map(function(t) { return t.dueDate || t.startDate || t.createdAt; });
   ensureDateView('notes', 'memo-content', noteDates, renderNotes);
   var dateBar = inp('date-view-notes');
   if (dateBar) dateBar.style.display = memoTab === 'report' ? 'none' : 'flex';
@@ -23845,11 +24124,13 @@ function renderNotes() {
 function renderMemoKpi() {
   var box = inp('memo-kpi');
   if (!box) return;
-  var open = todoList.filter(function(t) { return t.status !== '완료'; }).length;
-  var overdue = todoList.filter(function(t) { return t.status !== '완료' && t.dueDate && t.dueDate < today(); }).length;
-  var important = memoList.filter(function(m) { return m.important; }).length;
+  var visibleMemos = typeof visibleRecords === 'function' ? visibleRecords(memoList, 'memo') : memoList;
+  var visibleTodos = typeof visibleRecords === 'function' ? visibleRecords(todoList, 'todo') : todoList;
+  var open = visibleTodos.filter(function(t) { return t.status !== '완료'; }).length;
+  var overdue = visibleTodos.filter(function(t) { return t.status !== '완료' && t.dueDate && t.dueDate < today(); }).length;
+  var important = visibleMemos.filter(function(m) { return m.important; }).length;
   box.innerHTML =
-    '<div class="mc"><div class="mc-lbl"><i class="ti ti-notes"></i>전체 메모</div><div class="mc-val">' + memoList.length + '</div></div>' +
+    '<div class="mc"><div class="mc-lbl"><i class="ti ti-notes"></i>전체 메모</div><div class="mc-val">' + visibleMemos.length + '</div></div>' +
     '<div class="mc"><div class="mc-lbl"><i class="ti ti-list-check"></i>미완료 할 일</div><div class="mc-val" style="color:var(--tx-i);">' + open + '</div></div>' +
     '<div class="mc"><div class="mc-lbl"><i class="ti ti-alert-triangle"></i>기한 초과</div><div class="mc-val" style="color:var(--tx-d);">' + overdue + '</div></div>' +
     '<div class="mc"><div class="mc-lbl"><i class="ti ti-pin"></i>중요 메모</div><div class="mc-val" style="color:var(--tx-w);">' + important + '</div></div>';
@@ -23867,7 +24148,8 @@ function _memoQueryMatch(item, q) {
 function renderMemoCards() {
   var q = v('memo-search').trim().toLowerCase();
   var filter = v('memo-filter');
-  var list = memoList.filter(function(m) {
+  var visibleMemos = typeof visibleRecords === 'function' ? visibleRecords(memoList, 'memo') : memoList;
+  var list = visibleMemos.filter(function(m) {
     if (!_memoQueryMatch(m, q)) return false;
     if (!dateViewMatch('notes', m.updatedAt || m.createdAt)) return false;
     return filter !== 'important' || m.important;
@@ -23881,7 +24163,7 @@ function renderMemoCards() {
     content.innerHTML = '<div class="card"><div class="empty"><i class="ti ti-notes"></i>등록된 메모가 없습니다.</div></div>';
     return;
   }
-  var validIds = new Set(memoList.map(function(m) { return m.id; }));
+  var validIds = new Set(visibleMemos.map(function(m) { return m.id; }));
   _memoSelected.forEach(function(id) { if (!validIds.has(id)) _memoSelected.delete(id); });
   setNotesSelectionBar(memoSelectionBarHtml(_memoSelected.size), _memoSelected.size > 0);
   content.innerHTML = '<div class="memo-grid">' + list.map(function(m) {
@@ -23906,7 +24188,8 @@ function renderMemoCards() {
 function _filteredTodos() {
   var q = v('memo-search').trim().toLowerCase();
   var filter = v('memo-filter');
-  return todoList.filter(function(t) {
+  var visibleTodos = typeof visibleRecords === 'function' ? visibleRecords(todoList, 'todo') : todoList;
+  return visibleTodos.filter(function(t) {
     if (!_memoQueryMatch(t, q)) return false;
     if (!dateViewMatch('notes', t.dueDate || t.startDate || t.createdAt)) return false;
     if (filter === 'important') return t.priority === '긴급' || t.priority === '높음';
@@ -24018,7 +24301,8 @@ function renderTodoList() {
   var list = _filteredTodos().sort(function(a, b) {
     return (a.status === '완료') - (b.status === '완료') || String(a.dueDate || '9999').localeCompare(String(b.dueDate || '9999'));
   });
-  var validIds = new Set(todoList.map(function(t) { return t.id; }));
+  var visibleTodos = typeof visibleRecords === 'function' ? visibleRecords(todoList, 'todo') : todoList;
+  var validIds = new Set(visibleTodos.map(function(t) { return t.id; }));
   _todoSelected.forEach(function(id) { if (!validIds.has(id)) _todoSelected.delete(id); });
   var content = inp('memo-content');
   if (!list.length) {
@@ -26053,17 +26337,22 @@ function renderMobileHome() {
   const el = inp('mobile-home');
   if (!el) return;
 
-  const pending     = materials.filter(m => m.status === '발주전').length;
-  const orderMats   = materials.filter(m => m.status === '발주중').length;
-  const arrived     = materials.filter(m => m.status === '입고완료').length;
-  const activeProds = products.filter(p => p.status !== '견적' && !['완료','납품'].includes(p.processStage)).length;
-  const doneProds   = products.filter(p => ['완료','납품'].includes(p.processStage)).length;
-  const lowStock    = inventory.filter(i => i.qty <= i.minQty && i.minQty > 0).length;
-  const openDefects = defects.filter(d => d.status !== '완료').length;
-  const openClaims  = claims.filter(c => c.status !== '완료').length;
+  const mobileMaterials = typeof visibleRecords === 'function' ? visibleRecords(materials, 'material') : materials;
+  const mobileProducts  = typeof visibleRecords === 'function' ? visibleRecords(products, 'processProduct') : products;
+  const mobileInventory = typeof visibleRecords === 'function' ? visibleRecords(inventory, 'inventory') : inventory;
+  const mobileDefects   = typeof visibleRecords === 'function' ? visibleRecords(defects, 'defect') : defects;
+  const mobileClaims    = typeof visibleRecords === 'function' ? visibleRecords(claims, 'claim') : claims;
+  const pending     = mobileMaterials.filter(m => m.status === '발주전').length;
+  const orderMats   = mobileMaterials.filter(m => m.status === '발주중').length;
+  const arrived     = mobileMaterials.filter(m => m.status === '입고완료').length;
+  const activeProds = mobileProducts.filter(p => p.status !== '견적' && !['완료','납품'].includes(p.processStage)).length;
+  const doneProds   = mobileProducts.filter(p => ['완료','납품'].includes(p.processStage)).length;
+  const lowStock    = mobileInventory.filter(i => i.qty <= i.minQty && i.minQty > 0).length;
+  const openDefects = mobileDefects.filter(d => d.status !== '완료').length;
+  const openClaims  = mobileClaims.filter(c => c.status !== '완료').length;
 
   // 임박 납기 (진행 중 제품, 납기일 빠른 순)
-  const deadlines = products
+  const deadlines = mobileProducts
     .filter(p => p.deliveryDate && p.status !== '견적' && !['완료','납품'].includes(p.processStage))
     .sort((a, b) => a.deliveryDate.localeCompare(b.deliveryDate))
     .slice(0, 4);
@@ -26089,7 +26378,7 @@ function renderMobileHome() {
       <div class="mh-kpi" onclick="mobileGo('clients')">
         <div class="mh-k-lbl"><i class="ti ti-box" style="color:var(--tx-i);"></i>진행 중 프로젝트</div>
         <div class="mh-k-val" style="color:var(--tx-i);">${activeProds}<span style="font-size:13px;">건</span></div>
-        <div class="mh-k-sub">완료 ${doneProds}건 · 전체 ${products.length}종</div>
+        <div class="mh-k-sub">완료 ${doneProds}건 · 전체 ${mobileProducts.length}종</div>
       </div>
       <div class="mh-kpi" onclick="mobileGo('materials')">
         <div class="mh-k-lbl"><i class="ti ti-circle-dashed" style="color:var(--tx-t);"></i>발주 대기 자재</div>
@@ -26099,7 +26388,7 @@ function renderMobileHome() {
       <div class="mh-kpi" onclick="mobileGoInv()">
         <div class="mh-k-lbl"><i class="ti ti-packages" style="color:${lowStock > 0 ? 'var(--tx-d)' : 'var(--tx-ok)'};"></i>안전재고 미달</div>
         <div class="mh-k-val" style="color:${lowStock > 0 ? 'var(--tx-d)' : 'var(--tx-ok)'};">${lowStock}<span style="font-size:13px;">품목</span></div>
-        <div class="mh-k-sub">전체 재고 ${inventory.length}종</div>
+        <div class="mh-k-sub">전체 재고 ${mobileInventory.length}종</div>
       </div>
       <div class="mh-kpi" onclick="mobileGo('quality')">
         <div class="mh-k-lbl"><i class="ti ti-shield-alert" style="color:${openDefects > 0 ? 'var(--tx-w)' : 'var(--tx-ok)'};"></i>미처리 품질장애</div>
