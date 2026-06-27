@@ -8494,6 +8494,14 @@ function deleteFinanceEntry(id) {
 
 /* 현재 페이지에 알맞는 신규 등록 팝업 창 호출 컨트롤러 */
 function openCurrentPageRegistration() {
+  if (typeof roleFeatureAllowed === 'function' && !roleFeatureAllowed('create')) {
+    showToast('등록 권한이 없습니다.', 'error');
+    return;
+  }
+  if (typeof pageAllowed === 'function' && !pageAllowed(currentPage)) {
+    showToast('현재 화면 접근 권한이 없습니다.', 'error');
+    return;
+  }
   // 각 탭별 등록 창 매핑. 자체 등록 폼이 없는 화면(대시보드/공정/납품/휴지통)은
   // 대표 등록인 '생산지시 등록'으로 연결하여 어떤 탭에서든 N키가 동작하도록 함.
   const REG = {
