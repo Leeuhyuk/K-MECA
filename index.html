@@ -607,7 +607,7 @@ body.sb-mini.sb-expanded .sb-overlay { display: block; }
 .sb-overlay { display: none !important; }
 .main,
 body.sb-mini .main { margin-left: 0 !important; }
-@media (min-width: 1440px) {
+@media (min-width: 1180px) {
   body.wide-sidebar .sidebar {
     display: flex !important;
     position: relative;
@@ -4212,6 +4212,263 @@ function saveStorage(key, data) {
   if (typeof cloudQueueSave === 'function') cloudQueueSave(key);   // 클라우드 동기화(활성 시)
 }
 
+const AUDIT_LOG_LIMIT = 1000;
+const DEFAULT_ENTITY_VISIBILITY = {
+  clients: 'company',
+  products: 'company',
+  partners: 'company',
+  rfq: 'assignee',
+  po: 'assignee',
+  material: 'department',
+  inventory: 'department',
+  inventoryMove: 'department',
+  paymentRequest: 'assignee',
+  financeEntry: 'department',
+  fixedCost: 'department',
+  fixedCostPayment: 'department',
+  workOrder: 'department',
+  defect: 'department',
+  checkRecord: 'department',
+  claim: 'assignee',
+  trash: 'department'
+};
+const AUDIT_META_FIELDS = new Set([
+  'createdBy','createdByName','createdAt','updatedBy','updatedByName','updatedAt',
+  'ownerUserId','ownerUserName','ownerDeptId','ownerDeptName','visibility',
+  'sharedWith','approvalUsers','deletedBy','deletedByName','deletedAt',
+  'restoredBy','restoredByName','restoredAt','auditTrail','_mes'
+]);
+
+function _safeJsonClone(value) {
+  if (value == null) return value;
+  try { return JSON.parse(JSON.stringify(value)); }
+  catch(e) { return value; }
+}
+function _auditString(value) {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) return value.map(_auditString).join(', ');
+  try { return JSON.stringify(value); } catch(e) { return String(value); }
+}
+function _auditSame(a, b) {
+  return _auditString(a) === _auditString(b);
+}
+function getCurrentActor() {
+  const cloudUser = (typeof _cloudUser !== 'undefined' && _cloudUser) ? _cloudUser : null;
+  const email = (cloudUser && cloudUser.email) || localStorage.getItem('mes_myEmail') || '';
+  const uid = (cloudUser && cloudUser.uid) || (email ? 'email:' + email : 'local-admin');
+  const role = (typeof currentRole !== 'undefined' && currentRole) || localStorage.getItem('mes_myRole') || 'admin';
+  const cachedUsers = loadStorage('cloudUsers_cache', []);
+  const account = Array.isArray(cachedUsers) ? cachedUsers.find(u => u.uid === uid || (email && u.email === email)) : null;
+  const worker = Array.isArray(workers) ? workers.find(w => email && (w.email || '').toLowerCase() === String(email).toLowerCase()) : null;
+  const name = (account && account.name) || (worker && worker.name) || localStorage.getItem('mes_myName') || (cloudUser && cloudUser.displayName) || email || '로컬 관리자';
+  return {
+    userId: uid,
+    uid,
+    name,
+    email,
+    role,
+    deptId: (account && (account.deptId || account.dept)) || (worker && (worker.deptId || worker.dept)) || '',
+    deptName: (account && (account.deptName || account.dept)) || (worker && (worker.deptName || worker.dept)) || '',
+    position: (account && account.position) || (worker && worker.position) || ''
+  };
+}
+function _actorMatchesName(actor, value) {
+  if (!actor || !value) return false;
+  const target = String(value).trim();
+  return !!target && [actor.name, actor.email, actor.userId].some(v => String(v || '').trim() === target);
+}
+function _recordAssigneeNames(record) {
+  if (!record || typeof record !== 'object') return [];
+  return [
+    record.assignee, record.manager, record.owner, record.requester, record.inspector,
+    record.handler, record.pic, record.workerName, record.createdByName, record.updatedByName
+  ].filter(Boolean);
+}
+function defaultVisibilityForEntity(entityType) {
+  return DEFAULT_ENTITY_VISIBILITY[entityType] || 'company';
+}
+function enrichRecordAccess(record, entityType, options = {}) {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) return record;
+  const actor = options.actor || getCurrentActor();
+  const now = options.now || new Date().toISOString();
+  if (!record.createdBy) record.createdBy = actor.userId;
+  if (!record.createdByName) record.createdByName = actor.name;
+  if (!record.createdAt) record.createdAt = now;
+  if (options.migration) {
+    if (!record.updatedBy) record.updatedBy = record.createdBy;
+    if (!record.updatedByName) record.updatedByName = record.createdByName;
+    if (!record.updatedAt) record.updatedAt = record.createdAt;
+  } else {
+    record.updatedBy = actor.userId;
+    record.updatedByName = actor.name;
+    record.updatedAt = now;
+  }
+  if (!record.ownerUserId) record.ownerUserId = options.ownerUserId || actor.userId;
+  if (!record.ownerUserName) record.ownerUserName = options.ownerUserName || actor.name;
+  if (!record.ownerDeptId) record.ownerDeptId = options.ownerDeptId || actor.deptId || actor.deptName || '';
+  if (!record.ownerDeptName) record.ownerDeptName = options.ownerDeptName || actor.deptName || actor.deptId || '';
+  if (!record.visibility) record.visibility = options.visibility || defaultVisibilityForEntity(entityType);
+  if (!Array.isArray(record.sharedWith)) record.sharedWith = record.sharedWith ? [record.sharedWith] : [];
+  if (!Array.isArray(record.approvalUsers)) record.approvalUsers = record.approvalUsers ? [record.approvalUsers] : [];
+  return record;
+}
+function stampRecordCreate(record, entityType, options = {}) {
+  return enrichRecordAccess(record, entityType, options);
+}
+function stampRecordUpdate(record, before, entityType, options = {}) {
+  if (before && typeof before === 'object') {
+    ['createdBy','createdByName','createdAt','ownerUserId','ownerUserName','ownerDeptId','ownerDeptName','visibility','sharedWith','approvalUsers'].forEach(k => {
+      if (record[k] == null || record[k] === '') record[k] = _safeJsonClone(before[k]);
+    });
+  }
+  return enrichRecordAccess(record, entityType, options);
+}
+function migrateRecordAccessFields(list, entityType, options = {}) {
+  if (!Array.isArray(list)) return false;
+  let changed = false;
+  list.forEach(record => {
+    if (!record || typeof record !== 'object') return;
+    const before = JSON.stringify({
+      createdBy: record.createdBy,
+      ownerUserId: record.ownerUserId,
+      visibility: record.visibility,
+      sharedWith: record.sharedWith
+    });
+    enrichRecordAccess(record, entityType, Object.assign({ now: record.createdAt || record.updatedAt || new Date().toISOString(), migration:true }, options));
+    const after = JSON.stringify({
+      createdBy: record.createdBy,
+      ownerUserId: record.ownerUserId,
+      visibility: record.visibility,
+      sharedWith: record.sharedWith
+    });
+    if (before !== after) changed = true;
+  });
+  return changed;
+}
+function auditDiff(before, after) {
+  const b = before && typeof before === 'object' ? before : {};
+  const a = after && typeof after === 'object' ? after : {};
+  const keys = new Set(Object.keys(b).concat(Object.keys(a)));
+  const changes = [];
+  keys.forEach(key => {
+    if (AUDIT_META_FIELDS.has(key)) return;
+    if (!_auditSame(b[key], a[key])) changes.push({ field: key, before: b[key] ?? '', after: a[key] ?? '' });
+  });
+  return changes;
+}
+function auditLabelForAction(action) {
+  const map = {
+    create: '등록',
+    update: '수정',
+    statusChange: '상태 변경',
+    delete: '삭제',
+    restore: '복구',
+    approve: '승인',
+    reject: '반려',
+    bulkUpdate: '일괄 처리',
+    export: '내보내기'
+  };
+  return map[action] || action || '작업';
+}
+function writeAuditLog(entityType, entityId, action, before, after, options = {}) {
+  const actor = options.actor || getCurrentActor();
+  const at = options.at || new Date().toISOString();
+  const changes = options.changes || auditDiff(before, after);
+  const summary = options.summary || `${auditLabelForAction(action)}${changes.length ? ' · ' + changes.map(c => c.field).slice(0, 4).join(', ') : ''}`;
+  const entry = {
+    id: options.id || ('AUD-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)),
+    entityType: entityType || '',
+    entityId: entityId || '',
+    action: action || '',
+    actorUserId: actor.userId,
+    actorName: actor.name,
+    actorRole: actor.role,
+    actorDeptId: actor.deptId || '',
+    actorDeptName: actor.deptName || '',
+    at,
+    summary,
+    changes,
+    reason: options.reason || '',
+    source: options.source || 'ui',
+    detail: options.detail || summary
+  };
+  if (!Array.isArray(auditLog)) auditLog = loadStorage('auditLog', []);
+  auditLog.unshift(entry);
+  auditLog = auditLog.slice(0, AUDIT_LOG_LIMIT);
+  saveStorage('auditLog', auditLog);
+  if (typeof financeData === 'object' && financeData) {
+    if (!Array.isArray(financeData.auditLog)) financeData.auditLog = [];
+    financeData.auditLog.unshift(entry);
+    financeData.auditLog = financeData.auditLog.slice(0, AUDIT_LOG_LIMIT);
+    saveStorage('financeData', financeData);
+  }
+  try {
+    if (typeof _fbDb !== 'undefined' && _fbDb && typeof _cloudActive !== 'undefined' && _cloudActive) {
+      _fbDb.collection('audit_logs').doc(entry.id).set(entry).catch(e => console.warn('감사 로그 서버 기록 실패:', e && e.code));
+    }
+  } catch(e) {}
+  return entry;
+}
+function userRefMatches(record, refs, actor) {
+  const set = new Set((refs || []).map(v => String(v || '').trim()).filter(Boolean));
+  if (!set.size) return false;
+  return [actor.userId, actor.uid, actor.email, actor.name].some(v => set.has(String(v || '').trim()));
+}
+function roleFeatureAllowed(key) {
+  if ((typeof currentRole !== 'undefined' && currentRole === 'admin') || !key) return true;
+  if (typeof canUseFeature === 'function') return canUseFeature(key);
+  const role = (typeof currentRole !== 'undefined' && currentRole) || 'staff';
+  const features = (typeof roleFeaturesConfig === 'function' ? roleFeaturesConfig() : {}) || {};
+  const f = features[role] || {};
+  return f[key] !== false;
+}
+function canViewRecord(record, entityType, actor = getCurrentActor()) {
+  if (!record || typeof record !== 'object') return true;
+  if (actor.role === 'admin') return true;
+  const visibility = record.visibility || defaultVisibilityForEntity(entityType);
+  if (visibility === 'company') return true;
+  if (record.createdBy && userRefMatches(record, [record.createdBy], actor)) return true;
+  if (record.ownerUserId && userRefMatches(record, [record.ownerUserId], actor)) return true;
+  if (userRefMatches(record, record.sharedWith, actor)) return true;
+  if (userRefMatches(record, record.approvalUsers, actor)) return true;
+  if ((visibility === 'assignee' || visibility === 'department' || visibility === 'shared') && _recordAssigneeNames(record).some(v => _actorMatchesName(actor, v))) return true;
+  if (visibility === 'department') {
+    const actorDept = String(actor.deptId || actor.deptName || '').trim();
+    const recordDept = String(record.ownerDeptId || record.ownerDeptName || record.dept || '').trim();
+    return !!actorDept && !!recordDept && actorDept === recordDept;
+  }
+  return false;
+}
+function canEditRecord(record, entityType, actor = getCurrentActor()) {
+  if (!canViewRecord(record, entityType, actor)) return false;
+  if (actor.role === 'admin') return true;
+  if (!roleFeatureAllowed('edit')) return false;
+  const locked = ['입고완료','지급완료','완료','수주전환','발행완료','전송완료'];
+  if (locked.includes(record && record.status)) return false;
+  if (!record || record.visibility === 'company') return actor.role === 'manager';
+  return userRefMatches(record, [record.createdBy, record.ownerUserId], actor) ||
+    userRefMatches(record, record.sharedWith, actor) ||
+    _recordAssigneeNames(record).some(v => _actorMatchesName(actor, v));
+}
+function canDeleteRecord(record, entityType, actor = getCurrentActor()) {
+  if (actor.role === 'admin') return true;
+  if (!roleFeatureAllowed('delete')) return false;
+  return canEditRecord(record, entityType, actor);
+}
+function canApproveRecord(record, entityType, actor = getCurrentActor()) {
+  if (actor.role === 'admin') return true;
+  if (!roleFeatureAllowed('approve')) return false;
+  return userRefMatches(record, record && record.approvalUsers, actor);
+}
+function requireRecordPermission(action, record, entityType) {
+  const fn = action === 'delete' ? canDeleteRecord : (action === 'approve' ? canApproveRecord : canEditRecord);
+  if (fn(record, entityType)) return true;
+  if (typeof showToast === 'function') showToast('이 데이터에 대한 권한이 없습니다.', 'error');
+  return false;
+}
+
 /* 파일에 내장된 데이터를 localStorage로 로드 (파일 열 때 한 번만 실행) */
 function initFromEmbedded() {
   const el = document.getElementById('embedded-data');
@@ -4230,7 +4487,8 @@ function initFromEmbedded() {
       quoteList:'quoteList', orderList:'orderList',
       inventoryLedger:  'inventoryLedger',
       alimtalkSettings: 'alimtalkSettings',
-      memoList: 'memoList', todoList: 'todoList'
+      memoList: 'memoList', todoList: 'todoList',
+      auditLog: 'auditLog'
     };
     // 내장 데이터 타임스탬프가 localStorage보다 최신이면 덮어쓰기
     const embeddedTime = data._savedAt || '';
@@ -4303,6 +4561,7 @@ function reloadAllData() {
   memoList     = loadStorage('memoList',      []);
   todoList     = loadStorage('todoList',      []);
   memoAttachmentData = loadStorage('memoAttachmentData', {});
+  auditLog      = loadStorage('auditLog',      []);
 
   // 자동 마이그레이션: 구형 예시 데이터만 존재하거나 비어있을 시 5개 추가 데이터 자동 삽입
   // (제거됨) 데모 시드 자동삽입 — 데이터는 Firebase가 담당
@@ -4323,7 +4582,7 @@ const DATA_KEYS = [
   'clients','products','materials','workOrders','workers','defects','claims',
   'checkRecords','alerts','inventory','deliveries','stages','trash','rfqList',
   'poList','partners','financeData','attendance','leaves','payrollRecords','statementList',
-  'taxList','quoteList','orderList','inventoryLedger','alimtalkSettings','memoList','todoList','memoAttachmentData',
+  'taxList','quoteList','orderList','inventoryLedger','alimtalkSettings','memoList','todoList','memoAttachmentData','auditLog',
   'asList','bomList','companyInfo','docXlsxTemplates','driveOAuthSettings'
 ];
 
@@ -4563,6 +4822,7 @@ let bomProductId = '';   // BOM 화면에서 선택된 제품
 let memoList = loadStorage('memoList', []);
 let todoList = loadStorage('todoList', []);
 let memoAttachmentData = loadStorage('memoAttachmentData', {});
+let auditLog = loadStorage('auditLog', []);
 let financeData = loadStorage('financeData', { entries: [], paidReceivable: {}, paidPayable: {} });
 // 구조 보정 (구버전 호환)
 if (!financeData.entries) financeData.entries = [];
@@ -4787,7 +5047,8 @@ migrateClientMasterToPartners();
  * @param {string} reason - 사유 텍스트
  * @param {string} [refId] - 연관 ID (자재발주 MT-xxx 등)
  */
-function logInventoryMove(invId, type, qty, reason, refId) {
+function logInventoryMove(invId, type, qty, reason, refId, options = {}) {
+  const actor = getCurrentActor();
   const entry = {
     id: 'ILG-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
     invId,
@@ -4795,11 +5056,58 @@ function logInventoryMove(invId, type, qty, reason, refId) {
     qty: Number(qty),
     reason: reason || '',
     refId: refId || '',
-    date: today()
+    date: today(),
+    beforeQty: options.beforeQty ?? '',
+    afterQty: options.afterQty ?? '',
+    actorUserId: actor.userId,
+    actorName: actor.name,
+    actorRole: actor.role,
+    createdAt: new Date().toISOString()
   };
   inventoryLedger.unshift(entry);
   saveStorage('inventoryLedger', inventoryLedger);
+  writeAuditLog('inventoryMove', entry.id, 'update', null, entry, {
+    summary: `재고 ${type}`,
+    changes: [
+      { field:'invId', before:'', after:invId },
+      { field:'qty', before:options.beforeQty ?? '', after:options.afterQty ?? entry.qty }
+    ],
+    reason: reason || '',
+    detail: `${invId} · ${type} · ${entry.qty}`
+  });
 }
+
+function migrateAccessControlFields() {
+  const batches = [
+    ['clients', clients, 'clients'],
+    ['products', products, 'products'],
+    ['partners', partners, 'partners'],
+    ['materials', materials, 'material'],
+    ['workOrders', workOrders, 'workOrder'],
+    ['defects', defects, 'defect'],
+    ['claims', claims, 'claim'],
+    ['checkRecords', checkRecords, 'checkRecord'],
+    ['inventory', inventory, 'inventory'],
+    ['rfqList', rfqList, 'rfq'],
+    ['poList', poList, 'po'],
+    ['quoteList', quoteList, 'quote'],
+    ['orderList', orderList, 'order'],
+    ['asList', asList, 'as']
+  ];
+  batches.forEach(([key, list, entityType]) => {
+    if (migrateRecordAccessFields(list, entityType, { visibility:'company' })) saveStorage(key, list);
+  });
+  let financeChanged = false;
+  if (financeData && typeof financeData === 'object') {
+    financeChanged = migrateRecordAccessFields(financeData.entries || [], 'financeEntry', { visibility:'company' }) || financeChanged;
+    financeChanged = migrateRecordAccessFields(financeData.paymentRequests || [], 'paymentRequest', { visibility:'company' }) || financeChanged;
+    financeChanged = migrateRecordAccessFields(financeData.fixedCosts || [], 'fixedCost', { visibility:'company' }) || financeChanged;
+    financeChanged = migrateRecordAccessFields(financeData.fixedCostPayments || [], 'fixedCostPayment', { visibility:'company' }) || financeChanged;
+    if (financeChanged) saveStorage('financeData', financeData);
+  }
+}
+
+migrateAccessControlFields();
 
 /* ════════ 앱 내부 글로벌 상태 및 권한 제어 변수 ════════ */
 const charts = {};
@@ -5481,9 +5789,9 @@ let currentSelectedKanbanProductId = null;
 let expandedClients = new Set();
 let showClosedProjects = false;
 let currentPage = 'dashboard';
-let currentRole = 'admin';      // 권한 역할 (로컬/미인증 시 전체 권한). 클라우드 로그인 시 실제 역할로 설정됨
-let allowedPages = null;        // null = 전체 허용. Set이면 해당 페이지만 허용
-let _cloudActive = false;       // 클라우드(Firebase) 로그인 활성 여부 (부팅 초기 참조 대비 조기 선언)
+var currentRole = 'admin';      // 권한 역할 (로컬/미인증 시 전체 권한). 클라우드 로그인 시 실제 역할로 설정됨
+var allowedPages = null;        // null = 전체 허용. Set이면 해당 페이지만 허용
+var _cloudActive = false;       // 클라우드(Firebase) 로그인 활성 여부 (부팅 초기 참조 대비 조기 선언)
 let cloudUsers = loadStorage('cloudUsers_cache', []);   // Firestore users 캐시(인사 명부 ↔ 로그인 계정 조인용)
 function userByEmail(email){ if(!email) return null; const e=email.trim().toLowerCase(); return cloudUsers.find(u=>(u.email||'').toLowerCase()===e)||null; }
 let currentAlertFilter = 'all';
@@ -5883,9 +6191,10 @@ function onPraStageChange(clientId) {
    미니 레일은 마우스를 올려도 아이콘 상태를 유지하며, 메뉴 클릭 시 바로 이동 */
 const SB_AUTO_MINI_MAX = 1280;
 let _sidebarScrollTimer = null;
-const SB_WIDE_MIN = 1440;
+const SB_WIDE_MIN = 1180;
 let _sidebarModeFrame = 0;
 let _sidebarModeObserver = null;
+let _sidebarHiddenForSession = false;
 
 function initSidebarScrollIndicator() {
   const sidebar = document.querySelector('.sidebar');
@@ -5902,19 +6211,22 @@ function initSidebarScrollIndicator() {
 }
 
 function toggleSidebar() {
-  try { localStorage.setItem('mes_sbHidden', '1'); } catch(e){}
-  document.body.classList.remove('wide-sidebar');
+  if (window.innerWidth >= SB_WIDE_MIN) {
+    _sidebarHiddenForSession = true;
+    document.body.classList.remove('wide-sidebar');
+    closeMegaMenu();
+    return;
+  }
   closeMegaMenu();
 }
 
 function isSidebarHiddenByUser() {
-  try { return localStorage.getItem('mes_sbHidden') === '1'; }
-  catch(e) { return false; }
+  return _sidebarHiddenForSession === true;
 }
 
 function togglePrimaryMenu() {
   if (window.innerWidth >= SB_WIDE_MIN && isSidebarHiddenByUser()) {
-    try { localStorage.removeItem('mes_sbHidden'); } catch(e){}
+    _sidebarHiddenForSession = false;
     applySidebarMode();
     if (document.body.classList.contains('wide-sidebar')) return;
   }
@@ -5952,11 +6264,11 @@ function initAdaptiveSidebarObserver() {
 /* 현재 화면 폭·숨김 여부에 맞는 사이드바 모드 적용 (부팅·리사이즈·토글 시 호출) */
 function applySidebarMode() {
   const body = document.body;
+  try { localStorage.removeItem('mes_sbHidden'); } catch(e){}
   body.classList.remove('sb-mini', 'sb-expanded', 'sb-collapsed', 'wide-sidebar');
   closeMegaMenu();
   if (window.innerWidth < SB_WIDE_MIN || isSidebarHiddenByUser()) return;
   body.classList.add('wide-sidebar');
-  if (activePageTableOverflows()) body.classList.remove('wide-sidebar');
 }
 window.addEventListener('resize', scheduleSidebarModeCheck);
 
@@ -5967,8 +6279,9 @@ function closeSbOverlay() {
 
 /* 미니 레일 → 전체 모드로 복귀 (숨김 해제 포함) */
 function expandSidebar() {
+  _sidebarHiddenForSession = false;
   document.body.classList.remove('sb-mini', 'sb-expanded', 'sb-collapsed');
-  try { localStorage.setItem('mes_sbHidden', ''); } catch(e){}
+  try { localStorage.removeItem('mes_sbHidden'); } catch(e){}
 }
 
 /* 미니 레일 초기화: 각 메뉴에 표시용 라벨 정보 부여 */
@@ -6624,8 +6937,20 @@ function renderDashOverview() {
 
 function renderDashProjects() {
   const stageColors = STAGE_COLORS;
-  const activeClients = clients.filter(c => !c.closed);
-  inp('dash-project-summary').innerHTML = activeClients.length ? `
+  const canView = (typeof canViewRecord === 'function') ? canViewRecord : function(){ return true; };
+  const visibleClients = clients.filter(c => canView(c, 'clients'));
+  const visibleProducts = products.filter(p => canView(p, 'products'));
+  const activeClients = visibleClients.filter(c => !c.closed);
+  const knownClientIds = new Set(visibleClients.map(c => c.id));
+  const projectGroups = activeClients.map(c => ({
+    client: c,
+    products: visibleProducts.filter(p => p.clientId === c.id)
+  }));
+  const unlinkedProducts = visibleProducts.filter(p => !p.clientId || !knownClientIds.has(p.clientId));
+  if (unlinkedProducts.length) {
+    projectGroups.push({ client: { id:'__unlinked__', name:'고객사 미연결', manager:'' }, products: unlinkedProducts });
+  }
+  inp('dash-project-summary').innerHTML = projectGroups.length ? `
     <table data-managed-table="false" style="min-width:860px;">
       <thead>
         <tr>
@@ -6634,8 +6959,9 @@ function renderDashProjects() {
         </tr>
       </thead>
       <tbody>
-        ${activeClients.flatMap(c => {
-          const prods = products.filter(p => p.clientId === c.id);
+        ${projectGroups.flatMap(group => {
+          const c = group.client;
+          const prods = group.products;
           if (!prods.length) return [`<tr><td style="font-weight:700;">${esc(c.name)}</td><td style="font-size:11px;color:var(--tx-t);">${esc(c.manager)||'—'}</td><td colspan="8" style="color:var(--tx-t);font-size:11px;font-style:italic;">등록된 제품 없음</td></tr>`];
           return prods.map((p, i) => {
             const pMats  = materials.filter(m => m.productId === p.id);
@@ -6645,7 +6971,7 @@ function renderDashProjects() {
             const relOrder = workOrders.find(o => o.productId === p.id);
             const sc = stageColors[p.processStage] || '#495057';
             return `
-              <tr style="cursor:pointer;" onclick="navToProduct('${c.id}','${p.id}')">
+              <tr style="cursor:pointer;" onclick="navToProduct('${p.clientId || c.id}','${p.id}')">
                 ${i===0 ? `<td rowspan="${prods.length}" style="font-weight:700;border-right:2px solid var(--br-i);vertical-align:middle;">${esc(c.name)}</td>
                             <td rowspan="${prods.length}" style="font-size:11px;color:var(--tx-s);border-right:1px solid var(--br);vertical-align:middle;">${esc(c.manager)||'—'}</td>` : ''}
                 <td style="font-weight:700;">${esc(p.name)} <span style="font-size:10px;color:var(--tx-t);font-weight:400;">${esc(p.spec)||''}</span></td>
@@ -6660,7 +6986,7 @@ function renderDashProjects() {
                 </td>
                 <td style="font-size:11px;">${relOrder ? pctBar(relOrder.done, relOrder.qty, 50) : '<span style="color:var(--tx-t);">미발행</span>'}</td>
                 <td>${statusBadge(p.status)}</td>
-                <td><button class="btn btn-sm" style="height:22px;padding:0 6px;font-size:10px;" onclick="event.stopPropagation();navToProduct('${c.id}','${p.id}')"><i class="ti ti-external-link"></i>이동</button></td>
+                <td><button class="btn btn-sm" style="height:22px;padding:0 6px;font-size:10px;" onclick="event.stopPropagation();navToProduct('${p.clientId || c.id}','${p.id}')"><i class="ti ti-external-link"></i>이동</button></td>
               </tr>`;
           });
         }).join('')}
@@ -8282,8 +8608,12 @@ function saveClient() {
   if (editId) {
     const c = clients.find(x => x.id === editId);
     if (c) {
+      const before = _safeJsonClone(c);
+      if (!requireRecordPermission('edit', c, 'clients')) return;
       c.name = name; c.manager = v('ca-mgr'); c.tel = v('ca-tel'); c.email = v('ca-email');
       c.bizNo = v('ca-bizno'); c.date = v('ca-date') || today(); c.note = v('ca-note');
+      stampRecordUpdate(c, before, 'clients', { visibility:'company' });
+      writeAuditLog('clients', c.id, 'update', before, c, { summary:'고객사 정보 수정' });
       if (typeof syncPartnerFromClient === 'function') syncPartnerFromClient(c);
     }
     saveStorage('clients', clients);
@@ -8294,9 +8624,13 @@ function saveClient() {
   } else if (existingId) {
     const c = clients.find(x => x.id === existingId);
     if (!c) { showToast('선택한 고객사를 찾을 수 없습니다.', 'error'); return; }
+    const before = _safeJsonClone(c);
+    if (!requireRecordPermission('edit', c, 'clients')) return;
     c.name = name; c.manager = v('ca-mgr'); c.tel = v('ca-tel'); c.email = v('ca-email');
     c.bizNo = v('ca-bizno'); c.date = v('ca-date') || c.date || today(); c.note = v('ca-note');
     c.closed = false; delete c.closedAt;
+    stampRecordUpdate(c, before, 'clients', { visibility:'company' });
+    writeAuditLog('clients', c.id, 'update', before, c, { summary:'기존 고객사 연결/재개' });
     if (typeof syncPartnerFromClient === 'function') syncPartnerFromClient(c);
     saveStorage('clients', clients);
     saveStorage('partners', partners);
@@ -8311,7 +8645,9 @@ function saveClient() {
       name, manager: v('ca-mgr'), tel: v('ca-tel'), email: v('ca-email'),
       bizNo: v('ca-bizno'), date: v('ca-date') || today(), note: v('ca-note'), closed: false
     };
+    stampRecordCreate(createdClient, 'clients', { visibility:'company' });
     clients.push(createdClient);
+    writeAuditLog('clients', createdClient.id, 'create', null, createdClient, { summary:'고객사 등록' });
     if (typeof syncPartnerFromClient === 'function') syncPartnerFromClient(createdClient);
     saveStorage('clients', clients);
     saveStorage('partners', partners);
@@ -8339,6 +8675,8 @@ function saveClientEdit(id) {
   const c = clients.find(x => x.id === id); if (!c) return;
   const name = (v('ce-name-'+id)||'').trim();
   if (!name) { showToast('업체명은 비울 수 없습니다.', 'error'); return; }
+  if (!requireRecordPermission('edit', c, 'clients')) return;
+  const before = _safeJsonClone(c);
   c.name = name;
   c.manager = v('ce-mgr-'+id);
   c.tel = v('ce-tel-'+id);
@@ -8346,6 +8684,8 @@ function saveClientEdit(id) {
   c.bizNo = v('ce-bizno-'+id);
   c.date = v('ce-date-'+id);
   c.note = v('ce-note-'+id);
+  stampRecordUpdate(c, before, 'clients', { visibility:'company' });
+  writeAuditLog('clients', c.id, 'update', before, c, { summary:'고객사 인라인 수정' });
   if (typeof syncPartnerFromClient === 'function') syncPartnerFromClient(c);
   saveStorage('clients', clients);
   saveStorage('partners', partners);
@@ -8355,8 +8695,12 @@ function saveClientEdit(id) {
 function closeProject(id, force) {
   if (!checkAdminAction()) return;
   const c = clients.find(x => x.id === id); if (!c) return;
+  if (!requireRecordPermission('edit', c, 'clients')) return;
+  const before = _safeJsonClone(c);
   if (force && !confirm('진행 중인 제품이 있습니다. 강제로 종료하시겠습니까?')) return;
   c.closed = true; c.closedAt = today();
+  stampRecordUpdate(c, before, 'clients', { visibility:'company' });
+  writeAuditLog('clients', c.id, 'statusChange', before, c, { summary:'고객사 프로젝트 종료' });
   saveStorage('clients', clients);
   renderClients();
   showToast('프로젝트가 종료 처리되었습니다.');
@@ -8364,7 +8708,11 @@ function closeProject(id, force) {
 function reopenProject(id) {
   if (!checkAdminAction()) return;
   const c = clients.find(x => x.id === id); if (!c) return;
+  if (!requireRecordPermission('edit', c, 'clients')) return;
+  const before = _safeJsonClone(c);
   c.closed = false; delete c.closedAt;
+  stampRecordUpdate(c, before, 'clients', { visibility:'company' });
+  writeAuditLog('clients', c.id, 'restore', before, c, { summary:'고객사 프로젝트 재개' });
   saveStorage('clients', clients);
   renderClients();
   showToast('프로젝트가 재개되었습니다.');
@@ -8372,12 +8720,15 @@ function reopenProject(id) {
 function deleteClient(id) {
   if (!checkAdminAction()) return;
   const c = clients.find(x => x.id === id); if (!c) return;
+  if (!requireRecordPermission('delete', c, 'clients')) return;
   const prodCount = products.filter(p => p.clientId === id).length;
   if (!confirm("'" + c.name + "' 고객사를 삭제하시겠습니까?" + (prodCount ? ' 연결된 제품 ' + prodCount + '건도 함께 삭제됩니다.' : ''))) return;
   pushToTrash('client', c);
   products.filter(p => p.clientId === id).forEach(p => pushToTrash('product', p));
+  products.filter(p => p.clientId === id).forEach(p => writeAuditLog('products', p.id, 'delete', p, null, { summary:'고객사 삭제에 따른 제품 이동' }));
   products = products.filter(p => p.clientId !== id);
   clients = clients.filter(x => x.id !== id);
+  writeAuditLog('clients', id, 'delete', c, null, { summary:'고객사 삭제', detail:`연결 제품 ${prodCount}건` });
   saveStorage('clients', clients); saveStorage('products', products);
   renderClients(); syncFilterDropdowns();
   showToast('고객사가 휴지통으로 이동되었습니다.');
@@ -8489,16 +8840,19 @@ function saveProdForm(clientId) {
 }
 function saveProd(clientId) {
   if (!checkAdminAction()) return;
+  if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
   const name = v('pra-name').trim();
   if (!name) { showToast('제품 품목명은 필수입니다.', 'error'); return; }
   const stage = v('pra-stage');
-  products.push({
+  const product = stampRecordCreate({
     id: nextCode('PR', products), clientId, name,
     spec: v('pra-spec'), qty: parseInt(v('pra-qty'))||1, unit: v('pra-unit')||'대',
     price: parseInt(v('pra-price'))||0, deliveryDate: v('pra-due'),
     matCost: parseInt(v('pra-matcost'))||0, laborCost: parseInt(v('pra-laborcost'))||0, ovhCost: parseInt(v('pra-ovhcost'))||0,
     processStage: stage, status: stageToStatus(stage), processMemo: '', note: v('pra-note')
-  });
+  }, 'products', { visibility:'company' });
+  products.push(product);
+  writeAuditLog('products', product.id, 'create', null, product, { summary:'제품 등록' });
   saveStorage('products', products);
   closeModal('prod-modal');
   renderClients(); syncFilterDropdowns();
@@ -8507,14 +8861,18 @@ function saveProd(clientId) {
 function saveProdEdit(clientId, productId) {
   if (!checkAdminAction()) return;
   const p = products.find(x => x.id === productId); if (!p) return;
+  if (!requireRecordPermission('edit', p, 'products')) return;
   const name = v('pra-name').trim();
   if (!name) { showToast('제품 명칭은 비울 수 없습니다.', 'error'); return; }
+  const before = _safeJsonClone(p);
   const stage = v('pra-stage');
   p.name = name; p.spec = v('pra-spec');
   p.qty = parseInt(v('pra-qty'))||1; p.unit = v('pra-unit')||'대';
   p.price = parseInt(v('pra-price'))||0; p.deliveryDate = v('pra-due');
   p.matCost = parseInt(v('pra-matcost'))||0; p.laborCost = parseInt(v('pra-laborcost'))||0; p.ovhCost = parseInt(v('pra-ovhcost'))||0;
   p.processStage = stage; p.status = stageToStatus(stage); p.note = v('pra-note');
+  stampRecordUpdate(p, before, 'products', { visibility:'company' });
+  writeAuditLog('products', productId, 'update', before, p, { summary:'제품 정보 수정' });
   saveStorage('products', products);
   closeModal('prod-modal');
   renderClients(); syncFilterDropdowns();
@@ -8522,7 +8880,11 @@ function saveProdEdit(clientId, productId) {
 }
 function changeProdStage(productId, stage) {
   const p = products.find(x => x.id === productId); if (!p) return;
+  if (!roleFeatureAllowed('status') || !requireRecordPermission('edit', p, 'products')) return;
+  const before = _safeJsonClone(p);
   p.processStage = stage; p.status = stageToStatus(stage);
+  stampRecordUpdate(p, before, 'products', { visibility:'company' });
+  writeAuditLog('products', productId, 'statusChange', before, p, { summary:`제품 공정 단계 변경: ${before.processStage || ''} → ${stage}` });
   saveStorage('products', products);
   renderClients();
   if (typeof syncWorkOrdersOnProductComplete === 'function') syncWorkOrdersOnProductComplete(p);
@@ -8530,9 +8892,11 @@ function changeProdStage(productId, stage) {
 function deleteProduct(id) {
   if (!checkAdminAction()) return;
   const p = products.find(x => x.id === id); if (!p) return;
+  if (!requireRecordPermission('delete', p, 'products')) return;
   if (!confirm("'" + p.name + "' 제품을 삭제하시겠습니까?")) return;
   pushToTrash('product', p);
   products = products.filter(x => x.id !== id);
+  writeAuditLog('products', id, 'delete', p, null, { summary:'제품 삭제' });
   saveStorage('products', products);
   renderClients(); syncFilterDropdowns();
   showToast('제품이 휴지통으로 이동되었습니다.');
@@ -8657,10 +9021,11 @@ function setMaterialEntryMode(mode) {
 }
 function renderMaterials() {
   ensureDateView('materials', 'mat-table', materials.map(m=>m.orderDate), renderMaterials);
-  const before = materials.filter(m=>m.status==='발주전').length;
-  const shipping = materials.filter(m=>m.status==='발주중'||m.status==='지연').length;
-  const done = materials.filter(m=>m.status==='입고완료').length;
-  const totalAmt = materials.reduce((s,m)=>s+getMatAmt(m),0);
+  const visibleMaterials = materials.filter(m => canViewRecord(m, 'material'));
+  const before = visibleMaterials.filter(m=>m.status==='발주전').length;
+  const shipping = visibleMaterials.filter(m=>m.status==='발주중'||m.status==='지연').length;
+  const done = visibleMaterials.filter(m=>m.status==='입고완료').length;
+  const totalAmt = visibleMaterials.reduce((s,m)=>s+getMatAmt(m),0);
   const kpi = inp('mat-kpi');
   if (kpi) {
     const fsCur = v('mat-fs') || '';
@@ -8677,7 +9042,7 @@ function renderMaterials() {
   }
 
   const fc=v('mat-fc'), fp=v('mat-fp'), fs=v('mat-fs'), q=(v('mat-q')||'').toLowerCase();
-  let rows = materials.filter(m => {
+  let rows = visibleMaterials.filter(m => {
     if (!dateViewMatch('materials', m.orderDate)) return false;
     const prod = getProductById(m.productId);
     if (fc && (!prod || prod.clientId !== fc)) return false;
@@ -8770,6 +9135,7 @@ function openMatAdd() {
 }
 function openMatEdit(id) {
   const m = materials.find(x=>x.id===id); if (!m) return;
+  if (!requireRecordPermission('edit', m, 'material')) return;
   editMatId = id;
   inp('mat-modal-ttl').innerHTML = '<i class="ti ti-edit" style="color:var(--tx-w);"></i>자재 발주 수정';
   const saveBtn = inp('mat-save-btn'); if (saveBtn) saveBtn.innerHTML = '<i class="ti ti-device-floppy"></i>수정';
@@ -8811,6 +9177,7 @@ function cloneMat(id) {
 function saveMaterialForm() {
   if (!checkAdminAction()) return;
   if (!editMatId && isBulkEntryMode('mat')) {
+    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
     const productId = v('ma-product');
     if (!productId) { showToast('해당 품목 제품을 선택해주세요.', 'error'); return; }
     const rows = readBulkEntryTable('mat');
@@ -8818,7 +9185,7 @@ function saveMaterialForm() {
     const invalid = rows.find(r => !r.name.trim() || (parseFloat(r.qty) || 0) <= 0);
     if (invalid) { showToast('자재명과 수량은 각 행에 필요합니다.', 'error'); return; }
     rows.slice().reverse().forEach(r => {
-      materials.unshift({
+      const item = stampRecordCreate({
         id: nextCode('MT', materials),
         productId,
         name: r.name.trim(),
@@ -8831,7 +9198,9 @@ function saveMaterialForm() {
         expectedDate: r.expectedDate,
         status: r.status || '발주전',
         note: r.note.trim()
-      });
+      }, 'material');
+      materials.unshift(item);
+      writeAuditLog('material', item.id, 'create', null, item, { summary:'자재 발주 일괄 등록', source:'bulkAction' });
     });
     saveStorage('materials', materials);
     closeModal('mat-modal');
@@ -8849,8 +9218,21 @@ function saveMaterialForm() {
     unit: v('ma-unit')||'EA', orderDate: v('ma-odate'), expectedDate: v('ma-edate'),
     status: v('ma-status'), note: v('ma-note')
   };
-  if (editMatId) { const i = materials.findIndex(m=>m.id===editMatId); if (i>=0) materials[i] = obj; }
-  else materials.unshift(obj);
+  if (editMatId) {
+    const i = materials.findIndex(m=>m.id===editMatId);
+    if (i>=0) {
+      const before = _safeJsonClone(materials[i]);
+      if (!requireRecordPermission('edit', before, 'material')) return;
+      materials[i] = stampRecordUpdate(Object.assign({}, materials[i], obj), before, 'material');
+      writeAuditLog('material', editMatId, 'update', before, materials[i], { summary:'자재 발주 수정' });
+    }
+  }
+  else {
+    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    const item = stampRecordCreate(obj, 'material');
+    materials.unshift(item);
+    writeAuditLog('material', item.id, 'create', null, item, { summary:'자재 발주 등록' });
+  }
   saveStorage('materials', materials);
   closeModal('mat-modal');
   renderMaterials();
@@ -8859,16 +9241,24 @@ function saveMaterialForm() {
 }
 function changeMatStatus(id, status) {
   const m = materials.find(x=>x.id===id); if (!m) return;
+  if (!roleFeatureAllowed('status') || !requireRecordPermission('edit', m, 'material')) return;
+  const before = _safeJsonClone(m);
   const prevStatus = m.status;
   m.status = status;
+  stampRecordUpdate(m, before, 'material');
   saveStorage('materials', materials);
+  writeAuditLog('material', id, 'statusChange', before, m, { summary:`자재 발주 상태 변경: ${prevStatus || ''} → ${status}` });
 
   if (status === '입고완료' && prevStatus !== '입고완료') {
     const invItem = inventory.find(function(i) { return i.name === m.name; });
     if (invItem) {
+      const invBefore = _safeJsonClone(invItem);
+      const beforeQty = Number(invItem.qty) || 0;
       invItem.qty = (invItem.qty || 0) + (m.qty || 0);
+      stampRecordUpdate(invItem, invBefore, 'inventory');
       saveStorage('inventory', inventory);
-      logInventoryMove(invItem.id, '입고', m.qty, '자재발주 입고 (' + m.id + ')', m.id);
+      logInventoryMove(invItem.id, '입고', m.qty, '자재발주 입고 (' + m.id + ')', m.id, { beforeQty, afterQty:invItem.qty });
+      writeAuditLog('inventory', invItem.id, 'update', invBefore, invItem, { summary:'자재발주 입고 재고 반영', reason:m.id });
       showToast('재고 자동 반영: ' + m.name + ' +' + m.qty + (m.unit||''));
     } else {
       showToast('입고완료 처리됨. 재고 탭에서 품목을 추가하세요.', 'info');
@@ -8881,9 +9271,11 @@ function changeMatStatus(id, status) {
 function deleteMat(id) {
   if (!checkAdminAction()) return;
   const m = materials.find(x=>x.id===id); if (!m) return;
+  if (!requireRecordPermission('delete', m, 'material')) return;
   if (!confirm('이 자재 발주를 삭제하시겠습니까?')) return;
   pushToTrash('material', m);
   materials = materials.filter(x=>x.id!==id);
+  writeAuditLog('material', id, 'delete', m, null, { summary:'자재 발주 삭제' });
   saveStorage('materials', materials);
   renderMaterials();
   showToast('자재 발주가 휴지통으로 이동되었습니다.');
@@ -8947,7 +9339,7 @@ function setInventoryEntryMode(mode) {
 }
 function renderInventory() {
   // 현재 분류 한정 집합
-  const catItems = inventory.filter(i => (i.category || '생산부품') === invCategory);
+  const catItems = inventory.filter(i => canViewRecord(i, 'inventory') && (i.category || '생산부품') === invCategory);
   const total = catItems.length;
   const below = catItems.filter(i => i.qty < (i.minQty||0)).length;
   const totalQty = catItems.reduce((s,i) => s + (Number(i.qty)||0), 0);
@@ -9042,8 +9434,13 @@ function renderInventory() {
 }
 function adjustStock(id, delta) {
   const i = inventory.find(x=>x.id===id); if (!i) return;
-  i.qty = Math.max(0, (i.qty||0) + delta);
-  logInventoryMove(id, delta > 0 ? '입고' : '출고', Math.abs(delta), '수동 조정');
+  if (!requireRecordPermission('edit', i, 'inventory')) return;
+  const before = _safeJsonClone(i);
+  const beforeQty = Number(i.qty) || 0;
+  i.qty = Math.max(0, beforeQty + delta);
+  stampRecordUpdate(i, before, 'inventory');
+  logInventoryMove(id, delta > 0 ? '입고' : '출고', Math.abs(delta), '수동 조정', '', { beforeQty, afterQty:i.qty });
+  writeAuditLog('inventory', id, 'update', before, i, { summary:'재고 수량 조정', reason:'수동 조정' });
   saveStorage('inventory', inventory);
   renderInventory();
 }
@@ -9064,6 +9461,7 @@ function openInvAdd() {
 }
 function openInvEdit(id) {
   const i = inventory.find(x=>x.id===id); if (!i) return;
+  if (!requireRecordPermission('edit', i, 'inventory')) return;
   editInvId = id;
   inp('inv-modal-ttl').innerHTML = '<i class="ti ti-edit" style="color:var(--tx-w);"></i>재고 수정';
   const saveBtn = inp('inv-save-btn'); if (saveBtn) saveBtn.innerHTML = '<i class="ti ti-device-floppy"></i>수정';
@@ -9078,12 +9476,13 @@ function openInvEdit(id) {
 function saveInventoryForm() {
   if (!checkAdminAction()) return;
   if (!editInvId && isBulkEntryMode('inv')) {
+    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
     const rows = readBulkEntryTable('inv');
     if (!rows.length) { showToast('등록할 재고 행을 입력해주세요.', 'error'); return; }
     const invalid = rows.find(r => !r.name.trim() || (parseInt(r.qty) || 0) < 0 || (parseInt(r.minQty) || 0) < 0);
     if (invalid) { showToast('품목명과 수량을 확인해주세요.', 'error'); return; }
     rows.slice().reverse().forEach(r => {
-      inventory.unshift({
+      const item = stampRecordCreate({
         id: nextCode('INV', inventory),
         name: r.name.trim(),
         category: r.category || '생산부품',
@@ -9093,7 +9492,9 @@ function saveInventoryForm() {
         minQty: parseInt(r.minQty) || 0,
         location: r.location,
         note: r.note
-      });
+      }, 'inventory');
+      inventory.unshift(item);
+      writeAuditLog('inventory', item.id, 'create', null, item, { summary:'재고 품목 일괄 등록', source:'bulkAction' });
     });
     saveStorage('inventory', inventory);
     closeModal('inv-modal');
@@ -9109,8 +9510,21 @@ function saveInventoryForm() {
     qty: parseInt(v('inva-qty'))||0, minQty: parseInt(v('inva-minQty'))||0,
     location: v('inva-location'), note: v('inva-note')
   };
-  if (editInvId) { const i = inventory.findIndex(x=>x.id===editInvId); if (i>=0) inventory[i] = obj; }
-  else inventory.unshift(obj);
+  if (editInvId) {
+    const i = inventory.findIndex(x=>x.id===editInvId);
+    if (i>=0) {
+      const before = _safeJsonClone(inventory[i]);
+      if (!requireRecordPermission('edit', before, 'inventory')) return;
+      inventory[i] = stampRecordUpdate(Object.assign({}, inventory[i], obj), before, 'inventory');
+      writeAuditLog('inventory', editInvId, 'update', before, inventory[i], { summary:'재고 품목 수정' });
+    }
+  }
+  else {
+    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    const item = stampRecordCreate(obj, 'inventory');
+    inventory.unshift(item);
+    writeAuditLog('inventory', item.id, 'create', null, item, { summary:'재고 품목 등록' });
+  }
   saveStorage('inventory', inventory);
   closeModal('inv-modal');
   renderInventory();
@@ -9119,9 +9533,11 @@ function saveInventoryForm() {
 function deleteInventory(id) {
   if (!checkAdminAction()) return;
   const i = inventory.find(x=>x.id===id); if (!i) return;
+  if (!requireRecordPermission('delete', i, 'inventory')) return;
   if (!confirm('이 재고 품목을 삭제하시겠습니까?')) return;
   pushToTrash('inventory', i);
   inventory = inventory.filter(x=>x.id!==id);
+  writeAuditLog('inventory', id, 'delete', i, null, { summary:'재고 품목 삭제' });
   saveStorage('inventory', inventory);
   renderInventory();
   showToast('재고가 휴지통으로 이동되었습니다.');
@@ -9167,11 +9583,12 @@ function renderInventoryLedger() {
 /* ════════ [복구] 생산 지시 (renderOrders) ════════ */
 function renderOrders() {
   ensureDateView('orders', 'orders-table', workOrders.map(o=>o.start), renderOrders);
-  const totalQty = workOrders.reduce((s,o)=>s+(o.qty||0),0);
-  const totalDone = workOrders.reduce((s,o)=>s+(o.done||0),0);
-  const inProg = workOrders.filter(o=>o.status==='진행중').length;
-  const doneCnt = workOrders.filter(o=>o.status==='완료').length;
-  const delayCnt = workOrders.filter(o=>o.status==='지연').length;
+  const visibleOrders = workOrders.filter(o => canViewRecord(o, 'workOrder'));
+  const totalQty = visibleOrders.reduce((s,o)=>s+(o.qty||0),0);
+  const totalDone = visibleOrders.reduce((s,o)=>s+(o.done||0),0);
+  const inProg = visibleOrders.filter(o=>o.status==='진행중').length;
+  const doneCnt = visibleOrders.filter(o=>o.status==='완료').length;
+  const delayCnt = visibleOrders.filter(o=>o.status==='지연').length;
   const summ = inp('orders-summary');
   if (summ) {
     const fsCur = v('orders-fs') || '';
@@ -9187,7 +9604,7 @@ function renderOrders() {
   }
 
   const q=(v('orders-q')||'').toLowerCase(), fs=v('orders-fs')||'';
-  let fil = workOrders.filter(o=>{
+  let fil = visibleOrders.filter(o=>{
     if (!dateViewMatch('orders', o.start)) return false;
     if (fs && o.status!==fs) return false;
     if (q && ![o.id, o.manager||'', getProductName(o.productId), getClientName(o.clientId)].join(' ').toLowerCase().includes(q)) return false;
@@ -9398,6 +9815,7 @@ function openOrderAdd() {
 function openOrderEdit(id) {
   if (!checkAdminAction()) return;
   const o = workOrders.find(x => x.id === id); if (!o) return;
+  if (!requireRecordPermission('edit', o, 'workOrder')) return;
   editOrderId = id;
   inp('order-modal-ttl').innerHTML = `<i class="ti ti-edit" style="color:var(--tx-w);"></i>생산 지시서 수정 — ${o.id}`;
   const saveBtn = inp('order-save-btn');
@@ -9479,13 +9897,14 @@ function openOrderModal() {
 function saveOrderForm() {
   if (!checkAdminAction()) return;
   if (!editOrderId && isBulkEntryMode('order')) {
+    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
     const rows = readBulkEntryTable('order');
     if (!rows.length) { showToast('발행할 생산 지시 행을 입력해주세요.', 'error'); return; }
     const invalid = rows.find(r => !r.productId || (parseInt(r.qty) || 0) <= 0);
     if (invalid) { showToast('제품과 목표량은 각 행에 필요합니다.', 'error'); return; }
     const touchedProducts = new Set();
     rows.slice().reverse().forEach(r => {
-      workOrders.unshift({
+      const order = stampRecordCreate({
         id: nextCode('WO', workOrders),
         clientId: v('oa-client'),
         productId: r.productId,
@@ -9498,7 +9917,9 @@ function saveOrderForm() {
         status: r.status || '대기',
         manager: r.manager,
         note: r.note
-      });
+      }, 'workOrder');
+      workOrders.unshift(order);
+      writeAuditLog('workOrder', order.id, 'create', null, order, { summary:'생산 지시 일괄 발행', source:'bulkAction' });
       if (r.status === '진행중') touchedProducts.add(r.productId);
     });
     touchedProducts.forEach(productId => {
@@ -9518,19 +9939,26 @@ function saveOrderForm() {
   if (qty <= 0) { showToast('목표 지시 수량은 최소 1개 이상이어야 합니다.', 'error'); return; }
   if (editOrderId) {
     const o = workOrders.find(x => x.id === editOrderId); if (!o) return;
+    if (!requireRecordPermission('edit', o, 'workOrder')) return;
+    const before = _safeJsonClone(o);
     o.clientId = v('oa-client'); o.productId = productId; o.line = v('oa-line');
     o.qty = qty; o.done = parseInt(v('oa-done')) || 0;
     o.start = v('oa-start'); o.due = v('oa-due'); o.status = v('oa-status');
     o.manager = v('oa-mgr'); o.note = v('oa-note');
+    stampRecordUpdate(o, before, 'workOrder');
+    writeAuditLog('workOrder', o.id, 'update', before, o, { summary:'생산 지시 수정' });
     syncProductOnOrderChange(productId);
   } else {
-    workOrders.unshift({
+    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    const order = stampRecordCreate({
       id: nextCode('WO', workOrders),
       clientId: v('oa-client'), productId, line: v('oa-line'),
       qty: qty, done: 0, defect: 0,
       start: v('oa-start'), due: v('oa-due'), status: v('oa-status'),
       manager: v('oa-mgr'), note: v('oa-note')
-    });
+    }, 'workOrder');
+    workOrders.unshift(order);
+    writeAuditLog('workOrder', order.id, 'create', null, order, { summary:'생산 지시 발행' });
     // 신규 생산지시 발행 시 제품 상태 자동 업데이트
     const p = products.find(x => x.id === productId);
     if (p && p.status !== '완료' && p.status !== '납품') {
@@ -9570,8 +9998,12 @@ function syncProductOnOrderChange(productId) {
 function qDone(id, val) {
   const applyFn = () => {
     const o = workOrders.find(x => x.id === id); if (!o) return;
+    if (!requireRecordPermission('edit', o, 'workOrder')) return;
+    const before = _safeJsonClone(o);
     o.done = Math.max(0, Math.min(o.qty, parseInt(val) || 0));
     if (o.done >= o.qty) { o.status = '완료'; }
+    stampRecordUpdate(o, before, 'workOrder');
+    writeAuditLog('workOrder', id, 'update', before, o, { summary:'생산 실적 변경' });
     saveStorage('workOrders', workOrders);
     syncProductOnOrderChange(o.productId);    // ← 제품 상태 동기화
     renderOrders();
@@ -9582,7 +10014,11 @@ function qDone(id, val) {
 function qDefect(id, val) {
   const applyFn = () => {
     const o = workOrders.find(x => x.id === id); if (!o) return;
+    if (!requireRecordPermission('edit', o, 'workOrder')) return;
+    const before = _safeJsonClone(o);
     o.defect = Math.max(0, parseInt(val) || 0);
+    stampRecordUpdate(o, before, 'workOrder');
+    writeAuditLog('workOrder', id, 'update', before, o, { summary:'생산 불량 수량 변경' });
     saveStorage('workOrders', workOrders);
     renderOrders();
   };
@@ -9592,7 +10028,11 @@ function qDefect(id, val) {
 function qStatus(id, val) {
   const applyFn = () => {
     const o = workOrders.find(x => x.id === id); if (!o) return;
+    if (!roleFeatureAllowed('status') || !requireRecordPermission('edit', o, 'workOrder')) return;
+    const before = _safeJsonClone(o);
     o.status = val;
+    stampRecordUpdate(o, before, 'workOrder');
+    writeAuditLog('workOrder', id, 'statusChange', before, o, { summary:`생산 지시 상태 변경: ${before.status || ''} → ${val}` });
     saveStorage('workOrders', workOrders);
     syncProductOnOrderChange(o.productId);    // ← 제품 상태 동기화
     renderOrders();
@@ -9604,10 +10044,12 @@ function deleteOrder(id) {
   if (!checkAdminAction()) return;
   const o = workOrders.find(x => x.id === id);
   if (!o) return;
+  if (!requireRecordPermission('delete', o, 'workOrder')) return;
   confirm_('생산 지시서 폐기 확인', `정말로 지시 번호 <strong>[${id}]</strong> 생산 계획 지시를 삭제 및 파기 처리하시겠습니까?`, () => {
     pushToTrash('order', `지시번호 ${o.id} - ${getProductName(o.productId)}`, id, o);
 
     workOrders = workOrders.filter(x => x.id !== id);
+    writeAuditLog('workOrder', id, 'delete', o, null, { summary:'생산 지시 삭제' });
     saveStorage('workOrders', workOrders);
     renderOrders();
     showToast('작업 지시서가 휴지통으로 이동했습니다.', 'info');
@@ -10113,15 +10555,18 @@ function renderQuality() {
   ensureDateView('defects', 'defect-table', defects.map(d=>d.date), renderQuality);
   ensureDateView('qualityClaims', 'claim-table', claims.map(c=>c.date), renderQuality);
   ensureDateView('checks', 'check-table', checkRecords.map(r=>r.date), renderQuality);
-  const totDefect = defects.reduce((s, d) => s + d.qty, 0);
-  const openDefect = defects.filter(d => d.status !== '완료').length;
-  const claimOpen = claims.filter(c => c.status !== '완료').length;
+  const visibleDefects = defects.filter(d => canViewRecord(d, 'defect'));
+  const visibleClaims = claims.filter(c => canViewRecord(c, 'claim'));
+  const visibleChecks = checkRecords.filter(r => canViewRecord(r, 'checkRecord'));
+  const totDefect = visibleDefects.reduce((s, d) => s + d.qty, 0);
+  const openDefect = visibleDefects.filter(d => d.status !== '완료').length;
+  const claimOpen = visibleClaims.filter(c => c.status !== '완료').length;
 
   inp('qc-kpi').innerHTML = `
-    <div class="mc"><div class="mc-lbl"><i class="ti ti-alert-triangle" style="color:var(--tx-w);"></i>공정 내 불량 유실수</div><div class="mc-val">${totDefect}개</div><div class="mc-sub">${defects.length}회 검출</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-alert-triangle" style="color:var(--tx-w);"></i>공정 내 불량 유실수</div><div class="mc-val">${totDefect}개</div><div class="mc-sub">${visibleDefects.length}회 검출</div></div>
     <div class="mc"><div class="mc-lbl"><i class="ti ti-loader" style="color:var(--tx-i);"></i>개선/조치중 품질장애</div><div class="mc-val" style="color:var(--tx-i);">${openDefect}건</div></div>
-    <div class="mc"><div class="mc-lbl"><i class="ti ti-message-report" style="color:var(--tx-d);"></i>해외/고객사 제기 클레임</div><div class="mc-val">${claims.length}건</div><div class="mc-sub">처리중 ${claimOpen}건</div></div>
-    <div class="mc"><div class="mc-lbl"><i class="ti ti-clipboard-check" style="color:var(--tx-ok);"></i>납품전수검사</div><div class="mc-val" style="color:var(--tx-ok);">${checkRecords.filter(c=>c.result==='합격').length}/${checkRecords.length}건</div><div class="mc-sub">통과/검사기록</div></div>`;
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-message-report" style="color:var(--tx-d);"></i>해외/고객사 제기 클레임</div><div class="mc-val">${visibleClaims.length}건</div><div class="mc-sub">처리중 ${claimOpen}건</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-clipboard-check" style="color:var(--tx-ok);"></i>납품전수검사</div><div class="mc-val" style="color:var(--tx-ok);">${visibleChecks.filter(c=>c.result==='합격').length}/${visibleChecks.length}건</div><div class="mc-sub">통과/검사기록</div></div>`;
 
   fillClientSelect('df-client', false);
   fillStageSelect('df-stage');
@@ -10130,7 +10575,7 @@ function renderQuality() {
 
   const _dfq = (v('df-q')||'').toLowerCase();
   const _dffs = v('df-fs');
-  let filteredDefects = defects.filter(d => {
+  let filteredDefects = visibleDefects.filter(d => {
     if (!dateViewMatch('defects', d.date)) return false;
     const cname = getClientName(getProductById(d.productId)?.clientId);
     if (_dfq && ![d.id, getProductName(d.productId), cname, d.type, d.stage, d.cause||''].join(' ').toLowerCase().includes(_dfq)) return false;
@@ -10199,7 +10644,7 @@ function renderQuality() {
 
   const _clq = (v('cl-q')||'').toLowerCase();
   const _clfs = v('cl-fs');
-  let filteredClaims = claims.filter(c => {
+  let filteredClaims = visibleClaims.filter(c => {
     if (!dateViewMatch('qualityClaims', c.date)) return false;
     if (_clq && ![c.id, getClientName(c.clientId), getProductName(c.productId), c.content||''].join(' ').toLowerCase().includes(_clq)) return false;
     if (_clfs && c.status !== _clfs) return false;
@@ -10269,7 +10714,7 @@ function renderQuality() {
 
   const _ckq = (v('ck-q')||'').toLowerCase();
   const _ckfs = v('ck-fs');
-  let filteredChecks = checkRecords.filter(r => {
+  let filteredChecks = visibleChecks.filter(r => {
     if (!dateViewMatch('checks', r.date)) return false;
     if (_ckq && ![getProductName(r.productId), getClientName(r.clientId), r.inspector||''].join(' ').toLowerCase().includes(_ckq)) return false;
     if (_ckfs && r.result !== _ckfs) return false;
@@ -10341,10 +10786,11 @@ function _escHtml(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').r
 
 function renderClaims() {
   ensureDateView('claims', 'claims-table-full', claims.map(c=>c.date), renderClaims);
+  const visibleClaims = claims.filter(c => canViewRecord(c, 'claim'));
   const kpi = inp('claims-kpi');
   if (kpi) {
-    const ing  = claims.filter(c => c.status === '처리중').length;
-    const done = claims.filter(c => c.status === '완료').length;
+    const ing  = visibleClaims.filter(c => c.status === '처리중').length;
+    const done = visibleClaims.filter(c => c.status === '완료').length;
     const fsCur = v('claims-fs') || '';
     // 클릭 시 claims-fs 필터 토글(같은 값 재클릭 시 전체 복구). 카운트=정확 상태라 필터 결과와 일치.
     const cl = (status, label, cnt, color, icon) =>
@@ -10352,10 +10798,10 @@ function renderClaims() {
       '<div class="mc-lbl"><i class="ti '+icon+'" style="color:'+color+';"></i>'+label+'</div>' +
       '<div class="mc-val" style="color:'+color+';">'+cnt+'건</div></div>';
     kpi.innerHTML =
-      '<div class="mc"><div class="mc-lbl"><i class="ti ti-message-report" style="color:var(--tx-d);"></i>전체 클레임</div><div class="mc-val">'+claims.length+'건</div></div>' +
+      '<div class="mc"><div class="mc-lbl"><i class="ti ti-message-report" style="color:var(--tx-d);"></i>전체 클레임</div><div class="mc-val">'+visibleClaims.length+'건</div></div>' +
       cl('처리중', '처리중', ing, 'var(--tx-i)', 'ti-loader') +
       cl('완료', '처리 완료', done, 'var(--tx-ok)', 'ti-circle-check') +
-      '<div class="mc"><div class="mc-lbl"><i class="ti ti-building-community" style="color:var(--tx-w);"></i>관련 고객사</div><div class="mc-val" style="color:var(--tx-w);">'+new Set(claims.map(c=>c.clientId)).size+'곳</div></div>';
+      '<div class="mc"><div class="mc-lbl"><i class="ti ti-building-community" style="color:var(--tx-w);"></i>관련 고객사</div><div class="mc-val" style="color:var(--tx-w);">'+new Set(visibleClaims.map(c=>c.clientId)).size+'곳</div></div>';
   }
 
   // 클레임 등록 모달용 고객사 옵션 동기화
@@ -10364,7 +10810,7 @@ function renderClaims() {
   const cont = inp('claims-table-full'); if (!cont) return;
   const q = (v('claims-q')||'').toLowerCase();
   const fs = v('claims-fs');
-  let list = claims.filter(c => {
+  let list = visibleClaims.filter(c => {
     if (!dateViewMatch('claims', c.date)) return false;
     if (q && ![c.id, c.kind||'', claimClientLabel(c), claimProductLabel(c), c.content||'', c.response||''].join(' ').toLowerCase().includes(q)) return false;
     if (fs && c.status !== fs) return false;
@@ -10427,6 +10873,7 @@ function renderClaims() {
 
 function openClaimDetail(id) {
   const c = claims.find(x => x.id === id); if (!c) return;
+  if (!canViewRecord(c, 'claim')) { showToast('이 클레임에 접근할 권한이 없습니다.', 'error'); return; }
   const stCls = { '접수':'bd-warn', '처리중':'bd-info', '완료':'bd-ok' }[c.status] || 'bd-neu';
   const memoBox = txt => `<div style="white-space:pre-wrap; word-break:break-word; line-height:1.6; font-size:13px; background:var(--bg-s); border:1px solid var(--br); border-radius:var(--rm); padding:10px 12px; max-height:240px; overflow-y:auto;" class="thin-scroll">${_escHtml(txt) || '<span style="color:var(--tx-t);">내용 없음</span>'}</div>`;
   inp('claim-detail-body').innerHTML = `
@@ -10556,6 +11003,7 @@ function openDefectAdd() {
 function openDefectEdit(id) {
   if (!checkAdminAction()) return;
   const d = defects.find(x => x.id === id); if (!d) return;
+  if (!requireRecordPermission('edit', d, 'defect')) return;
   editDefectId = id;
   inp('defect-modal-ttl').innerHTML = `<i class="ti ti-edit" style="color:var(--tx-w);"></i>불량 검출 분석서 수정 (${d.id})`;
   inp('df-save-btn').innerHTML = '<i class="ti ti-device-floppy"></i>수정 반영';
@@ -10583,13 +11031,14 @@ function openDefectEdit(id) {
 function addDefect() {
   if (!checkAdminAction()) return;
   if (!editDefectId && isBulkEntryMode('df')) {
+    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
     const rows = readBulkEntryTable('df');
     if (!rows.length) { showToast('등록할 불량 행을 입력해주세요.', 'error'); return; }
     const invalid = rows.find(r => !r.productId || !r.type.trim() || (parseInt(r.qty) || 0) <= 0);
     if (invalid) { showToast('제품, 불량 유형, 수량은 각 행에 필요합니다.', 'error'); return; }
     const records = [];
     rows.slice().reverse().forEach(r => {
-      const rec = {
+      const rec = stampRecordCreate({
         id: nextCode('DF', defects),
         productId: r.productId,
         date: v('df-date'),
@@ -10600,9 +11049,10 @@ function addDefect() {
         action: r.action,
         status: r.status || '조치중',
         note: r.note
-      };
+      }, 'defect');
       defects.unshift(rec);
       records.push(rec);
+      writeAuditLog('defect', rec.id, 'create', null, rec, { summary:'불량 리포트 일괄 등록', source:'bulkAction' });
     });
     saveStorage('defects', defects);
     closeModal('defect-modal');
@@ -10618,6 +11068,8 @@ function addDefect() {
   
   if (editDefectId) {
     const d = defects.find(x => x.id === editDefectId); if (!d) return;
+    if (!requireRecordPermission('edit', d, 'defect')) return;
+    const before = _safeJsonClone(d);
     d.productId = v('df-product');
     d.date = v('df-date');
     d.stage = v('df-stage');
@@ -10627,8 +11079,11 @@ function addDefect() {
     d.action = v('df-action');
     d.status = v('df-status');
     d.note = v('df-note');
+    stampRecordUpdate(d, before, 'defect');
+    writeAuditLog('defect', d.id, 'update', before, d, { summary:'불량 리포트 수정' });
   } else {
-    defects.unshift({
+    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    const rec = stampRecordCreate({
       id: nextCode('DF', defects),
       productId: v('df-product'),
       date: v('df-date'),
@@ -10639,7 +11094,9 @@ function addDefect() {
       action: v('df-action'),
       status: v('df-status'),
       note: v('df-note')
-    });
+    }, 'defect');
+    defects.unshift(rec);
+    writeAuditLog('defect', rec.id, 'create', null, rec, { summary:'불량 리포트 등록' });
   }
   saveStorage('defects', defects);
   editDefectId = null;
@@ -10659,7 +11116,14 @@ function addDefect() {
 
 function changeDefectStatus(id, status) {
   const d = defects.find(x => x.id === id);
-  if (d) { d.status = status; saveStorage('defects', defects); renderQuality(); }
+  if (d) {
+    if (!roleFeatureAllowed('status') || !requireRecordPermission('edit', d, 'defect')) return;
+    const before = _safeJsonClone(d);
+    d.status = status;
+    stampRecordUpdate(d, before, 'defect');
+    writeAuditLog('defect', id, 'statusChange', before, d, { summary:`불량 상태 변경: ${before.status || ''} → ${status}` });
+    saveStorage('defects', defects); renderQuality();
+  }
 }
 
 /* 품질기록 - 고객 클레임 등록 / 수정 */
@@ -10693,6 +11157,7 @@ function openClaimAdd() {
 function openClaimEdit(id) {
   if (!checkAdminAction()) return;
   const c = claims.find(x => x.id === id); if (!c) return;
+  if (!requireRecordPermission('edit', c, 'claim')) return;
   editClaimId = id;
   inp('claim-modal-ttl').innerHTML = `<i class="ti ti-edit" style="color:var(--tx-w);"></i>클레임 / AS 내역 수정 (${c.id})`;
   inp('cl-save-btn').innerHTML = '<i class="ti ti-device-floppy"></i>수정 반영';
@@ -10715,6 +11180,7 @@ function openClaimEdit(id) {
 function addClaim() {
   if (!checkAdminAction()) return;
   if (!editClaimId && isBulkEntryMode('cl')) {
+    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
     const clientId = v('cl-client');
     const clientName = v('cl-client-text').trim();
     if (!clientId && !clientName) { showToast('고객사를 선택하거나 직접 입력하세요.', 'error'); return; }
@@ -10723,7 +11189,7 @@ function addClaim() {
     const invalid = rows.find(r => !r.content.trim());
     if (invalid) { showToast('불만/요청 내용은 각 행에 필요합니다.', 'error'); return; }
     rows.slice().reverse().forEach(r => {
-      claims.unshift({
+      const rec = stampRecordCreate({
         id: nextCode('CLM', claims),
         date: v('cl-date'),
         kind: r.kind || '클레임',
@@ -10735,7 +11201,9 @@ function addClaim() {
         content: r.content.trim(),
         status: r.status || '접수',
         response: r.response
-      });
+      }, 'claim');
+      claims.unshift(rec);
+      writeAuditLog('claim', rec.id, 'create', null, rec, { summary:'클레임 / AS 일괄 접수', source:'bulkAction' });
     });
     saveStorage('claims', claims);
     editClaimId = null;
@@ -10763,9 +11231,16 @@ function addClaim() {
   };
   if (editClaimId) {
     const c = claims.find(x => x.id === editClaimId); if (!c) return;
+    if (!requireRecordPermission('edit', c, 'claim')) return;
+    const before = _safeJsonClone(c);
     Object.assign(c, fields);
+    stampRecordUpdate(c, before, 'claim');
+    writeAuditLog('claim', c.id, 'update', before, c, { summary:'클레임 / AS 수정' });
   } else {
-    claims.unshift({ id: nextCode('CLM', claims), ...fields });
+    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    const rec = stampRecordCreate({ id: nextCode('CLM', claims), ...fields }, 'claim');
+    claims.unshift(rec);
+    writeAuditLog('claim', rec.id, 'create', null, rec, { summary:'클레임 / AS 접수' });
   }
   saveStorage('claims', claims);
   editClaimId = null;
@@ -10780,7 +11255,14 @@ function claimProductLabel(c) { return c.productName || (c.productId ? getProduc
 
 function changeClaimStatus(id, status) {
   const c = claims.find(x => x.id === id);
-  if (c) { c.status = status; saveStorage('claims', claims); renderQuality(); }
+  if (c) {
+    if (!roleFeatureAllowed('status') || !requireRecordPermission('edit', c, 'claim')) return;
+    const before = _safeJsonClone(c);
+    c.status = status;
+    stampRecordUpdate(c, before, 'claim');
+    writeAuditLog('claim', id, 'statusChange', before, c, { summary:`클레임 상태 변경: ${before.status || ''} → ${status}` });
+    saveStorage('claims', claims); renderQuality();
+  }
 }
 
 /* 품질기록 - 최종 출하 검증 체크리스트 추가 / 수정 */
@@ -10809,6 +11291,7 @@ function openCheckAdd() {
 function openCheckEdit(id) {
   if (!checkAdminAction()) return;
   const r = checkRecords.find(x => x.id === id); if (!r) return;
+  if (!requireRecordPermission('edit', r, 'checkRecord')) return;
   editCheckId = id;
   inp('check-modal-ttl').innerHTML = `<i class="ti ti-edit" style="color:var(--tx-w);"></i>출하 품질 성적 검사서 수정 (${r.id})`;
   inp('ck-save-btn').innerHTML = '<i class="ti ti-device-floppy"></i>수정 반영';
@@ -10835,12 +11318,13 @@ function addCheckRecord() {
   const inspector = v('ck-inspector').trim();
   if (!inspector) { showToast('검사 실무자의 성함(사인)이 필요합니다.', 'error'); return; }
   if (!editCheckId && isBulkEntryMode('ck')) {
+    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
     const rows = readBulkEntryTable('ck');
     if (!rows.length) { showToast('등록할 검사 행을 입력해주세요.', 'error'); return; }
     const invalid = rows.find(r => !r.productId);
     if (invalid) { showToast('검사 제품은 각 행에 필요합니다.', 'error'); return; }
     rows.slice().reverse().forEach(r => {
-      checkRecords.unshift({
+      const rec = stampRecordCreate({
         id: nextCode('CHK', checkRecords),
         date: v('ck-date'),
         clientId: v('ck-client'),
@@ -10851,7 +11335,9 @@ function addCheckRecord() {
         func: r.func || '합격',
         result: r.result || '합격',
         note: r.note
-      });
+      }, 'checkRecord');
+      checkRecords.unshift(rec);
+      writeAuditLog('checkRecord', rec.id, 'create', null, rec, { summary:'검사 기록 일괄 등록', source:'bulkAction' });
     });
     saveStorage('checkRecords', checkRecords);
     editCheckId = null;
@@ -10863,6 +11349,8 @@ function addCheckRecord() {
   
   if (editCheckId) {
     const r = checkRecords.find(x => x.id === editCheckId); if (!r) return;
+    if (!requireRecordPermission('edit', r, 'checkRecord')) return;
+    const before = _safeJsonClone(r);
     r.date = v('ck-date');
     r.clientId = v('ck-client');
     r.productId = v('ck-product');
@@ -10872,8 +11360,11 @@ function addCheckRecord() {
     r.func = v('ck-func');
     r.result = v('ck-result');
     r.note = v('ck-note');
+    stampRecordUpdate(r, before, 'checkRecord');
+    writeAuditLog('checkRecord', r.id, 'update', before, r, { summary:'검사 기록 수정' });
   } else {
-    checkRecords.unshift({
+    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    const rec = stampRecordCreate({
       id: nextCode('CHK', checkRecords),
       date: v('ck-date'),
       clientId: v('ck-client'),
@@ -10884,7 +11375,9 @@ function addCheckRecord() {
       func: v('ck-func'),
       result: v('ck-result'),
       note: v('ck-note')
-    });
+    }, 'checkRecord');
+    checkRecords.unshift(rec);
+    writeAuditLog('checkRecord', rec.id, 'create', null, rec, { summary:'검사 기록 등록' });
   }
   saveStorage('checkRecords', checkRecords);
   editCheckId = null;
@@ -10917,8 +11410,10 @@ function deleteDefect(id) {
   confirm_('불량 레포트 기록 삭제', '해당 품질 부적합 분석 파일을 데이터베이스에서 폐기하시겠습니까?', () => {
     const d = defects.find(x => x.id === id);
     if (d) {
+      if (!requireRecordPermission('delete', d, 'defect')) return;
       pushToTrash('defect', `${d.type} (불량기록)`, id, d);
       defects = defects.filter(x => x.id !== id);
+      writeAuditLog('defect', id, 'delete', d, null, { summary:'불량 리포트 삭제' });
       saveStorage('defects', defects);
       renderQuality();
       showToast('불량 분석 기록이 휴지통으로 이동했습니다.', 'info');
@@ -10930,8 +11425,10 @@ function deleteClaim(id) {
   confirm_('고객 클레임 소멸 확인', '해당 고객사의 소송/조치 클레임 파일을 완전히 파기하시겠습니까?', () => {
     const c = claims.find(x => x.id === id);
     if (c) {
+      if (!requireRecordPermission('delete', c, 'claim')) return;
       pushToTrash('claim', `${c.content} (고객클레임)`, id, c);
       claims = claims.filter(x => x.id !== id);
+      writeAuditLog('claim', id, 'delete', c, null, { summary:'클레임 삭제' });
       saveStorage('claims', claims);
       renderQuality();
       showToast('클레임 기록이 휴지통으로 이동했습니다.', 'info');
@@ -10943,8 +11440,10 @@ function deleteCheck(id) {
   confirm_('검사 성적 삭제 확인', '완제품 출하 품질 성적 체크 대장에서 지우시겠습니까?', () => {
     const r = checkRecords.find(x => x.id === id);
     if (r) {
+      if (!requireRecordPermission('delete', r, 'checkRecord')) return;
       pushToTrash('check', `${getProductName(r.productId)} - ${r.inspector} (검사기록)`, id, r);
       checkRecords = checkRecords.filter(x => x.id !== id);
+      writeAuditLog('checkRecord', id, 'delete', r, null, { summary:'검사 기록 삭제' });
       saveStorage('checkRecords', checkRecords);
       renderQuality();
       showToast('검사 성적 대장이 휴지통으로 이동했습니다.', 'info');
@@ -11510,12 +12009,25 @@ function delAlert(token) {
 
 /* ════════ 9. 휴지통 백업 및 복구 로직 ════════ */
 function pushToTrash(type, name, originalId, data, cascadeData = null) {
+  if (data == null && name && typeof name === 'object') {
+    data = name;
+    originalId = name.id || name.code || '';
+    name = name.name || name.title || name.id || type;
+  }
+  const actor = getCurrentActor();
+  if (data && typeof data === 'object') {
+    data.deletedBy = actor.userId;
+    data.deletedByName = actor.name;
+    data.deletedAt = new Date().toISOString();
+  }
   const newItem = {
     id: nextCode('TRSH', trash, 'id'),
     type,
     name,
     originalId,
     deletedAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
+    deletedBy: actor.userId,
+    deletedByName: actor.name,
     data,
     cascadeData
   };
@@ -11535,6 +12047,14 @@ function updateTrashBadge() {
 function restoreTrash(id) {
   const item = trash.find(x => x.id === id);
   if (!item) return;
+  if (!roleFeatureAllowed('restore')) { showToast('복구 권한이 없습니다.', 'error'); return; }
+  const actor = getCurrentActor();
+  const restoredData = item.data && typeof item.data === 'object' ? item.data : null;
+  if (restoredData) {
+    restoredData.restoredBy = actor.userId;
+    restoredData.restoredByName = actor.name;
+    restoredData.restoredAt = new Date().toISOString();
+  }
 
   if (item.type === 'client') {
     if (!clients.some(c => c.id === item.originalId)) {
@@ -11636,6 +12156,7 @@ function restoreTrash(id) {
 
   trash = trash.filter(x => x.id !== id);
   saveStorage('trash', trash);
+  writeAuditLog(item.type || 'trash', item.originalId || id, 'restore', item, item.data, { summary:'휴지통 복구', detail:item.name || id });
   
   syncFilterDropdowns();
   updateTrashBadge();
@@ -11648,6 +12169,7 @@ function deleteTrashPermanently(id) {
 
   confirm_('데이터 영구 삭제 경고', `<strong>[${item.name}]</strong> 데이터를 휴지통에서 완전히 삭제하시겠습니까?<br><span style="color:var(--tx-d); font-weight:700;">이 작업은 복구가 절대 불가능하며 데이터가 완전히 유실됩니다.</span>`, () => {
     trash = trash.filter(x => x.id !== id);
+    writeAuditLog(item.type || 'trash', item.originalId || id, 'delete', item, null, { summary:'휴지통 영구 삭제', detail:item.name || id });
     saveStorage('trash', trash);
     updateTrashBadge();
     renderTrash();
@@ -11661,6 +12183,7 @@ function emptyTrash() {
     return;
   }
   confirm_('휴지통 전체 비우기', `휴지통 내부 <strong>총 ${trash.length}건</strong>의 모든 백업 데이터를 영구 파기하시겠습니까?<br><span style="color:var(--tx-d); font-weight:700;">비워진 메모리 데이터는 복구 조작을 진행할 수 없습니다.</span>`, () => {
+    trash.forEach(item => writeAuditLog(item.type || 'trash', item.originalId || item.id, 'delete', item, null, { summary:'휴지통 전체 비우기', source:'bulkAction' }));
     trash = [];
     saveStorage('trash', trash);
     updateTrashBadge();
@@ -12269,7 +12792,7 @@ const FIREBASE_CONFIG = Object.assign(
 );
 /* 클라우드로 공유할 데이터 키(테마/관리자비번 등 기기·보안 로컬값은 제외) */
 const CLOUD_KEYS = ['clients','products','materials','workOrders','workers','defects','claims','checkRecords','alerts','inventory','inventoryLedger','deliveries','stages','trash','rfqList','poList','partners','statementList','taxList','quoteList','orderList','financeData','attendance','leaves','payrollRecords','asList','bomList','memoList','todoList','companyInfo','docXlsxTemplates','driveOAuthSettings'];
-let _fbAuth=null, _fbDb=null, _cloudUser=null;   // _cloudActive는 앞쪽(전역 상태)에서 선언됨
+var _fbAuth=null, _fbDb=null, _cloudUser=null;   // 초기 데이터 마이그레이션에서도 안전하게 참조되도록 var 사용
 const _cloudQueue=new Set(); let _cloudTimer=null; let _cloudUnsub=null;
 
 /* ════════ 프로그램 기동 초기화 (FIREBASE_CONFIG 선언 이후에 실행) ════════ */
@@ -12393,14 +12916,31 @@ function applyColumnGating(){
 
 /* ════════ 기능 권한 (엑셀 CSV 내보내기 / PDF·인쇄 출력) ════════ */
 const PDF_BTN_SEL = '[onclick^="openRfqPrint"],[onclick^="openPoPrint"],[onclick^="openSalesDocPrint"],[onclick^="openSODocPrint"],[onclick^="printPayslip"],[onclick^="poBulkPrint"]';
-const FEATURE_DEFS = [ {key:'csv', label:'엑셀 CSV 내보내기', icon:'ti-file-spreadsheet'}, {key:'pdf', label:'PDF·인쇄 출력', icon:'ti-printer'} ];
+const FEATURE_DEFS = [
+  {key:'create', label:'등록', icon:'ti-plus'},
+  {key:'edit', label:'수정', icon:'ti-edit'},
+  {key:'delete', label:'삭제', icon:'ti-trash'},
+  {key:'restore', label:'복구', icon:'ti-restore'},
+  {key:'approve', label:'승인', icon:'ti-check'},
+  {key:'status', label:'상태 변경', icon:'ti-arrows-exchange'},
+  {key:'csv', label:'엑셀 CSV 내보내기', icon:'ti-file-spreadsheet'},
+  {key:'pdf', label:'PDF·인쇄 출력', icon:'ti-printer'},
+  {key:'audit', label:'감사 로그 조회', icon:'ti-history'}
+];
 function roleFeaturesConfig(){ return loadStorage('roleFeatures', {}); }   // { 역할:{ csv:bool, pdf:bool } } (true=허용, 기본 허용)
+function canUseFeature(key){
+  if (currentRole === 'admin') return true;
+  const f = roleFeaturesConfig()[currentRole] || {};
+  return f[key] !== false;
+}
+function canEditFeature(){ return canUseFeature('edit'); }
 function applyFeatureGating(){
   let css='';
   if (currentRole!=='admin'){
     const f = roleFeaturesConfig()[currentRole] || {};
     if (f.csv===false) css += `[onclick^="export"],[onclick^="poBulkExport"]{display:none!important;}\n`;   // 모든 내보내기 버튼
     if (f.pdf===false) css += `${PDF_BTN_SEL}{display:none!important;}\n`;            // 모든 PDF/인쇄 버튼
+    if (f.delete===false) css += `.del-btn,[onclick^="delete"],[onclick*="bulkRun"][onclick*="delete"]{display:none!important;}\n`;
   }
   let st=document.getElementById('feat-gating');
   if(!st){ st=document.createElement('style'); st.id='feat-gating'; document.head.appendChild(st); }
@@ -12408,8 +12948,17 @@ function applyFeatureGating(){
 }
 
 /* 부팅 시 localStorage의 역할로 권한 상태 초기화 */
+function activateLocalAdminAccess(){
+  currentRole = 'admin';
+  allowedPages = null;
+  localStorage.setItem('mes_myActive', 'true');
+  if (typeof _hideLogin === 'function') _hideLogin();
+  applyRoleGating();
+  applyColumnGating();
+  applyFeatureGating();
+}
 function initRole(){
-  if (!cloudConfigured()){ currentRole='admin'; allowedPages=null; applyRoleGating(); applyColumnGating(); applyFeatureGating(); return; }  // 로컬 = 전체
+  if (!cloudConfigured() || typeof firebase === 'undefined'){ activateLocalAdminAccess(); return; }  // 로컬/오프라인 = 전체
   currentRole = localStorage.getItem('mes_myRole') || 'staff';
   allowedPages = roleAllowedSet(currentRole);
   applyRoleGating();
@@ -12455,11 +13004,19 @@ async function cloudLoadRole(){
 /* 클라우드 동기화 없이 localStorage에만 저장(권한맵 캐시용) */
 function saveStorageLocalOnly(key,data){ localStorage.setItem('mes_'+key, JSON.stringify(data)); }
 
-function cloudConfigured(){ return !!(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId); }
+function isLocalRuntime(){
+  const host = (location && location.hostname) || '';
+  return location.protocol === 'file:' || host === 'localhost' || host === '127.0.0.1' || host === '::1';
+}
+
+function cloudConfigured(){
+  if (isLocalRuntime() && localStorage.getItem('mes_enableCloudOnLocal') !== 'true') return false;
+  return !!(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId);
+}
 
 function cloudBootstrap(){
-  if (!cloudConfigured()){ _cloudChip('local'); return; }              // 미설정 → 로컬 전용
-  if (typeof firebase === 'undefined'){ console.warn('Firebase SDK 미로드(오프라인?) — 로컬 전용'); _cloudChip('local'); return; }
+  if (!cloudConfigured()){ activateLocalAdminAccess(); _cloudChip('local'); return; }              // 미설정 → 로컬 전용
+  if (typeof firebase === 'undefined'){ console.warn('Firebase SDK 미로드(오프라인?) — 로컬 전용'); activateLocalAdminAccess(); _cloudChip('local'); return; }
   try {
     firebase.initializeApp(FIREBASE_CONFIG);
     _fbAuth = firebase.auth(); _fbDb = firebase.firestore();
@@ -12494,7 +13051,7 @@ function cloudBootstrap(){
         _showLogin();
       }
     });
-  } catch(e){ console.error('Firebase 초기화 오류', e); _cloudChip('error'); }
+  } catch(e){ console.error('Firebase 초기화 오류', e); activateLocalAdminAccess(); _cloudChip('error'); }
 }
 
 function cloudV2MapKeys(){
@@ -12725,6 +13282,7 @@ function cloudResyncGlobals(){
   if(!financeData.fixedCostPayments) financeData.fixedCostPayments=[];
   asList=L('asList',asList); bomList=L('bomList',bomList);
   memoList=L('memoList',memoList); todoList=L('todoList',todoList);
+  auditLog=L('auditLog',auditLog);
   if (typeof migrateClientMasterToPartners === 'function') migrateClientMasterToPartners();
 }
 let _cloudRemoteRefreshTimer = null;
@@ -13144,6 +13702,9 @@ function renderDocTemplateManagement() {
   }
 }
 let permSection = 'pages';
+let auditLogFilterText = '';
+let serverAuditLogCache = [];
+let serverAuditLogLoaded = false;
 function setPermSection(section){
   permSection = section || 'pages';
   renderPermissions();
@@ -13157,6 +13718,7 @@ async function renderPermissions(){
     {key:'pages', icon:'ti-table-options', title:'페이지 접근 권한', desc:'역할별 메뉴 접근'},
     {key:'columns', icon:'ti-columns-3', title:'테이블 컬럼 권한', desc:'역할별 열 표시/숨김'},
     {key:'features', icon:'ti-tool', title:'기능 권한', desc:'내보내기와 출력 허용'},
+    {key:'audit', icon:'ti-history', title:'감사 로그', desc:'등록·수정·삭제 이력 조회'},
     {key:'backup', icon:'ti-database-cog', title:'데이터 백업/복구', desc:'파일 내보내기와 복구'}
   ];
   if (!sections.some(s => s.key === permSection)) permSection = 'pages';
@@ -13196,6 +13758,11 @@ async function renderPermissions(){
               <span style="font-size:11px;color:var(--tx-t);">엑셀 CSV 내보내기 / PDF·인쇄 출력 허용 여부 · 관리자는 항상 전체</span></div>
             <div id="perm-features"></div>
           </div>
+          <div class="permission-section" style="${permSection==='audit'?'':'display:none;'}">
+            <div class="card-hd"><span class="card-ttl"><i class="ti ti-history"></i>감사 로그</span>
+              <span style="font-size:11px;color:var(--tx-t);">최근 등록·수정·삭제·복구·상태 변경 이력</span></div>
+            <div id="perm-audit-log"></div>
+          </div>
           <div class="permission-section" style="${permSection==='backup'?'':'display:none;'}">
             <div class="card-hd"><span class="card-ttl"><i class="ti ti-database-cog"></i>데이터 백업 · 복구</span>
               <span style="font-size:11px;color:var(--tx-t);">전체 데이터를 파일로 내보내거나 파일에서 복구 · 관리자 전용</span></div>
@@ -13214,6 +13781,7 @@ async function renderPermissions(){
   renderPermMatrix();
   renderPermColumns();
   renderPermFeatures();
+  renderPermAuditLog();
 }
 function renderPermUsers(users){
   const el=inp('perm-users'); if(!el) return;
@@ -13318,6 +13886,69 @@ function renderPermFeatures(){
   const chip=(def)=>{ const on=(f[def.key]!==false); return `<span onclick="permToggleFeature('${role}','${def.key}',${!on})" style="display:inline-flex;align-items:center;padding:5px 10px;margin:2px;border-radius:12px;font-size:10.5px;cursor:pointer;user-select:none;border:1px solid ${on?'#1971c2':'var(--br)'};background:${on?'#1971c2':'transparent'};color:${on?'#fff':'var(--tx-t)'};font-weight:${on?'600':'400'};">${def.label}</span>`; };
   el.innerHTML = `<div style="font-size:11.5px;color:var(--tx-s);margin-bottom:8px;"><b>${RL[role]}</b> 에게 허용할 기능을 선택합니다. (앱 전체 공통 적용)</div>
     <div>${FEATURE_DEFS.map(chip).join('')}</div>`;
+}
+function allAuditLogRows(){
+  const rows = [];
+  if (Array.isArray(auditLog)) rows.push(...auditLog);
+  if (financeData && Array.isArray(financeData.auditLog)) rows.push(...financeData.auditLog);
+  if (Array.isArray(serverAuditLogCache)) rows.push(...serverAuditLogCache);
+  const seen = new Set();
+  return rows.filter(log => {
+    if (!log) return false;
+    const key = log.id || [log.at, log.entityType, log.entityId, log.action, log.summary || log.detail].join('|');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).sort((a,b) => String(b.at || '').localeCompare(String(a.at || '')));
+}
+function loadServerAuditLogsForAdmin(){
+  if (serverAuditLogLoaded || currentRole !== 'admin' || !_fbDb) return;
+  serverAuditLogLoaded = true;
+  _fbDb.collection('audit_logs').orderBy('at', 'desc').limit(500).get()
+    .then(snap => {
+      serverAuditLogCache = snap.docs.map(doc => Object.assign({ id:doc.id }, doc.data()));
+      if (permSection === 'audit') renderPermAuditLog();
+    })
+    .catch(e => {
+      console.warn('서버 감사 로그 조회 실패:', e && e.code);
+      serverAuditLogLoaded = false;
+    });
+}
+function auditChangeText(log){
+  const changes = Array.isArray(log.changes) ? log.changes : [];
+  if (!changes.length) return esc(log.detail || log.summary || '');
+  return changes.slice(0, 4).map(c => `${esc(c.field)}: ${esc(_auditString(c.before))} → ${esc(_auditString(c.after))}`).join('<br>');
+}
+function renderPermAuditLog(){
+  const el=inp('perm-audit-log'); if(!el) return;
+  if (currentRole !== 'admin' && !roleFeatureAllowed('audit')) {
+    el.innerHTML = `<div class="empty"><i class="ti ti-lock"></i>감사 로그 조회 권한이 없습니다.</div>`;
+    return;
+  }
+  loadServerAuditLogsForAdmin();
+  const q = String(auditLogFilterText || '').trim().toLowerCase();
+  const logs = allAuditLogRows().filter(log => {
+    if (!q) return true;
+    return [log.entityType, log.entityId, log.action, log.actorName, log.summary, log.detail, log.reason]
+      .some(v => String(v || '').toLowerCase().includes(q));
+  });
+  const rows = logs.slice(0, 200).map(log => `
+    <tr>
+      <td style="white-space:nowrap;">${log.at ? new Date(log.at).toLocaleString('ko-KR') : '-'}</td>
+      <td><span class="bd bd-info">${esc(log.entityType || '-')}</span><div style="font-size:11px;color:var(--tx-t);">${esc(log.entityId || '')}</div></td>
+      <td style="font-weight:800;">${esc(auditLabelForAction(log.action))}</td>
+      <td>${esc(log.actorName || '-')}<div style="font-size:11px;color:var(--tx-t);">${esc(log.actorRole || '')}</div></td>
+      <td>${esc(log.summary || log.detail || '')}${log.reason ? `<div style="font-size:11px;color:var(--tx-t);">사유: ${esc(log.reason)}</div>` : ''}</td>
+      <td style="min-width:220px;">${auditChangeText(log)}</td>
+    </tr>`).join('');
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+      <span class="bd bd-info">전체 ${allAuditLogRows().length}건</span>
+      <span class="bd">표시 ${logs.length}건</span>
+      <input value="${esc(auditLogFilterText)}" placeholder="작업자, 항목, 문서번호 검색" oninput="auditLogFilterText=this.value;renderPermAuditLog()" style="max-width:280px;">
+      <button class="btn btn-sm" onclick="auditLogFilterText='';renderPermAuditLog()"><i class="ti ti-x"></i>검색 해제</button>
+    </div>
+    ${rows ? `<div style="overflow-x:auto;"><table><thead><tr><th>일시</th><th>항목</th><th>작업</th><th>작업자</th><th>요약</th><th>변경 전/후</th></tr></thead><tbody>${rows}</tbody></table></div>` : empty('감사 로그가 없습니다.')}`;
 }
 async function permToggleFeature(role, key, allowed){
   const cfg=roleFeaturesConfig(); cfg[role]=cfg[role]||{};
@@ -14239,6 +14870,7 @@ function renderRfq() {
 
   const fc = v('rfq-fc'), fs = v('rfq-fs'), q = v('rfq-q').toLowerCase();
   const rows = rfqList.filter(r => {
+    if (!canViewRecord(r, 'rfq')) return false;
     if (!dateViewMatch('rfq', r.date)) return false;
     if (fc && r.clientId !== fc) return false;
     if (fs && r.status !== fs)   return false;
@@ -14350,10 +14982,19 @@ function saveRfqForm() {
   if (!items.length)     { showToast('품목명을 입력하세요.', 'error'); return; }
   if (editId) {
     const idx = rfqList.findIndex(r => r.id === editId);
-    if (idx !== -1) rfqList[idx] = { ...rfqList[idx], ...buildRfqObj(editId) };
+    if (idx !== -1) {
+      const before = _safeJsonClone(rfqList[idx]);
+      if (!requireRecordPermission('edit', before, 'rfq')) return;
+      const next = stampRecordUpdate({ ...rfqList[idx], ...buildRfqObj(editId) }, before, 'rfq');
+      rfqList[idx] = next;
+      writeAuditLog('rfq', editId, 'update', before, next, { summary:'견적요청서 수정' });
+    }
     delete modal.dataset.editId;
   } else {
-    rfqList.unshift(buildRfqObj(v('rq-id')));
+    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    const next = stampRecordCreate(buildRfqObj(v('rq-id')), 'rfq');
+    rfqList.unshift(next);
+    writeAuditLog('rfq', next.id, 'create', null, next, { summary:'견적요청서 등록' });
   }
   saveStorage('rfqList', rfqList);
   closeModal('rfq-modal');
@@ -14379,6 +15020,7 @@ function buildRfqObj(id) {
 function openRfqEdit(id) {
   const r = rfqList.find(x => x.id === id);
   if (!r) return;
+  if (!requireRecordPermission('edit', r, 'rfq')) return;
   const modal = inp('rfq-modal');
   modal.dataset.editId = id;
   inp('rfq-modal-ttl').innerHTML = '<i class="ti ti-edit" style="color:var(--tx-w);"></i>견적요청서 수정';
@@ -14421,7 +15063,12 @@ function cloneRfq(id) {
 function changeRfqStatus(id, val) {
   const r = rfqList.find(x => x.id === id);
   if (!r) return;
-  r.status = val; saveStorage('rfqList', rfqList); renderRfq();
+  if (!roleFeatureAllowed('status') || !requireRecordPermission('edit', r, 'rfq')) return;
+  const before = _safeJsonClone(r);
+  r.status = val;
+  stampRecordUpdate(r, before, 'rfq');
+  writeAuditLog('rfq', id, 'statusChange', before, r, { summary:`견적요청서 상태 변경: ${before.status || ''} → ${val}` });
+  saveStorage('rfqList', rfqList); renderRfq();
 }
 
 function convertRfqToPo(ids) {
@@ -14445,7 +15092,8 @@ function convertRfqToPo(ids) {
   if (!confirm(`${fresh.length}건의 견적요청서를 구매발주서로 생성하시겠습니까?${suffix}`)) return;
 
   fresh.forEach(r => {
-    poList.unshift({
+    const before = _safeJsonClone(r);
+    const po = stampRecordCreate({
       id: nextDocCode('P', poList),
       date: today(),
       clientId: r.clientId || '',
@@ -14463,8 +15111,12 @@ function convertRfqToPo(ids) {
       note: `견적요청서 ${r.id}에서 생성${r.note ? ' - ' + r.note : ''}`,
       items: _docItems(r),
       sourceRfqId: r.id
-    });
+    }, 'po', { visibility: r.visibility || 'assignee', ownerUserId: r.ownerUserId, ownerUserName: r.ownerUserName, ownerDeptId: r.ownerDeptId, ownerDeptName: r.ownerDeptName });
+    poList.unshift(po);
     if (r.status !== '미채택') r.status = '채택';
+    stampRecordUpdate(r, before, 'rfq');
+    writeAuditLog('po', po.id, 'create', null, po, { summary:`견적요청서 ${r.id}에서 구매발주서 생성` });
+    writeAuditLog('rfq', r.id, 'statusChange', before, r, { summary:`견적요청서 채택 및 발주 전환` });
   });
 
   saveStorage('poList', poList);
@@ -14476,8 +15128,11 @@ function convertRfqToPo(ids) {
 
 function deleteRfq(id) {
   if (!checkAdminAction()) return;
+  const target = rfqList.find(r => r.id === id);
+  if (!target || !requireRecordPermission('delete', target, 'rfq')) return;
   if (!confirm('이 견적요청서를 삭제하시겠습니까?')) return;
   rfqList = rfqList.filter(r => r.id !== id);
+  writeAuditLog('rfq', id, 'delete', target, null, { summary:'견적요청서 삭제' });
   saveStorage('rfqList', rfqList); renderRfq();
   showToast('견적요청서가 삭제되었습니다.');
 }
@@ -14614,6 +15269,7 @@ function renderPo() {
 
   const fc = v('po-fc'), fs = v('po-fs'), q = v('po-q').toLowerCase();
   const rows = poList.filter(p => {
+    if (!canViewRecord(p, 'po')) return false;
     if (!dateViewMatch('po', p.date)) return false;
     if (fc && p.clientId !== fc) return false;
     if (fs && p.status !== fs)   return false;
@@ -14742,7 +15398,10 @@ function poBulkPaymentRequest(){ const ids=poCheckedIds(); if(ids.length===1 && 
 function poBulkDelete(){
   const ids=poCheckedIds(); if(!ids.length) return;
   if(!checkAdminAction()) return;
+  const targets = poList.filter(p=>ids.includes(p.id));
+  if (targets.some(p => !canDeleteRecord(p, 'po'))) { showToast('삭제 권한이 없는 구매발주서가 포함되어 있습니다.', 'error'); return; }
   if(!confirm(ids.length+'건의 구매발주서를 삭제하시겠습니까?')) return;
+  targets.forEach(p => writeAuditLog('po', p.id, 'delete', p, null, { summary:'구매발주서 일괄 삭제', source:'bulkAction' }));
   poList=poList.filter(p=>!ids.includes(p.id));
   saveStorage('poList', poList); renderPo();
   showToast(ids.length+'건이 삭제되었습니다.');
@@ -14798,10 +15457,19 @@ function savePoForm() {
   if (!items.length)     { showToast('품목명을 입력하세요.', 'error'); return; }
   if (editId) {
     const idx = poList.findIndex(p => p.id === editId);
-    if (idx !== -1) poList[idx] = { ...poList[idx], ...buildPoObj(editId) };
+    if (idx !== -1) {
+      const before = _safeJsonClone(poList[idx]);
+      if (!requireRecordPermission('edit', before, 'po')) return;
+      const next = stampRecordUpdate({ ...poList[idx], ...buildPoObj(editId) }, before, 'po');
+      poList[idx] = next;
+      writeAuditLog('po', editId, 'update', before, next, { summary:'구매발주서 수정' });
+    }
     delete modal.dataset.editId;
   } else {
-    poList.unshift(buildPoObj(v('po-id')));
+    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    const next = stampRecordCreate(buildPoObj(v('po-id')), 'po');
+    poList.unshift(next);
+    writeAuditLog('po', next.id, 'create', null, next, { summary:'구매발주서 등록' });
   }
   saveStorage('poList', poList); closeModal('po-modal'); renderPo();
   showToast(editId ? '구매발주서가 수정되었습니다.' : '구매발주서가 등록되었습니다.');
@@ -14827,6 +15495,7 @@ function buildPoObj(id) {
 function openPoEdit(id) {
   const p = poList.find(x => x.id === id);
   if (!p) return;
+  if (!requireRecordPermission('edit', p, 'po')) return;
   const modal = inp('po-modal');
   modal.dataset.editId = id;
   inp('po-modal-ttl').innerHTML = '<i class="ti ti-edit" style="color:var(--tx-w);"></i>구매발주서 수정';
@@ -14872,13 +15541,21 @@ function clonePo(id) {
 function changePoStatus(id, val) {
   const p = poList.find(x => x.id === id);
   if (!p) return;
-  p.status = val; saveStorage('poList', poList); renderPo();
+  if (!roleFeatureAllowed('status') || !requireRecordPermission('edit', p, 'po')) return;
+  const before = _safeJsonClone(p);
+  p.status = val;
+  stampRecordUpdate(p, before, 'po');
+  writeAuditLog('po', id, 'statusChange', before, p, { summary:`구매발주서 상태 변경: ${before.status || ''} → ${val}` });
+  saveStorage('poList', poList); renderPo();
 }
 
 function deletePo(id) {
   if (!checkAdminAction()) return;
+  const target = poList.find(p => p.id === id);
+  if (!target || !requireRecordPermission('delete', target, 'po')) return;
   if (!confirm('이 구매발주서를 삭제하시겠습니까?')) return;
   poList = poList.filter(p => p.id !== id);
+  writeAuditLog('po', id, 'delete', target, null, { summary:'구매발주서 삭제' });
   saveStorage('poList', poList); renderPo();
   showToast('구매발주서가 삭제되었습니다.');
 }
@@ -16830,9 +17507,17 @@ function savePartnerForm() {
   };
   if (editId) {
     const idx = partners.findIndex(p => p.id === editId);
-    if (idx !== -1) partners[idx] = obj;
+    if (idx !== -1) {
+      const before = _safeJsonClone(partners[idx]);
+      if (!requireRecordPermission('edit', before, 'partners')) return;
+      partners[idx] = stampRecordUpdate(Object.assign({}, partners[idx], obj), before, 'partners', { visibility:'company' });
+      writeAuditLog('partners', editId, 'update', before, partners[idx], { summary:'거래처 수정' });
+    }
   } else {
+    if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
+    stampRecordCreate(obj, 'partners', { visibility:'company' });
     partners.unshift(obj);
+    writeAuditLog('partners', obj.id, 'create', null, obj, { summary:'거래처 등록' });
   }
   if (obj.type === '고객사' && typeof syncClientFromPartner === 'function') {
     syncClientFromPartner(obj);
@@ -16849,8 +17534,11 @@ function savePartnerForm() {
 
 function deletePartner(id) {
   if (!checkAdminAction()) return;
+  const target = partners.find(p => p.id === id);
+  if (!target || !requireRecordPermission('delete', target, 'partners')) return;
   if (!confirm('이 거래처를 삭제하시겠습니까?')) return;
   partners = partners.filter(p => p.id !== id);
+  writeAuditLog('partners', id, 'delete', target, null, { summary:'거래처 삭제' });
   saveStorage('partners', partners);
   renderPartners();
   showToast('거래처가 삭제되었습니다.');
@@ -18629,8 +19317,9 @@ function fixedCostSavePayment(itemId, ym, patch, options={}) {
   const item = fixedCostItems().find(x => x.id === itemId);
   if (!item) return false;
   let rec = fixedCostPayment(itemId, ym);
+  const before = rec ? _safeJsonClone(rec) : null;
   if (!rec) {
-    rec = {
+    rec = stampRecordCreate({
       id: nextCode('FCP', fixedCostPayments()),
       itemId,
       ym,
@@ -18641,10 +19330,14 @@ function fixedCostSavePayment(itemId, ym, patch, options={}) {
       method: item.method || '계좌이체',
       note: item.note || '',
       createdAt: new Date().toISOString()
-    };
+    }, 'fixedCostPayment');
     fixedCostPayments().push(rec);
   }
   Object.assign(rec, patch, { updatedAt:new Date().toISOString() });
+  stampRecordUpdate(rec, before, 'fixedCostPayment');
+  if (!options.skipAudit) {
+    writeAuditLog('fixedCostPayment', rec.id, before ? 'update' : 'create', before, rec, { summary:options.auditSummary || '월 고정비 처리 변경', detail:`${ym} · ${item.name || itemId}` });
+  }
   saveStorage('financeData', financeData);
   return true;
 }
@@ -18852,19 +19545,24 @@ function saveFixedCostItem() {
   if (invalid) { showToast('항목명과 기본 금액은 필수입니다.', 'error'); return; }
   if (editId) {
     const existing = fixedCostItems().find(x => x.id === editId);
-    if (existing) Object.assign(existing, fixedCostItemFromRow(rows[0], editId));
-    finAudit('고정비 항목 수정', `${rows[0].name} · ${fmtW(rows[0].defaultAmount)}`);
+    if (existing) {
+      const before = _safeJsonClone(existing);
+      Object.assign(existing, fixedCostItemFromRow(rows[0], editId));
+      stampRecordUpdate(existing, before, 'fixedCost');
+      writeAuditLog('fixedCost', editId, 'update', before, existing, { summary:'고정비 항목 수정', detail:`${rows[0].name} · ${fmtW(rows[0].defaultAmount)}` });
+    }
     showToast('고정비 항목을 수정했습니다.', 'success');
   } else {
     const created = [];
     rows.forEach(row => {
       const item = fixedCostItemFromRow(row, nextCode('FC', fixedCostItems()));
       item.createdAt = new Date().toISOString();
+      stampRecordCreate(item, 'fixedCost');
       fixedCostItems().push(item);
       created.push(item);
+      writeAuditLog('fixedCost', item.id, 'create', null, item, { summary:'고정비 항목 등록', detail:`${item.name} · ${fmtW(item.defaultAmount)}` });
     });
     financeData.fixedCosts.sort((a,b) => String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
-    finAudit('고정비 항목 일괄 등록', `${created.length}건 · ${fmtW(created.reduce((sum, item) => sum + (Number(item.defaultAmount)||0), 0))}`);
     showToast(`고정비 항목 ${created.length}건을 등록했습니다.`, 'success');
   }
   saveStorage('financeData', financeData);
@@ -18875,10 +19573,12 @@ function deleteFixedCostItem(id) {
   if (!checkAdminAction()) return;
   const item = fixedCostItems().find(x => x.id === id);
   if (!item) return;
+  if (!requireRecordPermission('delete', item, 'fixedCost')) return;
   confirm_('고정비 항목 삭제', `${item.name} 항목과 월별 처리 내역을 삭제하시겠습니까?`, () => {
+    const payments = fixedCostPayments().filter(x => x.itemId === id);
     financeData.fixedCosts = fixedCostItems().filter(x => x.id !== id);
     financeData.fixedCostPayments = fixedCostPayments().filter(x => x.itemId !== id);
-    finAudit('고정비 항목 삭제', id);
+    writeAuditLog('fixedCost', id, 'delete', item, null, { summary:'고정비 항목 삭제', detail:`월별 처리 ${payments.length}건 함께 삭제` });
     saveStorage('financeData', financeData);
     renderFinance();
   }, 'btn-danger', 'ti-trash');
@@ -18896,28 +19596,16 @@ function updateFixedCostPayment(itemId, field, value) {
   } else if (field === 'method') patch.method = value || '계좌이체';
   else if (field === 'note') patch.note = value || '';
   else if (field === 'dueDate') patch.dueDate = value || fixedCostPayDate(fixedCostMonth, 25);
-  if (fixedCostSavePayment(itemId, fixedCostMonth, patch)) {
-    finAudit('월 고정비 수정', `${fixedCostMonth} · ${itemId}`);
-    renderFinance();
-  }
+  if (fixedCostSavePayment(itemId, fixedCostMonth, patch, { auditSummary:'월 고정비 수정' })) renderFinance();
 }
 function markFixedCostPaid(itemId) {
-  if (fixedCostSavePayment(itemId, fixedCostMonth, { status:'지급완료', paidDate:today() })) {
-    finAudit('고정비 지급완료', `${fixedCostMonth} · ${itemId}`);
-    renderFinance();
-  }
+  if (fixedCostSavePayment(itemId, fixedCostMonth, { status:'지급완료', paidDate:today() }, { auditSummary:'고정비 지급완료' })) renderFinance();
 }
 function requestFixedCostPayment(itemId) {
-  if (fixedCostSavePayment(itemId, fixedCostMonth, { status:'결제요청', paidDate:'' })) {
-    finAudit('고정비 결제요청', `${fixedCostMonth} · ${itemId}`);
-    renderFinance();
-  }
+  if (fixedCostSavePayment(itemId, fixedCostMonth, { status:'결제요청', paidDate:'' }, { auditSummary:'고정비 결제요청' })) renderFinance();
 }
 function holdFixedCostPayment(itemId) {
-  if (fixedCostSavePayment(itemId, fixedCostMonth, { status:'보류', paidDate:'' })) {
-    finAudit('고정비 보류', `${fixedCostMonth} · ${itemId}`);
-    renderFinance();
-  }
+  if (fixedCostSavePayment(itemId, fixedCostMonth, { status:'보류', paidDate:'' }, { auditSummary:'고정비 보류' })) renderFinance();
 }
 function fixedCostPruneSelection(validIds) {
   const valid = new Set(validIds || []);
@@ -19090,11 +19778,11 @@ function financeFilteredRows(tab) {
   const s=finState(tab), q=s.query.trim().toLowerCase();
   if(tab==='revenue')return deliveries.filter(d=>finMatchDate(d.deliveredAt,s)&&finMatchAmount((d.price||0)*(d.qty||0),s)&&(!q||[d.id,getClientName(d.clientId),d.productName,getProductName(d.productId)].join(' ').toLowerCase().includes(q)));
   if(tab==='purchase')return poList.filter(p=>finMatchDate(p.date,s)&&finMatchAmount(finPoAmount(p),s)&&(!s.status||(p.status||'작성중')===s.status)&&(!q||[p.id,p.supplier,finPoItemSearchText(p)].join(' ').toLowerCase().includes(q)));
-  if(tab==='payreq')return financePaymentRequests().filter(r=>finMatchDate(r.requestDate,s)&&finMatchAmount(r.amount,s)&&(!s.status||r.status===s.status)&&(!q||[r.id,r.poId,r.supplier,r.itemSummary,r.assignee,r.requester,r.note].join(' ').toLowerCase().includes(q)));
+  if(tab==='payreq')return financePaymentRequests().filter(r=>canViewRecord(r,'paymentRequest')&&finMatchDate(r.requestDate,s)&&finMatchAmount(r.amount,s)&&(!s.status||r.status===s.status)&&(!q||[r.id,r.poId,r.supplier,r.itemSummary,r.assignee,r.requester,r.note].join(' ').toLowerCase().includes(q)));
   if(tab==='fixed')return fixedCostRows(fixedCostMonth, fixedCostShowInactive).filter(r=>finMatchAmount(r.amount,s)&&(!s.status||r.status===s.status)&&(!q||[r.name,r.category,r.vendor,r.method,r.note].join(' ').toLowerCase().includes(q)));
   if(tab==='cost')return products.filter(p=>finMatchAmount(prodUnitCost(p),s)&&(!q||[p.id,p.name,getClientName(p.clientId)].join(' ').toLowerCase().includes(q)));
   if(tab==='labor')return workers.filter(w=>finMatchAmount(calcPayroll(w,payrollMonth).net,s)&&(!s.status||(calcPayroll(w,payrollMonth).confirmed?'확정':'작성중')===s.status)&&(!q||[w.id,w.name,w.dept,w.position].join(' ').toLowerCase().includes(q)));
-  if(tab==='etc')return financeData.entries.filter(e=>finMatchDate(e.date,s)&&finMatchAmount(e.amount,s)&&(!s.status||e.type===s.status)&&(!q||[e.id,e.category,e.title,e.note].join(' ').toLowerCase().includes(q)));
+  if(tab==='etc')return financeData.entries.filter(e=>canViewRecord(e,'financeEntry')&&finMatchDate(e.date,s)&&finMatchAmount(e.amount,s)&&(!s.status||e.type===s.status)&&(!q||[e.id,e.category,e.title,e.note].join(' ').toLowerCase().includes(q)));
   return [];
 }
 function exportFinanceViewXLS(tab){
@@ -19134,6 +19822,10 @@ function exportPnlXLS(){
   const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet([['월','매출','매입/지출','인건비','고정비','기타수입','기타비용','순이익'],...rows]);XLSX.utils.book_append_sheet(wb,ws,'손익');XLSX.writeFile(wb,`손익계산_${finPnlMonths}개월_${today()}.xlsx`);
 }
 function finAudit(action, detail='') {
+  if (typeof writeAuditLog === 'function') {
+    writeAuditLog('finance', detail || action, 'update', null, null, { summary:action, detail });
+    return;
+  }
   financeData.auditLog.unshift({id:'FA-'+Date.now(),at:new Date().toISOString(),action,detail});
   financeData.auditLog=financeData.auditLog.slice(0,300);
 }
@@ -19410,6 +20102,10 @@ function openFinancePayment(kind, id) {
   if (!checkAdminAction()) return;
   const src = financePaymentSource(kind, id);
   if (!src) { showToast('처리할 항목을 찾을 수 없습니다.', 'error'); return; }
+  if (kind === 'ap') {
+    const p = poList.find(x => x.id === id);
+    if (p && !requireRecordPermission('edit', p, 'po')) return;
+  }
   const pay = finPaymentRecord(kind, id, src.total);
   sv('payment-kind', kind);
   sv('payment-id', id);
@@ -19437,6 +20133,7 @@ function saveFinancePayment() {
   if (amount <= 0) { showToast('처리금액을 입력하세요. 미처리는 되돌리기 버튼을 사용하세요.', 'error'); return; }
   const current = finPaymentRecord(kind, id, src.total);
   const nextAmount = Math.min(src.total, current.amount + amount);
+  const before = _safeJsonClone(finPaymentMap(kind)[id] || current);
   finPaymentMap(kind)[id] = { amount:nextAmount, date, method:v('payment-method') || '계좌이체', note:v('payment-note') || '' };
   const pay = finPaymentRecord(kind, id, src.total);
   if (kind === 'ap') {
@@ -19445,9 +20142,10 @@ function saveFinancePayment() {
       req.status = '지급완료';
       req.completedAt = new Date().toISOString();
       req.updatedAt = new Date().toISOString();
+      stampRecordUpdate(req, null, 'paymentRequest');
     }
   }
-  finAudit(kind === 'ap' ? '지급 처리' : '수금 처리', `${id} · ${fmtW(amount)} · 누적 ${fmtW(nextAmount)} · ${pay.status}`);
+  writeAuditLog('financePayment', id, 'update', before, finPaymentMap(kind)[id], { summary:kind === 'ap' ? '지급 처리' : '수금 처리', detail:`${id} · ${fmtW(amount)} · 누적 ${fmtW(nextAmount)} · ${pay.status}` });
   arSelected.delete(finPaymentRowKey(kind, id));
   saveStorage('financeData', financeData);
   closeModal('payment-modal');
@@ -19461,14 +20159,16 @@ function clearFinancePayment() {
   const src = financePaymentSource(kind, id);
   if (!src) return;
   if (!guardFinanceMonth(today())) return;
+  const before = _safeJsonClone(finPaymentMap(kind)[id] || finPaymentRecord(kind, id, src.total));
   delete finPaymentMap(kind)[id];
   const req = kind === 'ap' ? finPaymentRequestForPo(id) : null;
   if (req && req.status === '지급완료') {
     req.status = '지급예정';
     delete req.completedAt;
     req.updatedAt = new Date().toISOString();
+    stampRecordUpdate(req, null, 'paymentRequest');
   }
-  finAudit(kind === 'ap' ? '지급 미처리 복원' : '수금 미처리 복원', id);
+  writeAuditLog('financePayment', id, 'restore', before, null, { summary:kind === 'ap' ? '지급 미처리 복원' : '수금 미처리 복원', detail:id });
   arSelected.delete(finPaymentRowKey(kind, id));
   saveStorage('financeData', financeData);
   closeModal('payment-modal');
@@ -19609,6 +20309,7 @@ function openPaymentRequestFromPo(poId) {
   if (!checkAdminAction()) return;
   const p = poList.find(x => x.id === poId);
   if (!p) { showToast('구매발주서를 찾을 수 없습니다.', 'error'); return; }
+  if (!canViewRecord(p, 'po')) { showToast('이 발주서에 접근할 권한이 없습니다.', 'error'); return; }
   const total = finPoAmount(p);
   const pay = finPaymentRecord('ap', p.id, total);
   if (pay.done) { showToast('이미 지급 완료된 발주서입니다.', 'info'); return; }
@@ -19642,8 +20343,10 @@ function savePaymentRequest() {
   if (amount <= 0) { showToast('요청 금액을 입력하세요.', 'error'); return; }
   const list = financePaymentRequests();
   let req = finPaymentRequestForPo(poId);
+  const before = req ? _safeJsonClone(req) : null;
+  if (before && !requireRecordPermission('edit', before, 'paymentRequest')) return;
   if (!req) {
-    req = { id:nextCode('PAY', list), sourceType:'po', poId, status:'요청', createdAt:new Date().toISOString() };
+    req = stampRecordCreate({ id:nextCode('PAY', list), sourceType:'po', poId, status:'요청', createdAt:new Date().toISOString() }, 'paymentRequest');
     list.unshift(req);
   } else if (req.status === '반려') {
     req.status = '요청';
@@ -19655,7 +20358,8 @@ function savePaymentRequest() {
     supplier:p.supplier || '', itemSummary:finPoItemSummary(p), payMethod:p.payMethod || '현금',
     note:v('payreq-note'), updatedAt:new Date().toISOString()
   });
-  finAudit('결제 요청', `${poId} · ${p.supplier || ''} · ${fmtW(amount)}`);
+  stampRecordUpdate(req, before, 'paymentRequest');
+  writeAuditLog('paymentRequest', req.id, before ? 'update' : 'create', before, req, { summary:'결제 요청 저장', detail:`${poId} · ${p.supplier || ''} · ${fmtW(amount)}` });
   saveStorage('financeData', financeData);
   if (typeof generateAlert === 'function') {
     generateAlert('info', `결제 요청: ${poId}`, `${req.assignee || '결제 담당자'} · ${p.supplier || ''} · ${fmtW(amount)}`, 'manual');
@@ -19669,9 +20373,12 @@ function changePaymentRequestStatus(id, status) {
   if (!checkAdminAction()) return;
   const req = financePaymentRequests().find(r => r.id === id);
   if (!req) return;
+  if (!roleFeatureAllowed('status') || !requireRecordPermission('edit', req, 'paymentRequest')) return;
+  const before = _safeJsonClone(req);
   req.status = status;
   req.updatedAt = new Date().toISOString();
-  finAudit('결제 요청 상태 변경', `${req.poId} · ${status}`);
+  stampRecordUpdate(req, before, 'paymentRequest');
+  writeAuditLog('paymentRequest', req.id, 'statusChange', before, req, { summary:`결제 요청 상태 변경: ${before.status || ''} → ${status}` });
   payreqSelected.delete(id);
   saveStorage('financeData', financeData);
   renderFinance();
@@ -19681,9 +20388,10 @@ function deletePaymentRequest(id) {
   if (!checkAdminAction()) return;
   const req = financePaymentRequests().find(r => r.id === id);
   if (!req) return;
+  if (!requireRecordPermission('delete', req, 'paymentRequest')) return;
   confirm_('결제 요청 삭제', `${req.poId} 결제 요청을 삭제하시겠습니까?`, () => {
     financeData.paymentRequests = financePaymentRequests().filter(r => r.id !== id);
-    finAudit('결제 요청 삭제', req.poId);
+    writeAuditLog('paymentRequest', req.id, 'delete', req, null, { summary:'결제 요청 삭제', detail:req.poId });
     payreqSelected.delete(id);
     saveStorage('financeData', financeData);
     renderFinance();
@@ -19722,7 +20430,7 @@ function clearPayreqSelection() {
 }
 function payreqSelectedRows() {
   const ids = new Set(payreqSelected);
-  return financePaymentRequests().filter(req => ids.has(req.id));
+  return financePaymentRequests().filter(req => ids.has(req.id) && canViewRecord(req, 'paymentRequest'));
 }
 function payreqMutableSelectedRows() {
   return payreqSelectedRows().filter(req => !payreqIsPaidDone(req));
@@ -19748,11 +20456,14 @@ function payreqBulkStatus(status) {
   const rows = payreqMutableSelectedRows();
   if (!rows.length) { showToast('처리 가능한 결제 요청이 없습니다.', 'info'); return; }
   if (!checkAdminAction()) return;
+  if (rows.some(req => !canEditRecord(req, 'paymentRequest'))) { showToast('상태 변경 권한이 없는 결제 요청이 포함되어 있습니다.', 'error'); return; }
   rows.forEach(req => {
+    const before = _safeJsonClone(req);
     req.status = status;
     req.updatedAt = new Date().toISOString();
+    stampRecordUpdate(req, before, 'paymentRequest');
+    writeAuditLog('paymentRequest', req.id, 'statusChange', before, req, { summary:`결제 요청 일괄 상태 변경: ${status}`, source:'bulkAction' });
   });
-  finAudit('결제 요청 선택 상태 변경', `${rows.length}건 · ${status}`);
   payreqSelected.clear();
   saveStorage('financeData', financeData);
   renderFinance();
@@ -19763,10 +20474,11 @@ function payreqBulkDelete() {
   const rows = payreqMutableSelectedRows();
   if (!rows.length) { showToast('삭제 가능한 결제 요청이 없습니다.', 'info'); return; }
   if (!checkAdminAction()) return;
+  if (rows.some(req => !canDeleteRecord(req, 'paymentRequest'))) { showToast('삭제 권한이 없는 결제 요청이 포함되어 있습니다.', 'error'); return; }
   confirm_('결제 요청 삭제', `선택한 결제 요청 ${rows.length}건을 삭제하시겠습니까?`, () => {
     const ids = new Set(rows.map(req => req.id));
     financeData.paymentRequests = financePaymentRequests().filter(req => !ids.has(req.id));
-    finAudit('결제 요청 선택 삭제', `${rows.length}건`);
+    rows.forEach(req => writeAuditLog('paymentRequest', req.id, 'delete', req, null, { summary:'결제 요청 일괄 삭제', source:'bulkAction' }));
     payreqSelected.clear();
     saveStorage('financeData', financeData);
     renderFinance();
@@ -19794,7 +20506,7 @@ function payreqSelectionBarHtml() {
 }
 function _finPayRequests() {
   const state=finState('payreq'), q=state.query.trim().toLowerCase();
-  let list=financePaymentRequests().filter(r => finMatchDate(r.requestDate,state) && finMatchAmount(r.amount,state) && (!state.status || r.status===state.status) &&
+  let list=financePaymentRequests().filter(r => canViewRecord(r,'paymentRequest') && finMatchDate(r.requestDate,state) && finMatchAmount(r.amount,state) && (!state.status || r.status===state.status) &&
     (!q || [r.id,r.poId,r.supplier,r.itemSummary,r.assignee,r.requester,r.note].join(' ').toLowerCase().includes(q)));
   list=finSort(list,state,r=>r.requestDate,r=>r.amount);
   payreqPruneSelection(list.map(r => r.id));
@@ -19994,8 +20706,9 @@ function saveFinanceEntry() {
     note: v('fin-note') || '',
     createdAt: new Date().toISOString()
   };
+  stampRecordCreate(entry, 'financeEntry');
   financeData.entries.unshift(entry);
-  finAudit('기타 수입/비용 등록', `${entry.type} · ${entry.category} · ${fmtW(entry.amount)}`);
+  writeAuditLog('financeEntry', entry.id, 'create', null, entry, { summary:'기타 수입/비용 등록', detail:`${entry.type} · ${entry.category} · ${fmtW(entry.amount)}` });
   saveStorage('financeData', financeData);
   closeModal('finance-modal');
   renderFinance();
@@ -20005,10 +20718,11 @@ function deleteFinanceEntry(id) {
   if (!checkAdminAction()) return;
   const item = financeData.entries.find(e => e.id === id);
   if (!item) return;
+  if (!requireRecordPermission('delete', item, 'financeEntry')) return;
   if (!guardFinanceMonth(item.date)) return;
   confirm_('기타 항목 삭제', `${item.title} 항목을 삭제하시겠습니까?`, () => {
     financeData.entries = financeData.entries.filter(e => e.id !== id);
-    finAudit('기타 수입/비용 삭제', id);
+    writeAuditLog('financeEntry', id, 'delete', item, null, { summary:'기타 수입/비용 삭제' });
     etcSelected.delete(id);
     saveStorage('financeData', financeData);
     renderFinance();
@@ -20041,18 +20755,19 @@ function clearEtcSelection() {
 }
 function etcSelectedRows() {
   const ids = new Set(etcSelected);
-  return (financeData.entries || []).filter(entry => ids.has(entry.id));
+  return (financeData.entries || []).filter(entry => ids.has(entry.id) && canViewRecord(entry, 'financeEntry'));
 }
 function etcBulkDelete() {
   const rows = etcSelectedRows();
   if (!rows.length) { showToast('선택된 기타 항목이 없습니다.', 'info'); return; }
   if (!checkAdminAction()) return;
+  if (rows.some(row => !canDeleteRecord(row, 'financeEntry'))) { showToast('삭제 권한이 없는 기타 항목이 포함되어 있습니다.', 'error'); return; }
   const locked = rows.find(row => row.date && isFinanceMonthClosed(row.date.slice(0,7)));
   if (locked) { showToast(`${monthLabel(locked.date.slice(0,7))}은 마감되어 삭제할 수 없습니다.`, 'error'); return; }
   confirm_('기타 항목 삭제', `선택한 기타 수입/비용 ${rows.length}건을 삭제하시겠습니까?`, () => {
     const ids = new Set(rows.map(row => row.id));
     financeData.entries = (financeData.entries || []).filter(entry => !ids.has(entry.id));
-    finAudit('기타 수입/비용 선택 삭제', `${rows.length}건`);
+    rows.forEach(row => writeAuditLog('financeEntry', row.id, 'delete', row, null, { summary:'기타 수입/비용 일괄 삭제', source:'bulkAction' }));
     etcSelected.clear();
     saveStorage('financeData', financeData);
     renderFinance();
@@ -20124,7 +20839,7 @@ function _finFixedCost() {
 
 function _finEtc() {
   const state=finState('etc'), query=state.query.trim().toLowerCase();
-  let list=financeData.entries.filter(e=>finMatchDate(e.date,state)&&finMatchAmount(e.amount,state)&&(!state.status||e.type===state.status)&&
+  let list=financeData.entries.filter(e=>canViewRecord(e,'financeEntry')&&finMatchDate(e.date,state)&&finMatchAmount(e.amount,state)&&(!state.status||e.type===state.status)&&
     (!query||[e.id,e.category,e.title,e.note].join(' ').toLowerCase().includes(query)));
   list=finSort(list,state,e=>e.date,e=>e.amount);
   etcPruneSelection(list.map(e => e.id));
