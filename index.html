@@ -12543,6 +12543,28 @@ function delAlert(token) {
 }
 
 /* ════════ 9. 휴지통 백업 및 복구 로직 ════════ */
+function nextTrashId(actor = getCurrentActor()) {
+  const who = String((actor && (actor.uid || actor.userId || actor.email)) || 'local').replace(/[^a-zA-Z0-9]+/g, '').slice(-6) || 'local';
+  return 'TRSH-' + Date.now().toString(36).toUpperCase() + '-' + who + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
+}
+
+function isTrashActive(item) {
+  return !!item && !item.trashStatus && !item.trashRemovedAt;
+}
+
+function activeTrashItems() {
+  return Array.isArray(trash) ? trash.filter(isTrashActive) : [];
+}
+
+function markTrashInactive(item, status) {
+  if (!item) return;
+  const actor = getCurrentActor();
+  item.trashStatus = status || 'removed';
+  item.trashRemovedAt = new Date().toISOString();
+  item.trashRemovedBy = actor.userId;
+  item.trashRemovedByName = actor.name;
+}
+
 function pushToTrash(type, name, originalId, data, cascadeData = null) {
   if (data == null && name && typeof name === 'object') {
     data = name;
@@ -12556,10 +12578,11 @@ function pushToTrash(type, name, originalId, data, cascadeData = null) {
     data.deletedAt = new Date().toISOString();
   }
   const newItem = {
-    id: nextCode('TRSH', trash, 'id'),
+    id: nextTrashId(actor),
     type,
     name,
     originalId,
+    trashStatus: '',
     deletedAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
     deletedBy: actor.userId,
     deletedByName: actor.name,
@@ -12574,13 +12597,14 @@ function pushToTrash(type, name, originalId, data, cascadeData = null) {
 function updateTrashBadge() {
   const el = inp('trashBadge');
   if (el) {
-    el.textContent = trash.length;
-    el.style.display = trash.length ? '' : 'none';
+    const count = activeTrashItems().length;
+    el.textContent = count;
+    el.style.display = count ? '' : 'none';
   }
 }
 
 function restoreTrash(id) {
-  const item = trash.find(x => x.id === id);
+  const item = trash.find(x => x.id === id && isTrashActive(x));
   if (!item) return;
   if (!roleFeatureAllowed('restore')) { showToast('복구 권한이 없습니다.', 'error'); return; }
   const actor = getCurrentActor();
@@ -12689,7 +12713,7 @@ function restoreTrash(id) {
     showToast(`[${item.data.name}] 사원의 조업 임직원 프로필이 복구되었습니다.`);
   }
 
-  trash = trash.filter(x => x.id !== id);
+  markTrashInactive(item, 'restored');
   saveStorage('trash', trash);
   writeAuditLog(item.type || 'trash', item.originalId || id, 'restore', item, item.data, { summary:'휴지통 복구', detail:item.name || id });
   
@@ -12699,11 +12723,11 @@ function restoreTrash(id) {
 }
 
 function deleteTrashPermanently(id) {
-  const item = trash.find(x => x.id === id);
+  const item = trash.find(x => x.id === id && isTrashActive(x));
   if (!item) return;
 
   confirm_('데이터 영구 삭제 경고', `<strong>[${item.name}]</strong> 데이터를 휴지통에서 완전히 삭제하시겠습니까?<br><span style="color:var(--tx-d); font-weight:700;">이 작업은 복구가 절대 불가능하며 데이터가 완전히 유실됩니다.</span>`, () => {
-    trash = trash.filter(x => x.id !== id);
+    markTrashInactive(item, 'deleted');
     writeAuditLog(item.type || 'trash', item.originalId || id, 'delete', item, null, { summary:'휴지통 영구 삭제', detail:item.name || id });
     saveStorage('trash', trash);
     updateTrashBadge();
@@ -12713,13 +12737,16 @@ function deleteTrashPermanently(id) {
 }
 
 function emptyTrash() {
-  if (trash.length === 0) {
+  const active = activeTrashItems();
+  if (active.length === 0) {
     showToast('비워둘 수 있는 휴지통 항목이 없습니다.', 'info');
     return;
   }
-  confirm_('휴지통 전체 비우기', `휴지통 내부 <strong>총 ${trash.length}건</strong>의 모든 백업 데이터를 영구 파기하시겠습니까?<br><span style="color:var(--tx-d); font-weight:700;">비워진 메모리 데이터는 복구 조작을 진행할 수 없습니다.</span>`, () => {
-    trash.forEach(item => writeAuditLog(item.type || 'trash', item.originalId || item.id, 'delete', item, null, { summary:'휴지통 전체 비우기', source:'bulkAction' }));
-    trash = [];
+  confirm_('휴지통 전체 비우기', `휴지통 내부 <strong>총 ${active.length}건</strong>의 모든 백업 데이터를 영구 파기하시겠습니까?<br><span style="color:var(--tx-d); font-weight:700;">비워진 메모리 데이터는 복구 조작을 진행할 수 없습니다.</span>`, () => {
+    active.forEach(item => {
+      writeAuditLog(item.type || 'trash', item.originalId || item.id, 'delete', item, null, { summary:'휴지통 전체 비우기', source:'bulkAction' });
+      markTrashInactive(item, 'deleted');
+    });
     saveStorage('trash', trash);
     updateTrashBadge();
     renderTrash();
@@ -12785,7 +12812,7 @@ function trashDeleteSelected() {
   const ids = trashSelectedIds();
   if (!ids.length) return;
   confirm_('선택 항목 영구 삭제', `선택한 <strong>${ids.length}건</strong>을 휴지통에서 완전히 삭제하시겠습니까?<br><span style="color:var(--tx-d);font-weight:700;">이 작업은 복구할 수 없습니다.</span>`, () => {
-    trash = trash.filter(x => !ids.includes(x.id));
+    trash.filter(x => ids.includes(x.id) && isTrashActive(x)).forEach(item => markTrashInactive(item, 'deleted'));
     saveStorage('trash', trash);
     updateTrashBadge();
     renderTrash();
@@ -12797,13 +12824,14 @@ function renderTrash() {
   const filterType = v('trash-filter-type');
   const searchQ = v('trash-q').toLowerCase();
 
-  const filtered = trash.filter(i => {
+  const active = activeTrashItems();
+  const filtered = active.filter(i => {
     if (filterType && i.type !== filterType) return false;
     if (searchQ && ![i.name, i.originalId, i.id].join(' ').toLowerCase().includes(searchQ)) return false;
     return true;
   });
 
-  inp('trash-total').textContent = trash.length + '건';
+  inp('trash-total').textContent = active.length + '건';
 
   const tableContainer = inp('trash-table');
   if (!tableContainer) return;
@@ -13816,10 +13844,12 @@ async function cloudMirrorV2Key(key){
       nextIds.add(id);
       writes.push({ ref: entityRef.collection('items').doc(id), data: cloudV2ItemPayload(item, key, index) });
     });
-    const existing = await entityRef.collection('items').get();
-    existing.forEach(doc => {
-      if (!nextIds.has(doc.id)) writes.push({ ref: doc.ref, delete: true });
-    });
+    if (key !== 'trash') {
+      const existing = await entityRef.collection('items').get();
+      existing.forEach(doc => {
+        if (!nextIds.has(doc.id)) writes.push({ ref: doc.ref, delete: true });
+      });
+    }
   } else if (value && typeof value === 'object') {
     writes.push({
       ref: entityRef.collection('state').doc('current'),
@@ -13857,7 +13887,17 @@ async function cloudFlush(){
   const failed = await cloudMirrorV2Keys(keys);
   const failedSet = new Set(failed);
   keys.filter(k=>!failedSet.has(k)).forEach(k=>{
-    setTimeout(()=>_cloudSavingKeys.delete(k), 2000);
+    setTimeout(()=>{
+      _cloudSavingKeys.delete(k);
+      if (k === 'trash' && typeof cloudLoadV2Key === 'function') {
+        cloudLoadV2Key(k).then(loaded => {
+          if (!loaded) return;
+          if (typeof cloudResyncGlobals === 'function') cloudResyncGlobals();
+          if (typeof renderTrash === 'function' && typeof currentPage !== 'undefined' && (currentPage === 'trash' || (currentPage === 'system' && typeof systemTab !== 'undefined' && systemTab === 'trash'))) renderTrash();
+          if (typeof updateTrashBadge === 'function') updateTrashBadge();
+        }).catch(e => console.warn('휴지통 동기화 재확인 실패:', e));
+      }
+    }, 2000);
   });
   if (!failed.length) { _cloudChip('online'); return; }
   _cloudChip('error');
