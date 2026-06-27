@@ -365,10 +365,10 @@ body { font-family: var(--f); font-size: calc(12px * var(--ui-font-scale)); back
 .theme-btn:hover { background: var(--bg-s); }
 
 /* 컨텐츠 및 레이아웃 */
-.content { flex: 1; overflow-y: auto; padding: calc(20px * var(--ui-density-scale)) calc(24px * var(--ui-density-scale)); display: none; }
+.content { flex: 1; overflow-y: auto; padding: calc(6px * var(--ui-density-scale)) calc(8px * var(--ui-density-scale)); display: none; }
 .content.active { display: block; }
-.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px; }
-.mc { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rm); padding: 8px 11px; cursor: default; box-shadow: var(--shadow); transition: transform 0.15s, border-color 0.15s; min-width: 0; min-height: 58px; display: flex; flex-direction: column; justify-content: center; }
+.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; margin-bottom: 5px; }
+.mc { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rm); padding: 6px 8px; cursor: default; box-shadow: var(--shadow); transition: transform 0.15s, border-color 0.15s; min-width: 0; min-height: 52px; display: flex; flex-direction: column; justify-content: center; }
 .mc.clickable { cursor: pointer; }
 .mc.clickable:hover { border-color: var(--tx-i); transform: translateY(-1px); }
 .mc.clickable.kpi-active { border-color: var(--tx-i); box-shadow: 0 0 0 2px var(--br-i) inset, var(--shadow); }
@@ -383,7 +383,11 @@ body { font-family: var(--f); font-size: calc(12px * var(--ui-font-scale)); back
 .row2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
 .row3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
 
-.card { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: calc(18px * var(--ui-density-scale)) calc(20px * var(--ui-density-scale)); box-shadow: var(--shadow); margin-bottom: calc(16px * var(--ui-density-scale)); min-width: 0; }
+.card { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: calc(10px * var(--ui-density-scale)) calc(12px * var(--ui-density-scale)); box-shadow: var(--shadow); margin-bottom: calc(6px * var(--ui-density-scale)); min-width: 0; }
+.content > .card:has(> div[id$="-table"]),
+.content > .card:has(> .trash-table-scroll) {
+  padding: calc(3px * var(--ui-density-scale)) calc(4px * var(--ui-density-scale));
+}
 .card-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
 .hr-view-toolbar {
   min-height: 34px;
@@ -932,6 +936,32 @@ body.mega-menu-open { overflow: hidden; }
 .bd-err { background: var(--bg-d); color: var(--tx-d); border-color: var(--br-d); }
 .bd-info { background: var(--bg-i); color: var(--tx-i); border-color: var(--br-i); }
 .bd-neu { background: var(--bg-s); color: var(--tx-s); border-color: var(--br); }
+.audit-change-line { line-height: 1.55; }
+.audit-before { color: var(--tx-d); }
+.audit-after { color: var(--tx-ok); font-weight: 650; }
+.audit-change-more { margin-top: 4px; color: var(--tx-t); font-size: 11px; }
+.audit-change-items { max-width: 560px; overflow-x: auto; }
+.audit-change-mini {
+  width: 100%;
+  min-width: 440px;
+  border-collapse: collapse;
+  font-size: 11px;
+  background: transparent;
+}
+.audit-change-mini th,
+.audit-change-mini td {
+  padding: 5px 7px;
+  border: 1px solid var(--br);
+  vertical-align: top;
+  white-space: nowrap;
+}
+.audit-change-mini th {
+  background: var(--tbl-head);
+  color: var(--tx-s);
+  font-weight: 750;
+}
+.audit-change-mini td:nth-child(3) { color: var(--tx-d); }
+.audit-change-mini td:nth-child(4) { color: var(--tx-ok); font-weight: 650; }
 
 .pb { height: 6px; background: var(--bg-s); border-radius: 3px; overflow: hidden; display: inline-block; vertical-align: middle; }
 .pf { height: 100%; border-radius: 3px; transition: width 0.3s ease; }
@@ -965,7 +995,8 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { outlin
 input[readonly] { background: var(--bg-s); color: var(--tx-t); cursor: not-allowed; }
 textarea { height: auto; resize: vertical; }
 
-.toolbar { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+.toolbar { display: flex; gap: 6px; margin-bottom: 5px; align-items: center; flex-wrap: wrap; }
+.content > .toolbar { margin-bottom: 5px !important; }
 .btn { padding: 6px 14px; border-radius: var(--rm); font-size: 12px; cursor: pointer; border: 1px solid var(--br-s); background: var(--bg-p); color: var(--tx); height: 32px; display: inline-flex; align-items: center; gap: 6px; font-family: var(--f); font-weight: 500; transition: all .15s; white-space: nowrap; }
 .btn:hover { background: var(--bg-s); border-color: var(--tx-s); }
 .btn:active { transform: scale(.97); }
@@ -1009,24 +1040,37 @@ textarea { height: auto; resize: vertical; }
   font-size: 13px;
   font-weight: 800;
 }
+.date-view-bar {
+  gap: 4px !important;
+  margin: 0 0 5px !important;
+  padding: 3px 6px !important;
+}
 .date-view-selected-mode {
   background: var(--bg-i) !important;
   border-color: var(--br-i) !important;
   color: var(--tx-i);
+  margin-bottom: 5px !important;
+  padding: 3px 8px !important;
 }
 .selection-action-bar,
 .date-view-selected-mode {
   align-items: center;
-  gap: 8px;
+  gap: 5px !important;
   flex-wrap: wrap;
 }
 .selection-action-bar {
-  min-height: 32px;
-  padding: 0 10px;
-  margin: 0 0 12px;
+  min-height: 28px;
+  padding: 3px 8px !important;
+  margin: 0 0 5px !important;
   background: var(--bg-i);
   border: 1px solid var(--br-i);
   border-radius: var(--rm);
+}
+#po-bulkbar,
+#memo-bulkbar {
+  gap: 5px !important;
+  margin: 0 0 5px !important;
+  padding: 4px 8px !important;
 }
 .date-view-selected-mode .date-view-selection-count,
 .selection-action-bar .date-view-selection-count {
@@ -3367,7 +3411,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     .memo-card-body{font-size:12px;line-height:1.65;color:var(--tx-s);white-space:pre-wrap;margin:10px 0;max-height:115px;overflow:hidden}
     .memo-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:10.5px;color:var(--tx-t)}
     .memo-tag{padding:2px 7px;border-radius:999px;background:var(--bg-s);border:1px solid var(--br)}
-    #memo-bulkbar{display:none;align-items:center;gap:8px;margin:0 0 12px;padding:9px 14px;background:var(--bg-i);border:1px solid var(--br-i);border-radius:8px;flex-wrap:wrap;color:var(--tx-i)}
+    #memo-bulkbar{display:none;align-items:center;gap:5px;margin:0 0 5px;padding:4px 8px;background:var(--bg-i);border:1px solid var(--br-i);border-radius:8px;flex-wrap:wrap;color:var(--tx-i)}
     #memo-bulkbar>span{font-weight:700;font-size:12.5px}
     .todo-board{display:grid;grid-template-columns:repeat(3,minmax(250px,1fr));gap:12px;overflow-x:auto}
     .todo-col{background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rl);padding:10px;min-height:250px}
@@ -3911,7 +3955,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     </div>
 
     <!-- 선택 일괄 동작 바 -->
-    <div id="po-bulkbar" style="display:none;align-items:center;gap:8px;margin:0 0 12px;padding:9px 14px;background:var(--bg-i);border:1px solid var(--br-i);border-radius:8px;flex-wrap:wrap;">
+    <div id="po-bulkbar" style="display:none;align-items:center;gap:5px;margin:0 0 5px;padding:4px 8px;background:var(--bg-i);border:1px solid var(--br-i);border-radius:8px;flex-wrap:wrap;">
       <span style="font-weight:700;font-size:12.5px;color:var(--tx-i);"><i class="ti ti-checkbox"></i> <span id="po-sel-count">0</span>건 선택됨</span>
       <button class="btn btn-sm" id="po-edit-btn" onclick="poBulkEdit()"><i class="ti ti-edit"></i>수정</button>
       <button class="btn btn-sm" id="po-clone-btn" onclick="poBulkClone()"><i class="ti ti-copy"></i>복제</button>
@@ -4238,6 +4282,16 @@ const AUDIT_META_FIELDS = new Set([
   'sharedWith','approvalUsers','deletedBy','deletedByName','deletedAt',
   'restoredBy','restoredByName','restoredAt','auditTrail','_mes'
 ]);
+const AUDIT_DOC_ITEM_FIELDS = ['itemName','spec','qty','unit','price','note'];
+const AUDIT_DOC_ITEM_LABELS = {
+  itemName: '품목명',
+  spec: '규격',
+  qty: '수량',
+  unit: '단위',
+  price: '단가',
+  note: '비고'
+};
+const AUDIT_DOC_MIRROR_FIELDS = new Set(['itemName','spec','qty','unit','unitPrice','price','note']);
 
 function _safeJsonClone(value) {
   if (value == null) return value;
@@ -4253,6 +4307,59 @@ function _auditString(value) {
 }
 function _auditSame(a, b) {
   return _auditString(a) === _auditString(b);
+}
+function _auditLooksLikeDocItems(items) {
+  return Array.isArray(items) && items.some(row =>
+    row && typeof row === 'object' && !Array.isArray(row) && AUDIT_DOC_ITEM_FIELDS.some(field => field in row)
+  );
+}
+function _auditDocItemRow(row) {
+  if (!row || typeof row !== 'object' || Array.isArray(row)) return {};
+  const out = {};
+  AUDIT_DOC_ITEM_FIELDS.forEach(field => { out[field] = row[field] ?? ''; });
+  return out;
+}
+function _auditDocRowHasValue(row) {
+  return AUDIT_DOC_ITEM_FIELDS.some(field => _auditString(row && row[field]).trim() !== '');
+}
+function _auditDocRowSummary(row) {
+  const clean = _auditDocItemRow(row);
+  return Object.assign({}, clean);
+}
+function _auditDocItemDiff(beforeItems, afterItems) {
+  const beforeRows = Array.isArray(beforeItems) ? beforeItems : [];
+  const afterRows = Array.isArray(afterItems) ? afterItems : [];
+  const max = Math.max(beforeRows.length, afterRows.length);
+  const changes = [];
+  for (let i = 0; i < max; i++) {
+    const beforeRow = _auditDocItemRow(beforeRows[i]);
+    const afterRow = _auditDocItemRow(afterRows[i]);
+    const beforeHas = _auditDocRowHasValue(beforeRow);
+    const afterHas = _auditDocRowHasValue(afterRow);
+    if (!beforeHas && !afterHas) continue;
+    const rowLabel = `품목 ${i + 1}`;
+    if (!beforeHas && afterHas) {
+      changes.push({ field: `items.${i}.row`, label: `${rowLabel} 추가`, before: '', after: _auditDocRowSummary(afterRow) });
+      continue;
+    }
+    if (beforeHas && !afterHas) {
+      changes.push({ field: `items.${i}.row`, label: `${rowLabel} 삭제`, before: _auditDocRowSummary(beforeRow), after: '' });
+      continue;
+    }
+    AUDIT_DOC_ITEM_FIELDS.forEach(field => {
+      if (_auditSame(beforeRow[field], afterRow[field])) return;
+      changes.push({
+        field: `items.${i}.${field}`,
+        label: `${rowLabel} ${AUDIT_DOC_ITEM_LABELS[field] || field}`,
+        before: beforeRow[field] ?? '',
+        after: afterRow[field] ?? ''
+      });
+    });
+  }
+  if (!changes.length && !_auditSame(beforeItems, afterItems)) {
+    changes.push({ field: 'items', label: '품목 목록', before: beforeItems || [], after: afterItems || [] });
+  }
+  return changes;
 }
 function getCurrentActor() {
   const cloudUser = (typeof _cloudUser !== 'undefined' && _cloudUser) ? _cloudUser : null;
@@ -4352,8 +4459,12 @@ function auditDiff(before, after) {
   const a = after && typeof after === 'object' ? after : {};
   const keys = new Set(Object.keys(b).concat(Object.keys(a)));
   const changes = [];
+  const docItemsChanged = (_auditLooksLikeDocItems(b.items) || _auditLooksLikeDocItems(a.items)) && !_auditSame(b.items, a.items);
+  if (docItemsChanged) changes.push(..._auditDocItemDiff(b.items, a.items));
   keys.forEach(key => {
     if (AUDIT_META_FIELDS.has(key)) return;
+    if (key === 'items' && docItemsChanged) return;
+    if (docItemsChanged && AUDIT_DOC_MIRROR_FIELDS.has(key)) return;
     if (!_auditSame(b[key], a[key])) changes.push({ field: key, before: b[key] ?? '', after: a[key] ?? '' });
   });
   return changes;
@@ -4372,11 +4483,34 @@ function auditLabelForAction(action) {
   };
   return map[action] || action || '작업';
 }
+function auditTargetMeta(before, after) {
+  const target = after && typeof after === 'object' ? after : (before && typeof before === 'object' ? before : {});
+  return {
+    targetCreatedBy: target.createdBy || '',
+    targetCreatedByName: target.createdByName || '',
+    targetCreatedAt: target.createdAt || '',
+    targetOwnerUserId: target.ownerUserId || '',
+    targetOwnerUserName: target.ownerUserName || ''
+  };
+}
+function auditCreatedByName(log) {
+  return (log && (log.targetCreatedByName || log.createdByName || log.ownerUserName || log.targetOwnerUserName)) || '';
+}
+function auditActorDisplayName(log) {
+  if (!log) return '-';
+  return log.actorName || auditCreatedByName(log) || log.actorUserId || log.targetCreatedBy || '-';
+}
+function auditActorDisplaySub(log) {
+  if (!log) return '';
+  if (log.actorRole) return log.actorRole;
+  if (!log.actorName && auditCreatedByName(log)) return '등록자';
+  return '';
+}
 function writeAuditLog(entityType, entityId, action, before, after, options = {}) {
   const actor = options.actor || getCurrentActor();
   const at = options.at || new Date().toISOString();
   const changes = options.changes || auditDiff(before, after);
-  const summary = options.summary || `${auditLabelForAction(action)}${changes.length ? ' · ' + changes.map(c => c.field).slice(0, 4).join(', ') : ''}`;
+  const summary = options.summary || `${auditLabelForAction(action)}${changes.length ? ' · ' + changes.map(c => c.label || c.field).slice(0, 4).join(', ') : ''}`;
   const entry = {
     id: options.id || ('AUD-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)),
     entityType: entityType || '',
@@ -4394,6 +4528,7 @@ function writeAuditLog(entityType, entityId, action, before, after, options = {}
     source: options.source || 'ui',
     detail: options.detail || summary
   };
+  Object.assign(entry, auditTargetMeta(before, after));
   if (!Array.isArray(auditLog)) auditLog = loadStorage('auditLog', []);
   auditLog.unshift(entry);
   auditLog = auditLog.slice(0, AUDIT_LOG_LIMIT);
@@ -5088,11 +5223,16 @@ function migrateAccessControlFields() {
     ['claims', claims, 'claim'],
     ['checkRecords', checkRecords, 'checkRecord'],
     ['inventory', inventory, 'inventory'],
+    ['workers', workers, 'worker'],
+    ['deliveries', deliveries, 'delivery'],
     ['rfqList', rfqList, 'rfq'],
     ['poList', poList, 'po'],
+    ['statementList', statementList, 'statement'],
+    ['taxList', taxList, 'tax'],
     ['quoteList', quoteList, 'quote'],
     ['orderList', orderList, 'order'],
-    ['asList', asList, 'as']
+    ['asList', asList, 'as'],
+    ['bomList', bomList, 'bom']
   ];
   batches.forEach(([key, list, entityType]) => {
     if (migrateRecordAccessFields(list, entityType, { visibility:'company' })) saveStorage(key, list);
@@ -5246,7 +5386,7 @@ function ensureDateView(key, containerId, dates, renderer) {
     bar = document.createElement('div');
     bar.id = 'date-view-' + key;
     bar.className = 'date-view-bar';
-    bar.style.cssText = 'display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:0 0 8px;padding:4px 8px;background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rm);';
+    bar.style.cssText = 'display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin:0 0 5px;padding:3px 6px;background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rm);';
     container.parentNode.insertBefore(bar, container);
   }
   _renderDateViewBar(key, bar);
@@ -7267,7 +7407,9 @@ function updateDlvBadge() {
 function deleteDelivery(id) {
   if (!checkAdminAction()) return;
   confirm_('납품 기록 삭제', '이 납품 기록을 삭제하시겠습니까?<br><span style="font-size:11px;color:var(--tx-t);">제품 공정 정보는 유지됩니다.</span>', () => {
+    const target = deliveries.find(x=>x.id===id);
     deliveries = deliveries.filter(x=>x.id!==id);
+    if (target) writeAuditLog('delivery', id, 'delete', target, null, { summary:'납품 기록 삭제' });
     saveStorage('deliveries', deliveries);
     updateDlvBadge();
     if (currentPage === 'deliveries') renderDeliveries();
@@ -7787,7 +7929,10 @@ function genPoFromMrp(){
       payMethod: '현금', dlvMethod: '직납', status: '작성중',
       note: `BOM 자동생성 · ${p.name} ${qty}${p.unit||'대'} 기준`
     };
-    poList.unshift(po); created++;
+    const nextPo = stampRecordCreate(po, 'po');
+    poList.unshift(nextPo);
+    writeAuditLog('po', nextPo.id, 'create', null, nextPo, { summary:'BOM 발주 필요량에서 구매발주서 생성' });
+    created++;
   });
   saveStorage('poList', poList);
   showToast(`구매발주서 ${created}건이 생성되었습니다. (구매발주서 메뉴에서 확인)`);
@@ -7891,10 +8036,15 @@ function applyBomMaterialImport(){
     const existing = row.existingId ? bomList.find(b=>b.id===row.existingId) : null;
     if (existing){
       rec.spec = existing.spec||'';
+      const before = _safeJsonClone(existing);
       Object.assign(existing, rec);
+      stampRecordUpdate(existing, before, 'bom');
+      writeAuditLog('bom', existing.id, 'update', before, existing, { summary:'BOM 항목 일괄 반영' });
       updated++;
     } else {
-      bomList.push(Object.assign({ id: nextCode('BM', bomList) }, rec));
+      const item = stampRecordCreate(Object.assign({ id: nextCode('BM', bomList) }, rec), 'bom');
+      bomList.push(item);
+      writeAuditLog('bom', item.id, 'create', null, item, { summary:'BOM 항목 일괄 등록' });
       added++;
     }
   });
@@ -7938,10 +8088,18 @@ function saveBomModal(){
   const rec = { productId: bomProductId, name, spec: v('bma-spec'), qtyPer: parseFloat(v('bma-qty'))||0, unit: v('bma-unit')||'EA',
     unitPrice: subId ? 0 : (parseInt(v('bma-price'))||0), supplier: subId ? '' : v('bma-supplier').trim(), subProductId: subId };
   if (editBomId){
-    const b = bomList.find(x=>x.id===editBomId); if(b) Object.assign(b, rec);
+    const b = bomList.find(x=>x.id===editBomId);
+    if(b) {
+      const before = _safeJsonClone(b);
+      Object.assign(b, rec);
+      stampRecordUpdate(b, before, 'bom');
+      writeAuditLog('bom', editBomId, 'update', before, b, { summary:'BOM 항목 수정' });
+    }
     showToast('BOM 자재가 수정되었습니다.');
   } else {
-    bomList.push(Object.assign({ id: nextCode('BM', bomList) }, rec));
+    const item = stampRecordCreate(Object.assign({ id: nextCode('BM', bomList) }, rec), 'bom');
+    bomList.push(item);
+    writeAuditLog('bom', item.id, 'create', null, item, { summary:'BOM 항목 등록' });
     showToast('BOM에 자재가 추가되었습니다.');
   }
   saveStorage('bomList', bomList);
@@ -7951,7 +8109,9 @@ function saveBomModal(){
 function deleteBom(id){
   if (!checkAdminAction()) return;
   if (!confirm('이 자재를 BOM에서 삭제하시겠습니까?')) return;
+  const target = bomList.find(x=>x.id===id);
   bomList = bomList.filter(x=>x.id!==id);
+  if (target) writeAuditLog('bom', id, 'delete', target, null, { summary:'BOM 항목 삭제' });
   saveStorage('bomList', bomList);
   renderBom();
   showToast('BOM 자재가 삭제되었습니다.');
@@ -11634,7 +11794,10 @@ function enrollWorkerFromUser(uid){
 function changeWorkerStatus(id, val) {
   const w = workers.find(x => x.id === id);
   if (w) {
+    const before = _safeJsonClone(w);
     w.status = val;
+    stampRecordUpdate(w, before, 'worker');
+    writeAuditLog('worker', id, 'statusChange', before, w, { summary:'작업원 상태 변경' });
     saveStorage('workers', workers);
     renderWorkers();
   }
@@ -11710,11 +11873,18 @@ function saveWorkerForm() {
   };
   if (editId) {
     const w = workers.find(x => x.id === editId);
-    if (w) Object.assign(w, data);
+    if (w) {
+      const before = _safeJsonClone(w);
+      Object.assign(w, data);
+      stampRecordUpdate(w, before, 'worker');
+      writeAuditLog('worker', editId, 'update', before, w, { summary:'작업원 정보 수정' });
+    }
     delete modal.dataset.editId;
     showToast('직원 정보가 수정되었습니다.');
   } else {
-    workers.push({ id: nextCode('E', workers), ...data });
+    const worker = stampRecordCreate({ id: nextCode('E', workers), ...data }, 'worker');
+    workers.push(worker);
+    writeAuditLog('worker', worker.id, 'create', null, worker, { summary:'작업원 등록' });
     showToast('신규 직원 정보가 등록되었습니다.');
   }
   saveStorage('workers', workers);
@@ -11733,6 +11903,7 @@ function deleteWorker(id) {
     pushToTrash('worker', `${w.name} (작업원)`, id, w);
 
     workers = workers.filter(x => x.id !== id);
+    writeAuditLog('worker', id, 'delete', w, null, { summary:'작업원 삭제' });
     saveStorage('workers', workers);
     renderWorkers();
     showToast('사원 정보가 휴지통으로 이동했습니다.', 'info');
@@ -13899,7 +14070,8 @@ function allAuditLogRows(){
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
-  }).sort((a,b) => String(b.at || '').localeCompare(String(a.at || '')));
+  }).map(log => typeof enrichAuditLogFromCurrentRecord === 'function' ? enrichAuditLogFromCurrentRecord(log) : log)
+    .sort((a,b) => String(b.at || '').localeCompare(String(a.at || '')));
 }
 function loadServerAuditLogsForAdmin(){
   if (serverAuditLogLoaded || currentRole !== 'admin' || !_fbDb) return;
@@ -13914,10 +14086,133 @@ function loadServerAuditLogsForAdmin(){
       serverAuditLogLoaded = false;
     });
 }
+const AUDIT_CHANGE_ITEM_FIELDS = ['itemName','spec','qty','unit','price','note'];
+const AUDIT_CHANGE_ITEM_FIELD_LABELS = {
+  itemName: '품목명',
+  spec: '규격',
+  qty: '수량',
+  unit: '단위',
+  price: '단가',
+  note: '비고'
+};
+const AUDIT_CHANGE_FIELD_LABELS = Object.assign({
+  itemName: '품목명',
+  spec: '규격',
+  qty: '수량',
+  unit: '단위',
+  unitPrice: '단가',
+  price: '단가',
+  note: '비고',
+  status: '상태',
+  date: '일자',
+  deliveryDate: '납기일',
+  clientId: '거래처',
+  clientName: '거래처명',
+  totalAmt: '합계금액'
+}, AUDIT_CHANGE_ITEM_FIELD_LABELS);
+const AUDIT_CHANGE_DOC_MIRROR_FIELDS = new Set(['itemName','spec','qty','unit','unitPrice','price','note']);
+function auditChangeRawText(value){
+  if (typeof _auditString === 'function') return _auditString(value);
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  try { return JSON.stringify(value); } catch(e) { return String(value); }
+}
+function auditChangeFieldLabel(field, label){
+  if (label) return label;
+  const text = String(field || '');
+  const itemMatch = text.match(/^items\.(\d+)\.([A-Za-z0-9_]+)$/);
+  if (itemMatch) return `품목 ${Number(itemMatch[1]) + 1} ${AUDIT_CHANGE_ITEM_FIELD_LABELS[itemMatch[2]] || itemMatch[2]}`;
+  return AUDIT_CHANGE_FIELD_LABELS[text] || text || '변경';
+}
+function auditChangeValueText(value){
+  if (value == null || value === '') return '-';
+  if (typeof value === 'number') return Number.isFinite(value) ? value.toLocaleString('ko-KR') : String(value);
+  if (typeof value === 'boolean') return value ? '예' : '아니오';
+  if (Array.isArray(value)) return `${value.length}건`;
+  if (typeof value === 'object') return auditChangeObjectSummary(value);
+  return auditChangeRawText(value);
+}
+function auditChangeObjectSummary(value){
+  if (!value || typeof value !== 'object') return auditChangeValueText(value);
+  const parts = AUDIT_CHANGE_ITEM_FIELDS
+    .filter(field => value[field] != null && value[field] !== '')
+    .map(field => `${AUDIT_CHANGE_ITEM_FIELD_LABELS[field] || field}: ${auditChangeValueText(value[field])}`);
+  if (parts.length) return parts.join(' · ');
+  return Object.keys(value).slice(0, 6).map(key => `${key}: ${auditChangeValueText(value[key])}`).join(' · ');
+}
+function auditChangeItemRow(row){
+  if (!row || typeof row !== 'object' || Array.isArray(row)) return {};
+  const out = {};
+  AUDIT_CHANGE_ITEM_FIELDS.forEach(field => { out[field] = row[field] ?? ''; });
+  return out;
+}
+function auditChangeRowHasValue(row){
+  return AUDIT_CHANGE_ITEM_FIELDS.some(field => String(auditChangeRawText((row && row[field]) ?? '')).trim() !== '');
+}
+function auditChangeItemsTable(change){
+  const beforeRows = Array.isArray(change.before) ? change.before : [];
+  const afterRows = Array.isArray(change.after) ? change.after : [];
+  const max = Math.max(beforeRows.length, afterRows.length);
+  const rows = [];
+  for (let i = 0; i < max; i++) {
+    const beforeRow = auditChangeItemRow(beforeRows[i]);
+    const afterRow = auditChangeItemRow(afterRows[i]);
+    const beforeHas = auditChangeRowHasValue(beforeRow);
+    const afterHas = auditChangeRowHasValue(afterRow);
+    if (!beforeHas && !afterHas) continue;
+    const rowName = `품목 ${i + 1}`;
+    if (!beforeHas && afterHas) {
+      rows.push(`<tr><td>${esc(rowName)}</td><td>추가</td><td>-</td><td>${esc(auditChangeObjectSummary(afterRow))}</td></tr>`);
+      continue;
+    }
+    if (beforeHas && !afterHas) {
+      rows.push(`<tr><td>${esc(rowName)}</td><td>삭제</td><td>${esc(auditChangeObjectSummary(beforeRow))}</td><td>-</td></tr>`);
+      continue;
+    }
+    AUDIT_CHANGE_ITEM_FIELDS.forEach(field => {
+      if (auditChangeRawText(beforeRow[field]) === auditChangeRawText(afterRow[field])) return;
+      rows.push(`<tr><td>${esc(rowName)}</td><td>${esc(AUDIT_CHANGE_ITEM_FIELD_LABELS[field] || field)}</td><td>${esc(auditChangeValueText(beforeRow[field]))}</td><td>${esc(auditChangeValueText(afterRow[field]))}</td></tr>`);
+    });
+  }
+  if (!rows.length) return '';
+  return `<div class="audit-change-items"><table class="audit-change-mini" data-no-managed-table><thead><tr><th>행</th><th>항목</th><th>변경 전</th><th>변경 후</th></tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+}
+function auditChangeItemFieldTable(changes){
+  const rows = [];
+  (changes || []).forEach(c => {
+    const match = String(c.field || '').match(/^items\.(\d+)\.([A-Za-z0-9_]+)$/);
+    if (!match) return;
+    const rowName = `품목 ${Number(match[1]) + 1}`;
+    const label = AUDIT_CHANGE_ITEM_FIELD_LABELS[match[2]] || auditChangeFieldLabel(c.field, c.label).replace(/^품목\s+\d+\s*/, '') || match[2];
+    rows.push(`<tr><td>${esc(rowName)}</td><td>${esc(label)}</td><td>${esc(auditChangeValueText(c.before))}</td><td>${esc(auditChangeValueText(c.after))}</td></tr>`);
+  });
+  if (!rows.length) return '';
+  return `<div class="audit-change-items"><table class="audit-change-mini" data-no-managed-table><thead><tr><th>행</th><th>항목</th><th>변경 전</th><th>변경 후</th></tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+}
+function auditChangeRowsForDisplay(log){
+  const changes = Array.isArray(log.changes) ? log.changes.filter(Boolean) : [];
+  const hasItemChange = changes.some(c => c && (c.field === 'items' || /^items\.\d+\./.test(String(c.field || ''))));
+  return hasItemChange ? changes.filter(c => !AUDIT_CHANGE_DOC_MIRROR_FIELDS.has(String(c.field || ''))) : changes;
+}
 function auditChangeText(log){
-  const changes = Array.isArray(log.changes) ? log.changes : [];
+  log = log || {};
+  const changes = auditChangeRowsForDisplay(log || {});
   if (!changes.length) return esc(log.detail || log.summary || '');
-  return changes.slice(0, 4).map(c => `${esc(c.field)}: ${esc(_auditString(c.before))} → ${esc(_auditString(c.after))}`).join('<br>');
+  const itemFieldTable = auditChangeItemFieldTable(changes);
+  let itemFieldTableUsed = false;
+  const blocks = changes.map(c => {
+    if (/^items\.\d+\./.test(String(c.field || ''))) {
+      if (itemFieldTableUsed) return '';
+      itemFieldTableUsed = true;
+      return itemFieldTable;
+    }
+    if (c.field === 'items') return auditChangeItemsTable(c) || `<div><b>${esc(auditChangeFieldLabel(c.field, c.label))}</b>: ${esc(auditChangeValueText(c.before))} &rarr; ${esc(auditChangeValueText(c.after))}</div>`;
+    return `<div class="audit-change-line"><b>${esc(auditChangeFieldLabel(c.field, c.label))}</b>: <span class="audit-before">${esc(auditChangeValueText(c.before))}</span> &rarr; <span class="audit-after">${esc(auditChangeValueText(c.after))}</span></div>`;
+  }).filter(Boolean);
+  const limit = changes.some(c => String(c.field || '').indexOf('items') === 0) ? 12 : 6;
+  const hidden = blocks.length > limit ? `<div class="audit-change-more">외 ${blocks.length - limit}건</div>` : '';
+  return blocks.slice(0, limit).join('') + hidden;
 }
 function renderPermAuditLog(){
   const el=inp('perm-audit-log'); if(!el) return;
@@ -13937,7 +14232,7 @@ function renderPermAuditLog(){
       <td style="white-space:nowrap;">${log.at ? new Date(log.at).toLocaleString('ko-KR') : '-'}</td>
       <td><span class="bd bd-info">${esc(log.entityType || '-')}</span><div style="font-size:11px;color:var(--tx-t);">${esc(log.entityId || '')}</div></td>
       <td style="font-weight:800;">${esc(auditLabelForAction(log.action))}</td>
-      <td>${esc(log.actorName || '-')}<div style="font-size:11px;color:var(--tx-t);">${esc(log.actorRole || '')}</div></td>
+      <td>${esc(typeof auditActorDisplayName === 'function' ? auditActorDisplayName(log) : (log.actorName || '-'))}<div style="font-size:11px;color:var(--tx-t);">${esc(typeof auditActorDisplaySub === 'function' ? auditActorDisplaySub(log) : (log.actorRole || ''))}</div></td>
       <td>${esc(log.summary || log.detail || '')}${log.reason ? `<div style="font-size:11px;color:var(--tx-t);">사유: ${esc(log.reason)}</div>` : ''}</td>
       <td style="min-width:220px;">${auditChangeText(log)}</td>
     </tr>`).join('');
@@ -14047,7 +14342,10 @@ function bulkActionButtons(key) {
   return btns;
 }
 function bulkSelectionBarHtml(key, count) {
-  return `<span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${count}건 선택됨</span>${bulkActionButtons(key)}<button class="btn btn-sm date-view-clear-selection" onclick="bulkToggleAll('${key}',false)"><i class="ti ti-x"></i>해제</button>`;
+  const auditBtn = (typeof managedAuditButtonHtml === 'function')
+    ? managedAuditButtonHtml(typeof auditEntityTypeForBulkKey === 'function' ? auditEntityTypeForBulkKey(key) : key, [...(bulkSel[key] || [])])
+    : '';
+  return `<span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${count}건 선택됨</span><span data-bulk-audit-slot>${auditBtn}</span>${bulkActionButtons(key)}<button class="btn btn-sm date-view-clear-selection" onclick="bulkToggleAll('${key}',false)"><i class="ti ti-x"></i>해제</button>`;
 }
 function registerBulkDateViewClearers() {
   if (_bulkDateViewClearersRegistered || typeof registerDateViewSelectionClearer !== 'function') return;
@@ -14116,8 +14414,11 @@ function ensureBulkBar(key, table, cont){
   const c=BULK_CFG[key]; const wrap=table.parentElement; if(!wrap||!wrap.parentNode) return;
   const bar=document.createElement('div'); bar.id='bulkbar-'+key;
   bar.className='selection-action-bar';
-  bar.style.cssText='display:none;align-items:center;gap:8px;margin:0 0 12px;padding:9px 14px;background:var(--bg-i);border:1px solid var(--br-i);border-radius:8px;flex-wrap:wrap;';
-  bar.innerHTML=`<span style="font-weight:700;font-size:12.5px;color:var(--tx-i);"><i class="ti ti-checkbox"></i> <span id="bulkcnt-${key}">0</span>건 선택됨</span>${bulkActionButtons(key)}<button class="btn btn-sm" style="margin-left:auto;" onclick="bulkToggleAll('${key}',false)"><i class="ti ti-x"></i>해제</button>`;
+  bar.style.cssText='display:none;align-items:center;gap:5px;margin:0 0 5px;padding:4px 8px;background:var(--bg-i);border:1px solid var(--br-i);border-radius:8px;flex-wrap:wrap;';
+  const auditBtn = (typeof managedAuditButtonHtml === 'function')
+    ? managedAuditButtonHtml(typeof auditEntityTypeForBulkKey === 'function' ? auditEntityTypeForBulkKey(key) : key, [...(bulkSel[key] || [])])
+    : '';
+  bar.innerHTML=`<span style="font-weight:700;font-size:12.5px;color:var(--tx-i);"><i class="ti ti-checkbox"></i> <span id="bulkcnt-${key}">0</span>건 선택됨</span><span data-bulk-audit-slot>${auditBtn}</span>${bulkActionButtons(key)}<button class="btn btn-sm" style="margin-left:auto;" onclick="bulkToggleAll('${key}',false)"><i class="ti ti-x"></i>해제</button>`;
   if(key==='products' || key==='bom') cont.parentNode.insertBefore(bar, cont);
   else wrap.parentNode.insertBefore(bar, wrap);
 }
@@ -14127,6 +14428,10 @@ function updateBulkBar(key){
   const bar=document.getElementById('bulkbar-'+key);
   const viewKey=bulkDateViewKey(key);
   const slotted = typeof setDateViewSelectionBar === 'function' && setDateViewSelectionBar(viewKey, bulkSelectionBarHtml(key,n), n>0);
+  if (bar && typeof managedAuditButtonHtml === 'function') {
+    const old = bar.querySelector('[data-bulk-audit-slot]');
+    if (old) old.outerHTML = `<span data-bulk-audit-slot>${managedAuditButtonHtml(typeof auditEntityTypeForBulkKey === 'function' ? auditEntityTypeForBulkKey(key) : key, [...(bulkSel[key] || [])])}</span>`;
+  }
   if(bar) bar.style.display = (!slotted && n>0) ? 'flex' : 'none';   // 선택 시에만 표시
   [bar, document.getElementById('date-view-'+viewKey)].filter(Boolean).forEach(scope => {
     const edit=scope.querySelector('[data-edit]'); if(edit) edit.style.display = n===1 ? '' : 'none';
@@ -15357,7 +15662,9 @@ function poToggleAll(checked){
   poUpdateBulkBar();
 }
 function poSelectionBarHtml(count){
+  const auditBtn = (typeof managedAuditButtonHtml === 'function') ? managedAuditButtonHtml('po', poCheckedIds()) : '';
   return `<span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${count}건 선택됨</span>
+    ${auditBtn}
     <button class="btn btn-sm" data-edit onclick="poBulkEdit()"><i class="ti ti-edit"></i>수정</button>
     <button class="btn btn-sm" data-clone onclick="poBulkClone()"><i class="ti ti-copy"></i>복제</button>
     <button class="btn btn-sm" onclick="poBulkPrint()"><i class="ti ti-printer"></i>PDF 출력</button>
@@ -16722,11 +17029,18 @@ function saveSalesDoc() {
   const editId = modal.dataset.editId;
   if (editId) {
     const d = list.find(x => x.id === editId);
-    if (d) Object.assign(d, data);
+    if (d) {
+      const before = _safeJsonClone(d);
+      Object.assign(d, data);
+      stampRecordUpdate(d, before, type);
+      writeAuditLog(type, editId, 'update', before, d, { summary:`${cfg.title} 수정` });
+    }
     delete modal.dataset.editId;
     showToast(`${cfg.title}가 수정되었습니다.`);
   } else {
-    list.unshift({ id: v('sd-id') || nextDocCode(cfg.prefix, list), ...data });
+    const doc = stampRecordCreate({ id: v('sd-id') || nextDocCode(cfg.prefix, list), ...data }, type);
+    list.unshift(doc);
+    writeAuditLog(type, doc.id, 'create', null, doc, { summary:`${cfg.title} 등록` });
     showToast(`${cfg.title}가 등록되었습니다.`);
   }
   saveStorage(cfg.key, list);
@@ -16737,7 +17051,13 @@ function saveSalesDoc() {
 function changeSalesDocStatus(type, id, val) {
   if (!checkAdminAction()) return;
   const d = salesList(type).find(x => x.id === id);
-  if (d) { d.status = val; saveStorage(SALES[type].key, salesList(type)); renderSalesDoc(type); }
+  if (d) {
+    const before = _safeJsonClone(d);
+    d.status = val;
+    stampRecordUpdate(d, before, type);
+    writeAuditLog(type, id, 'statusChange', before, d, { summary:`${SALES[type].title} 상태 변경` });
+    saveStorage(SALES[type].key, salesList(type)); renderSalesDoc(type);
+  }
 }
 
 function deleteSalesDoc(type, id) {
@@ -16746,6 +17066,7 @@ function deleteSalesDoc(type, id) {
   const d = salesList(type).find(x => x.id === id); if (!d) return;
   confirm_(`${cfg.title} 삭제`, `<strong>${d.id}</strong> (${_docItemSummary(d)}) 문서를 삭제하시겠습니까?`, () => {
     setSalesList(type, salesList(type).filter(x => x.id !== id));
+    writeAuditLog(type, id, 'delete', d, null, { summary:`${cfg.title} 삭제` });
     saveStorage(cfg.key, salesList(type));
     renderSalesDoc(type);
     showToast(`${cfg.title}가 삭제되었습니다.`);
@@ -17220,11 +17541,18 @@ function saveSODoc() {
   const editId = modal.dataset.editId;
   if (editId) {
     const d = list.find(x=>x.id===editId);
-    if (d) Object.assign(d, data);
+    if (d) {
+      const before = _safeJsonClone(d);
+      Object.assign(d, data);
+      stampRecordUpdate(d, before, type);
+      writeAuditLog(type, editId, 'update', before, d, { summary:`${cfg.title} 수정` });
+    }
     delete modal.dataset.editId;
     showToast(`${cfg.title}가 수정되었습니다.`);
   } else {
-    list.unshift({ id: v('so2-id') || nextDocCode(cfg.prefix, list), orderId:'', productId:'', quoteId:'', ...data });
+    const doc = stampRecordCreate({ id: v('so2-id') || nextDocCode(cfg.prefix, list), orderId:'', productId:'', quoteId:'', ...data }, type);
+    list.unshift(doc);
+    writeAuditLog(type, doc.id, 'create', null, doc, { summary:`${cfg.title} 등록` });
     showToast(`${cfg.title}가 등록되었습니다.`);
   }
   saveStorage(cfg.key, list);
@@ -17235,7 +17563,13 @@ function saveSODoc() {
 function changeSODocStatus(type, id, val) {
   if (!checkAdminAction()) return;
   const d = soDocList(type).find(x=>x.id===id);
-  if (d) { d.status = val; saveStorage(SODOCS[type].key, soDocList(type)); renderSODoc(type); }
+  if (d) {
+    const before = _safeJsonClone(d);
+    d.status = val;
+    stampRecordUpdate(d, before, type);
+    writeAuditLog(type, id, 'statusChange', before, d, { summary:`${SODOCS[type].title} 상태 변경` });
+    saveStorage(SODOCS[type].key, soDocList(type)); renderSODoc(type);
+  }
 }
 
 function deleteSODoc(type, id) {
@@ -17244,6 +17578,7 @@ function deleteSODoc(type, id) {
   const d = soDocList(type).find(x=>x.id===id); if (!d) return;
   confirm_(`${cfg.title} 삭제`, `<strong>${d.id}</strong> (${_docItemSummary(d)}) 문서를 삭제하시겠습니까?`, () => {
     setSoDocList(type, soDocList(type).filter(x=>x.id!==id));
+    writeAuditLog(type, id, 'delete', d, null, { summary:`${cfg.title} 삭제` });
     saveStorage(cfg.key, soDocList(type));
     renderSODoc(type);
     showToast(`${cfg.title}가 삭제되었습니다.`);
@@ -17325,6 +17660,11 @@ function convertQuoteToOrder(id) {
       deliveryDate: q.deliveryDate||'', processStage: firstStage,
       status: stageToStatus(firstStage), processMemo: `견적 ${q.id} 수주 전환 자동 생성`, note: q.note||''
     });
+    const product = products.find(x=>x.id===productId);
+    if (product) {
+      stampRecordCreate(product, 'products', { visibility:'company' });
+      writeAuditLog('products', product.id, 'create', null, product, { summary:'견적 수주 전환 제품 생성' });
+    }
     saveStorage('products', products);
     // 3) 수주 레코드 생성
     const orderId = nextDocCode('SO', orderList);
@@ -17334,9 +17674,17 @@ function convertQuoteToOrder(id) {
       deliveryDate: q.deliveryDate||'', note: q.note||'', commonNote: q.commonNote || '', items: _docItems(q),
       status: '수주확정', productId, quoteId: q.id
     });
+    const orderDoc = orderList.find(x=>x.id===orderId);
+    if (orderDoc) {
+      stampRecordCreate(orderDoc, 'order');
+      writeAuditLog('order', orderDoc.id, 'create', null, orderDoc, { summary:'견적서에서 수주 생성' });
+    }
     saveStorage('orderList', orderList);
+    const quoteBefore = _safeJsonClone(q);
     // 4) 견적 상태 갱신
     q.status = '수주전환'; q.orderId = orderId; q.clientId = clientId; q.clientName = '';
+    stampRecordUpdate(q, quoteBefore, 'quote');
+    writeAuditLog('quote', q.id, 'statusChange', quoteBefore, q, { summary:'견적서 수주 전환' });
     saveStorage('quoteList', quoteList);
     // 화면 갱신
     syncFilterDropdowns && syncFilterDropdowns();
@@ -19046,7 +19394,7 @@ function finDateViewLabel(tab) {
 }
 function finDateViewBar(tab) {
   const state = finState(tab), mode = finDateMode(tab), range = mode === 'range', disabled = mode === 'all' || mode === 'range';
-  return `<div class="date-view-bar finance-date-view-bar" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px;padding:6px 10px;background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rm);">
+  return `<div class="date-view-bar finance-date-view-bar" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin:0 0 5px;padding:3px 6px;background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rm);">
     <select onchange="finDateViewModeChange('${tab}',this.value)" style="height:28px;min-width:140px;font-size:11px;">
       <option value="all"${mode==='all'?' selected':''}>전체</option>
       <option value="year"${mode==='year'?' selected':''}>년</option>
@@ -19694,8 +20042,10 @@ function fixedCostSelectionBarHtml() {
   const count = fixedCostSelected.size;
   if (!count) return '';
   const single = count === 1;
+  const auditBtn = (typeof managedAuditButtonHtml === 'function') ? `<button class="btn btn-sm" data-audit-detail-btn onclick="openAuditDetailsForRefs(fixedCostSelectedAuditRefs())"><i class="ti ti-history"></i>세부사항</button>` : '';
   return `<div class="selection-action-bar fixed-cost-selection-bar" style="display:flex;">
     <span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${count}건 선택됨</span>
+    ${auditBtn}
     <button class="btn btn-sm" onclick="fixedCostBulkStatus('지급완료')"><i class="ti ti-check"></i>지급완료</button>
     <button class="btn btn-sm" onclick="fixedCostBulkStatus('결제요청')"><i class="ti ti-send"></i>결제요청</button>
     <button class="btn btn-sm" onclick="fixedCostBulkStatus('보류')"><i class="ti ti-player-pause"></i>보류</button>
@@ -19704,6 +20054,14 @@ function fixedCostSelectionBarHtml() {
     <button class="btn btn-sm btn-danger" onclick="fixedCostBulkDelete()"><i class="ti ti-trash"></i>삭제</button>
     <button class="btn btn-sm date-view-clear-selection" onclick="clearFixedCostSelection()"><i class="ti ti-x"></i>해제</button>
   </div>`;
+}
+function fixedCostSelectedAuditRefs() {
+  return fixedCostSelectedIds().flatMap(itemId => {
+    const refs = [{ entityType:'fixedCost', entityId:itemId }];
+    const payment = fixedCostPayment(itemId, fixedCostMonth);
+    if (payment && payment.id) refs.push({ entityType:'fixedCostPayment', entityId:payment.id });
+    return refs;
+  });
 }
 function ensureFixedCostMonthModal() {
   if (inp('fixed-cost-month-modal')) return;
@@ -20198,6 +20556,9 @@ function arSelectedRows() {
     return { key, kind:parts.kind, id:parts.id, date:src.date, partner:src.partner, item:src.item, total:src.total, pay };
   }).filter(Boolean);
 }
+function arSelectedAuditRefs() {
+  return arSelectedRows().map(row => ({ entityType:'financePayment', entityId:row.id }));
+}
 function arToggleSelected(key, checked) {
   if (!key) return;
   if (checked) arSelected.add(key);
@@ -20251,8 +20612,10 @@ function arSelectionBarHtml() {
   const single = count === 1;
   const processed = rows.filter(row => row.pay.amount > 0).length;
   const singleLabel = single && rows[0].kind === 'ap' ? '지급 처리' : '수금 처리';
+  const auditBtn = (typeof managedAuditButtonHtml === 'function') ? `<button class="btn btn-sm" data-audit-detail-btn onclick="openAuditDetailsForRefs(arSelectedAuditRefs())"><i class="ti ti-history"></i>세부사항</button>` : '';
   return `<div class="selection-action-bar ar-selection-bar" style="display:flex;">
     <span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${count}건 선택됨</span>
+    ${auditBtn}
     <button class="btn btn-sm" onclick="openSelectedFinancePayment()" ${single?'':'disabled'} title="${single?'선택한 항목 처리':'한 건만 선택하면 처리할 수 있습니다.'}"><i class="ti ti-cash-banknote"></i>${singleLabel}</button>
     <button class="btn btn-sm btn-danger" onclick="arBulkClearPayment()" ${processed?'':'disabled'}><i class="ti ti-rotate-clockwise"></i>미처리 복원</button>
     <button class="btn btn-sm date-view-clear-selection" onclick="clearArSelection()"><i class="ti ti-x"></i>해제</button>
@@ -20432,6 +20795,9 @@ function payreqSelectedRows() {
   const ids = new Set(payreqSelected);
   return financePaymentRequests().filter(req => ids.has(req.id) && canViewRecord(req, 'paymentRequest'));
 }
+function payreqSelectedAuditRefs() {
+  return payreqSelectedRows().map(req => ({ entityType:'paymentRequest', entityId:req.id }));
+}
 function payreqMutableSelectedRows() {
   return payreqSelectedRows().filter(req => !payreqIsPaidDone(req));
 }
@@ -20493,8 +20859,10 @@ function payreqSelectionBarHtml() {
   const singleReq = single ? selected[0] : null;
   const singleMutable = !!(singleReq && !payreqIsPaidDone(singleReq));
   const canPay = !!(singleReq && !payreqIsPaidDone(singleReq) && poList.some(p => p.id === singleReq.poId));
+  const auditBtn = (typeof managedAuditButtonHtml === 'function') ? `<button class="btn btn-sm" data-audit-detail-btn onclick="openAuditDetailsForRefs(payreqSelectedAuditRefs())"><i class="ti ti-history"></i>세부사항</button>` : '';
   return `<div class="selection-action-bar payreq-selection-bar" style="display:flex;">
     <span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${count}건 선택됨</span>
+    ${auditBtn}
     <button class="btn btn-sm" onclick="payreqBulkStatus('확인')" ${mutableCount?'':'disabled'}><i class="ti ti-check"></i>확인</button>
     <button class="btn btn-sm" onclick="payreqBulkStatus('지급예정')" ${mutableCount?'':'disabled'}><i class="ti ti-calendar-dollar"></i>지급예정</button>
     <button class="btn btn-sm" onclick="payreqBulkStatus('반려')" ${mutableCount?'':'disabled'}><i class="ti ti-ban"></i>반려</button>
@@ -20757,6 +21125,9 @@ function etcSelectedRows() {
   const ids = new Set(etcSelected);
   return (financeData.entries || []).filter(entry => ids.has(entry.id) && canViewRecord(entry, 'financeEntry'));
 }
+function etcSelectedAuditRefs() {
+  return etcSelectedRows().map(row => ({ entityType:'financeEntry', entityId:row.id }));
+}
 function etcBulkDelete() {
   const rows = etcSelectedRows();
   if (!rows.length) { showToast('선택된 기타 항목이 없습니다.', 'info'); return; }
@@ -20775,8 +21146,10 @@ function etcBulkDelete() {
 }
 function etcSelectionBarHtml() {
   const count = etcSelectedRows().length;
+  const auditBtn = (typeof managedAuditButtonHtml === 'function') ? `<button class="btn btn-sm" data-audit-detail-btn onclick="openAuditDetailsForRefs(etcSelectedAuditRefs())"><i class="ti ti-history"></i>세부사항</button>` : '';
   return `<div class="selection-action-bar etc-selection-bar" style="display:flex;">
     <span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${count}건 선택됨</span>
+    ${auditBtn}
     <button class="btn btn-sm btn-danger" onclick="etcBulkDelete()" ${count?'':'disabled'}><i class="ti ti-trash"></i>삭제</button>
     <button class="btn btn-sm date-view-clear-selection" onclick="clearEtcSelection()"><i class="ti ti-x"></i>해제</button>
   </div>`;
@@ -21464,11 +21837,18 @@ function saveAsModal(){
     action: v('asa-action'), doneDate: v('asa-done'), cost: parseInt(v('asa-cost'))||0, note: v('asa-note')
   };
   if (editAsId) {
-    const a = asList.find(x=>x.id===editAsId); if(a) Object.assign(a, rec);
+    const a = asList.find(x=>x.id===editAsId);
+    if(a) {
+      const before = _safeJsonClone(a);
+      Object.assign(a, rec);
+      stampRecordUpdate(a, before, 'as');
+      writeAuditLog('as', editAsId, 'update', before, a, { summary:'A/S 수정' });
+    }
     showToast('A/S 정보가 수정되었습니다.');
   } else {
-    const newAs = Object.assign({ id: nextCode('AS', asList) }, rec);
+    const newAs = stampRecordCreate(Object.assign({ id: nextCode('AS', asList) }, rec), 'as');
     asList.push(newAs);
+    writeAuditLog('as', newAs.id, 'create', null, newAs, { summary:'A/S 등록' });
     showToast('A/S 접수가 등록되었습니다.');
     if (typeof sendAlimtalkAsRegistered === 'function') sendAlimtalkAsRegistered(newAs);
   }
@@ -21479,7 +21859,9 @@ function saveAsModal(){
 function deleteAS(id){
   if (!checkAdminAction()) return;
   if (!confirm('이 A/S 기록을 삭제하시겠습니까?')) return;
+  const target = asList.find(x=>x.id===id);
   asList = asList.filter(x=>x.id!==id);
+  if (target) writeAuditLog('as', id, 'delete', target, null, { summary:'A/S 삭제' });
   saveStorage('asList', asList);
   renderAS();
   showToast('A/S 기록이 삭제되었습니다.');
@@ -24435,6 +24817,423 @@ async function pbLoadLogs() {
 /* Common table row selection and action dropdowns. */
 const TABLE_ACTION_HEADER_RE = /(관리|동작|처리|작업)/;
 const TABLE_INTERACTIVE_SEL = 'button,a,input,select,textarea,label,[contenteditable="true"]';
+const MANAGED_TABLES = new Map();
+let managedTableSeq = 0;
+
+const BULK_AUDIT_TYPES = {
+  rfq:'rfq', materials:'material', inventory:'inventory', orders:'workOrder',
+  defects:'defect', checks:'checkRecord', claims:'claim', deliveries:'delivery',
+  workers:'worker', as:'as', partners:'partners', statement:'statement',
+  tax:'tax', quote:'quote', order:'order', products:'products', bom:'bom'
+};
+const TABLE_AUDIT_TYPES = {
+  'rfq-table':'rfq', 'po-table':'po', 'mat-table':'material',
+  'inventory-table':'inventory', 'orders-table':'workOrder',
+  'defect-table':'defect', 'check-table':'checkRecord',
+  'claims-table-full':'claim', 'bp-table':'partners',
+  'workers-table':'worker', 'dlv-table':'delivery'
+};
+const AUDIT_ENTITY_ALIASES = {
+  clients:['client','clients'],
+  products:['product','products'],
+  partners:['partner','partners'],
+  material:['material','materials'],
+  inventory:['inventory'],
+  workOrder:['workOrder','orders','orderWork'],
+  defect:['defect','defects'],
+  claim:['claim','claims'],
+  checkRecord:['checkRecord','checks'],
+  rfq:['rfq','rfqList'],
+  po:['po','poList'],
+  statement:['statement','statementList'],
+  tax:['tax','taxList'],
+  quote:['quote','quoteList'],
+  order:['order','orderList'],
+  delivery:['delivery','deliveries'],
+  worker:['worker','workers'],
+  as:['as','asList'],
+  bom:['bom','bomList'],
+  paymentRequest:['paymentRequest','payreq'],
+  fixedCost:['fixedCost'],
+  fixedCostPayment:['fixedCostPayment'],
+  financePayment:['financePayment'],
+  financeEntry:['financeEntry','finance'],
+  trash:['trash']
+};
+const ROW_AUDIT_PATTERNS = [
+  ['openClientEdit','clients',0], ['deleteClient','clients',0], ['closeProject','clients',0], ['reopenProject','clients',0],
+  ['openProdEdit','products',1], ['deleteProduct','products',0], ['changeProdStage','products',0], ['navToProduct','products',1],
+  ['openPartnerModal','partners',0], ['deletePartner','partners',0],
+  ['openMatEdit','material',0], ['deleteMat','material',0], ['changeMatStatus','material',0],
+  ['openInvEdit','inventory',0], ['deleteInventory','inventory',0],
+  ['openOrderEdit','workOrder',0], ['deleteOrder','workOrder',0], ['qStatus','workOrder',0], ['qDone','workOrder',0], ['qDefect','workOrder',0],
+  ['openDefectEdit','defect',0], ['deleteDefect','defect',0], ['changeDefectStatus','defect',0],
+  ['openClaimEdit','claim',0], ['deleteClaim','claim',0], ['openClaimDetail','claim',0], ['changeClaimStatus','claim',0],
+  ['openCheckEdit','checkRecord',0], ['deleteCheck','checkRecord',0],
+  ['openRfqEdit','rfq',0], ['deleteRfq','rfq',0], ['changeRfqStatus','rfq',0], ['openRfqPrint','rfq',0],
+  ['openPoEdit','po',0], ['deletePo','po',0], ['changePoStatus','po',0], ['openPoPrint','po',0],
+  ['openPaymentRequestEdit','paymentRequest',0], ['deletePaymentRequest','paymentRequest',0],
+  ['openFinanceEdit','financeEntry',0], ['deleteFinanceEntry','financeEntry',0],
+  ['openFixedCostItemEdit','fixedCost',0], ['deleteFixedCostItem','fixedCost',0],
+  ['deleteSalesDoc',null,1], ['openSalesDocEdit',null,1], ['changeSalesDocStatus',null,1],
+  ['deleteSODoc',null,1], ['openSODocEdit',null,1], ['changeSODocStatus',null,1]
+];
+
+function auditEntityTypeForBulkKey(key) {
+  return BULK_AUDIT_TYPES[key] || key || '';
+}
+
+function auditEntityAliases(type) {
+  const t = String(type || '').trim();
+  if (!t) return [];
+  return AUDIT_ENTITY_ALIASES[t] || [t];
+}
+
+function auditLogRowsLocal() {
+  if (typeof allAuditLogRows === 'function') return allAuditLogRows();
+  const rows = [];
+  if (typeof auditLog !== 'undefined' && Array.isArray(auditLog)) rows.push(...auditLog);
+  if (typeof financeData === 'object' && financeData && Array.isArray(financeData.auditLog)) rows.push(...financeData.auditLog);
+  const seen = new Set();
+  return rows.filter(row => {
+    const key = row.id || [row.at, row.entityType, row.entityId, row.action, row.summary || row.detail].join('|');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')));
+}
+
+function auditLogMatchesRef(log, ref) {
+  const entityId = String(ref && ref.entityId || '').trim();
+  if (!entityId || String(log.entityId || '').trim() !== entityId) return false;
+  const type = String(ref && ref.entityType || '').trim();
+  if (!type) return true;
+  return auditEntityAliases(type).includes(String(log.entityType || '').trim());
+}
+
+function addAuditRecordList(lists, list) {
+  if (Array.isArray(list)) lists.push(list);
+}
+
+function auditRecordListsForType(type) {
+  const aliases = auditEntityAliases(type);
+  const has = value => aliases.includes(value);
+  const lists = [];
+  if (has('clients') || has('client')) { if (typeof clients !== 'undefined') addAuditRecordList(lists, clients); }
+  if (has('products') || has('product')) { if (typeof products !== 'undefined') addAuditRecordList(lists, products); }
+  if (has('partners') || has('partner')) { if (typeof partners !== 'undefined') addAuditRecordList(lists, partners); }
+  if (has('material') || has('materials')) { if (typeof materials !== 'undefined') addAuditRecordList(lists, materials); }
+  if (has('inventory')) { if (typeof inventory !== 'undefined') addAuditRecordList(lists, inventory); }
+  if (has('workOrder') || has('orders') || has('orderWork')) { if (typeof workOrders !== 'undefined') addAuditRecordList(lists, workOrders); }
+  if (has('defect') || has('defects')) { if (typeof defects !== 'undefined') addAuditRecordList(lists, defects); }
+  if (has('claim') || has('claims')) { if (typeof claims !== 'undefined') addAuditRecordList(lists, claims); }
+  if (has('checkRecord') || has('checks')) { if (typeof checkRecords !== 'undefined') addAuditRecordList(lists, checkRecords); }
+  if (has('rfq') || has('rfqList')) { if (typeof rfqList !== 'undefined') addAuditRecordList(lists, rfqList); }
+  if (has('po') || has('poList')) { if (typeof poList !== 'undefined') addAuditRecordList(lists, poList); }
+  if (has('statement') || has('statementList')) { if (typeof statementList !== 'undefined') addAuditRecordList(lists, statementList); }
+  if (has('tax') || has('taxList')) { if (typeof taxList !== 'undefined') addAuditRecordList(lists, taxList); }
+  if (has('quote') || has('quoteList')) { if (typeof quoteList !== 'undefined') addAuditRecordList(lists, quoteList); }
+  if (has('order') || has('orderList')) { if (typeof orderList !== 'undefined') addAuditRecordList(lists, orderList); }
+  if (has('delivery') || has('deliveries')) { if (typeof deliveries !== 'undefined') addAuditRecordList(lists, deliveries); }
+  if (has('worker') || has('workers')) { if (typeof workers !== 'undefined') addAuditRecordList(lists, workers); }
+  if (has('as')) { if (typeof asList !== 'undefined') addAuditRecordList(lists, asList); }
+  if (has('bom') || has('bomList')) { if (typeof bomList !== 'undefined') addAuditRecordList(lists, bomList); }
+  if (has('paymentRequest') || has('payreq')) {
+    if (typeof financeData !== 'undefined' && financeData) addAuditRecordList(lists, financeData.paymentRequests);
+  }
+  if (has('fixedCost')) {
+    if (typeof financeData !== 'undefined' && financeData) addAuditRecordList(lists, financeData.fixedCosts);
+  }
+  if (has('fixedCostPayment')) {
+    if (typeof financeData !== 'undefined' && financeData) addAuditRecordList(lists, financeData.fixedCostPayments);
+  }
+  if (has('financeEntry') || has('finance')) {
+    if (typeof financeData !== 'undefined' && financeData) addAuditRecordList(lists, financeData.entries);
+  }
+  return lists;
+}
+
+function auditRecordId(record) {
+  if (!record || typeof record !== 'object') return '';
+  return String(record.id || record.code || record.no || record.docId || '').trim();
+}
+
+function currentAuditRecordForLog(log) {
+  const entityId = String(log && log.entityId || '').trim();
+  if (!entityId) return null;
+  for (const list of auditRecordListsForType(log.entityType)) {
+    const found = (list || []).find(record => auditRecordId(record) === entityId);
+    if (found) return found;
+  }
+  if (typeof financeData !== 'undefined' && financeData && log.entityType === 'financePayment') {
+    return (financeData.paidReceivable && financeData.paidReceivable[entityId]) ||
+      (financeData.paidPayable && financeData.paidPayable[entityId]) || null;
+  }
+  return null;
+}
+
+function enrichAuditLogFromCurrentRecord(log) {
+  if (!log || (log.actorName && log.targetCreatedByName)) return log;
+  const record = currentAuditRecordForLog(log);
+  if (!record) return log;
+  const next = Object.assign({}, log);
+  if (!next.targetCreatedBy) next.targetCreatedBy = record.createdBy || record.ownerUserId || '';
+  if (!next.targetCreatedByName) next.targetCreatedByName = record.createdByName || record.ownerUserName || '';
+  if (!next.targetCreatedAt) next.targetCreatedAt = record.createdAt || '';
+  if (!next.actorName && String(next.action || '') === 'create' && next.targetCreatedByName) next.actorName = next.targetCreatedByName;
+  return next;
+}
+
+function fallbackAuditLogForRef(ref) {
+  const record = currentAuditRecordForLog(ref);
+  if (!record) return null;
+  const at = record.createdAt || record.updatedAt || '';
+  const actorName = record.createdByName || record.ownerUserName || record.updatedByName || '';
+  const action = record.createdAt ? 'create' : 'update';
+  return {
+    id: `FALLBACK-${ref.entityType || 'record'}-${ref.entityId}`,
+    entityType: ref.entityType || '',
+    entityId: ref.entityId || '',
+    action,
+    actorName,
+    actorRole: actorName ? '등록자' : '',
+    at,
+    summary: record.createdAt ? '등록 정보' : '현재 항목 정보',
+    detail: record.createdAt ? '등록 이력 로그가 없어 항목의 등록 정보를 표시합니다.' : '저장된 이력 로그가 없어 현재 항목 정보를 표시합니다.',
+    changes: [],
+    targetCreatedBy: record.createdBy || record.ownerUserId || '',
+    targetCreatedByName: record.createdByName || record.ownerUserName || '',
+    targetCreatedAt: record.createdAt || ''
+  };
+}
+
+async function auditRowsForRefs(refs) {
+  const normalized = (refs || []).filter(ref => ref && ref.entityId);
+  const rows = auditLogRowsLocal().filter(log => normalized.some(ref => auditLogMatchesRef(log, ref)));
+  const serverRows = [];
+  try {
+    if (typeof _fbDb !== 'undefined' && _fbDb && typeof _cloudActive !== 'undefined' && _cloudActive) {
+      for (const ref of normalized.slice(0, 10)) {
+        const snap = await _fbDb.collection('audit_logs').where('entityId', '==', ref.entityId).limit(80).get();
+        snap.forEach(doc => {
+          const data = doc.data() || {};
+          if (auditLogMatchesRef(data, ref)) serverRows.push(Object.assign({ id:doc.id }, data));
+        });
+      }
+    }
+  } catch(e) {}
+  const seen = new Set();
+  const result = rows.concat(serverRows).filter(row => {
+    const key = row.id || [row.at, row.entityType, row.entityId, row.action, row.summary || row.detail].join('|');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).map(enrichAuditLogFromCurrentRecord);
+  normalized.forEach(ref => {
+    if (!result.some(log => auditLogMatchesRef(log, ref))) {
+      const fallback = fallbackAuditLogForRef(ref);
+      if (fallback) result.push(fallback);
+    }
+  });
+  return result.sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')));
+}
+
+function auditButtonHtml(entityType, ids, label = '세부사항') {
+  const list = (Array.isArray(ids) ? ids : [ids]).map(v => String(v || '').trim()).filter(Boolean);
+  const disabled = list.length ? '' : ' disabled';
+  const typeArg = encodeURIComponent(String(entityType || ''));
+  const idsArg = encodeURIComponent(JSON.stringify(list));
+  return `<button class="btn btn-sm" data-audit-detail-btn onclick="openAuditDetailsForIds('${typeArg}','${idsArg}')"${disabled}><i class="ti ti-history"></i>${label}</button>`;
+}
+
+function managedAuditButtonHtml(entityType, ids, label) {
+  return auditButtonHtml(entityType, ids, label);
+}
+
+function parseOnclickArgs(onclick, fn) {
+  const re = new RegExp(fn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\(([^)]*)\\)');
+  const m = String(onclick || '').match(re);
+  if (!m) return null;
+  return Array.from(m[1].matchAll(/['"]([^'"]*)['"]/g)).map(x => x[1]);
+}
+
+function tableAuditType(table) {
+  const bulkKey = tableBulkKey(table);
+  if (bulkKey) return auditEntityTypeForBulkKey(bulkKey);
+  if (table && table.id && TABLE_AUDIT_TYPES[table.id]) return TABLE_AUDIT_TYPES[table.id];
+  return '';
+}
+
+function rowFallbackId(row) {
+  if (!row) return '';
+  const cells = Array.from(row.cells || []).filter(cell => {
+    if (cell.classList.contains('table-row-select-td')) return false;
+    if (cell.querySelector('.table-action-select,.table-action-source')) return false;
+    return true;
+  });
+  return String((cells[0] && cells[0].textContent) || '').trim();
+}
+
+function inferRowAuditRef(row, table) {
+  const check = rowSelectionCheckbox(row);
+  const bulkKey = tableBulkKey(table);
+  if (check && check.dataset && check.dataset.bid) {
+    return { entityType:auditEntityTypeForBulkKey(bulkKey), entityId:check.dataset.bid };
+  }
+  const onclicks = Array.from(row.querySelectorAll('[onclick]')).map(el => el.getAttribute('onclick') || '');
+  for (const onclick of onclicks) {
+    for (const [fn, fixedType, argIndex] of ROW_AUDIT_PATTERNS) {
+      const args = parseOnclickArgs(onclick, fn);
+      if (!args) continue;
+      const entityType = fixedType || args[0] || tableAuditType(table);
+      const entityId = args[argIndex];
+      if (entityId) return { entityType, entityId };
+    }
+  }
+  const fallbackId = rowFallbackId(row);
+  return fallbackId ? { entityType:tableAuditType(table), entityId:fallbackId } : null;
+}
+
+function selectedManagedRows(table) {
+  return Array.from(table.querySelectorAll('tbody .table-row-select, tbody input[type="checkbox"][data-bid]'))
+    .filter(chk => chk.checked)
+    .map(chk => chk.closest('tr'))
+    .filter(Boolean);
+}
+
+function selectedManagedAuditRefs(table) {
+  const seen = new Set();
+  return selectedManagedRows(table).map(row => inferRowAuditRef(row, table)).filter(ref => {
+    if (!ref || !ref.entityId) return false;
+    const key = `${ref.entityType || ''}|${ref.entityId}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function ensureAuditDetailModal() {
+  let modal = document.getElementById('audit-detail-modal');
+  if (modal) return modal;
+  modal = document.createElement('div');
+  modal.className = 'overlay';
+  modal.id = 'audit-detail-modal';
+  modal.innerHTML = `
+    <div class="dlg audit-detail-dialog" style="max-width:980px;width:96%;">
+      <div class="dlg-title"><i class="ti ti-history" style="color:var(--tx-i);"></i><span id="audit-detail-title">이력 세부사항</span></div>
+      <div id="audit-detail-sub" style="font-size:12px;color:var(--tx-t);margin:-4px 0 12px;"></div>
+      <div id="audit-detail-body" class="fixed-scroll-area" style="max-height:60vh;overflow:auto;"></div>
+      <div class="dlg-actions" style="margin-top:14px;">
+        <button class="btn" onclick="closeModal('audit-detail-modal')">닫기</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  return modal;
+}
+
+function auditChangeHtml(log) {
+  if (typeof auditChangeText === 'function') return auditChangeText(log);
+  const changes = Array.isArray(log.changes) ? log.changes : [];
+  if (!changes.length) return esc(log.detail || log.summary || '');
+  return changes.map(c => `<div><b>${esc(c.field)}</b>: <span style="color:var(--tx-d);">${esc(c.before)}</span> → <span style="color:var(--tx-ok);">${esc(c.after)}</span></div>`).join('');
+}
+
+function renderAuditDetailRows(refs, rows) {
+  const body = document.getElementById('audit-detail-body');
+  if (!body) return;
+  if (!rows.length) {
+    const refsText = refs.map(ref => `${ref.entityType || '항목'} ${ref.entityId}`).join(', ');
+    body.innerHTML = `<div class="empty"><i class="ti ti-history-off"></i>아직 기록된 이력이 없습니다.<br><span style="font-size:11px;color:var(--tx-t);">${esc(refsText)}</span></div>`;
+    return;
+  }
+  body.innerHTML = `
+    <table>
+      <thead><tr><th>일시</th><th>항목</th><th>작업자</th><th>작업</th><th>요약</th><th>변경 내용</th></tr></thead>
+      <tbody>
+        ${rows.map(log => `
+          <tr>
+            <td style="white-space:nowrap;">${log.at ? new Date(log.at).toLocaleString('ko-KR') : '-'}</td>
+            <td><span class="bd bd-info">${esc(log.entityType || '-')}</span><div style="font-size:11px;color:var(--tx-t);">${esc(log.entityId || '')}</div></td>
+            <td>${esc(typeof auditActorDisplayName === 'function' ? auditActorDisplayName(log) : (log.actorName || '-'))}<div style="font-size:11px;color:var(--tx-t);">${esc(typeof auditActorDisplaySub === 'function' ? auditActorDisplaySub(log) : (log.actorRole || ''))}</div></td>
+            <td>${esc(auditLabelForAction(log.action || ''))}</td>
+            <td>${esc(log.summary || log.detail || '')}${log.reason ? `<div style="font-size:11px;color:var(--tx-t);">사유: ${esc(log.reason)}</div>` : ''}</td>
+            <td style="min-width:240px;">${auditChangeHtml(log)}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function openAuditDetailsForRefs(refs) {
+  const list = (refs || []).filter(ref => ref && ref.entityId);
+  if (!list.length) { showToast('이력을 확인할 항목을 찾지 못했습니다.', 'info'); return; }
+  const modal = ensureAuditDetailModal();
+  document.getElementById('audit-detail-title').textContent = list.length === 1 ? '이력 세부사항' : `이력 세부사항 (${list.length}건)`;
+  document.getElementById('audit-detail-sub').textContent = list.map(ref => `${ref.entityType || '항목'} ${ref.entityId}`).join(' · ');
+  document.getElementById('audit-detail-body').innerHTML = `<div class="empty"><i class="ti ti-loader animate-spin"></i>이력을 불러오는 중입니다.</div>`;
+  modal.classList.add('open');
+  const rows = await auditRowsForRefs(list);
+  renderAuditDetailRows(list, rows);
+}
+
+function openAuditDetailsForIds(encodedType, encodedIds) {
+  let ids = [];
+  try { ids = JSON.parse(decodeURIComponent(encodedIds || '%5B%5D')); } catch(e) {}
+  const entityType = decodeURIComponent(encodedType || '');
+  openAuditDetailsForRefs(ids.map(id => ({ entityType, entityId:String(id || '') })));
+}
+
+function managedTableToken(table) {
+  if (!table.dataset.managedToken) table.dataset.managedToken = 'mt' + (++managedTableSeq);
+  MANAGED_TABLES.set(table.dataset.managedToken, table);
+  return table.dataset.managedToken;
+}
+
+function ensureManagedSelectionBar(table) {
+  const token = managedTableToken(table);
+  let bar = document.getElementById('managed-selection-bar-' + token);
+  if (bar) return bar;
+  bar = document.createElement('div');
+  bar.id = 'managed-selection-bar-' + token;
+  bar.className = 'selection-action-bar managed-selection-bar';
+  bar.style.display = 'none';
+  bar.innerHTML = `
+    <span class="date-view-selection-count"><i class="ti ti-checkbox"></i> <span data-managed-count>0</span>건 선택됨</span>
+    <button class="btn btn-sm" data-managed-audit-btn data-audit-detail-btn onclick="openManagedAuditDetails('${token}')"><i class="ti ti-history"></i>세부사항</button>
+    <button class="btn btn-sm date-view-clear-selection" onclick="clearManagedTableSelection('${token}')"><i class="ti ti-x"></i>해제</button>`;
+  const wrap = table.parentElement;
+  if (wrap && wrap.parentNode) wrap.parentNode.insertBefore(bar, wrap);
+  return bar;
+}
+
+function updateManagedSelectionBar(table) {
+  if (!table || table.closest('.overlay')) return;
+  if (tableBulkKey(table)) {
+    const token = table.dataset.managedToken;
+    const bar = token ? document.getElementById('managed-selection-bar-' + token) : null;
+    if (bar) bar.style.display = 'none';
+    return;
+  }
+  const rows = selectedManagedRows(table);
+  const bar = ensureManagedSelectionBar(table);
+  const countEl = bar.querySelector('[data-managed-count]');
+  const auditBtn = bar.querySelector('[data-managed-audit-btn]');
+  if (countEl) countEl.textContent = rows.length;
+  if (auditBtn) auditBtn.disabled = rows.length < 1;
+  bar.style.display = rows.length ? 'flex' : 'none';
+}
+
+function clearManagedTableSelection(token) {
+  const table = MANAGED_TABLES.get(token);
+  if (!table) return;
+  table.querySelectorAll('tbody .table-row-select, tbody input[type="checkbox"][data-bid]').forEach(chk => { chk.checked = false; });
+  syncManagedTableRows(table);
+}
+
+function openManagedAuditDetails(token) {
+  const table = MANAGED_TABLES.get(token);
+  if (!table) return;
+  openAuditDetailsForRefs(selectedManagedAuditRefs(table));
+}
 
 function tableActionLabel(button, index) {
   const title = (button.getAttribute('title') || button.getAttribute('aria-label') || '').trim();
@@ -24490,6 +25289,7 @@ function syncManagedTableRows(table) {
   if (!table) return;
   table.querySelectorAll('tbody tr').forEach(syncManagedTableRow);
   updateManagedTableCheckAll(table);
+  updateManagedSelectionBar(table);
 }
 
 function rowSelectionCheckbox(row) {
