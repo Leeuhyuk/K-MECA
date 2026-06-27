@@ -1389,6 +1389,17 @@ textarea { height: auto; resize: vertical; }
   padding: 0 8px;
   font-size: 12.5px;
 }
+.batch-entry-grid .bulk-product-search {
+  height: 32px;
+}
+.batch-entry-grid .bulk-product-search input {
+  padding-right: 34px;
+}
+.batch-entry-grid .bulk-product-search .field-search-btn {
+  right: 2px;
+  width: 28px;
+  height: 28px;
+}
 .batch-entry-grid select { appearance: auto; }
 .doc-item-grid input:focus,
 .batch-entry-grid input:focus,
@@ -3299,7 +3310,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     <div class="mc"><div class="mc-lbl"><i class="ti ti-clipboard-check" style="color:var(--tx-ok);"></i>납품전수검사</div><div class="mc-val" style="color:var(--tx-ok);">0/0건</div><div class="mc-sub">통과/검사기록</div></div></div>
     <div class="row2">
       <div class="card" style="grid-column:1 / -1;">
-        <div class="card-hd">
+        <div class="card-hd" style="justify-content:flex-start;">
           <span class="card-ttl"><i class="ti ti-alert-triangle" style="color:var(--tx-w);"></i>공정 내 불량 기록 관리</span>
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
             <input type="text" id="df-q" placeholder="제품·유형 검색..." style="min-width:130px; height:26px; font-size:11px; padding:0 8px; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx);" oninput="renderQuality()">
@@ -3352,7 +3363,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     </div>
     
     <div class="card">
-      <div class="card-hd">
+      <div class="card-hd" style="justify-content:flex-start;">
         <span class="card-ttl"><i class="ti ti-clipboard-check"></i>최종 출하 납품 전수/샘플링 체크리스트</span>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
           <input type="text" id="ck-q" placeholder="제품·검사원 검색..." style="min-width:130px; height:26px; font-size:11px; padding:0 8px; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx);" oninput="renderQuality()">
@@ -3375,9 +3386,9 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
   <div class="content list-page" id="pg-claims">
     <div class="metrics" id="claims-kpi"></div>
     <div class="card">
-      <div class="card-hd">
+      <div class="card-hd" style="justify-content:flex-start;">
         <span class="card-ttl"><i class="ti ti-message-report" style="color:var(--tx-d);"></i>납품 후 고객사 클레임 내역</span>
-        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
           <input type="text" id="claims-q" placeholder="업체·제품·내용 검색..." style="min-width:180px; height:28px; font-size:11px; padding:0 8px; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx);" oninput="renderClaims()">
           <select id="claims-fs" style="height:28px; font-size:11px; padding:0 6px; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx);" onchange="renderClaims()">
             <option value="">전체 상태</option>
@@ -4445,6 +4456,10 @@ function getCurrentActor() {
     deptName: (account && (account.deptName || account.dept)) || (worker && (worker.deptName || worker.dept)) || '',
     position: (account && account.position) || (worker && worker.position) || ''
   };
+}
+function canViewCostInfo(actor = null) {
+  const role = (actor && actor.role) || (typeof currentRole !== 'undefined' && currentRole) || localStorage.getItem('mes_myRole') || 'staff';
+  return role === 'admin' || role === 'manager';
 }
 function _actorMatchesName(actor, value) {
   if (!actor || !value) return false;
@@ -6850,6 +6865,39 @@ function bulkProductOptions(clientId) {
   return [{ value: '', label: '-- 품목 선택 --' }].concat(list.map(p => ({ value: p.id, label: p.name })));
 }
 
+function _bulkFieldValueLabel(field, value) {
+  const raw = String(value ?? '').trim();
+  if (field.type === 'productSearch') {
+    const product = products.find(p => p.id === raw);
+    return product ? (product.name || product.id) : raw;
+  }
+  return value ?? '';
+}
+
+function _bulkProductSearchListId(field) {
+  return field.listId || `bulk-product-list-${field.name || 'product'}`;
+}
+
+function _bulkProductSearchClientId(field) {
+  return typeof field.clientId === 'function' ? field.clientId() : (field.clientId || '');
+}
+
+function syncBulkProductSearchList(field) {
+  const listId = _bulkProductSearchListId(field);
+  let listEl = document.getElementById(listId);
+  if (!listEl) {
+    listEl = document.createElement('datalist');
+    listEl.id = listId;
+    document.body.appendChild(listEl);
+  }
+  const clientId = _bulkProductSearchClientId(field);
+  const rows = clientId ? products.filter(p => p.clientId === clientId) : products;
+  listEl.innerHTML = rows.map(p => {
+    const label = [p.id, getClientName(p.clientId), p.spec || ''].filter(Boolean).join(' / ');
+    return `<option value="${esc(p.name || p.id)}" label="${esc(label)}"></option>`;
+  }).join('');
+}
+
 function bulkWorkerOptions() {
   return [{ value: '', label: '— 작업원 선택 —' }].concat(
     workers.map(w => ({ value: w.name, label: `${w.name} (라인${w.line}·${w.role})` }))
@@ -6867,7 +6915,11 @@ function _bulkInputHtml(field, value) {
   if (type === 'select') {
     return `<select ${attrs}>${_bulkOptionsHtml(field, value)}</select>`;
   }
-  return `<input type="${esc(type)}" value="${esc(value ?? '')}" ${attrs}>`;
+  if (type === 'productSearch') {
+    syncBulkProductSearchList(field);
+    return `<div class="field-search bulk-product-search"><input type="text" value="${esc(_bulkFieldValueLabel(field, value))}" list="${esc(_bulkProductSearchListId(field))}" autocomplete="off" ${attrs}><button type="button" class="field-search-btn" onclick="var el=this.parentElement.querySelector('input'); if(el){ el.focus(); if(el.showPicker) el.showPicker(); }" title="제품 찾기"><i class="ti ti-search"></i></button></div>`;
+  }
+  return `<input type="${esc(type)}" value="${esc(_bulkFieldValueLabel(field, value))}" ${attrs}>`;
 }
 
 function addBulkEntryRow(key, values = {}) {
@@ -7781,6 +7833,16 @@ function explodeBomLeaves(pid, mult, seen, acc){
   return acc;
 }
 function bomProductName(pid){ return products.find(p=>p.id===pid)?.name || pid; }
+function bomCostInfoAllowed() {
+  if (typeof canViewCostInfo === 'function') return canViewCostInfo();
+  const role = (typeof currentRole !== 'undefined' && currentRole) || localStorage.getItem('mes_myRole') || 'staff';
+  return role === 'admin' || role === 'manager';
+}
+function requireBomCostInfo() {
+  if (bomCostInfoAllowed()) return true;
+  if (typeof showToast === 'function') showToast('BOM/원가 조회 권한이 없습니다.', 'error');
+  return false;
+}
 /* 재고에서 동일 자재명의 현재고 조회(이름 매칭, 없으면 0) */
 function invStockByName(name){
   const it = inventory.find(i=>(i.name||'').trim().toLowerCase()===(name||'').trim().toLowerCase());
@@ -7873,6 +7935,10 @@ function filterBomMaterials(field){
 }
 function renderBom(){
   const body = inp('bom-body'); if(!body) return;
+  if (!bomCostInfoAllowed()) {
+    body.innerHTML = `<div class="card"><div class="empty"><i class="ti ti-lock"></i>BOM/원가 조회 권한이 없습니다.</div></div>`;
+    return;
+  }
   // 제품 셀렉트 채우기 + 기본 선택
   if (!bomProductId || !products.find(p=>p.id===bomProductId)) bomProductId = products[0]?.id || '';
   if (bomProductId) _rememberBomProduct(bomProductId);
@@ -7938,6 +8004,7 @@ function renderBom(){
 }
 function renderBomMrp(){
   const wrap = inp('bom-mrp'); if(!wrap) return;
+  if (!bomCostInfoAllowed()) { wrap.innerHTML = ''; return; }
   const p = products.find(x=>x.id===bomProductId); if(!p) return;
   const qty = parseInt(v('bom-mrp-qty'))||0;
   const leaves = Object.values(explodeBomLeaves(p.id, qty)).filter(L=>
@@ -7971,6 +8038,7 @@ function renderBomMrp(){
 }
 /* MRP 발주 필요량 → 구매발주서(PO) 자동생성. 발주필요>0 인 자재마다 PO 1건 생성 */
 function genPoFromMrp(){
+  if (!requireBomCostInfo()) return;
   if (!checkAdminAction()) return;
   const p = products.find(x=>x.id===bomProductId); if(!p){ showToast('제품을 선택하세요.','error'); return; }
   const qty = parseInt(v('bom-mrp-qty'))||0;
@@ -8004,6 +8072,7 @@ function genPoFromMrp(){
   if (confirm('생성된 발주서를 지금 확인하시겠습니까?')) go('po');
 }
 function applyBomCost(){
+  if (!requireBomCostInfo()) return;
   if (!checkAdminAction()) return;
   const p = products.find(x=>x.id===bomProductId); if(!p){ showToast('제품을 선택하세요.','error'); return; }
   const cost = bomMaterialCost(p.id);
@@ -8029,6 +8098,7 @@ function _bomImportEsc(value){
   return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 function openBomMaterialImport(){
+  if (!requireBomCostInfo()) return;
   const p = products.find(x=>x.id===bomProductId);
   if (!p){ showToast('제품을 먼저 선택하세요.','error'); return; }
   const grouped = {};
@@ -8082,6 +8152,7 @@ function toggleBomMaterialImportAll(checked){
   document.querySelectorAll('.bom-import-check').forEach(el=>{ el.checked = checked; });
 }
 function applyBomMaterialImport(){
+  if (!requireBomCostInfo()) return;
   if (!checkAdminAction()) return;
   const selected = Array.from(document.querySelectorAll('.bom-import-check:checked'));
   if (!selected.length){ showToast('반영할 자재를 선택하세요.','error'); return; }
@@ -8120,6 +8191,7 @@ function applyBomMaterialImport(){
   showToast(`자재 발주 내역을 BOM에 반영했습니다. 신규 ${added}건 · 갱신 ${updated}건${skipped?` · 제외 ${skipped}건`:''}`);
 }
 function openBomAdd(){
+  if (!requireBomCostInfo()) return;
   if (!bomProductId){ showToast('제품을 먼저 선택하세요.','error'); return; }
   editBomId = null;
   inp('bom-modal-ttl').innerHTML = '<i class="ti ti-plus" style="color:var(--tx-i);"></i>자재 추가 — '+(products.find(p=>p.id===bomProductId)?.name||'');
@@ -8128,6 +8200,7 @@ function openBomAdd(){
   inp('bom-modal').classList.add('open');
 }
 function openBomEdit(id){
+  if (!requireBomCostInfo()) return;
   const b = bomList.find(x=>x.id===id); if(!b) return;
   editBomId = id;
   inp('bom-modal-ttl').innerHTML = '<i class="ti ti-edit" style="color:var(--tx-w);"></i>BOM 자재 수정';
@@ -8136,6 +8209,7 @@ function openBomEdit(id){
   inp('bom-modal').classList.add('open');
 }
 function cloneBom(id){
+  if (!requireBomCostInfo()) return;
   if (!checkAdminAction()) return;
   const b = bomList.find(x=>x.id===id); if(!b) return;
   editBomId = null;
@@ -8146,6 +8220,7 @@ function cloneBom(id){
   inp('bom-modal').classList.add('open');
 }
 function saveBomModal(){
+  if (!requireBomCostInfo()) return;
   if (!checkAdminAction()) return;
   const name = v('bma-name').trim();
   if (!name){ showToast('자재명은 필수입니다.','error'); return; }
@@ -8511,6 +8586,7 @@ function openCurrentPageRegistration() {
     inventory: openInvAdd,
     quality:   openDefectAdd, // 품질 탭은 대표로 공정 불량 등록 창 호출
     claims:    openClaimAdd,
+    as:        openAsAdd,
     workers:   openEmployeeAdd,
     rfq:       openRfqAdd,
     po:        openPoAdd,
@@ -8561,7 +8637,13 @@ document.addEventListener('keydown', function(e) {
 });
 
 /* ════════ 2. 수주 및 제품 등록 관리 (드래그 앤 드롭 지원!) ════════ */
+function productCostInfoAllowed() {
+  if (typeof canViewCostInfo === 'function') return canViewCostInfo();
+  const role = (typeof currentRole !== 'undefined' && currentRole) || localStorage.getItem('mes_myRole') || 'staff';
+  return role === 'admin' || role === 'manager';
+}
 function renderClients() {
+  const showCostInfo = productCostInfoAllowed();
   const totAmt = products.reduce((s, p) => s + (p.price * p.qty), 0);
   const activeClients = clients.filter(c => !c.closed);
   const closedClients = clients.filter(c => c.closed);
@@ -8687,7 +8769,7 @@ function renderClients() {
               <tbody>
                 ${prods.map(p => {
                   const sc = stageColor(p.processStage);
-                  const mg = (typeof getProductMargin === 'function' && typeof bomList !== 'undefined' && bomList.length > 0)
+                  const mg = (showCostInfo && typeof getProductMargin === 'function' && typeof bomList !== 'undefined' && bomList.length > 0)
                     ? getProductMargin(p.id) : null;
                   const marginBadge = mg && mg.cost > 0
                     ? '<span style="font-size:10px;margin-left:6px;color:' + (mg.marginRate > 0 ? 'var(--tx-ok)' : 'var(--tx-d)') + ';">원가 ' + fmtW(mg.cost) + (mg.marginRate !== null ? ' / 마진 ' + mg.marginRate + '%' : '') + '</span>'
@@ -9006,6 +9088,33 @@ function onClientDragEnd() {
 }
 
 /* ════════ [복구] 제품 (products) ════════ */
+function syncProductCostVisibility() {
+  const show = productCostInfoAllowed();
+  ['pra-matcost','pra-laborcost','pra-ovhcost','pra-cost-preview'].forEach(id => {
+    const el = inp(id);
+    if (!el) return;
+    const holder = el.closest ? (el.closest('.ff') || el) : el;
+    holder.style.display = show ? '' : 'none';
+  });
+  if (!show) {
+    const preview = inp('pra-cost-preview');
+    if (preview) preview.innerHTML = '';
+  }
+}
+function readProductCostFields(base = null) {
+  if (!productCostInfoAllowed()) {
+    return {
+      matCost: Number(base && base.matCost) || 0,
+      laborCost: Number(base && base.laborCost) || 0,
+      ovhCost: Number(base && base.ovhCost) || 0
+    };
+  }
+  return {
+    matCost: parseInt(v('pra-matcost')) || 0,
+    laborCost: parseInt(v('pra-laborcost')) || 0,
+    ovhCost: parseInt(v('pra-ovhcost')) || 0
+  };
+}
 function openProdAdd(clientId) {
   editProductId = null;
   const modal = inp('prod-modal');
@@ -9017,7 +9126,7 @@ function openProdAdd(clientId) {
   sv('pra-qty','1'); sv('pra-unit','대'); sv('pra-price','0');
   sv('pra-matcost','0'); sv('pra-laborcost','0'); sv('pra-ovhcost','0');
   inp('pra-stage').innerHTML = processStages.map(s=>'<option>'+s+'</option>').join('');
-  onPraStageChange(); updateProdCostPreview();
+  syncProductCostVisibility(); onPraStageChange(); updateProdCostPreview();
   modal.classList.add('open');
 }
 function openProdEdit(clientId, productId) {
@@ -9032,7 +9141,7 @@ function openProdEdit(clientId, productId) {
   sv('pra-due', p.deliveryDate||''); sv('pra-qty', p.qty); sv('pra-unit', p.unit||'대');
   sv('pra-price', p.price||'0'); sv('pra-stage', p.processStage); sv('pra-note', p.note||'');
   sv('pra-matcost', p.matCost||'0'); sv('pra-laborcost', p.laborCost||'0'); sv('pra-ovhcost', p.ovhCost||'0');
-  onPraStageChange(); updateProdCostPreview();
+  syncProductCostVisibility(); onPraStageChange(); updateProdCostPreview();
   modal.classList.add('open');
 }
 function cloneProduct(clientId, productId) {
@@ -9048,7 +9157,7 @@ function cloneProduct(clientId, productId) {
   sv('pra-due', p.deliveryDate||''); sv('pra-qty', p.qty||1); sv('pra-unit', p.unit||'대');
   sv('pra-price', p.price||0); sv('pra-stage', processStages[0]||p.processStage); sv('pra-note', p.note||'');
   sv('pra-matcost', p.matCost||0); sv('pra-laborcost', p.laborCost||0); sv('pra-ovhcost', p.ovhCost||0);
-  onPraStageChange(); updateProdCostPreview();
+  syncProductCostVisibility(); onPraStageChange(); updateProdCostPreview();
   modal.classList.add('open');
 }
 /* 제조원가 = 재료비+노무비+경비, 공헌이익 = 수주단가-제조원가 (단위 기준) */
@@ -9062,6 +9171,7 @@ function prodMaterialCost(p){
 function prodUnitCost(p){ return prodMaterialCost(p)+(Number(p.laborCost)||0)+(Number(p.ovhCost)||0); }
 function updateProdCostPreview() {
   const box = inp('pra-cost-preview'); if (!box) return;
+  if (!productCostInfoAllowed()) { box.innerHTML = ''; return; }
   const cost = (parseInt(v('pra-matcost'))||0)+(parseInt(v('pra-laborcost'))||0)+(parseInt(v('pra-ovhcost'))||0);
   const price = parseInt(v('pra-price'))||0;
   const margin = price - cost;
@@ -9086,11 +9196,12 @@ function saveProd(clientId) {
   const name = v('pra-name').trim();
   if (!name) { showToast('제품 품목명은 필수입니다.', 'error'); return; }
   const stage = v('pra-stage');
+  const costFields = readProductCostFields();
   const product = stampRecordCreate({
     id: nextCode('PR', products), clientId, name,
     spec: v('pra-spec'), qty: parseInt(v('pra-qty'))||1, unit: v('pra-unit')||'대',
     price: parseInt(v('pra-price'))||0, deliveryDate: v('pra-due'),
-    matCost: parseInt(v('pra-matcost'))||0, laborCost: parseInt(v('pra-laborcost'))||0, ovhCost: parseInt(v('pra-ovhcost'))||0,
+    matCost: costFields.matCost, laborCost: costFields.laborCost, ovhCost: costFields.ovhCost,
     processStage: stage, status: stageToStatus(stage), processMemo: '', note: v('pra-note')
   }, 'products', { visibility:'company' });
   products.push(product);
@@ -9108,10 +9219,11 @@ function saveProdEdit(clientId, productId) {
   if (!name) { showToast('제품 명칭은 비울 수 없습니다.', 'error'); return; }
   const before = _safeJsonClone(p);
   const stage = v('pra-stage');
+  const costFields = readProductCostFields(p);
   p.name = name; p.spec = v('pra-spec');
   p.qty = parseInt(v('pra-qty'))||1; p.unit = v('pra-unit')||'대';
   p.price = parseInt(v('pra-price'))||0; p.deliveryDate = v('pra-due');
-  p.matCost = parseInt(v('pra-matcost'))||0; p.laborCost = parseInt(v('pra-laborcost'))||0; p.ovhCost = parseInt(v('pra-ovhcost'))||0;
+  p.matCost = costFields.matCost; p.laborCost = costFields.laborCost; p.ovhCost = costFields.ovhCost;
   p.processStage = stage; p.status = stageToStatus(stage); p.note = v('pra-note');
   stampRecordUpdate(p, before, 'products', { visibility:'company' });
   writeAuditLog('products', productId, 'update', before, p, { summary:'제품 정보 수정' });
@@ -10014,7 +10126,7 @@ registerBulkEntryTable('order', {
   body: 'order-bulk-body',
   minRows: 3,
   fields: [
-    { name: 'productId', type: 'select', options: () => bulkProductOptions(v('oa-client')), width: '260px', required: true },
+    { name: 'productId', type: 'productSearch', clientId: () => v('oa-client'), listId: 'order-product-bulk-list', placeholder: '제품명 입력/검색', width: '260px', required: true },
     { name: 'line', type: 'select', default: '라인 A', options: ['라인 A','라인 B','라인 C'], width: '92px' },
     { name: 'qty', type: 'number', min: 1, step: 1, default: '1', width: '48px' },
     { name: 'start', type: 'date', default: today, width: '126px' },
@@ -10136,19 +10248,69 @@ function openOrderModal() {
   inp('order-modal').classList.add('open');
 }
 
+function _orderProductKey(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function _findOrderProduct(value, clientId) {
+  const key = _orderProductKey(value);
+  if (!key) return null;
+  const scoped = products.filter(p => !clientId || p.clientId === clientId);
+  return scoped.find(p => _orderProductKey(p.id) === key)
+    || scoped.find(p => _orderProductKey(p.name) === key)
+    || (!clientId ? products.find(p => _orderProductKey(p.id) === key) : null)
+    || null;
+}
+
+function ensureOrderProduct(value, clientId) {
+  const name = String(value || '').trim().replace(/\s+/g, ' ');
+  if (!name) return null;
+  const found = _findOrderProduct(name, clientId);
+  if (found) return { id: found.id, product: found, created: false };
+  const stage = processStages[0] || '';
+  const product = stampRecordCreate({
+    id: nextCode('PR', products),
+    clientId,
+    name,
+    spec: '',
+    qty: 1,
+    unit: 'EA',
+    price: 0,
+    deliveryDate: '',
+    matCost: 0,
+    laborCost: 0,
+    ovhCost: 0,
+    processStage: stage,
+    status: stageToStatus(stage),
+    processMemo: '',
+    note: '생산 지시 입력에서 자동 등록'
+  }, 'products', { visibility:'company' });
+  products.push(product);
+  writeAuditLog('products', product.id, 'create', null, product, { summary:'생산 지시 제품 자동 등록', source:'orderProductInput' });
+  return { id: product.id, product, created: true };
+}
+
 function saveOrderForm() {
   if (!checkAdminAction()) return;
   if (!editOrderId && isBulkEntryMode('order')) {
+    const clientId = v('oa-client');
+    if (!clientId) { showToast('연결 고객사를 먼저 선택해주십시오.', 'error'); return; }
     if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
     const rows = readBulkEntryTable('order');
     if (!rows.length) { showToast('발행할 생산 지시 행을 입력해주세요.', 'error'); return; }
     const invalid = rows.find(r => !r.productId || (parseInt(r.qty) || 0) <= 0);
     if (invalid) { showToast('제품과 목표량은 각 행에 필요합니다.', 'error'); return; }
+    let createdProductCount = 0;
+    const orderRows = rows.map(r => {
+      const productInfo = ensureOrderProduct(r.productId, clientId);
+      if (productInfo?.created) createdProductCount++;
+      return { ...r, productId: productInfo?.id || '' };
+    });
     const touchedProducts = new Set();
-    rows.slice().reverse().forEach(r => {
+    orderRows.slice().reverse().forEach(r => {
       const order = stampRecordCreate({
         id: nextCode('WO', workOrders),
-        clientId: v('oa-client'),
+        clientId,
         productId: r.productId,
         line: r.line || '라인 A',
         qty: parseInt(r.qty) || 0,
@@ -10168,7 +10330,7 @@ function saveOrderForm() {
       const p = products.find(x => x.id === productId);
       if (p && p.status !== '완료' && p.status !== '납품') p.status = '생산중';
     });
-    if (touchedProducts.size) saveStorage('products', products);
+    if (createdProductCount || touchedProducts.size) saveStorage('products', products);
     saveStorage('workOrders', workOrders);
     editOrderId = null;
     closeModal('order-modal');
@@ -10176,14 +10338,18 @@ function saveOrderForm() {
     showToast(`생산 지시 ${rows.length}건이 발행되었습니다.`);
     return;
   }
-  const productId = v('oa-product'); if (!productId) { showToast('제조 가동할 품목 모델을 선택해주십시오.', 'error'); return; }
+  const singleClientId = v('oa-client');
+  if (!singleClientId) { showToast('연결 고객사를 먼저 선택해주십시오.', 'error'); return; }
+  const productInfo = ensureOrderProduct(v('oa-product') || v('oa-product-search'), singleClientId);
+  const productId = productInfo?.id || '';
+  if (!productId) { showToast('제조 가동할 품목 모델을 선택해주십시오.', 'error'); return; }
   const qty = parseInt(v('oa-qty')) || 0;
   if (qty <= 0) { showToast('목표 지시 수량은 최소 1개 이상이어야 합니다.', 'error'); return; }
   if (editOrderId) {
     const o = workOrders.find(x => x.id === editOrderId); if (!o) return;
     if (!requireRecordPermission('edit', o, 'workOrder')) return;
     const before = _safeJsonClone(o);
-    o.clientId = v('oa-client'); o.productId = productId; o.line = v('oa-line');
+    o.clientId = singleClientId; o.productId = productId; o.line = v('oa-line');
     o.qty = qty; o.done = parseInt(v('oa-done')) || 0;
     o.start = v('oa-start'); o.due = v('oa-due'); o.status = v('oa-status');
     o.manager = v('oa-mgr'); o.note = v('oa-note');
@@ -10194,7 +10360,7 @@ function saveOrderForm() {
     if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
     const order = stampRecordCreate({
       id: nextCode('WO', workOrders),
-      clientId: v('oa-client'), productId, line: v('oa-line'),
+      clientId: singleClientId, productId, line: v('oa-line'),
       qty: qty, done: 0, defect: 0,
       start: v('oa-start'), due: v('oa-due'), status: v('oa-status'),
       manager: v('oa-mgr'), note: v('oa-note')
@@ -10208,6 +10374,7 @@ function saveOrderForm() {
       saveStorage('products', products);
       showToast(`[${p.name}] 생산지시 발행 → 제품 상태 연동`, 'info');
     }
+    if (productInfo.created) saveStorage('products', products);
   }
   saveStorage('workOrders', workOrders);
   editOrderId = null;
@@ -10812,7 +10979,7 @@ function renderQuality() {
 
   fillClientSelect('df-client', false);
   fillStageSelect('df-stage');
-  fillClientSelect('cl-client', false);
+  _fillClaimClientSelect(v('cl-client'));
   fillClientSelect('ck-client', false);
 
   const _dfq = (v('df-q')||'').toLowerCase();
@@ -11198,6 +11365,11 @@ function setCheckEntryMode(mode) {
 
 function onClaimClientChange() {
   fillProductSelect('cl-product', v('cl-client'));
+  const client = clients.find(c => c.id === v('cl-client'));
+  if (client && typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('cl-client', 'cl-client-search');
+  sv('cl-product', '');
+  sv('cl-product-search', '');
+  if (typeof hideProductFieldMatches === 'function') hideProductFieldMatches('cl-product-results');
 }
 
 function onCheckClientChange() {
@@ -11375,6 +11547,14 @@ function _fillClaimClientSelect(selId) {
     clients.map(c => `<option value="${esc(c.id)}"${c.id===selId?' selected':''}>${esc(c.name)}</option>`).join('');
 }
 
+function claimClientInputName() {
+  return v('cl-client') ? '' : (v('cl-client-search') || v('cl-client-text')).trim();
+}
+
+function claimProductInputName() {
+  return v('cl-product') ? '' : (v('cl-product-search') || v('cl-product-text')).trim();
+}
+
 function openClaimAdd() {
   editClaimId = null;
   inp('claim-modal-ttl').innerHTML = '<i class="ti ti-plus"></i>신규 고객 클레임 / AS 접수';
@@ -11384,15 +11564,15 @@ function openClaimAdd() {
   sv('cl-kind', '클레임');
   _fillClaimClientSelect('');
   fillProductSelect('cl-product', '');
+  sv('cl-client-search', '');
+  sv('cl-product-search', '');
   sv('cl-client-text', '');
   sv('cl-product-text', '');
   sv('cl-spec', '');
   sv('cl-content', '');
   sv('cl-status', '접수');
   sv('cl-response', '');
-  initBulkEntryTable('cl');
-  setClaimEntryMode('bulk');
-  const mode = inp('cl-mode-switch'); if (mode) mode.style.display = '';
+  const single = inp('cl-single-fields'); if (single) single.style.display = '';
   inp('claim-modal').classList.add('open');
 }
 
@@ -11408,14 +11588,23 @@ function openClaimEdit(id) {
   sv('cl-kind', c.kind || '클레임');
   _fillClaimClientSelect(c.clientId);
   fillProductSelect('cl-product', c.clientId, c.productId);
+  if (c.clientId) {
+    if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('cl-client', 'cl-client-search');
+  } else {
+    sv('cl-client-search', c.clientName || '');
+  }
+  if (c.productId) {
+    if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('cl-product', 'cl-product-search');
+  } else {
+    sv('cl-product-search', c.productName || '');
+  }
   sv('cl-client-text', c.clientName || '');
   sv('cl-product-text', c.productName || '');
   sv('cl-spec', c.spec || '');
   sv('cl-content', c.content);
   sv('cl-status', c.status);
   sv('cl-response', c.response || '');
-  setClaimEntryMode('single');
-  const mode = inp('cl-mode-switch'); if (mode) mode.style.display = 'none';
+  const single = inp('cl-single-fields'); if (single) single.style.display = '';
   inp('claim-modal').classList.add('open');
 }
 
@@ -11424,7 +11613,7 @@ function addClaim() {
   if (!editClaimId && isBulkEntryMode('cl')) {
     if (!roleFeatureAllowed('create')) { showToast('등록 권한이 없습니다.', 'error'); return; }
     const clientId = v('cl-client');
-    const clientName = v('cl-client-text').trim();
+    const clientName = claimClientInputName();
     if (!clientId && !clientName) { showToast('고객사를 선택하거나 직접 입력하세요.', 'error'); return; }
     const rows = readBulkEntryTable('cl');
     if (!rows.length) { showToast('접수할 클레임 행을 입력해주세요.', 'error'); return; }
@@ -11438,7 +11627,7 @@ function addClaim() {
         clientId,
         clientName,
         productId: v('cl-product'),
-        productName: v('cl-product-text').trim(),
+        productName: claimProductInputName(),
         spec: r.spec.trim(),
         content: r.content.trim(),
         status: r.status || '접수',
@@ -11457,9 +11646,9 @@ function addClaim() {
   const content = v('cl-content').trim();
   if (!content) { showToast('접수 내용을 구체적으로 기록해야 합니다.', 'error'); return; }
   const clientId = v('cl-client');
-  const clientName = v('cl-client-text').trim();
+  const clientName = claimClientInputName();
   const productId = v('cl-product');
-  const productName = v('cl-product-text').trim();
+  const productName = claimProductInputName();
   if (!clientId && !clientName) { showToast('고객사를 선택하거나 직접 입력하세요.', 'error'); return; }
   const fields = {
     date: v('cl-date'),
@@ -20280,12 +20469,13 @@ function financeFilteredRows(tab) {
   if(tab==='purchase')return poList.filter(p=>finMatchDate(p.date,s)&&finMatchAmount(finPoAmount(p),s)&&(!s.status||(p.status||'작성중')===s.status)&&(!q||[p.id,p.supplier,finPoItemSearchText(p)].join(' ').toLowerCase().includes(q)));
   if(tab==='payreq')return financePaymentRequests().filter(r=>canViewRecord(r,'paymentRequest')&&finMatchDate(r.requestDate,s)&&finMatchAmount(r.amount,s)&&(!s.status||r.status===s.status)&&(!q||[r.id,r.poId,r.supplier,r.itemSummary,r.assignee,r.requester,r.note].join(' ').toLowerCase().includes(q)));
   if(tab==='fixed')return fixedCostRows(fixedCostMonth, fixedCostShowInactive).filter(r=>finMatchAmount(r.amount,s)&&(!s.status||r.status===s.status)&&(!q||[r.name,r.category,r.vendor,r.method,r.note].join(' ').toLowerCase().includes(q)));
-  if(tab==='cost')return products.filter(p=>finMatchAmount(prodUnitCost(p),s)&&(!q||[p.id,p.name,getClientName(p.clientId)].join(' ').toLowerCase().includes(q)));
+  if(tab==='cost')return financeCostInfoAllowed() ? products.filter(p=>finMatchAmount(prodUnitCost(p),s)&&(!q||[p.id,p.name,getClientName(p.clientId)].join(' ').toLowerCase().includes(q))) : [];
   if(tab==='labor')return workers.filter(w=>finMatchAmount(calcPayroll(w,payrollMonth).net,s)&&(!s.status||(calcPayroll(w,payrollMonth).confirmed?'확정':'작성중')===s.status)&&(!q||[w.id,w.name,w.dept,w.position].join(' ').toLowerCase().includes(q)));
   if(tab==='etc')return financeData.entries.filter(e=>canViewRecord(e,'financeEntry')&&finMatchDate(e.date,s)&&finMatchAmount(e.amount,s)&&(!s.status||e.type===s.status)&&(!q||[e.id,e.category,e.title,e.note].join(' ').toLowerCase().includes(q)));
   return [];
 }
 function exportFinanceViewXLS(tab){
+  if(tab==='cost' && !financeCostInfoAllowed()){showToast('원가 내보내기 권한이 없습니다.','error');return;}
   if(typeof XLSX==='undefined'){showToast('엑셀 생성 라이브러리가 준비되지 않았습니다.','error');return;}
   if(tab==='ar'){
     const s=finState('ar'),q=s.query.trim().toLowerCase(),rows=[];
@@ -20414,7 +20604,16 @@ function finEntryRange(rangeInfo,type) { return financeData.entries.filter(e=>e.
 function finPayrollRange(rangeInfo) { return finRangeMonths(rangeInfo).reduce((sum, ym)=>sum+finPayrollMonthly(ym),0); }
 
 /* ── 탭 전환 ── */
+function financeCostInfoAllowed() {
+  if (typeof canViewCostInfo === 'function') return canViewCostInfo();
+  const role = (typeof currentRole !== 'undefined' && currentRole) || localStorage.getItem('mes_myRole') || 'staff';
+  return role === 'admin' || role === 'manager';
+}
 function switchFinTab(tab) {
+  if (tab === 'cost' && !financeCostInfoAllowed()) {
+    if (typeof showToast === 'function') showToast('원가 조회 권한이 없습니다.', 'error');
+    tab = 'dashboard';
+  }
   financeTab = tab;
   syncCurrentSubRoute('finance', financeTab);
   renderFinance();
@@ -20443,6 +20642,10 @@ function openFinancePrimaryAction() {
 
 function renderFinance() {
   const body = inp('finance-body'); if (!body) return;
+  if (financeTab === 'cost' && !financeCostInfoAllowed()) financeTab = 'dashboard';
+  document.querySelectorAll('#finance-tabs [data-fintab="cost"]').forEach(b => {
+    b.style.display = financeCostInfoAllowed() ? '' : 'none';
+  });
   document.querySelectorAll('#finance-tabs [data-fintab]').forEach(b =>
     b.classList.toggle('btn-primary', b.dataset.fintab === financeTab));
   updatePaymentRequestBadge();
@@ -26427,21 +26630,31 @@ window.addEventListener('resize', () => {
 
 <!-- ══ 클레임 등록 모달 ══ -->
 <div class="overlay" id="claim-modal">
-  <div class="dlg bulk-entry-dialog" style="max-width:1040px;width:96%;">
+  <div class="dlg" style="max-width:680px;width:96%;">
     <div class="dlg-title" id="claim-modal-ttl"><i class="ti ti-message-report" style="color:var(--tx-w);"></i>고객 클레임 등록</div>
-    <div class="entry-mode-switch" id="cl-mode-switch">
-      <button type="button" id="cl-mode-single" onclick="setClaimEntryMode('single')">단건 입력</button>
-      <button type="button" id="cl-mode-bulk" onclick="setClaimEntryMode('bulk')">일괄 입력</button>
-    </div>
-    <div class="fg fg3" style="gap:10px;margin-bottom:10px;">
+    <div class="fg fg4" style="gap:10px;margin-bottom:10px;">
       <div class="ff"><label>클레임 코드</label><input id="cl-id" readonly></div>
       <div class="ff"><label>접수일</label><input id="cl-date" type="date"></div>
-      <div class="ff"><label>제기처(고객사)</label><select id="cl-client" onchange="onClaimClientChange()"></select></div>
-      <div class="ff" style="grid-column:span 2;"><label>미등록 고객사 직접입력</label><input id="cl-client-text" placeholder="목록에 없으면 업체명 직접 입력"></div>
-      <div class="ff"><label>대상 제품</label><select id="cl-product"></select></div>
-      <div class="ff" style="grid-column:span 2;"><label>미등록 제품 직접입력</label><input id="cl-product-text" placeholder="목록에 없으면 제품·품목명 직접 입력"></div>
+      <div class="ff"><label>고객사 *</label>
+        <div class="field-search">
+          <input id="cl-client-search" placeholder="고객사명 검색 또는 직접 입력" autocomplete="off" oninput="onClientFieldSearchInput('cl-client','cl-client-search','cl-client-results','onClaimClientChange')" onfocus="renderClientFieldMatches('cl-client','cl-client-search','cl-client-results','onClaimClientChange')" onblur="setTimeout(function(){hideClientFieldMatches('cl-client-results');},160)" onkeydown="onClientFieldSearchKey(event,'cl-client','cl-client-search','cl-client-results','onClaimClientChange')">
+          <button type="button" class="field-search-btn" onclick="openClientFieldPicker('cl-client','cl-client-search','cl-client-results','onClaimClientChange')" title="고객사 찾기"><i class="ti ti-search"></i></button>
+          <select id="cl-client" class="linked-hidden-select" onchange="onClaimClientChange(); syncClientFieldDisplay('cl-client','cl-client-search');"></select>
+        </div>
+        <div class="inline-search-results" id="cl-client-results"></div>
+      </div>
+      <div class="ff"><label>대상 제품</label>
+        <div class="field-search">
+          <input id="cl-product-search" placeholder="제품명 검색 또는 직접 입력" autocomplete="off" oninput="onProductFieldSearchInput('cl-product','cl-product-search','cl-product-results','cl-client')" onfocus="renderProductFieldMatches('cl-product','cl-product-search','cl-product-results','cl-client')" onblur="setTimeout(function(){hideProductFieldMatches('cl-product-results');},160)" onkeydown="onProductFieldSearchKey(event,'cl-product','cl-product-search','cl-product-results','cl-client')">
+          <button type="button" class="field-search-btn" onclick="openProductFieldSearch('cl-product','cl-product-search','cl-product-results','cl-client')" title="제품 찾기"><i class="ti ti-search"></i></button>
+          <select id="cl-product" class="linked-hidden-select" onchange="syncProductFieldDisplay('cl-product','cl-product-search');"></select>
+        </div>
+        <div class="inline-search-results" id="cl-product-results"></div>
+      </div>
+      <input id="cl-client-text" type="hidden">
+      <input id="cl-product-text" type="hidden">
     </div>
-    <div class="fg fg3" id="cl-single-fields" style="gap:10px;margin-bottom:14px;">
+    <div class="fg fg4" id="cl-single-fields" style="gap:10px;margin-bottom:14px;">
       <div class="ff"><label>유형</label>
         <select id="cl-kind"><option>클레임</option><option>AS</option><option>기타</option></select>
       </div>
@@ -26449,15 +26662,8 @@ window.addEventListener('resize', () => {
         <select id="cl-status"><option>접수</option><option>처리중</option><option>완료</option></select>
       </div>
       <div class="ff" style="grid-column:span 2;"><label>클레임 사양</label><input id="cl-spec" placeholder="예: AC 220V 모터 유격 또는 상세 사양 기재"></div>
-      <div class="ff" style="grid-column:span 3;"><label>불만/요청 내용 *</label><textarea id="cl-content" rows="4" placeholder="클레임/AS 요청 내용을 구체적으로 기재" style="width:100%; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx); padding:8px; font-size:12px; font-family:inherit; resize:vertical;"></textarea></div>
-      <div class="ff" style="grid-column:span 3;"><label>조치 방안</label><textarea id="cl-response" rows="4" placeholder="검토 조치 피드백" style="width:100%; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx); padding:8px; font-size:12px; font-family:inherit; resize:vertical;"></textarea></div>
-    </div>
-    <div class="batch-entry-grid" id="cl-bulk-panel" style="display:none;">
-      <div class="batch-entry-label"><i class="ti ti-table"></i>클레임 / AS 일괄 입력</div>
-      <table>
-        <thead><tr><th>유형</th><th>사양</th><th>불만/요청 내용 *</th><th>조치 방안</th><th>상태</th><th></th></tr></thead>
-        <tbody id="cl-bulk-body" data-bulk-key="cl"></tbody>
-      </table>
+      <div class="ff" style="grid-column:span 4;"><label>불만/요청 내용 *</label><textarea id="cl-content" rows="4" placeholder="클레임/AS 요청 내용을 구체적으로 기재" style="width:100%; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx); padding:8px; font-size:12px; font-family:inherit; resize:vertical;"></textarea></div>
+      <div class="ff" style="grid-column:span 4;"><label>조치 방안</label><textarea id="cl-response" rows="4" placeholder="검토 조치 피드백" style="width:100%; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx); padding:8px; font-size:12px; font-family:inherit; resize:vertical;"></textarea></div>
     </div>
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('claim-modal')">취소</button>
