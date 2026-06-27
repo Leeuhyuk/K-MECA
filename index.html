@@ -8170,6 +8170,7 @@ function saveBomModal(){
   saveStorage('bomList', bomList);
   closeModal('bom-modal');
   renderBom();
+  if (currentPage === 'finance' && typeof financeTab !== 'undefined' && financeTab === 'cost' && typeof renderFinance === 'function') renderFinance();
 }
 function deleteBom(id){
   if (!checkAdminAction()) return;
@@ -8179,6 +8180,7 @@ function deleteBom(id){
   if (target) writeAuditLog('bom', id, 'delete', target, null, { summary:'BOM 항목 삭제' });
   saveStorage('bomList', bomList);
   renderBom();
+  if (currentPage === 'finance' && typeof financeTab !== 'undefined' && financeTab === 'cost' && typeof renderFinance === 'function') renderFinance();
   showToast('BOM 자재가 삭제되었습니다.');
 }
 
@@ -9042,7 +9044,14 @@ function cloneProduct(clientId, productId) {
   modal.classList.add('open');
 }
 /* 제조원가 = 재료비+노무비+경비, 공헌이익 = 수주단가-제조원가 (단위 기준) */
-function prodUnitCost(p){ return (Number(p.matCost)||0)+(Number(p.laborCost)||0)+(Number(p.ovhCost)||0); }
+function prodMaterialCost(p){
+  if (!p) return 0;
+  if (typeof bomFor === 'function' && typeof bomMaterialCost === 'function' && bomFor(p.id).length) {
+    return bomMaterialCost(p.id);
+  }
+  return Number(p.matCost) || 0;
+}
+function prodUnitCost(p){ return prodMaterialCost(p)+(Number(p.laborCost)||0)+(Number(p.ovhCost)||0); }
 function updateProdCostPreview() {
   const box = inp('pra-cost-preview'); if (!box) return;
   const cost = (parseInt(v('pra-matcost'))||0)+(parseInt(v('pra-laborcost'))||0)+(parseInt(v('pra-ovhcost'))||0);
@@ -20293,7 +20302,7 @@ function exportFinanceViewXLS(tab){
   else if(tab==='purchase'){header=['발주일','공급처','품목','수량','단가','매입액','상태'];rows=list.map(p=>[p.date,p.supplier,finPoItemSummary(p),typeof _docQtySummary==='function'?_docQtySummary(p):p.qty,p.unitPrice,finPoAmount(p),p.status]);}
   else if(tab==='payreq'){header=['요청번호','요청일','희망지급일','발주번호','공급처','품목','요청금액','담당자','요청자','상태','세금계산서','비고'];rows=list.map(r=>[r.id,r.requestDate,r.dueDate,r.poId,r.supplier,r.itemSummary,r.amount,r.assignee,r.requester,r.status,r.taxInvoiceStatus,r.note]);}
   else if(tab==='fixed'){header=['월','항목명','분류','지급처','예정일','금액','상태','지급일','결제방법','비고'];rows=list.map(r=>[r.ym,r.name,r.category,r.vendor,r.dueDate,r.amount,r.status,r.paidDate,r.method,r.note]);}
-  else if(tab==='cost'){header=['코드','제품','고객사','재료비','노무비','경비','제조원가','수주단가'];rows=list.map(p=>[p.id,p.name,getClientName(p.clientId),p.matCost,p.laborCost,p.ovhCost,prodUnitCost(p),p.price]);}
+  else if(tab==='cost'){header=['코드','제품','고객사','재료비','노무비','경비','제조원가','수주단가'];rows=list.map(p=>[p.id,p.name,getClientName(p.clientId),typeof prodMaterialCost==='function'?prodMaterialCost(p):p.matCost,p.laborCost,p.ovhCost,prodUnitCost(p),p.price]);}
   else if(tab==='labor'){exportPayrollXLS();return;}
   else if(tab==='etc'){header=['일자','구분','분류','내용','금액','비고'];rows=list.map(e=>[e.date,e.type,e.category,e.title,e.amount,e.note]);}
   else {showToast('이 탭은 전용 내보내기를 사용하세요.','info');return;}
@@ -21055,7 +21064,7 @@ function finCostDetailHtml(productId) {
   const marginRate = price > 0 ? Math.round(margin / price * 1000) / 10 : 0;
   const rows = lines.length ? lines.map(line => {
     const qty = Number(line.qtyPer) || 0;
-    const unitPrice = Number(line.unitPrice) || 0;
+    const unitPrice = typeof bomLineUnitCost === 'function' ? bomLineUnitCost(line) : (Number(line.unitPrice) || 0);
     const amount = qty * unitPrice;
     const materialName = line.subProductId ? getProductName(line.subProductId) : (line.name || '-');
     return `<tr>
@@ -21092,6 +21101,7 @@ function _finCost() {
   let tCost=0, tRev=0, tMargin=0;
   allList.forEach(p=>{ const unitCost=prodUnitCost(p), price=Number(p.price)||0, qty=Number(p.qty)||0; tCost+=unitCost*qty; tRev+=price*qty; tMargin+=(price-unitCost)*qty; });
   const body = page.rows.length ? page.rows.map(p => {
+    const materialCost = typeof prodMaterialCost === 'function' ? prodMaterialCost(p) : (Number(p.matCost) || 0);
     const unitCost = prodUnitCost(p);
     const price = Number(p.price)||0;
     const qty = Number(p.qty)||0;
@@ -21101,7 +21111,7 @@ function _finCost() {
     <tr data-product-id="${esc(p.id)}" onclick="toggleFinCostDetail(this.dataset.productId)" style="cursor:pointer;${finCostDetailProductId===p.id?'outline:2px solid var(--br-i);':''}">
       <td style="font-weight:700;">${esc(p.id)}</td>
       <td style="font-weight:700;">${esc(p.name)}<span style="font-size:10px;color:var(--tx-t);font-weight:400;display:block;">${esc(getClientName(p.clientId))}</span></td>
-      <td style="text-align:right;">${fmtW(p.matCost||0)}</td>
+      <td style="text-align:right;">${fmtW(materialCost)}</td>
       <td style="text-align:right;">${fmtW(p.laborCost||0)}</td>
       <td style="text-align:right;">${fmtW(p.ovhCost||0)}</td>
       <td style="text-align:right;font-weight:700;">${fmtW(unitCost)}</td>
