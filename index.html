@@ -1923,6 +1923,20 @@ textarea { height: auto; resize: vertical; }
 .bom-detail-header { position:sticky; top:0; z-index:80; display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:56px; padding:9px 12px; margin-bottom:12px; border:1px solid var(--br); border-radius:var(--rl); background:var(--bg-p); box-shadow:var(--shadow); }
 
 /* 품질 */
+.quality-tabs {
+  margin-bottom: 10px;
+  align-items: center;
+}
+.quality-tabs .btn {
+  min-height: 34px;
+}
+.quality-tab-panel {
+  display: none;
+}
+.quality-tab-panel.active {
+  display: block;
+}
+
 .al { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-radius: var(--rl); margin-bottom: 10px; border: 1px solid; box-shadow: var(--shadow); }
 .al-err { background: var(--bg-d); border-color: var(--br-d); }
 .al-warn { background: var(--bg-w); border-color: var(--br-w); }
@@ -3308,6 +3322,11 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     <div class="mc"><div class="mc-lbl"><i class="ti ti-loader" style="color:var(--tx-i);"></i>개선/조치중 품질장애</div><div class="mc-val" style="color:var(--tx-i);">0건</div></div>
     <div class="mc"><div class="mc-lbl"><i class="ti ti-message-report" style="color:var(--tx-d);"></i>해외/고객사 제기 클레임</div><div class="mc-val">1건</div><div class="mc-sub">처리중 1건</div></div>
     <div class="mc"><div class="mc-lbl"><i class="ti ti-clipboard-check" style="color:var(--tx-ok);"></i>납품전수검사</div><div class="mc-val" style="color:var(--tx-ok);">0/0건</div><div class="mc-sub">통과/검사기록</div></div></div>
+    <div class="toolbar quality-tabs" id="quality-tabs">
+      <button type="button" class="btn btn-primary" data-quality-tab="defects" onclick="switchQualityTab('defects')"><i class="ti ti-alert-triangle"></i> 공정 불량</button>
+      <button type="button" class="btn" data-quality-tab="checks" onclick="switchQualityTab('checks')"><i class="ti ti-clipboard-check"></i> 출하 검사</button>
+    </div>
+    <div class="quality-tab-panel active" data-quality-panel="defects">
     <div class="row2">
       <div class="card" style="grid-column:1 / -1;">
         <div class="card-hd" style="justify-content:flex-start;">
@@ -3361,7 +3380,9 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     </table></div>
       </div>
     </div>
+    </div>
     
+    <div class="quality-tab-panel" data-quality-panel="checks">
     <div class="card">
       <div class="card-hd" style="justify-content:flex-start;">
         <span class="card-ttl"><i class="ti ti-clipboard-check"></i>최종 출하 납품 전수/샘플링 체크리스트</span>
@@ -3379,6 +3400,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       </div>
       <!-- 검사 기록 추가/수정 패널 -->
       <div id="check-table" style="overflow-x:auto;"><div class="empty"><i class="ti ti-inbox"></i>검색 조건에 맞는 검사 기록이 없습니다.</div></div>
+    </div>
     </div>
   </div>
 
@@ -11292,6 +11314,30 @@ function exportProcessCSV() {
 }
 
 /* ════════ 6. 품질 및 검사 관리 ════════ */
+let qualityActiveTab = 'defects';
+
+function switchQualityTab(tab) {
+  qualityActiveTab = tab === 'checks' ? 'checks' : 'defects';
+  try { localStorage.setItem('qualityActiveTab', qualityActiveTab); } catch(e) {}
+  document.querySelectorAll('#quality-tabs [data-quality-tab]').forEach(btn => {
+    const active = btn.dataset.qualityTab === qualityActiveTab;
+    btn.classList.toggle('btn-primary', active);
+    btn.classList.toggle('active', active);
+  });
+  document.querySelectorAll('#pg-quality [data-quality-panel]').forEach(panel => {
+    panel.classList.toggle('active', panel.dataset.qualityPanel === qualityActiveTab);
+  });
+}
+
+function ensureQualityTab() {
+  if (!document.getElementById('quality-tabs')) return;
+  try {
+    const saved = localStorage.getItem('qualityActiveTab');
+    if (saved === 'checks' || saved === 'defects') qualityActiveTab = saved;
+  } catch(e) {}
+  switchQualityTab(qualityActiveTab);
+}
+
 function renderQuality() {
   ensureDateView('defects', 'defect-table', defects.map(d=>d.date), renderQuality);
   ensureDateView('qualityClaims', 'claim-table', claims.map(c=>c.date), renderQuality);
@@ -11518,6 +11564,7 @@ function renderQuality() {
       </tbody>
     </table>` : empty('검색 조건에 맞는 검사 기록이 없습니다.');
 
+  ensureQualityTab();
   // 클레임 전용 페이지도 함께 동기화
   if (typeof renderClaims === 'function') renderClaims();
 }
@@ -18155,6 +18202,10 @@ function _excelCellCss(cell) {
   return css.join(';');
 }
 
+const DOC_TEMPLATE_PDF_PAGE_WIDTH = 746;
+const DOC_TEMPLATE_PDF_PAGE_HEIGHT = 1083;
+const DOC_TEMPLATE_PDF_SAFE_GUTTER = 18;
+
 function _worksheetToHtmlTable(ws) {
   const bounds = _worksheetPrintBounds(ws);
   const merges = _worksheetMergeMap(ws);
@@ -18168,10 +18219,12 @@ function _worksheetToHtmlTable(ws) {
     colParts.push(`<col style="width:${width}px;">`);
   }
   const rows = [];
+  let totalHeight = 0;
   for (let r = bounds.top; r <= bounds.bottom; r++) {
     const row = ws.getRow(r);
     if (row && row.hidden) continue;
     const height = Math.max(18, Math.round(((row && row.height) || ws.properties.defaultRowHeight || 16) * 1.333));
+    totalHeight += height;
     const cells = [];
     for (let c = bounds.left; c <= bounds.right; c++) {
       const col = ws.getColumn(c);
@@ -18188,7 +18241,17 @@ function _worksheetToHtmlTable(ws) {
     }
     rows.push(`<tr style="height:${height}px;">${cells.join('')}</tr>`);
   }
-  return `<table class="xlsx-print-table" style="width:${Math.max(totalWidth, 1)}px;"><colgroup>${colParts.join('')}</colgroup><tbody>${rows.join('')}</tbody></table>`;
+  const tableWidth = Math.max(totalWidth, 1);
+  const tableHeight = Math.max(totalHeight, 1);
+  const scale = Math.min(
+    1,
+    (DOC_TEMPLATE_PDF_PAGE_WIDTH - DOC_TEMPLATE_PDF_SAFE_GUTTER) / tableWidth,
+    (DOC_TEMPLATE_PDF_PAGE_HEIGHT - DOC_TEMPLATE_PDF_SAFE_GUTTER) / tableHeight
+  );
+  const fittedHeight = Math.ceil(tableHeight * scale);
+  const scaleText = scale.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
+  const table = `<table class="xlsx-print-table" style="width:${tableWidth}px;"><colgroup>${colParts.join('')}</colgroup><tbody>${rows.join('')}</tbody></table>`;
+  return `<div class="xlsx-print-fit" style="width:${DOC_TEMPLATE_PDF_PAGE_WIDTH}px;height:${fittedHeight}px;"><div class="xlsx-print-scale" style="width:${tableWidth}px;height:${tableHeight}px;transform:scale(${scaleText});">${table}</div></div>`;
 }
 
 async function buildDocTemplatePdfHtml(type, id = null, options = {}) {
@@ -18206,7 +18269,9 @@ async function buildDocTemplatePdfHtml(type, id = null, options = {}) {
       <style>
         @page{size:A4 portrait;margin:0;}
         body{margin:0;background:#fff;color:#111;font-family:'Malgun Gothic','맑은 고딕',sans-serif;}
-        .xlsx-print-page{width:746px;min-height:1083px;box-sizing:border-box;background:#fff;overflow:hidden;}
+        .xlsx-print-page{width:${DOC_TEMPLATE_PDF_PAGE_WIDTH}px;min-height:${DOC_TEMPLATE_PDF_PAGE_HEIGHT}px;box-sizing:border-box;background:#fff;overflow:hidden;}
+        .xlsx-print-fit{position:relative;overflow:hidden;}
+        .xlsx-print-scale{transform-origin:top left;}
         .xlsx-print-table{border-collapse:collapse;table-layout:fixed;background:#fff;color:#111;}
         .xlsx-print-table td{padding:2px 4px;line-height:1.25;word-break:break-word;overflow:hidden;}
       </style></head><body>${pages}</body></html>`
