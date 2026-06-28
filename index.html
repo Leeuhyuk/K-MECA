@@ -4204,10 +4204,10 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <div style="display:flex; gap:8px; justify-content:flex-end;">
         <button class="btn" onclick="closeModal('email-send-modal')">취소</button>
         <button class="btn" onclick="doMailto()"><i class="ti ti-mail"></i>메일 앱으로 열기</button>
-        <button class="btn btn-primary" id="email-submit-btn" onclick="doEmailJS()" disabled><i class="ti ti-send"></i>직접 발송 (EmailJS)</button>
+        <button class="btn btn-primary" id="email-submit-btn" onclick="doEmailJS()" disabled><i class="ti ti-send"></i>직접 발송</button>
       </div>
       <div style="font-size:10px; color:var(--tx-t); text-align:right;">
-        직접 발송 설정: 시스템 관리 → API 관리 → EmailJS
+        직접 발송: Firebase 이메일 확장 사용
       </div>
     </div>
   </div>
@@ -15850,56 +15850,128 @@ ${ci.name} ${ci.dept}
 TEL: ${ci.tel}`;
 }
 
+const DOCUMENT_EMAIL_FN_REGION = 'asia-northeast3';
+const DOCUMENT_EMAIL_MAX_PDF_BASE64 = 880000;
+
+function isFirestoreEmailReady() {
+  return (typeof _cloudActive !== 'undefined' && _cloudActive) &&
+         typeof firebase !== 'undefined' &&
+         firebase.app &&
+         typeof firebase.app().functions === 'function';
+}
+
+function documentEmailCallable(name) {
+  return firebase.app().functions(DOCUMENT_EMAIL_FN_REGION).httpsCallable(name);
+}
+
+function normalizeEmailAddress(value) {
+  const email = String(value || '').trim();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : '';
+}
+
+function markDocumentEmailSent() {
+  if (!_emailDocRef) return;
+  const { docObj, docType } = _emailDocRef;
+  if (docType === 'rfq') {
+    const r = rfqList.find(x => x.id === docObj.id);
+    if (r && r.status === '요청전') {
+      r.status = '요청중';
+      saveStorage('rfqList', rfqList);
+      renderRfq();
+    }
+  } else if (docType === 'po') {
+    const p = poList.find(x => x.id === docObj.id);
+    if (p && p.status === '작성중') {
+      p.status = '발송완료';
+      saveStorage('poList', poList);
+      renderPo();
+    }
+  }
+}
+
+function buildFirestoreEmailPayload(to, ci) {
+  const doc = (_emailDocRef && _emailDocRef.docObj) || {};
+  const docType = (_emailDocRef && _emailDocRef.docType) || '';
+  const payload = {
+    to,
+    subject: v('em-subject'),
+    text: v('em-body'),
+    docType,
+    docId: doc.id || ''
+  };
+  const replyTo = normalizeEmailAddress(ci.email);
+  if (replyTo) payload.replyTo = replyTo;
+  if (_emailDocRef && _emailDocRef.pdfBase64) {
+    if (_emailDocRef.pdfBase64.length > DOCUMENT_EMAIL_MAX_PDF_BASE64) {
+      throw new Error('PDF 첨부 용량이 너무 큽니다. PDF를 저장 후 별도 첨부해 주세요.');
+    }
+    payload.attachments = [{
+      filename: (doc.id || 'document') + '.pdf',
+      content: _emailDocRef.pdfBase64,
+      encoding: 'base64',
+      contentType: 'application/pdf'
+    }];
+  }
+  return payload;
+}
+
+async function queueFirestoreDocumentEmail(to, ci) {
+  const fn = documentEmailCallable('queueDocumentEmail');
+  return fn(buildFirestoreEmailPayload(to, ci));
+}
+
+function getEmailjsReadyConfig() {
+  const cfg = getEmailjsConfig();
+  return cfg.serviceId && cfg.templateId && cfg.publicKey && window.emailjs ? cfg : null;
+}
+
+async function sendEmailjsDocumentEmail(to, ci) {
+  const cfg = getEmailjsReadyConfig();
+  if (!cfg) return false;
+  const templateParams = {
+    to_email:  to,
+    subject:   v('em-subject'),
+    message:   v('em-body'),
+    from_name: ci.name + ' ' + ci.dept,
+  };
+
+  if (_emailDocRef && _emailDocRef.pdfBase64) {
+    templateParams.pdf_attachment = "data:application/pdf;base64," + _emailDocRef.pdfBase64;
+    templateParams.pdf_filename = _emailDocRef.docObj.id + ".pdf";
+  }
+
+  await emailjs.send(cfg.serviceId, cfg.templateId, templateParams);
+  return true;
+}
+
 function doMailto() {
   const to = v('em-to');
   if (!to) { showToast('수신 이메일을 입력하세요.', 'error'); return; }
-  showToast('안내: 메일 앱 발송 시 브라우저 보안 제약으로 PDF 첨부파일이 누락될 수 있으므로 EmailJS 직접 발송을 권장합니다.', 'info');
+  showToast('안내: 메일 앱 발송 시 브라우저 보안 제약으로 PDF 첨부파일이 누락될 수 있으므로 직접 발송을 권장합니다.', 'info');
   const url = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(v('em-subject'))}&body=${encodeURIComponent(v('em-body'))}`;
   window.open(url, '_blank');
 }
 
 async function doEmailJS() {
-  const cfg = getEmailjsConfig();
-  if (!cfg.serviceId || !cfg.templateId || !cfg.publicKey) {
-    showToast('EmailJS 설정이 필요합니다.', 'error');
-    closeModal('email-send-modal');
-    openEmailjsSettings();
-    return;
-  }
   const to = v('em-to');
   if (!to) { showToast('수신 이메일을 입력하세요.', 'error'); return; }
   const ci = getCompanyInfo();
   try {
-    showToast('이메일 및 PDF 전송 중...', 'info');
-    
-    const templateParams = {
-      to_email:  to,
-      subject:   v('em-subject'),
-      message:   v('em-body'),
-      from_name: ci.name + ' ' + ci.dept,
-    };
-
-    if (_emailDocRef && _emailDocRef.pdfBase64) {
-      templateParams.pdf_attachment = "data:application/pdf;base64," + _emailDocRef.pdfBase64;
-      templateParams.pdf_filename = _emailDocRef.docObj.id + ".pdf";
+    showToast('이메일 발송 요청 등록 중...', 'info');
+    if (isFirestoreEmailReady()) {
+      await queueFirestoreDocumentEmail(to, ci);
+    } else if (!(await sendEmailjsDocumentEmail(to, ci))) {
+      showToast('Firebase 로그인 또는 이메일 함수 배포가 필요합니다.', 'error');
+      return;
     }
-
-    await emailjs.send(cfg.serviceId, cfg.templateId, templateParams);
     closeModal('email-send-modal');
-    showToast('이메일이 PDF 파일과 함께 발송되었습니다.', 'success');
-    
-    if (_emailDocRef) {
-      const { docObj, docType } = _emailDocRef;
-      if (docType === 'rfq') {
-        const r = rfqList.find(x => x.id === docObj.id);
-        if (r && r.status === '요청전') { r.status = '요청중'; saveStorage('rfqList', rfqList); renderRfq(); }
-      } else {
-        const p = poList.find(x => x.id === docObj.id);
-        if (p && p.status === '작성중') { p.status = '발송완료'; saveStorage('poList', poList); renderPo(); }
-      }
-    }
+    showToast('이메일 발송 요청이 등록되었습니다.', 'success');
+    markDocumentEmailSent();
   } catch(e) {
-    showToast('발송 실패: ' + (e.text || e.message || '알 수 없는 오류'), 'error');
+    const msg = e && e.code === 'functions/not-found'
+      ? 'Firebase 이메일 함수 배포가 필요합니다.'
+      : (e.text || e.message || '알 수 없는 오류');
+    showToast('발송 실패: ' + msg, 'error');
   }
 }
 
