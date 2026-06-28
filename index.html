@@ -15600,174 +15600,33 @@ function normalizePdfBase64(output) {
   return text;
 }
 
-function generatePdfBase64(docObj, docType) {
+function pdfBlobToBase64(blob) {
   return new Promise((resolve, reject) => {
-    try {
-      const ci = getCompanyInfo();
-      const style = _docPrintStyle();
-      let bodyHtml = '';
-
-      if (docType === 'rfq') {
-        const r = docObj;
-        const client = getClientName(r.clientId) || '—';
-        const prod = r.productId ? getProductName(r.productId) : '—';
-        const lines = _docLines(r, 'rfq');
-        const total = _docAmount(r, 'rfq');
-        const amt = total ? Number(total).toLocaleString('ko-KR') : '—';
-        const vatVal = Math.round(total * 0.1);
-        const vat = total ? Number(vatVal).toLocaleString('ko-KR') : '—';
-        const tot = total ? Number(total + vatVal).toLocaleString('ko-KR') : '—';
-        
-        bodyHtml = `
-          <div style="padding: 20px 24px; color:#111; font-size:12px; background:#fff; width:794px; min-height:1123px; box-sizing:border-box;">
-            <div class="approval-box">
-              <div class="apv-cell"><div class="apv-title">담 당</div><div class="apv-sign"></div></div>
-              <div class="apv-cell"><div class="apv-title">팀 장</div><div class="apv-sign"></div></div>
-              <div class="apv-cell"><div class="apv-title">승 인</div><div class="apv-sign"></div></div>
-            </div>
-            <div class="doc-header" style="margin-top:20px;">
-              <div>
-                <div class="co-name">${ci.name}</div>
-                <div class="co-detail">${ci.address}${ci.tel?' | TEL. '+ci.tel:''}${ci.fax?' | FAX. '+ci.fax:''}</div>
-                ${ci.bizNo?`<div class="co-detail">사업자등록번호: ${ci.bizNo}${ci.ceo?' | 대표이사: '+ci.ceo:''}</div>`:''}
-              </div>
-              <div><div class="doc-title" style="font-size:24px;">견 적 요 청 서</div><div class="doc-no">문서번호 &nbsp; ${r.id}</div></div>
-            </div>
-            <table class="info-tbl" style="margin-top:15px;">
-              <tr><th>수 신</th><td class="hl" colspan="3">${r.supplier} 귀중</td></tr>
-              <tr><th>발 신</th><td>${ci.name} ${ci.dept}</td><th style="width:90px;">발행일자</th><td>${r.date}</td></tr>
-              <tr><th>관련 프로젝트</th><td colspan="3">${client} — ${prod}</td></tr>
-              ${ci.tel?`<tr><th>담당 연락처</th><td colspan="3">${ci.dept} ${ci.tel}</td></tr>`:''}
-            </table>
-            <div class="sec-title" style="margin-top:20px;">■ 견적 요청 품목</div>
-            <table class="items-tbl">
-              <thead><tr><th style="width:30px;">No.</th><th>품 목 명</th><th style="width:140px;">규 격 / 사 양</th>
-              <th style="width:46px;">수량</th><th style="width:40px;">단위</th>
-              <th style="width:100px;">희망 단가</th><th style="width:110px;">희망 금액</th><th>비 고</th></tr></thead>
-              <tbody>
-                ${_docItemRowsHtml(lines, 'rfq')}
-                <tr class="empty-row"><td colspan="8">—</td></tr>
-                <tr class="empty-row"><td colspan="8">—</td></tr>
-                <tr class="total-row"><td colspan="6" style="text-align:right;">합 계</td>
-                <td class="num">${amt}</td><td></td></tr>
-              </tbody>
-            </table>
-            <div class="sum-wrap"><div class="sum-box">
-              <div class="sum-row"><div class="sum-lbl">희망 공급가액</div><div class="sum-val">${amt} 원</div></div>
-              <div class="sum-row"><div class="sum-lbl">부가세 (10%)</div><div class="sum-val">${vat} 원</div></div>
-              <div class="sum-row sum-final"><div class="sum-lbl">희망 합계금액</div><div class="sum-val">${tot} 원</div></div>
-            </div></div>
-            <div class="remarks" style="margin-top:15px;">
-              <div class="remarks-title">◆ 특기사항 및 요청조건</div>
-              1. 상기 품목에 대하여 견적을 요청드리오니 회신 기한 내 견적서를 제출해 주시기 바랍니다.<br>
-              2. 견적가격은 납품지 기준 공급가(VAT 별도)로 기재 바랍니다.<br>
-              3. 납품 가능 수량 및 납기일을 반드시 명시하여 주시기 바랍니다.
-            </div>
-            <div class="sign-area" style="margin-top:20px;">
-              <div class="sign-left">본 견적요청서는 구매 의사의 표명이 아니며,<br>견적 내용은 최종 발주 시 변경될 수 있습니다.</div>
-              <div class="sign-right">
-                <div class="sign-box"><div class="sign-title">작 성</div><div class="sign-content">(인)</div></div>
-                <div class="sign-box"><div class="sign-title">검 토</div><div class="sign-content">(인)</div></div>
-                <div class="sign-box"><div class="sign-title">승 인</div><div class="sign-content">(인)</div></div>
-              </div>
-            </div>
-          </div>`;
-      } else if (docType === 'statement' || docType === 'tax' || docType === 'quote' || docType === 'order') {
-        bodyHtml = _salesDocBodyHtml(docObj, docType, ci);
-      } else {
-        const p = docObj;
-        const lines = _docLines(p, 'po');
-        const total = _docAmount(p, 'po');
-        const vat = Math.round(total * 0.1);
-        const grandTotal = total + vat;
-        const client = getClientName(p.clientId) || '—';
-        const prod = p.productId ? getProductName(p.productId) : '—';
-        
-        bodyHtml = `
-          <div style="padding: 20px 24px; color:#111; font-size:12px; background:#fff; width:794px; min-height:1123px; box-sizing:border-box;">
-            <div class="approval-box">
-              <div class="apv-cell"><div class="apv-title">담 당</div><div class="apv-sign"></div></div>
-              <div class="apv-cell"><div class="apv-title">팀 장</div><div class="apv-sign"></div></div>
-              <div class="apv-cell"><div class="apv-title">이 사</div><div class="apv-sign"></div></div>
-              <div class="apv-cell"><div class="apv-title">대 표</div><div class="apv-sign"></div></div>
-            </div>
-            <div class="doc-header" style="margin-top:20px;">
-              <div>
-                <div class="co-name">${ci.name}</div>
-                <div class="co-detail">${ci.address}${ci.tel?' | TEL. '+ci.tel:''}${ci.fax?' | FAX. '+ci.fax:''}</div>
-                ${ci.bizNo?`<div class="co-detail">사업자등록번호: ${ci.bizNo}${ci.ceo?' | 대표이사: '+ci.ceo:''}</div>`:''}
-              </div>
-              <div><div class="doc-title" style="font-size:24px;">구 매 발 주 서</div><div class="doc-no">발주번호 &nbsp; ${p.id}</div></div>
-            </div>
-            <table class="info-tbl" style="margin-top:15px;">
-              <tr><th>공급처(수신)</th><td class="hl" colspan="3">${p.supplier} 귀중</td></tr>
-              <tr><th>발행일자</th><td colspan="3">${p.date}</td></tr>
-              <tr><th>결제조건</th><td>${p.payMethod||'현금'}</td><th>납품방법</th><td>${p.dlvMethod||'직납'}</td></tr>
-              <tr><th>납품지 주소</th><td colspan="3">${ci.address}</td></tr>
-            </table>
-            <div class="sec-title" style="margin-top:20px;">■ 발주 품목</div>
-            <table class="items-tbl">
-              <thead><tr><th style="width:30px;">No.</th><th>품 목 명</th><th style="width:140px;">규 격 / 사 양</th>
-              <th style="width:46px;">수량</th><th style="width:40px;">단위</th>
-              <th style="width:100px;">단 가 (원)</th><th style="width:110px;">금 액 (원)</th><th>비 고</th></tr></thead>
-              <tbody>
-                ${_docItemRowsHtml(lines, 'po')}
-                <tr class="empty-row"><td colspan="8">—</td></tr>
-                <tr class="total-row"><td colspan="5" style="text-align:right;">공급가액 합계</td>
-                <td></td><td class="num">${total.toLocaleString('ko-KR')}</td><td></td></tr>
-              </tbody>
-            </table>
-            <div class="sum-wrap"><div class="sum-box">
-              <div class="sum-row"><div class="sum-lbl">공급가액</div><div class="sum-val">${total.toLocaleString('ko-KR')} 원</div></div>
-              <div class="sum-row"><div class="sum-lbl">부가세 (10%)</div><div class="sum-val">${vat.toLocaleString('ko-KR')} 원</div></div>
-              <div class="sum-row sum-final"><div class="sum-lbl">발주 합계금액</div><div class="sum-val">${grandTotal.toLocaleString('ko-KR')} 원</div></div>
-            </div></div>
-            <div class="remarks" style="margin-top:15px;">
-              <div class="remarks-title">◆ 특기사항 및 거래조건</div>
-              1. 상기 품목에 대하여 발주하오니 납기일에 맞추어 납품하여 주시기 바랍니다.<br>
-              2. 납품 시 반드시 거래명세표를 동봉하여 주시기 바랍니다.<br>
-              3. 세금계산서는 납품 완료 후 익일 발행 바랍니다.
-            </div>
-            <div class="sign-area" style="margin-top:20px;">
-              <div class="sign-left">위와 같이 발주하며, 본 발주서가 계약 효력을 갖습니다.<br>${p.date}<br><strong>${ci.name}</strong></div>
-              <div class="sign-right">
-                <div class="sign-box"><div class="sign-title">작 성</div><div class="sign-content">(인)</div></div>
-                <div class="sign-box"><div class="sign-title">검 토</div><div class="sign-content">(인)</div></div>
-                <div class="sign-box"><div class="sign-title">대표이사</div><div class="sign-content">(인)</div></div>
-              </div>
-            </div>
-          </div>`;
-      }
-
-      const tempEl = document.createElement('div');
-      tempEl.style.position = 'absolute';
-      tempEl.style.left = '-9999px';
-      tempEl.style.top = '-9999px';
-      tempEl.style.width = '794px';
-      tempEl.style.background = '#fff';
-      tempEl.innerHTML = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><style>${style.replace(/<style>|<\/style>/g, '')}</style></head><body>${bodyHtml}</body></html>`;
-      document.body.appendChild(tempEl);
-
-      const opt = {
-        margin: [0, 0, 0, 0],
-        filename: `${docObj.id}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-
-      html2pdf().from(tempEl).set(opt).outputPdf('arraybuffer').then(output => {
-        const base64 = normalizePdfBase64(output);
-        document.body.removeChild(tempEl);
-        resolve(base64);
-      }).catch(err => {
-        if (tempEl.parentNode) document.body.removeChild(tempEl);
-        reject(err);
-      });
-    } catch (e) {
-      reject(e);
+    if (!blob || !blob.size) {
+      reject(new Error('PDF 파일 데이터가 비어 있습니다.'));
+      return;
     }
+    const reader = new FileReader();
+    reader.onload = () => {
+      try { resolve(normalizePdfBase64(reader.result)); }
+      catch (error) { reject(error); }
+    };
+    reader.onerror = () => reject(reader.error || new Error('PDF 파일을 읽지 못했습니다.'));
+    reader.readAsDataURL(blob);
   });
+}
+
+async function generateDocumentPdfBase64FromPrint(docObj, docType) {
+  if (!docObj || !docObj.id) throw new Error('문서번호가 없어 PDF를 생성할 수 없습니다.');
+  if (typeof documentPdfBlob !== 'function') {
+    throw new Error('기존 PDF 출력 모듈이 준비되지 않았습니다.');
+  }
+  const blob = await documentPdfBlob(docType, docObj.id);
+  return pdfBlobToBase64(blob);
+}
+
+function generatePdfBase64(docObj, docType) {
+  return generateDocumentPdfBase64FromPrint(docObj, docType);
 }
 
 function openEmailModal(docObj, docType) {
