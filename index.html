@@ -1936,6 +1936,20 @@ textarea { height: auto; resize: vertical; }
 .quality-tab-panel.active {
   display: block;
 }
+.order-id-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--tx-i);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.order-id-link:hover {
+  text-decoration: underline;
+}
 
 .al { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-radius: var(--rl); margin-bottom: 10px; border: 1px solid; box-shadow: var(--shadow); }
 .al-err { background: var(--bg-d); border-color: var(--br-d); }
@@ -4696,6 +4710,22 @@ function auditActorDisplaySub(log) {
   if (!log.actorName && auditCreatedByName(log)) return '등록자';
   return '';
 }
+const FINANCE_AUDIT_ENTITY_TYPES = new Set([
+  'finance',
+  'financePayment',
+  'fixedCost',
+  'fixedCostPayment',
+  'paymentRequest',
+  'financeEntry'
+]);
+function isFinanceAuditLogEntry(log) {
+  if (!log) return false;
+  if (typeof log === 'string') return FINANCE_AUDIT_ENTITY_TYPES.has(log);
+  if (typeof log === 'object' && !Object.prototype.hasOwnProperty.call(log, 'entityType')) return true;
+  const type = String(log.entityType || '').trim();
+  if (!type) return false;
+  return FINANCE_AUDIT_ENTITY_TYPES.has(type);
+}
 function writeAuditLog(entityType, entityId, action, before, after, options = {}) {
   const actor = options.actor || getCurrentActor();
   const at = options.at || new Date().toISOString();
@@ -4723,7 +4753,7 @@ function writeAuditLog(entityType, entityId, action, before, after, options = {}
   auditLog.unshift(entry);
   auditLog = auditLog.slice(0, AUDIT_LOG_LIMIT);
   saveStorage('auditLog', auditLog);
-  if (typeof financeData === 'object' && financeData) {
+  if (typeof financeData === 'object' && financeData && isFinanceAuditLogEntry(entry)) {
     if (!Array.isArray(financeData.auditLog)) financeData.auditLog = [];
     financeData.auditLog.unshift(entry);
     financeData.auditLog = financeData.auditLog.slice(0, AUDIT_LOG_LIMIT);
@@ -10331,9 +10361,10 @@ function renderOrders() {
   if (!fil.length) { el.innerHTML = empty('발행된 생산 지시서가 없습니다.'); return; }
 
   el.innerHTML = `
-    <table style="min-width:820px;">
+    <table data-bulk="1" style="min-width:794px;">
       <thead>
         <tr>
+          <th class="orders-row-select-th" style="width:34px;text-align:center;"><input type="checkbox" class="table-check-all" title="현재 표 전체 선택" onclick="bulkToggleAll('orders',this.checked)"></th>
           <th onclick="toggleSort('orders', 'id')" style="cursor:pointer; user-select:none; width:90px;">지시번호 ${sortIcon('orders', 'id')}</th>
           <th onclick="toggleSort('orders', 'client')" style="cursor:pointer; user-select:none;">고객사 ${sortIcon('orders', 'client')}</th>
           <th onclick="toggleSort('orders', 'product')" style="cursor:pointer; user-select:none;">생산 제품 ${sortIcon('orders', 'product')}</th>
@@ -10343,11 +10374,10 @@ function renderOrders() {
           <th onclick="toggleSort('orders', 'defect')" style="cursor:pointer; user-select:none; width:58px;">불량 ${sortIcon('orders', 'defect')}</th>
           <th onclick="toggleSort('orders', 'start')" style="cursor:pointer; user-select:none; width:82px;">개시일 ${sortIcon('orders', 'start')}</th>
           <th onclick="toggleSort('orders', 'due')" style="cursor:pointer; user-select:none; width:100px;">납기일 ${sortIcon('orders', 'due')}</th>
-          <th onclick="toggleSort('orders', 'progress')" style="cursor:pointer; user-select:none; width:90px;">진행률 ${sortIcon('orders', 'progress')}</th>
+          <th onclick="toggleSort('orders', 'progress')" style="cursor:pointer; user-select:none; width:108px;" title="실적량 ÷ 목표량으로 자동 계산됩니다.">진행률 ${sortIcon('orders', 'progress')}</th>
           <th onclick="toggleSort('orders', 'status')" style="cursor:pointer; user-select:none; width:80px;">상태 ${sortIcon('orders', 'status')}</th>
           <th onclick="toggleSort('orders', 'manager')" style="cursor:pointer; user-select:none; width:80px;">담당자 ${sortIcon('orders', 'manager')}</th>
           <th style="width:44px;">메모</th>
-          <th style="width:60px;">조작</th>
         </tr>
       </thead>
       <tbody>
@@ -10358,7 +10388,10 @@ function renderOrders() {
           const hasNote = !!(o.note||'').trim();
           return `
             <tr style="${rowBg}">
-              <td style="font-family:monospace; font-size:11px; font-weight:700; color:var(--tx-i);">${esc(o.id)}</td>
+              <td class="orders-row-select-td" style="width:34px;text-align:center;"><input type="checkbox" class="table-row-select" data-bid="${esc(o.id)}" title="행 선택" onclick="bulkToggle('orders','${o.id}',this.checked)"></td>
+              <td style="font-family:monospace; font-size:11px; font-weight:700;">
+                <button type="button" class="order-id-link" onclick="openOrderEdit('${o.id}')" title="생산 지시 수정">${esc(o.id)}</button>
+              </td>
               <td style="font-weight:600;">${esc(getClientName(o.clientId))}</td>
               <td style="font-weight:700;">${esc(getProductName(o.productId))}</td>
               <td style="text-align:center;"><span class="bd" style="font-size:10px;">${esc(o.line)}</span></td>
@@ -10375,7 +10408,7 @@ function renderOrders() {
               </td>
               <td style="font-size:11px;">${esc(o.start)||'—'}</td>
               <td>${dayBadge(o.due)}<div style="font-size:10px; color:var(--tx-t); margin-top:1px;">${esc(o.due)||''}</div></td>
-              <td>${pctBar(o.done, o.qty, 72)}</td>
+              <td title="실적량 ${Number(o.done)||0} / 목표량 ${Number(o.qty)||0} 기준">${pctBar(o.done, o.qty, 82)}</td>
               <td>
                 <select class="stat-sel" style="font-weight:700; color:${statusColor}; border-color:${statusColor};" onchange="qStatus('${o.id}',this.value)">
                   ${['대기','진행중','완료','지연'].map(s=>`<option${s===o.status?' selected':''}>${s}</option>`).join('')}
@@ -10389,10 +10422,6 @@ function renderOrders() {
                       <i class="ti ti-notes" style="font-size:14px;"></i>
                     </button>`
                   : `<span style="color:var(--tx-t); font-size:16px;">—</span>`}
-              </td>
-              <td style="white-space:nowrap;">
-                <button class="edit-btn" onclick="openOrderEdit('${o.id}')"><i class="ti ti-edit"></i></button>
-                <button class="del-btn" onclick="deleteOrder('${o.id}')"><i class="ti ti-trash"></i></button>
               </td>
             </tr>`;
         }).join('')}
@@ -10481,10 +10510,21 @@ function setOrderEntryMode(mode) {
   if (saveBtn && !editOrderId) saveBtn.innerHTML = bulk ? '<i class="ti ti-check"></i>일괄 발행' : '<i class="ti ti-check"></i>발행 완료';
 }
 
+function setOrderDeleteButton(visible) {
+  const btn = inp('order-delete-btn');
+  if (btn) btn.style.display = visible ? '' : 'none';
+}
+
+function deleteCurrentOrder() {
+  if (!editOrderId) return;
+  deleteOrder(editOrderId);
+}
+
 function openOrderAdd() {
   if (!checkAdminAction()) return;
   if (typeof requireCreateAction === 'function' && !requireCreateAction('orders', '생산 지시 등록')) return;
   editOrderId = null;
+  setOrderDeleteButton(false);
   inp('order-modal-ttl').innerHTML = '<i class="ti ti-clipboard-plus"></i>현장 생산 지시서 신규 발행';
   const saveBtn = inp('order-save-btn');
   if (saveBtn) saveBtn.innerHTML = '<i class="ti ti-check"></i>발행 완료';
@@ -10509,6 +10549,7 @@ function openOrderEdit(id) {
   const o = workOrders.find(x => x.id === id); if (!o) return;
   if (!requireRecordPermission('edit', o, 'workOrder')) return;
   editOrderId = id;
+  setOrderDeleteButton(true);
   inp('order-modal-ttl').innerHTML = `<i class="ti ti-edit" style="color:var(--tx-w);"></i>생산 지시서 수정 — ${o.id}`;
   const saveBtn = inp('order-save-btn');
   if (saveBtn) saveBtn.innerHTML = '<i class="ti ti-device-floppy"></i>저장';
@@ -10533,6 +10574,7 @@ function cloneOrder(id) {
   if (!checkAdminAction()) return;
   const o = workOrders.find(x => x.id === id); if (!o) return;
   editOrderId = null;
+  setOrderDeleteButton(false);
   inp('order-modal-ttl').innerHTML = `<i class="ti ti-copy" style="color:var(--tx-i);"></i>생산 지시서 복제 발행 — ${o.id}`;
   const saveBtn = inp('order-save-btn');
   if (saveBtn) saveBtn.innerHTML = '<i class="ti ti-check"></i>신규 발행';
@@ -10565,6 +10607,7 @@ function onQcClientChange() {
 function openOrderModal() {
   if (!checkAdminAction()) return;
   editOrderId = null;
+  setOrderDeleteButton(false);
   inp('order-modal-ttl').innerHTML = '<i class="ti ti-clipboard-plus"></i>현장 생산 지시서 신규 발행';
   const saveBtn = inp('order-save-btn');
   if (saveBtn) saveBtn.innerHTML = '<i class="ti ti-check"></i>발행 완료';
@@ -10800,6 +10843,10 @@ function deleteOrder(id) {
     workOrders = workOrders.filter(x => x.id !== id);
     writeAuditLog('workOrder', id, 'delete', o, null, { summary:'생산 지시 삭제' });
     saveStorage('workOrders', workOrders);
+    if (editOrderId === id) {
+      editOrderId = null;
+      closeModal('order-modal');
+    }
     renderOrders();
     showToast('작업 지시서가 휴지통으로 이동했습니다.', 'info');
   });
@@ -13859,7 +13906,7 @@ function applyRoleGating(){
 const ADD_KEY='＋등록버튼';   // 컬럼 외 '등록 버튼' 토글용 특수 키
 const COLUMN_TABLES = {
   clients:    { sel:'#client-list',       label:'수주 정보 관리(제품표)', addBtn:'openProdAdd,openClientAdd', cols:['코드','제품/규격명','납기기한','수량','수주 단가','수주 합계','공정 단계 → 상태','관리 작업'] },
-  orders:     { sel:'#orders-table',      label:'생산 지시',        addBtn:'openOrderAdd', cols:['지시번호','고객사','생산제품','라인','목표량','실적량','불량','개시일','납기일','진행률','상태','담당자','메모','조작'] },
+  orders:     { sel:'#orders-table',      label:'생산 지시',        addBtn:'openOrderAdd', cols:['지시번호','고객사','생산제품','라인','목표량','실적량','불량','개시일','납기일','진행률','상태','담당자','메모'] },
   defects:    { sel:'#defect-table',      label:'불량 기록(품질)',   addBtn:'openDefectAdd', cols:['코드','일자','제품','발생공정','하자유형','수량','상태','비고','관리 작업'] },
   checks:     { sel:'#check-table',       label:'출하 검사(품질)',   addBtn:'openCheckAdd',  cols:['검사일','의뢰처','완료제품','검사원','외관','치수','테스트','종합판정','관리 작업'] },
   claims:     { sel:'#claims-table-full', label:'고객 클레임',       addBtn:'openClaimAdd',  cols:['인입일','유형','의뢰 고객사','해당 제품','클레임 사양','내용','조치 방안','상태','관리'] },
@@ -15496,8 +15543,38 @@ function updateBulkBar(key){
     const email=scope.querySelector('[data-email]'); if(email) email.style.display = n===1 ? '' : 'none';
   });
 }
-function bulkToggle(key,id,on){ const s=bulkSel[key]=bulkSel[key]||new Set(); if(on){ if(!bulkRecordById(key,id)) return; s.add(id); }else s.delete(id); updateBulkBar(key); }
-function bulkToggleAll(key,on){ const s=bulkSel[key]=new Set(); const cont=document.querySelector(BULK_CFG[key].sel); if(cont) cont.querySelectorAll('tbody input[type=checkbox][data-bid]').forEach(cb=>{ cb.checked=on; if(on) s.add(cb.getAttribute('data-bid')); }); updateBulkBar(key); }
+function bulkSyncSelectionVisual(key) {
+  const c = BULK_CFG[key];
+  const cont = c && document.querySelector(c.sel);
+  if (!cont) return;
+  const checks = [...cont.querySelectorAll('tbody input[type=checkbox][data-bid]')];
+  checks.forEach(cb => {
+    const row = cb.closest('tr');
+    if (row) row.classList.toggle('table-row-selected', cb.checked);
+  });
+  const all = cont.querySelector('thead .table-check-all') || cont.querySelector('thead input[type=checkbox]');
+  if (all) {
+    const selected = checks.filter(cb => cb.checked);
+    all.checked = checks.length > 0 && selected.length === checks.length;
+    all.indeterminate = selected.length > 0 && selected.length < checks.length;
+  }
+}
+function bulkToggle(key,id,on){
+  const s=bulkSel[key]=bulkSel[key]||new Set();
+  if(on){
+    if(!bulkRecordById(key,id)) return;
+    s.add(id);
+  }else s.delete(id);
+  bulkSyncSelectionVisual(key);
+  updateBulkBar(key);
+}
+function bulkToggleAll(key,on){
+  const s=bulkSel[key]=new Set();
+  const cont=document.querySelector(BULK_CFG[key].sel);
+  if(cont) cont.querySelectorAll('tbody input[type=checkbox][data-bid]').forEach(cb=>{ cb.checked=on; if(on) s.add(cb.getAttribute('data-bid')); });
+  bulkSyncSelectionVisual(key);
+  updateBulkBar(key);
+}
 function bulkRun(key, action){
   const c=BULK_CFG[key]; let ids=[...(bulkSel[key]||[])]; if(!ids.length) return;
   if(action==='edit' && c.edit){
@@ -21863,6 +21940,10 @@ function finAudit(action, detail='') {
   financeData.auditLog.unshift({id:'FA-'+Date.now(),at:new Date().toISOString(),action,detail});
   financeData.auditLog=financeData.auditLog.slice(0,300);
 }
+function financeAuditRows() {
+  const rows = Array.isArray(financeData.auditLog) ? financeData.auditLog : [];
+  return rows.filter(log => typeof isFinanceAuditLogEntry === 'function' ? isFinanceAuditLogEntry(log) : true);
+}
 function isFinanceMonthClosed(ym) { return financeData.closedMonths.includes(ym); }
 function toggleFinanceMonthClose(ym) {
   if (!checkAdminAction()) return;
@@ -22013,6 +22094,7 @@ function _finDashboard() {
   const net = rev - pur - payroll - fixedExp - exp + inc;
   const months = finMonthList(6);
   const maxV = Math.max(1, ...months.map(m => Math.max(finRevenueMonth(m.ym), finPurchaseMonth(m.ym))));
+  const financeLogs = financeAuditRows();
 
   const bars = months.map(m => {
     const r = finRevenueMonth(m.ym), p = finPurchaseMonth(m.ym);
@@ -22074,7 +22156,7 @@ function _finDashboard() {
     </div>
     <div class="card" style="margin-top:16px;">
       <div class="card-hd"><span class="card-ttl"><i class="ti ti-history"></i>최근 재무 변경 이력</span><span style="font-size:10px;color:var(--tx-t);">최대 300건 보관</span></div>
-      ${(financeData.auditLog||[]).length?`<div style="overflow-x:auto;"><table><thead><tr><th>일시</th><th>작업</th><th>상세</th></tr></thead><tbody>${financeData.auditLog.slice(0,10).map(log=>`<tr><td>${new Date(log.at).toLocaleString('ko-KR')}</td><td style="font-weight:700;">${esc(log.action)}</td><td>${esc(log.detail)}</td></tr>`).join('')}</tbody></table></div>`:empty('아직 재무 변경 이력이 없습니다.')}
+      ${financeLogs.length?`<div style="overflow-x:auto;"><table><thead><tr><th>일시</th><th>작업</th><th>상세</th></tr></thead><tbody>${financeLogs.slice(0,10).map(log=>`<tr><td>${new Date(log.at).toLocaleString('ko-KR')}</td><td style="font-weight:700;">${esc(log.summary || log.action)}</td><td>${esc(log.detail || log.entityId || '')}</td></tr>`).join('')}</tbody></table></div>`:empty('아직 재무 변경 이력이 없습니다.')}
     </div>`;
 }
 
@@ -27998,6 +28080,7 @@ window.addEventListener('resize', () => {
       </table>
     </div>
     <div class="dlg-actions">
+      <button class="btn" id="order-delete-btn" style="display:none;color:var(--tx-d);border-color:var(--br-d);" onclick="deleteCurrentOrder()"><i class="ti ti-trash"></i>삭제</button>
       <button class="btn" onclick="closeModal('order-modal')">취소</button>
       <button class="btn btn-primary" id="order-save-btn" onclick="saveOrderForm()"><i class="ti ti-check"></i>지시 등록</button>
     </div>
