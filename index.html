@@ -15576,6 +15576,30 @@ function autoFillSupplierEmail(supplierInputId, emailInputId, type) {
 /* ════════ 이메일 발송 ════════ */
 let _emailDocRef = null;
 
+function pdfBufferToBase64(buffer) {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer || []);
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+function normalizePdfBase64(output) {
+  if (output instanceof ArrayBuffer || output instanceof Uint8Array) {
+    const base64 = pdfBufferToBase64(output);
+    if (base64.length < 1000) throw new Error('PDF 데이터가 비어 있습니다.');
+    return base64;
+  }
+  let text = String(output || '').trim();
+  const comma = text.indexOf('base64,');
+  if (comma >= 0) text = text.slice(comma + 7);
+  text = text.replace(/\s/g, '');
+  if (text.length < 1000) throw new Error('PDF 데이터가 비어 있습니다.');
+  return text;
+}
+
 function generatePdfBase64(docObj, docType) {
   return new Promise((resolve, reject) => {
     try {
@@ -15732,7 +15756,8 @@ function generatePdfBase64(docObj, docType) {
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
-      html2pdf().from(tempEl).set(opt).outputPdf('base64').then(base64 => {
+      html2pdf().from(tempEl).set(opt).outputPdf('arraybuffer').then(output => {
+        const base64 = normalizePdfBase64(output);
         document.body.removeChild(tempEl);
         resolve(base64);
       }).catch(err => {
