@@ -9384,23 +9384,33 @@ function deleteClient(id) {
   if (blockedProduct) { showToast('연결된 제품 중 삭제 권한이 없는 항목이 있어 고객사를 삭제할 수 없습니다.', 'error'); return; }
   const prodCount = linkedProducts.length;
   if (!confirm("'" + c.name + "' 고객사를 삭제하시겠습니까?" + (prodCount ? ' 연결된 제품 ' + prodCount + '건도 함께 삭제됩니다.' : ''))) return;
+  const linkedPartner = Array.isArray(partners)
+    ? partners.find(p => p && p.id === id && (typeof _isCustomerPartner !== 'function' || _isCustomerPartner(p)))
+    : null;
   pushToTrash('client', c);
+  if (linkedPartner) pushToTrash('partner', linkedPartner);
   linkedProducts.forEach(p => pushToTrash('product', p));
   linkedProducts.forEach(p => writeAuditLog('products', p.id, 'delete', p, null, { summary:'고객사 삭제에 따른 제품 이동' }));
+  if (linkedPartner) writeAuditLog('partners', id, 'delete', linkedPartner, null, { summary:'고객사 삭제에 따른 거래처 이동' });
   if (typeof cloudRememberDeletedArrayRecord === 'function') {
     cloudRememberDeletedArrayRecord('clients', c);
+    if (linkedPartner) cloudRememberDeletedArrayRecord('partners', linkedPartner);
     linkedProducts.forEach(p => cloudRememberDeletedArrayRecord('products', p));
   }
   products = products.filter(p => p.clientId !== id);
+  if (linkedPartner) partners = partners.filter(p => p.id !== id);
   clients = clients.filter(x => x.id !== id);
   writeAuditLog('clients', id, 'delete', c, null, { summary:'고객사 삭제', detail:`연결 제품 ${prodCount}건` });
   saveStorage('clients', clients); saveStorage('products', products);
+  if (linkedPartner) saveStorage('partners', partners);
   if (typeof cloudDeleteArrayRecordNow === 'function') {
     cloudDeleteArrayRecordNow('clients', c).catch(e => console.warn('client cloud delete failed:', e));
+    if (linkedPartner) cloudDeleteArrayRecordNow('partners', linkedPartner).catch(e => console.warn('partner cloud delete failed:', e));
     linkedProducts.forEach(p => cloudDeleteArrayRecordNow('products', p).catch(e => console.warn('product cloud delete failed:', e)));
   }
   if (typeof cloudFlushSoon === 'function') cloudFlushSoon();
   renderClients(); syncFilterDropdowns();
+  if (document.getElementById('pg-partners')?.classList.contains('active') && typeof renderPartners === 'function') renderPartners();
   showToast('고객사가 휴지통으로 이동되었습니다.');
 }
 function exportClientsCSV() {
@@ -12994,6 +13004,10 @@ function restoreTrash(id) {
       clients.push(item.data);
       saveStorage('clients', clients);
     }
+    if (typeof syncPartnerFromClient === 'function') {
+      syncPartnerFromClient(item.data);
+      saveStorage('partners', partners);
+    }
     if (item.cascadeData) {
       if (item.cascadeData.products) {
         item.cascadeData.products.forEach(p => {
@@ -13016,6 +13030,17 @@ function restoreTrash(id) {
     }
     showToast(`고객사 [${item.data.name}] 및 연동 하위 완제품/자재가 완벽히 역복구되었습니다.`);
   } 
+  else if (item.type === 'partner') {
+    if (!partners.some(p => p.id === item.originalId)) {
+      partners.push(item.data);
+      saveStorage('partners', partners);
+    }
+    if (typeof syncClientFromPartner === 'function' && typeof _isCustomerPartner === 'function' && _isCustomerPartner(item.data)) {
+      syncClientFromPartner(item.data);
+      saveStorage('clients', clients);
+    }
+    showToast('거래처가 복구되었습니다.');
+  }
   else if (item.type === 'product') {
     if (!products.some(p => p.id === item.originalId)) {
       products.push(item.data);
@@ -19715,10 +19740,34 @@ function deletePartner(id) {
   const target = partners.find(p => p.id === id);
   if (!target || !requireRecordPermission('delete', target, 'partners')) return;
   if (!confirm('이 거래처를 삭제하시겠습니까?')) return;
+  const customerPartner = partnerCanProvideClient(target);
+  const linkedClient = customerPartner ? clients.find(c => c.id === id) : null;
+  const linkedProducts = linkedClient ? products.filter(p => p.clientId === id) : [];
+  if (linkedClient) pushToTrash('client', linkedClient);
+  linkedProducts.forEach(p => pushToTrash('product', p));
   partners = partners.filter(p => p.id !== id);
+  if (linkedClient) clients = clients.filter(c => c.id !== id);
+  if (linkedProducts.length) products = products.filter(p => p.clientId !== id);
   writeAuditLog('partners', id, 'delete', target, null, { summary:'거래처 삭제' });
+  if (linkedClient) writeAuditLog('clients', id, 'delete', linkedClient, null, { summary:'거래처 삭제에 따른 고객사 이동', detail:`연결 제품 ${linkedProducts.length}건` });
+  linkedProducts.forEach(p => writeAuditLog('products', p.id, 'delete', p, null, { summary:'거래처 삭제에 따른 제품 이동' }));
+  if (typeof cloudRememberDeletedArrayRecord === 'function') {
+    cloudRememberDeletedArrayRecord('partners', target);
+    if (linkedClient) cloudRememberDeletedArrayRecord('clients', linkedClient);
+    linkedProducts.forEach(p => cloudRememberDeletedArrayRecord('products', p));
+  }
   saveStorage('partners', partners);
+  if (linkedClient) saveStorage('clients', clients);
+  if (linkedProducts.length) saveStorage('products', products);
+  if (typeof cloudDeleteArrayRecordNow === 'function') {
+    cloudDeleteArrayRecordNow('partners', target).catch(e => console.warn('partner cloud delete failed:', e));
+    if (linkedClient) cloudDeleteArrayRecordNow('clients', linkedClient).catch(e => console.warn('client cloud delete failed:', e));
+    linkedProducts.forEach(p => cloudDeleteArrayRecordNow('products', p).catch(e => console.warn('product cloud delete failed:', e)));
+  }
+  if (typeof cloudFlushSoon === 'function') cloudFlushSoon();
   renderPartners();
+  if (document.getElementById('pg-clients')?.classList.contains('active') && typeof renderClients === 'function') renderClients();
+  syncFilterDropdowns();
   showToast('거래처가 삭제되었습니다.');
 }
 
@@ -19919,11 +19968,16 @@ function _partnerAsClientCandidate(p) {
     _typeLabel: normalizePartnerType(p.type) || '거래처'
   };
 }
+function partnerCanProvideClient(p) {
+  if (!p) return false;
+  if (typeof _isCustomerPartner === 'function') return _isCustomerPartner(p);
+  return normalizePartnerType(p.type) === '고객사';
+}
 function ensureClientFromAnyPartner(id) {
   let c = clients.find(x => x.id === id);
   if (c) return c;
   const p = partners.find(x => x.id === id);
-  if (!p) return null;
+  if (!partnerCanProvideClient(p)) return null;
   c = {
     id: p.id,
     name: p.name || p.id,
@@ -19954,6 +20008,7 @@ function _clientSearchCandidates(query, limit, includeEmpty) {
     usedNames.add(String(c.name || '').trim().toLowerCase());
   });
   visiblePartners.forEach(p => {
+    if (!partnerCanProvideClient(p)) return;
     if (!p || usedIds.has(p.id)) return;
     const nameKey = String(p.name || '').trim().toLowerCase();
     if (nameKey && usedNames.has(nameKey)) return;
