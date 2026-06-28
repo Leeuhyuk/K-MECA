@@ -9184,6 +9184,7 @@ function saveClient() {
   if (!editId && !existingId && typeof requireCreateAction === 'function' && !requireCreateAction('clients', '고객사 등록')) return;
   if (editId) {
     const c = clients.find(x => x.id === editId);
+    let syncedCount = 0;
     if (c) {
       const before = _safeJsonClone(c);
       if (!requireRecordPermission('edit', c, 'clients')) return;
@@ -9192,16 +9193,18 @@ function saveClient() {
       stampRecordUpdate(c, before, 'clients', { visibility:'company' });
       writeAuditLog('clients', c.id, 'update', before, c, { summary:'고객사 정보 수정' });
       if (typeof syncPartnerFromClient === 'function') syncPartnerFromClient(c);
+      if (typeof syncCustomerDocumentReferences === 'function') syncedCount = syncCustomerDocumentReferences(before, c);
     }
     saveStorage('clients', clients);
     saveStorage('partners', partners);
     closeModal('ca-modal');
     renderClients(); syncFilterDropdowns();
-    showToast('고객사 정보가 수정되었습니다.');
+    showToast(`고객사 정보가 수정되었습니다.${syncedCount ? ` 연결 문서 ${syncedCount}건 반영` : ''}`);
   } else if (existingId) {
     const c = clients.find(x => x.id === existingId);
     if (!c) { showToast('선택한 고객사를 찾을 수 없습니다.', 'error'); return; }
     const before = _safeJsonClone(c);
+    let syncedCount = 0;
     if (!requireRecordPermission('edit', c, 'clients')) return;
     c.name = name; c.manager = v('ca-mgr'); c.tel = v('ca-tel'); c.email = v('ca-email');
     c.bizNo = v('ca-bizno'); c.date = v('ca-date') || c.date || today(); c.note = v('ca-note');
@@ -9209,13 +9212,14 @@ function saveClient() {
     stampRecordUpdate(c, before, 'clients', { visibility:'company' });
     writeAuditLog('clients', c.id, 'update', before, c, { summary:'기존 고객사 연결/재개' });
     if (typeof syncPartnerFromClient === 'function') syncPartnerFromClient(c);
+    if (typeof syncCustomerDocumentReferences === 'function') syncedCount = syncCustomerDocumentReferences(before, c);
     saveStorage('clients', clients);
     saveStorage('partners', partners);
     closeModal('ca-modal');
     expandedClients.add(c.id);
     renderClients(); syncFilterDropdowns();
     if (typeof consumeClientPickerCreatedClient === 'function') consumeClientPickerCreatedClient(c);
-    showToast('기존 고객사가 수주 정보에 연결되었습니다. 제품 추가로 수주 품목을 등록하세요.');
+    showToast(`기존 고객사가 수주 정보에 연결되었습니다.${syncedCount ? ` 연결 문서 ${syncedCount}건 반영` : ''} 제품 추가로 수주 품목을 등록하세요.`);
   } else {
     const createdClient = {
       id: v('ca-id') || nextCode('BP', partners),
@@ -9265,10 +9269,11 @@ function saveClientEdit(id) {
   stampRecordUpdate(c, before, 'clients', { visibility:'company' });
   writeAuditLog('clients', c.id, 'update', before, c, { summary:'고객사 인라인 수정' });
   if (typeof syncPartnerFromClient === 'function') syncPartnerFromClient(c);
+  const syncedCount = typeof syncCustomerDocumentReferences === 'function' ? syncCustomerDocumentReferences(before, c) : 0;
   saveStorage('clients', clients);
   saveStorage('partners', partners);
   renderClients(); syncFilterDropdowns();
-  showToast('고객사 정보가 수정되었습니다.');
+  showToast(`고객사 정보가 수정되었습니다.${syncedCount ? ` 연결 문서 ${syncedCount}건 반영` : ''}`);
 }
 function closeProject(id, force) {
   if (!checkAdminAction()) return;
@@ -18878,11 +18883,118 @@ function openPartnerModal(id) {
   modal.classList.add('open');
 }
 
+function _masterRefValue(value) {
+  return String(value == null ? '' : value).trim();
+}
+function _masterRefKey(value) {
+  return _masterRefValue(value).toLowerCase();
+}
+function _masterRefMatchesName(value, before, after) {
+  const current = _masterRefKey(value);
+  if (!current) return false;
+  return current === _masterRefKey(before && before.name) || current === _masterRefKey(after && after.name);
+}
+function _masterRefIds(before, after) {
+  const ids = [];
+  [before && before.id, after && after.id].forEach(id => {
+    const key = _masterRefValue(id);
+    if (key && !ids.includes(key)) ids.push(key);
+  });
+  return ids;
+}
+function _syncPartnerPurchaseDocs(before, after) {
+  if (!after) return 0;
+  const nextName = _masterRefValue(after.name);
+  const nextEmail = _masterRefValue(after.email);
+  const syncList = (storageKey, list, renderFn) => {
+    if (!Array.isArray(list)) return 0;
+    let changed = 0;
+    list.forEach(doc => {
+      if (!doc || !_masterRefMatchesName(doc.supplier, before, after)) return;
+      let touched = false;
+      if (nextName && doc.supplier !== nextName) {
+        doc.supplier = nextName;
+        touched = true;
+      }
+      if (_masterRefValue(doc.supplierEmail) !== nextEmail) {
+        doc.supplierEmail = nextEmail;
+        touched = true;
+      }
+      if (touched) changed += 1;
+    });
+    if (changed) {
+      saveStorage(storageKey, list);
+      if (typeof renderFn === 'function') renderFn();
+    }
+    return changed;
+  };
+
+  let total = 0;
+  if (typeof rfqList !== 'undefined') total += syncList('rfqList', rfqList, typeof renderRfq === 'function' ? renderRfq : null);
+  if (typeof poList !== 'undefined') total += syncList('poList', poList, typeof renderPo === 'function' ? renderPo : null);
+  return total;
+}
+function syncCustomerDocumentReferences(before, after) {
+  if (!after) return 0;
+  const ids = _masterRefIds(before, after);
+  const nextName = _masterRefValue(after.name);
+  const nextEmail = _masterRefValue(after.email);
+  const nextBizNo = _masterRefValue(after.bizNo);
+  const matchesClient = doc => {
+    if (!doc) return false;
+    const clientId = _masterRefValue(doc.clientId);
+    if (clientId && ids.includes(clientId)) return true;
+    return _masterRefMatchesName(doc.clientName, before, after);
+  };
+  const syncList = (storageKey, list, renderFn) => {
+    if (!Array.isArray(list)) return 0;
+    let changed = 0;
+    list.forEach(doc => {
+      if (!matchesClient(doc)) return;
+      let touched = false;
+      if (doc.clientName && nextName && doc.clientName !== nextName) {
+        doc.clientName = nextName;
+        touched = true;
+      }
+      if (_masterRefValue(doc.clientEmail) !== nextEmail) {
+        doc.clientEmail = nextEmail;
+        touched = true;
+      }
+      if (_masterRefValue(doc.clientBizNo) !== nextBizNo) {
+        doc.clientBizNo = nextBizNo;
+        touched = true;
+      }
+      if (touched) changed += 1;
+    });
+    if (changed) {
+      saveStorage(storageKey, list);
+      if (typeof renderFn === 'function') renderFn();
+    }
+    return changed;
+  };
+
+  let total = 0;
+  if (typeof quoteList !== 'undefined') total += syncList('quoteList', quoteList, typeof renderSODoc === 'function' ? () => renderSODoc('quote') : null);
+  if (typeof orderList !== 'undefined') total += syncList('orderList', orderList, typeof renderSODoc === 'function' ? () => renderSODoc('order') : null);
+  if (typeof statementList !== 'undefined') total += syncList('statementList', statementList, typeof renderSalesDoc === 'function' ? () => renderSalesDoc('statement') : null);
+  if (typeof taxList !== 'undefined') total += syncList('taxList', taxList, typeof renderSalesDoc === 'function' ? () => renderSalesDoc('tax') : null);
+  return total;
+}
+function syncPartnerDocumentReferences(before, after) {
+  const purchaseCount = _syncPartnerPurchaseDocs(before, after);
+  const customerCount = (typeof _isCustomerPartner === 'function' && _isCustomerPartner(after))
+    ? syncCustomerDocumentReferences(before, after)
+    : 0;
+  return { purchaseCount, customerCount, total: purchaseCount + customerCount };
+}
+
 function savePartnerForm() {
   if (!checkAdminAction()) return;
   if (!v('bp-name')) { showToast('거래처명을 입력하세요.', 'error'); return; }
   const modal  = inp('partner-modal');
   const editId = modal.dataset.editId;
+  let beforePartner = null;
+  let syncedDocs = { total: 0 };
   const obj = {
     id: editId || nextCode('BP', partners),
     name: v('bp-name'), type: normalizePartnerType(v('bp-type')),
@@ -18894,9 +19006,11 @@ function savePartnerForm() {
     const idx = partners.findIndex(p => p.id === editId);
     if (idx !== -1) {
       const before = _safeJsonClone(partners[idx]);
+      beforePartner = before;
       if (!requireRecordPermission('edit', before, 'partners')) return;
       partners[idx] = stampRecordUpdate(Object.assign({}, partners[idx], obj), before, 'partners', { visibility:'company' });
       writeAuditLog('partners', editId, 'update', before, partners[idx], { summary:'거래처 수정' });
+      syncedDocs = syncPartnerDocumentReferences(beforePartner, partners[idx]);
     }
   } else {
     if (typeof requireCreateAction === 'function' && !requireCreateAction('partners', '거래처 등록')) return;
@@ -18905,14 +19019,21 @@ function savePartnerForm() {
     writeAuditLog('partners', obj.id, 'create', null, obj, { summary:'거래처 등록' });
   }
   if (obj.type === '고객사' && typeof syncClientFromPartner === 'function') {
+    const beforeClient = beforePartner ? _safeJsonClone(clients.find(c => c.id === obj.id) || beforePartner) : null;
     syncClientFromPartner(obj);
     saveStorage('clients', clients);
+    const syncedClient = clients.find(c => c.id === obj.id);
+    if (syncedClient) {
+      const clientSyncedCount = syncCustomerDocumentReferences(beforeClient, syncedClient);
+      syncedDocs.total = (syncedDocs.total || 0) + clientSyncedCount;
+    }
   }
   saveStorage('partners', partners);
   closeModal('partner-modal');
   if (document.getElementById('pg-partners')?.classList.contains('active')) renderPartners();
   if (document.getElementById('pg-clients')?.classList.contains('active')) renderClients();
-  showToast(editId ? '거래처가 수정되었습니다.' : '거래처가 등록되었습니다.');
+  const syncMsg = editId && syncedDocs.total ? ` 연결 문서 ${syncedDocs.total}건 반영` : '';
+  showToast(editId ? `거래처가 수정되었습니다.${syncMsg}` : '거래처가 등록되었습니다.');
   // picker가 열려 있으면 목록 갱신
   if (inp('partner-picker-modal')?.classList.contains('open')) renderPickerList();
 }
