@@ -3775,7 +3775,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
           <span id="template-package-status" style="font-size:11px;color:var(--tx-t);">다른 MESPro 또는 외부 프로그램에서 사용할 수 있는 ZIP 패키지</span>
         </div>
         <div style="font-size:11.5px;color:var(--tx-s);line-height:1.75;margin-bottom:12px;">
-          현재 등록된 XLSX 양식, PDF 인쇄 CSS, 데이터 변수 규격과 사용 안내를 하나의 ZIP 파일로 내보냅니다.
+          현재 등록된 XLSX 기반 PDF/엑셀 인쇄 양식, 데이터 변수 규격과 사용 안내를 하나의 ZIP 파일로 내보냅니다.
           가져오기 전 형식과 버전을 검사하며 기존 사용자 양식은 자동 백업됩니다.
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;">
@@ -3847,8 +3847,8 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       </div>
       <div class="card" style="margin-top:16px;background:var(--bg-s);">
         <div style="font-size:12px;color:var(--tx-s);line-height:1.8;">
-          기본 양식을 내보내 Excel에서 수정한 뒤 다시 등록하면, 등록한 양식으로 문서가 출력됩니다.
-          기존 PDF 출력과 일반 데이터 엑셀 내보내기는 각 문서 화면에서 계속 사용할 수 있습니다.
+          기본 양식을 내보내 Excel에서 수정한 뒤 다시 등록하면, PDF 출력·메일 첨부 PDF·Google Drive PDF·등록 양식 출력에 같은 양식이 적용됩니다.
+          일반 데이터 엑셀 내보내기는 각 문서 화면에서 계속 사용할 수 있습니다.
         </div>
         <div style="margin-top:10px;">
           <button class="btn btn-sm btn-danger" onclick="resetAllDocXlsxTemplates()"><i class="ti ti-restore"></i>모든 양식 기본값 복원</button>
@@ -4200,6 +4200,13 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       </div>
       <div id="em-attachment-spinner" style="font-size:16px; color:var(--tx-i);"><i class="ti ti-loader animate-spin"></i></div>
     </div>
+    <div id="em-history-panel" style="border:1px solid var(--br); border-radius:var(--rm); padding:10px 12px; margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="font-weight:700;font-size:12px;"><i class="ti ti-history"></i> 최근 발송 내역</div>
+        <span class="bd bd-neu" id="em-history-count" style="font-size:10px;">0건</span>
+      </div>
+      <div id="em-history-list"></div>
+    </div>
     <div class="dlg-actions" style="flex-direction:column; gap:8px;">
       <div style="display:flex; gap:8px; justify-content:flex-end;">
         <button class="btn" onclick="closeModal('email-send-modal')">취소</button>
@@ -4209,6 +4216,18 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <div style="font-size:10px; color:var(--tx-t); text-align:right;">
         직접 발송: Firebase 이메일 확장 사용
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 이메일 발송 내역 모달 ══ -->
+<div class="overlay" id="email-history-modal">
+  <div class="dlg" style="max-width:640px;">
+    <div class="dlg-title"><i class="ti ti-history" style="color:var(--tx-i);"></i><span id="email-history-title">이메일 발송 내역</span></div>
+    <div id="email-history-summary" style="font-size:12px;color:var(--tx-t);margin-bottom:12px;"></div>
+    <div id="email-history-list" style="max-height:420px;overflow:auto;"></div>
+    <div class="dlg-actions">
+      <button class="btn btn-primary" onclick="closeModal('email-history-modal')">닫기</button>
     </div>
   </div>
 </div>
@@ -4283,6 +4302,7 @@ let poList   = [];
 let partners = [];
 let inventoryLedger = [];  // 재고 입출고 이력
 let alimtalkSettings = {}; // 카카오 알림톡 설정
+let emailSendHistory = [];
 
 const defaultClients = [];
 
@@ -4801,7 +4821,8 @@ function initFromEmbedded() {
       inventoryLedger:  'inventoryLedger',
       alimtalkSettings: 'alimtalkSettings',
       memoList: 'memoList', todoList: 'todoList',
-      auditLog: 'auditLog'
+      auditLog: 'auditLog',
+      emailSendHistory: 'emailSendHistory'
     };
     // 내장 데이터 타임스탬프가 localStorage보다 최신이면 덮어쓰기
     const embeddedTime = data._savedAt || '';
@@ -4875,6 +4896,7 @@ function reloadAllData() {
   todoList     = loadStorage('todoList',      []);
   memoAttachmentData = loadStorage('memoAttachmentData', {});
   auditLog      = loadStorage('auditLog',      []);
+  emailSendHistory = loadStorage('emailSendHistory', []);
 
   // 자동 마이그레이션: 구형 예시 데이터만 존재하거나 비어있을 시 5개 추가 데이터 자동 삽입
   // (제거됨) 데모 시드 자동삽입 — 데이터는 Firebase가 담당
@@ -4895,7 +4917,7 @@ const DATA_KEYS = [
   'clients','products','materials','workOrders','workers','defects','claims',
   'checkRecords','alerts','inventory','deliveries','stages','trash','rfqList',
   'poList','partners','financeData','attendance','leaves','payrollRecords','statementList',
-  'taxList','quoteList','orderList','inventoryLedger','alimtalkSettings','memoList','todoList','memoAttachmentData','auditLog',
+  'taxList','quoteList','orderList','inventoryLedger','alimtalkSettings','memoList','todoList','memoAttachmentData','auditLog','emailSendHistory',
   'asList','bomList','companyInfo','docXlsxTemplates','driveOAuthSettings'
 ];
 const LOCAL_ONLY_DATA_KEYS = ['alimtalkSettings','memoAttachmentData','auditLog'];
@@ -5146,6 +5168,7 @@ let memoList = loadStorage('memoList', []);
 let todoList = loadStorage('todoList', []);
 let memoAttachmentData = loadStorage('memoAttachmentData', {});
 let auditLog = loadStorage('auditLog', []);
+emailSendHistory = loadStorage('emailSendHistory', []);
 let financeData = loadStorage('financeData', { entries: [], paidReceivable: {}, paidPayable: {} });
 // 구조 보정 (구버전 호환)
 if (!financeData.entries) financeData.entries = [];
@@ -14249,6 +14272,7 @@ function cloudResyncGlobals(changedKeys){
   if(shouldLoad('memoList')) memoList=L('memoList',memoList);
   if(shouldLoad('todoList')) todoList=L('todoList',todoList);
   if(shouldLoad('auditLog')) auditLog=L('auditLog',auditLog);
+  if(shouldLoad('emailSendHistory')) emailSendHistory=L('emailSendHistory',emailSendHistory);
   if ((!changedSet || shouldLoad('clients') || shouldLoad('partners')) && typeof migrateClientMasterToPartners === 'function') migrateClientMasterToPartners();
 }
 let _cloudRemoteRefreshTimer = null;
@@ -14264,12 +14288,12 @@ const CLOUD_PAGE_KEYS = {
   inventory:['inventory','inventoryLedger'],
   deliveries:['deliveries','clients','products'],
   calendar:['products','deliveries','workOrders','materials'],
-  rfq:['rfqList','clients','products','partners','companyInfo'],
-  po:['poList','rfqList','clients','products','partners','financeData','companyInfo'],
+  rfq:['rfqList','clients','products','partners','companyInfo','emailSendHistory'],
+  po:['poList','rfqList','clients','products','partners','financeData','companyInfo','emailSendHistory'],
   partners:['partners','poList','clients'],
-  salesdoc:['quoteList','orderList','clients','products','companyInfo'],
-  statement:['statementList','clients','companyInfo'],
-  taxinvoice:['taxList','clients','companyInfo'],
+  salesdoc:['quoteList','orderList','clients','products','companyInfo','emailSendHistory'],
+  statement:['statementList','clients','companyInfo','emailSendHistory'],
+  taxinvoice:['taxList','clients','companyInfo','emailSendHistory'],
   finance:['financeData','deliveries','poList','payrollRecords','workers','products','clients'],
   workers:['workers','attendance','leaves','payrollRecords'],
   as:['asList','clients','products','workers'],
@@ -15580,6 +15604,129 @@ function autoFillSupplierEmail(supplierInputId, emailInputId, type) {
 
 /* ════════ 이메일 발송 ════════ */
 let _emailDocRef = null;
+const DOCUMENT_EMAIL_LABELS = { rfq:'견적요청', po:'구매발주', statement:'거래명세표', tax:'세금계산서', quote:'견적서', order:'수주확인서' };
+const EMAIL_SEND_HISTORY_LIMIT = 500;
+
+function documentEmailLabel(docType) {
+  return DOCUMENT_EMAIL_LABELS[docType] || '문서';
+}
+function emailHistorySource() {
+  if (!Array.isArray(emailSendHistory)) emailSendHistory = loadStorage('emailSendHistory', []);
+  return emailSendHistory;
+}
+function documentEmailHistoryRows(docType, docId) {
+  const type = String(docType || '');
+  const id = String(docId || '');
+  return emailHistorySource()
+    .filter(row => row && String(row.docType || '') === type && String(row.docId || '') === id)
+    .sort((a, b) => String(b.sentAt || '').localeCompare(String(a.sentAt || '')));
+}
+function formatEmailHistoryTime(value, compact) {
+  if (!value) return '-';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  const opts = compact
+    ? { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }
+    : { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' };
+  return d.toLocaleString('ko-KR', opts);
+}
+function emailHistoryStatusClass(status) {
+  if (status === '메일 앱 열림') return 'bd-neu';
+  if (status === '발송 실패') return 'bd-err';
+  return 'bd-info';
+}
+function emailHistoryStatusBadge(status) {
+  const s = status || '발송 요청 등록';
+  return `<span class="bd ${emailHistoryStatusClass(s)}" style="font-size:10px;">${esc(s)}</span>`;
+}
+function renderEmailHistoryRows(rows, limit) {
+  const visible = rows.slice(0, limit || 20);
+  if (!visible.length) {
+    return '<div class="empty" style="padding:12px;"><i class="ti ti-history-off"></i>아직 이메일 발송 내역이 없습니다.</div>';
+  }
+  return visible.map(row => `
+    <div style="border:1px solid var(--br);border-radius:8px;padding:8px 10px;margin-bottom:6px;background:var(--bg);">
+      <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;">
+        <div style="font-weight:700;font-size:12px;">${esc(formatEmailHistoryTime(row.sentAt))}</div>
+        ${emailHistoryStatusBadge(row.status)}
+      </div>
+      <div style="font-size:11px;color:var(--tx-s);margin-top:4px;">받는 사람: ${esc(row.to || '-')}</div>
+      <div style="font-size:11px;color:var(--tx-t);margin-top:2px;">제목: ${esc(row.subject || '-')}</div>
+      <div style="font-size:10px;color:var(--tx-t);margin-top:3px;">
+        ${esc(row.provider || '-')} · ${row.attachmentCount ? 'PDF 첨부' : '첨부 없음'}${row.actorName ? ' · ' + esc(row.actorName) : ''}
+      </div>
+      ${row.note ? `<div style="font-size:10px;color:var(--tx-t);margin-top:3px;">${esc(row.note)}</div>` : ''}
+    </div>
+  `).join('');
+}
+function emailSendSummaryHtml(docType, docId) {
+  const latest = documentEmailHistoryRows(docType, docId)[0];
+  if (!latest) return '';
+  return `<br><button type="button" class="btn btn-sm" data-email-history-type="${esc(docType)}" data-email-history-id="${esc(docId)}" onclick="openEmailHistoryFromButton(this,event)" title="이메일 발송 내역" style="margin-top:3px;padding:2px 6px;font-size:10px;border-color:var(--br-i);color:var(--tx-i);"><i class="ti ti-history"></i> ${esc(formatEmailHistoryTime(latest.sentAt, true))}</button>`;
+}
+function openEmailHistoryFromButton(btn, event) {
+  if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+  openEmailHistoryModal(btn && btn.dataset ? btn.dataset.emailHistoryType : '', btn && btn.dataset ? btn.dataset.emailHistoryId : '');
+}
+function renderCurrentEmailHistoryPanel() {
+  const box = inp('em-history-list');
+  const count = inp('em-history-count');
+  if (!box || !_emailDocRef || !_emailDocRef.docObj) return;
+  const rows = documentEmailHistoryRows(_emailDocRef.docType, _emailDocRef.docObj.id);
+  if (count) count.textContent = rows.length ? `${rows.length}건` : '0건';
+  box.innerHTML = renderEmailHistoryRows(rows, 4);
+}
+function openEmailHistoryModal(docType, docId) {
+  const rows = documentEmailHistoryRows(docType, docId);
+  const title = inp('email-history-title');
+  const summary = inp('email-history-summary');
+  const list = inp('email-history-list');
+  if (title) title.textContent = `${documentEmailLabel(docType)} ${docId || ''} 이메일 발송 내역`;
+  if (summary) {
+    const latest = rows[0];
+    summary.innerHTML = latest
+      ? `총 ${rows.length}건 · 최근 ${esc(formatEmailHistoryTime(latest.sentAt))} · ${esc(latest.to || '')}`
+      : '아직 기록된 이메일 발송 내역이 없습니다.';
+  }
+  if (list) list.innerHTML = renderEmailHistoryRows(rows, 50);
+  inp('email-history-modal')?.classList.add('open');
+}
+function refreshEmailHistoryDocumentView(docType) {
+  if (docType === 'rfq' && typeof renderRfq === 'function') renderRfq();
+  else if (docType === 'po' && typeof renderPo === 'function') renderPo();
+  else if ((docType === 'statement' || docType === 'tax') && typeof renderSalesDoc === 'function') renderSalesDoc(docType);
+  else if ((docType === 'quote' || docType === 'order') && typeof renderSODoc === 'function') renderSODoc(docType);
+}
+function recordDocumentEmailHistory(options) {
+  if (!_emailDocRef || !_emailDocRef.docObj) return null;
+  const actor = typeof getCurrentActor === 'function' ? getCurrentActor() : {};
+  const doc = _emailDocRef.docObj;
+  const entry = {
+    id: 'EMH-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+    docType: _emailDocRef.docType || '',
+    docLabel: documentEmailLabel(_emailDocRef.docType),
+    docId: doc.id || '',
+    to: options.to || '',
+    subject: options.subject || v('em-subject') || '',
+    status: options.status || '발송 요청 등록',
+    provider: options.provider || '',
+    mailQueueId: options.mailQueueId || '',
+    attachmentCount: options.attachmentCount || 0,
+    attachmentName: options.attachmentName || '',
+    note: options.note || '',
+    sentAt: new Date().toISOString(),
+    actorName: actor.name || '',
+    actorEmail: actor.email || '',
+    actorUid: actor.uid || actor.userId || ''
+  };
+  emailSendHistory = emailHistorySource();
+  emailSendHistory.unshift(entry);
+  emailSendHistory = emailSendHistory.slice(0, EMAIL_SEND_HISTORY_LIMIT);
+  saveStorage('emailSendHistory', emailSendHistory);
+  renderCurrentEmailHistoryPanel();
+  refreshEmailHistoryDocumentView(entry.docType);
+  return entry;
+}
 
 function pdfBufferToBase64(buffer) {
   const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer || []);
@@ -15637,15 +15784,16 @@ function generatePdfBase64(docObj, docType) {
 function openEmailModal(docObj, docType) {
   _emailDocRef = { docObj, docType, pdfBase64: null };
   const ci = getCompanyInfo();
-  const LABELS = { rfq:'견적요청', po:'구매발주', statement:'거래명세표', tax:'세금계산서', quote:'견적서', order:'수주확인서' };
-  const subject = `[${LABELS[docType]||'문서'}] ${docObj.id} — ${typeof _docItemSummary === 'function' ? _docItemSummary(docObj) : (docObj.itemName||'')}`;
+  const label = documentEmailLabel(docType);
+  const subject = `[${label}] ${docObj.id} — ${typeof _docItemSummary === 'function' ? _docItemSummary(docObj) : (docObj.itemName||'')}`;
   let body;
   if (docType === 'rfq')      body = buildRfqEmailBody(docObj, ci);
   else if (docType === 'po')  body = buildPoEmailBody(docObj, ci);
-  else                        body = buildSalesEmailBody(docObj, ci, LABELS[docType] || '문서');
+  else                        body = buildSalesEmailBody(docObj, ci, label);
   inp('em-to').value      = docObj.supplierEmail || docObj.clientEmail || '';
   inp('em-subject').value = subject;
   inp('em-body').value    = body;
+  renderCurrentEmailHistoryPanel();
 
   // 첨부파일 UI 초기화
   inp('em-attachment-status').textContent = 'PDF 파일 조립 중...';
@@ -15663,7 +15811,7 @@ function openEmailModal(docObj, docType) {
     inp('em-attachment-status').style.color = 'var(--tx-ok)';
     inp('em-attachment-spinner').style.display = 'none';
     inp('email-submit-btn').disabled = false;
-    showToast('이메일에 발주서 PDF 파일이 성공적으로 조립되어 첨부되었습니다.', 'success');
+    showToast(`이메일에 ${label} PDF 파일이 성공적으로 조립되어 첨부되었습니다.`, 'success');
   }).catch(err => {
     console.error('PDF 조립 실패:', err);
     inp('em-attachment-status').textContent = 'PDF 첨부 실패';
@@ -15775,6 +15923,14 @@ function markDocumentEmailSent() {
       saveStorage('poList', poList);
       renderPo();
     }
+  } else if (docType === 'statement') {
+    const list = typeof salesList === 'function' ? salesList('statement') : statementList;
+    const d = Array.isArray(list) ? list.find(x => x.id === docObj.id) : null;
+    if (d && d.status === '작성') {
+      d.status = '발송완료';
+      saveStorage('statementList', list);
+      if (typeof renderSalesDoc === 'function') renderSalesDoc('statement');
+    }
   }
 }
 
@@ -15840,6 +15996,14 @@ function doMailto() {
   showToast('안내: 메일 앱 발송 시 브라우저 보안 제약으로 PDF 첨부파일이 누락될 수 있으므로 직접 발송을 권장합니다.', 'info');
   const url = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(v('em-subject'))}&body=${encodeURIComponent(v('em-body'))}`;
   window.open(url, '_blank');
+  recordDocumentEmailHistory({
+    to,
+    subject: v('em-subject'),
+    status: '메일 앱 열림',
+    provider: '메일 앱',
+    attachmentCount: 0,
+    note: '앱에서 실제 발송 완료 여부와 PDF 첨부 여부는 확인할 수 없습니다.'
+  });
 }
 
 async function doEmailJS() {
@@ -15852,12 +16016,26 @@ async function doEmailJS() {
   const ci = getCompanyInfo();
   try {
     showToast('이메일 발송 요청 등록 중...', 'info');
+    let provider = 'Firebase 이메일 확장';
+    let mailQueueId = '';
     if (isFirestoreEmailReady()) {
-      await queueFirestoreDocumentEmail(to, ci);
+      const result = await queueFirestoreDocumentEmail(to, ci);
+      mailQueueId = (result && result.data && result.data.id) || (result && result.id) || '';
     } else if (!(await sendEmailjsDocumentEmail(to, ci))) {
       showToast('Firebase 로그인 또는 이메일 함수 배포가 필요합니다.', 'error');
       return;
+    } else {
+      provider = 'EmailJS';
     }
+    recordDocumentEmailHistory({
+      to,
+      subject: v('em-subject'),
+      status: '발송 요청 등록',
+      provider,
+      mailQueueId,
+      attachmentCount: 1,
+      attachmentName: _emailDocRef.docObj.id + '.pdf'
+    });
     closeModal('email-send-modal');
     showToast('이메일 발송 요청이 등록되었습니다.', 'success');
     markDocumentEmailSent();
@@ -16187,7 +16365,7 @@ function renderRfq() {
         <td>${r.date}</td>
         <td>${getClientName(r.clientId)||'—'}</td>
         <td style="font-size:11px;">${r.productId?getProductName(r.productId):'—'}</td>
-        <td style="font-weight:600;">${r.supplier}${r.supplierEmail?`<br><span style="font-size:10px;color:var(--tx-t);">${r.supplierEmail}</span>`:''}</td>
+        <td style="font-weight:600;">${r.supplier}${r.supplierEmail?`<br><span style="font-size:10px;color:var(--tx-t);">${r.supplierEmail}</span>`:''}${typeof emailSendSummaryHtml === 'function' ? emailSendSummaryHtml('rfq', r.id) : ''}</td>
         <td style="font-weight:700;">${esc(_docItemSummary(r))}</td>
         <td style="font-size:11px;color:var(--tx-t);">${r.spec||'—'}</td>
         <td>${_docQtySummary(r)}</td>
@@ -16426,6 +16604,11 @@ function openRfqPrint(id) {
   const targets = id ? [sourceRows.find(x=>x.id===id)].filter(Boolean)
                      : sourceRows.filter(r => r.status !== '미채택');
   if (!targets.length) { showToast('출력할 견적요청서가 없습니다.', 'error'); return; }
+  if (_docTemplateHasCustom('rfq')) {
+    const ids = targets.map(r => r.id);
+    openDocTemplatePdfPreview('rfq', ids.length === 1 ? ids[0] : ids);
+    return;
+  }
   const ci = getCompanyInfo();
   const pages = targets.map(r => {
     const client = getClientName(r.clientId)||'—';
@@ -16606,7 +16789,7 @@ function renderPo() {
         <td>${p.date}</td>
         <td>${getClientName(p.clientId)||'—'}</td>
         <td style="font-size:11px;">${p.productId?getProductName(p.productId):'—'}</td>
-        <td style="font-weight:600;">${p.supplier}${p.supplierEmail?`<br><span style="font-size:10px;color:var(--tx-t);">${p.supplierEmail}</span>`:''}</td>
+        <td style="font-weight:600;">${p.supplier}${p.supplierEmail?`<br><span style="font-size:10px;color:var(--tx-t);">${p.supplierEmail}</span>`:''}${typeof emailSendSummaryHtml === 'function' ? emailSendSummaryHtml('po', p.id) : ''}</td>
         <td style="font-weight:700;">${esc(_docItemSummary(p))}</td>
         <td style="font-size:11px;color:var(--tx-t);">${p.spec||'—'}</td>
         <td>${_docQtySummary(p)}</td>
@@ -16871,6 +17054,11 @@ function openPoPrint(id, individual=false) {
   const targetList = ids ? ids.map(i=>visiblePo.find(x=>x.id===i)).filter(Boolean)
                         : visiblePo;   // 전체 출력: 입고완료 포함 모든 발주서
   if (!targetList.length) { showToast('출력할 발주서가 없습니다.', 'error'); return; }
+  if (_docTemplateHasCustom('po')) {
+    const targetIds = targetList.map(p => p.id);
+    openDocTemplatePdfPreview('po', targetIds.length === 1 ? targetIds[0] : targetIds, { individual });
+    return;
+  }
   const ci = getCompanyInfo();
   const grouped = {};
   // individual=true: 건별 개별 페이지 / false: 공급처별로 묶음
@@ -17271,6 +17459,11 @@ async function importDocTemplatePackage(input) {
 
 function _docTemplateStore() {
   return loadStorage('docXlsxTemplates', {});
+}
+
+function _docTemplateHasCustom(type) {
+  const saved = _docTemplateStore()[type];
+  return !!(saved && saved.data);
 }
 
 function _arrayToBase64(array) {
@@ -17697,6 +17890,10 @@ async function _docTemplateArray(type) {
 }
 
 function _docTemplateGroups(type, id) {
+  return _docTemplateGroupsWithOptions(type, id, {});
+}
+
+function _docTemplateGroupsWithOptions(type, id, options = {}) {
   const ids = Array.isArray(id) ? id : (id ? [id] : null);
   if (type === 'rfq') {
     const source = visibleRfqList();
@@ -17717,7 +17914,7 @@ function _docTemplateGroups(type, id) {
   const list = ids ? rows.filter(p => ids.includes(p.id)) : rows;
   const grouped = {};
   list.forEach(p => {
-    const key = ids && ids.length === 1 ? p.id : (p.supplier || p.id);
+    const key = options.individual || (ids && ids.length === 1) ? p.id : (p.supplier || p.id);
     (grouped[key] = grouped[key] || []).push(p);
   });
   return Object.entries(grouped).map(([key, items]) => ({ key, items }));
@@ -17799,42 +17996,229 @@ function _safeSheetName(name, used) {
   return out;
 }
 
+async function _buildDocTemplateWorkbook(type, id = null, options = {}) {
+  const info = DOC_XLS_TEMPLATE_INFO[type];
+  if (!info) throw new Error('지원하지 않는 문서 양식입니다.');
+  const groups = _docTemplateGroupsWithOptions(type, id, options);
+  if (!groups.length) throw new Error('양식으로 출력할 문서가 없습니다.');
+  const templateData = await _docTemplateArray(type);
+  const out = new ExcelJS.Workbook();
+  await out.xlsx.load(templateData);
+  const templateWs = out.worksheets[0];
+  const templateModel = JSON.parse(JSON.stringify(templateWs.model));
+  out.worksheets.slice(1).forEach(sheet => out.removeWorksheet(sheet.id));
+  const used = new Set();
+  groups.forEach((group, index) => {
+    let ws;
+    if (index === 0) {
+      ws = templateWs;
+    } else {
+      const sheetName = _safeSheetName(group.key, used);
+      ws = out.addWorksheet(sheetName);
+      const cloneModel = JSON.parse(JSON.stringify(templateModel));
+      cloneModel.id = ws.id;
+      cloneModel.name = sheetName;
+      ws.model = cloneModel;
+    }
+    ws.name = _safeSheetName(group.key, used);
+    _fillDocTemplateSheet(ws, _docTemplateValues(type, group.items));
+  });
+  return { workbook:out, groups, info };
+}
+
 async function exportDocTemplateXLS(type, id = null) {
   const info = DOC_XLS_TEMPLATE_INFO[type];
   if (!info || !_requireExcelJS()) return;
-  const groups = _docTemplateGroups(type, id);
-  if (!groups.length) { showToast('양식으로 출력할 문서가 없습니다.', 'error'); return; }
   try {
-    const templateData = await _docTemplateArray(type);
-    const out = new ExcelJS.Workbook();
-    await out.xlsx.load(templateData);
-    const templateWs = out.worksheets[0];
-    const templateModel = JSON.parse(JSON.stringify(templateWs.model));
-    out.worksheets.slice(1).forEach(sheet => out.removeWorksheet(sheet.id));
-    const used = new Set();
-    groups.forEach((group, index) => {
-      let ws;
-      if (index === 0) {
-        ws = templateWs;
-      } else {
-        const sheetName = _safeSheetName(group.key, used);
-        ws = out.addWorksheet(sheetName);
-        const cloneModel = JSON.parse(JSON.stringify(templateModel));
-        cloneModel.id = ws.id;
-        cloneModel.name = sheetName;
-        ws.model = cloneModel;
-        _fillDocTemplateSheet(ws, _docTemplateValues(type, group.items));
-        return;
-      }
-      ws.name = _safeSheetName(group.key, used);
-      _fillDocTemplateSheet(ws, _docTemplateValues(type, group.items));
-    });
+    const { workbook, groups } = await _buildDocTemplateWorkbook(type, id);
     const suffix = groups.length === 1 ? groups[0].key : today();
-    const buffer = await out.xlsx.writeBuffer();
+    const buffer = await workbook.xlsx.writeBuffer();
     _downloadExcelBuffer(buffer, `${info.title}_${suffix}.xlsx`);
     showToast(`${info.title} ${groups.length}건을 등록 양식으로 출력했습니다.`);
   } catch(err) {
     showToast('엑셀 양식 출력 실패: ' + err.message, 'error');
+  }
+}
+
+function _xlsxColor(value) {
+  const argb = value && (value.argb || value.rgb);
+  if (!argb) return '';
+  const clean = String(argb).replace(/^#/, '');
+  return '#' + (clean.length === 8 ? clean.slice(2) : clean).slice(0, 6);
+}
+
+function _excelColumnNumber(label) {
+  return String(label || '').toUpperCase().split('').reduce((sum, ch) => sum * 26 + ch.charCodeAt(0) - 64, 0);
+}
+
+function _excelAddressParts(address) {
+  const match = String(address || '').match(/([A-Z]+)(\d+)/i);
+  return match ? { col:_excelColumnNumber(match[1]), row:Number(match[2]) } : null;
+}
+
+function _excelRangeBounds(range) {
+  const clean = String(range || '').replace(/^.*!/, '').replace(/\$/g, '').replace(/'/g, '');
+  const parts = clean.split(':');
+  const start = _excelAddressParts(parts[0]);
+  const end = _excelAddressParts(parts[1] || parts[0]);
+  if (!start || !end) return null;
+  return {
+    top:Math.min(start.row, end.row),
+    left:Math.min(start.col, end.col),
+    bottom:Math.max(start.row, end.row),
+    right:Math.max(start.col, end.col)
+  };
+}
+
+function _worksheetPrintBounds(ws) {
+  const printArea = ws && ws.pageSetup && ws.pageSetup.printArea;
+  const parsed = printArea ? _excelRangeBounds(String(printArea).split('&&')[0]) : null;
+  if (parsed) return parsed;
+  let top = 1, left = 1, bottom = Math.max(1, ws.rowCount || 1), right = Math.max(1, ws.columnCount || 1);
+  (ws.model && ws.model.merges || []).forEach(range => {
+    const b = _excelRangeBounds(range);
+    if (!b) return;
+    bottom = Math.max(bottom, b.bottom);
+    right = Math.max(right, b.right);
+  });
+  return { top, left, bottom, right };
+}
+
+function _worksheetMergeMap(ws) {
+  const map = new Map();
+  (ws.model && ws.model.merges || []).forEach(range => {
+    const b = _excelRangeBounds(range);
+    if (!b) return;
+    for (let r = b.top; r <= b.bottom; r++) {
+      for (let c = b.left; c <= b.right; c++) {
+        const key = r + ':' + c;
+        if (r === b.top && c === b.left) map.set(key, { rowSpan:b.bottom - b.top + 1, colSpan:b.right - b.left + 1 });
+        else map.set(key, { skip:true });
+      }
+    }
+  });
+  return map;
+}
+
+function _excelBorderCss(border) {
+  if (!border || !border.style) return '';
+  const width = ['medium', 'thick', 'double'].includes(border.style) ? 2 : 1;
+  return `${width}px solid ${_xlsxColor(border.color) || '#d0d4dc'}`;
+}
+
+function _excelCellText(cell) {
+  let value = cell && cell.value;
+  if (value == null) return '';
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (typeof value === 'object') {
+    if (Array.isArray(value.richText)) value = value.richText.map(part => part.text || '').join('');
+    else if (value.text != null) value = value.text;
+    else if (value.result != null) value = value.result;
+    else if (value.formula != null) value = value.result != null ? value.result : '';
+  }
+  if (typeof value === 'number') {
+    const fmt = String(cell.numFmt || '');
+    if (fmt.includes('%')) return (value * 100).toLocaleString('ko-KR') + '%';
+    if (fmt.includes('#,##0')) {
+      const suffix = fmt.includes('" 원"') || fmt.includes('"원"') ? ' 원' : '';
+      return value.toLocaleString('ko-KR') + suffix;
+    }
+  }
+  return String(value);
+}
+
+function _excelCellCss(cell) {
+  const css = ['box-sizing:border-box'];
+  const font = cell.font || {};
+  const align = cell.alignment || {};
+  const fill = cell.fill || {};
+  if (font.name) css.push(`font-family:'${String(font.name).replace(/['\\]/g, '')}','Malgun Gothic',sans-serif`);
+  if (font.size) css.push(`font-size:${Math.max(7, Number(font.size))}pt`);
+  if (font.bold) css.push('font-weight:700');
+  if (font.italic) css.push('font-style:italic');
+  if (font.underline) css.push('text-decoration:underline');
+  const fontColor = _xlsxColor(font.color);
+  if (fontColor) css.push(`color:${fontColor}`);
+  const fillColor = _xlsxColor(fill.fgColor || fill.bgColor);
+  if (fillColor && fillColor.toLowerCase() !== '#ffffff') css.push(`background:${fillColor}`);
+  if (align.horizontal) css.push(`text-align:${align.horizontal === 'centerContinuous' ? 'center' : align.horizontal}`);
+  if (align.vertical) css.push(`vertical-align:${align.vertical}`);
+  if (align.wrapText) css.push('white-space:pre-wrap');
+  else css.push('white-space:normal');
+  if (align.textRotation) css.push('writing-mode:vertical-rl;text-orientation:upright');
+  const border = cell.border || {};
+  const sides = [['top','border-top'], ['right','border-right'], ['bottom','border-bottom'], ['left','border-left']];
+  sides.forEach(([key, prop]) => {
+    const val = _excelBorderCss(border[key]);
+    if (val) css.push(`${prop}:${val}`);
+  });
+  return css.join(';');
+}
+
+function _worksheetToHtmlTable(ws) {
+  const bounds = _worksheetPrintBounds(ws);
+  const merges = _worksheetMergeMap(ws);
+  const colParts = [];
+  let totalWidth = 0;
+  for (let c = bounds.left; c <= bounds.right; c++) {
+    const col = ws.getColumn(c);
+    if (col && col.hidden) continue;
+    const width = Math.max(24, Math.round(((col && col.width) || 8.43) * 7 + 5));
+    totalWidth += width;
+    colParts.push(`<col style="width:${width}px;">`);
+  }
+  const rows = [];
+  for (let r = bounds.top; r <= bounds.bottom; r++) {
+    const row = ws.getRow(r);
+    if (row && row.hidden) continue;
+    const height = Math.max(18, Math.round(((row && row.height) || ws.properties.defaultRowHeight || 16) * 1.333));
+    const cells = [];
+    for (let c = bounds.left; c <= bounds.right; c++) {
+      const col = ws.getColumn(c);
+      if (col && col.hidden) continue;
+      const merge = merges.get(r + ':' + c);
+      if (merge && merge.skip) continue;
+      const cell = ws.getCell(r, c);
+      const span = merge || {};
+      const attrs = [
+        span.rowSpan > 1 ? `rowspan="${span.rowSpan}"` : '',
+        span.colSpan > 1 ? `colspan="${span.colSpan}"` : ''
+      ].filter(Boolean).join(' ');
+      cells.push(`<td ${attrs} style="${_excelCellCss(cell)}">${esc(_excelCellText(cell)).replace(/\n/g, '<br>')}</td>`);
+    }
+    rows.push(`<tr style="height:${height}px;">${cells.join('')}</tr>`);
+  }
+  return `<table class="xlsx-print-table" style="width:${Math.max(totalWidth, 1)}px;"><colgroup>${colParts.join('')}</colgroup><tbody>${rows.join('')}</tbody></table>`;
+}
+
+async function buildDocTemplatePdfHtml(type, id = null, options = {}) {
+  if (!_requireExcelJS()) throw new Error('엑셀 인쇄 모듈을 불러오지 못했습니다.');
+  const { workbook, groups, info } = await _buildDocTemplateWorkbook(type, id, options);
+  const pages = workbook.worksheets.map((ws, index) => `
+    <section class="xlsx-print-page" style="${index < workbook.worksheets.length - 1 ? 'page-break-after:always;break-after:page;' : ''}">
+      ${_worksheetToHtmlTable(ws)}
+    </section>
+  `).join('');
+  const suffix = groups.length === 1 ? groups[0].key : today();
+  return {
+    title:`${info.title}_${suffix}`,
+    html:`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${info.title}</title>
+      <style>
+        @page{size:A4 portrait;margin:0;}
+        body{margin:0;background:#fff;color:#111;font-family:'Malgun Gothic','맑은 고딕',sans-serif;}
+        .xlsx-print-page{width:746px;min-height:1083px;box-sizing:border-box;background:#fff;overflow:hidden;}
+        .xlsx-print-table{border-collapse:collapse;table-layout:fixed;background:#fff;color:#111;}
+        .xlsx-print-table td{padding:2px 4px;line-height:1.25;word-break:break-word;overflow:hidden;}
+      </style></head><body>${pages}</body></html>`
+  };
+}
+
+async function openDocTemplatePdfPreview(type, id = null, options = {}) {
+  try {
+    const result = await buildDocTemplatePdfHtml(type, id, options);
+    openDocumentPdfPreview(result.html, result.title);
+  } catch(err) {
+    showToast('등록 양식 PDF 출력 실패: ' + err.message, 'error');
   }
 }
 
@@ -17917,7 +18301,7 @@ function renderSalesDoc(type) {
       <tr>
         <td style="font-weight:700;color:var(--tx-i);">${d.id}</td>
         <td>${d.date}</td>
-        <td>${_docClientName(d)||'—'}${d.clientEmail?`<br><span style="font-size:10px;color:var(--tx-t);">${d.clientEmail}</span>`:''}</td>
+        <td>${_docClientName(d)||'—'}${d.clientEmail?`<br><span style="font-size:10px;color:var(--tx-t);">${d.clientEmail}</span>`:''}${typeof emailSendSummaryHtml === 'function' ? emailSendSummaryHtml(type, d.id) : ''}</td>
         <td style="font-size:11px;">${_docClientBizNo(d) || '—'}</td>
         <td style="font-weight:700;">${esc(_docItemSummary(d))}</td>
         <td style="font-size:11px;color:var(--tx-t);">${d.spec||'—'}</td>
@@ -18307,6 +18691,11 @@ function openSalesDocPrint(type, id) {
   const cfg = SALES[type], list = visibleSalesList(type);
   const targets = Array.isArray(id) ? list.filter(x=>id.includes(x.id)) : (id ? list.filter(x => x.id === id) : list);
   if (!targets.length) { showToast('출력할 문서가 없습니다.', 'error'); return; }
+  if (_docTemplateHasCustom(type)) {
+    const ids = targets.map(d => d.id);
+    openDocTemplatePdfPreview(type, ids.length === 1 ? ids[0] : ids);
+    return;
+  }
   const ci = getCompanyInfo();
   const pages = targets.map((d,i) => `<div style="${i<targets.length-1?'page-break-after:always;':''}">${_salesDocBodyHtml(d, type, ci)}</div>`).join('');
   const docTitle = id || cfg.title;
@@ -18434,7 +18823,7 @@ function renderSODoc(type) {
       <tr>
         <td style="font-weight:700;color:var(--tx-i);">${d.id}</td>
         <td>${d.date}</td>
-        <td>${soDocLabel(d)}${d.clientName && !d.clientId?'<br><span style="font-size:9px;color:var(--tx-t);">미등록</span>':''}</td>
+        <td>${soDocLabel(d)}${d.clientName && !d.clientId?'<br><span style="font-size:9px;color:var(--tx-t);">미등록</span>':''}${d.clientEmail?`<br><span style="font-size:10px;color:var(--tx-t);">${d.clientEmail}</span>`:''}${typeof emailSendSummaryHtml === 'function' ? emailSendSummaryHtml(type, d.id) : ''}</td>
         <td style="font-weight:700;">${esc(_docItemSummary(d))}</td>
         <td style="font-size:11px;color:var(--tx-t);">${d.spec||'—'}</td>
         <td>${_docQtySummary(d)}</td>
@@ -18640,6 +19029,11 @@ function openSODocPrint(type, id) {
   const cfg = SODOCS[type], list = visibleSODocList(type);
   const targets = Array.isArray(id) ? list.filter(x=>id.includes(x.id)) : (id ? list.filter(x=>x.id===id) : list);
   if (!targets.length) { showToast('출력할 문서가 없습니다.', 'error'); return; }
+  if (_docTemplateHasCustom(type)) {
+    const ids = targets.map(d => d.id);
+    openDocTemplatePdfPreview(type, ids.length === 1 ? ids[0] : ids);
+    return;
+  }
   const ci = getCompanyInfo();
   const pages = targets.map((d, index) =>
     `<div style="${index < targets.length - 1 ? 'page-break-after:always;' : ''}">${_salesDocBodyHtml(d, cfg.docType, ci)}</div>`
@@ -24189,6 +24583,12 @@ function buildDocumentPdfPreviewHtml(html, title, options = {}) {
 async function documentPdfBlob(type, id) {
   const config = _driveDocumentConfig(type);
   if (!config) throw new Error('지원하지 않는 문서 형식입니다.');
+  if (typeof _docTemplateHasCustom === 'function' &&
+      typeof buildDocTemplatePdfHtml === 'function' &&
+      _docTemplateHasCustom(type)) {
+    const result = await buildDocTemplatePdfHtml(type, id, { individual:Array.isArray(id) });
+    return createDocumentPdfBlobFromHtml(result.html);
+  }
   const html = captureDocumentPrintHtml(()=>config.print(id));
   return createDocumentPdfBlobFromHtml(html);
 }
