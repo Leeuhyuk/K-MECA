@@ -9387,10 +9387,19 @@ function deleteClient(id) {
   pushToTrash('client', c);
   linkedProducts.forEach(p => pushToTrash('product', p));
   linkedProducts.forEach(p => writeAuditLog('products', p.id, 'delete', p, null, { summary:'고객사 삭제에 따른 제품 이동' }));
+  if (typeof cloudRememberDeletedArrayRecord === 'function') {
+    cloudRememberDeletedArrayRecord('clients', c);
+    linkedProducts.forEach(p => cloudRememberDeletedArrayRecord('products', p));
+  }
   products = products.filter(p => p.clientId !== id);
   clients = clients.filter(x => x.id !== id);
   writeAuditLog('clients', id, 'delete', c, null, { summary:'고객사 삭제', detail:`연결 제품 ${prodCount}건` });
   saveStorage('clients', clients); saveStorage('products', products);
+  if (typeof cloudDeleteArrayRecordNow === 'function') {
+    cloudDeleteArrayRecordNow('clients', c).catch(e => console.warn('client cloud delete failed:', e));
+    linkedProducts.forEach(p => cloudDeleteArrayRecordNow('products', p).catch(e => console.warn('product cloud delete failed:', e)));
+  }
+  if (typeof cloudFlushSoon === 'function') cloudFlushSoon();
   renderClients(); syncFilterDropdowns();
   showToast('고객사가 휴지통으로 이동되었습니다.');
 }
@@ -14108,6 +14117,130 @@ function cloudV2StripMeta(value){
 }
 const _cloudKeyApplied = {};   // key -> 마지막으로 로컬에 반영한 sourceUpdatedAt(ms). 비순차 원격 읽기 거부용
 const _cloudSavingKeys = new Set(); // 저장 중인 키는 이전 원격 스냅샷으로 덮지 않음
+const CLOUD_DELETE_TOMBSTONES_KEY = 'cloudDeleteTombstones';
+const CLOUD_DELETE_TOMBSTONE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const CLOUD_ARRAY_ID_FIELDS = ['id','code','no','number','docNo','quoteNo','orderNo','poNo','rfqNo','statementNo','taxNo'];
+
+function cloudReadDeleteTombstones(){
+  try {
+    const raw = localStorage.getItem('mes_' + CLOUD_DELETE_TOMBSTONES_KEY);
+    const data = raw ? JSON.parse(raw) : {};
+    return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+  } catch(e){
+    return {};
+  }
+}
+function cloudWriteDeleteTombstones(data){
+  try { localStorage.setItem('mes_' + CLOUD_DELETE_TOMBSTONES_KEY, JSON.stringify(data || {})); }
+  catch(e){ console.warn('cloud delete tombstone save failed:', e); }
+}
+function cloudPruneDeleteTombstones(data){
+  const now = Date.now();
+  let changed = false;
+  Object.keys(data || {}).forEach(key => {
+    const bucket = data[key];
+    if (!bucket || typeof bucket !== 'object') { delete data[key]; changed = true; return; }
+    Object.keys(bucket).forEach(id => {
+      if (!bucket[id] || now - Number(bucket[id]) > CLOUD_DELETE_TOMBSTONE_TTL_MS) {
+        delete bucket[id];
+        changed = true;
+      }
+    });
+    if (!Object.keys(bucket).length) { delete data[key]; changed = true; }
+  });
+  return changed;
+}
+function cloudArrayRecordDocIds(record, docId){
+  const ids = new Set();
+  const add = value => {
+    const id = cloudV2SafeDocId(value);
+    if (id) ids.add(id);
+  };
+  add(docId);
+  if (record && typeof record === 'object' && !Array.isArray(record)) {
+    CLOUD_ARRAY_ID_FIELDS.forEach(field => add(record[field]));
+    add(cloudV2StableRecordId(record, 0));
+  }
+  return Array.from(ids);
+}
+function cloudRememberDeletedArrayRecord(key, record, docId){
+  if (!key) return;
+  const data = cloudReadDeleteTombstones();
+  cloudPruneDeleteTombstones(data);
+  const bucket = data[key] && typeof data[key] === 'object' ? data[key] : {};
+  cloudArrayRecordDocIds(record, docId).forEach(id => { bucket[id] = Date.now(); });
+  data[key] = bucket;
+  cloudWriteDeleteTombstones(data);
+}
+function cloudClearDeletedArrayRecord(key, record, docId){
+  const data = cloudReadDeleteTombstones();
+  const bucket = data[key];
+  if (!bucket || typeof bucket !== 'object') return;
+  let changed = false;
+  cloudArrayRecordDocIds(record, docId).forEach(id => {
+    if (bucket[id]) { delete bucket[id]; changed = true; }
+  });
+  if (!Object.keys(bucket).length) { delete data[key]; changed = true; }
+  if (changed) cloudWriteDeleteTombstones(data);
+}
+function cloudShouldSkipDeletedArrayRecord(key, docId, record){
+  const data = cloudReadDeleteTombstones();
+  const changed = cloudPruneDeleteTombstones(data);
+  const bucket = data[key];
+  if (changed) cloudWriteDeleteTombstones(data);
+  if (!bucket || typeof bucket !== 'object') return false;
+  return cloudArrayRecordDocIds(record, docId).some(id => !!bucket[id]);
+}
+function cloudRecordIdentityMatches(a, b){
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+  return CLOUD_ARRAY_ID_FIELDS.some(field => {
+    const av = a[field], bv = b[field];
+    return av != null && bv != null && String(av).trim() && String(av).trim() === String(bv).trim();
+  });
+}
+async function cloudDeleteArrayRecordNow(key, record, docId){
+  cloudRememberDeletedArrayRecord(key, record, docId);
+  if (!_fbDb || !_cloudActive || !CLOUD_KEYS.includes(key)) return false;
+  const entityRef = _fbDb.collection('mes_v2').doc(key);
+  const ids = new Set(cloudArrayRecordDocIds(record, docId));
+  const writeMap = new Map();
+  ids.forEach(id => writeMap.set(id, { ref: entityRef.collection('items').doc(id), delete: true }));
+  try {
+    const snap = await entityRef.collection('items').get();
+    snap.forEach(doc => {
+      const data = cloudV2StripMeta(doc.data() || {});
+      if (ids.has(doc.id) || cloudRecordIdentityMatches(data, record)) {
+        writeMap.set(doc.id, { ref: doc.ref, delete: true });
+      }
+    });
+  } catch(e){
+    console.warn('cloud delete lookup failed:', key, e);
+  }
+  const writes = Array.from(writeMap.values());
+  writes.push({
+    ref: entityRef,
+    data: {
+      key,
+      sourceCollection: 'mes_v2',
+      sourceDocId: key,
+      sourceExists: true,
+      sourceType: 'array',
+      sourceUpdatedAt: cloudV2ServerTimestamp(),
+      schemaVersion: 1,
+      mode: 'v2'
+    }
+  });
+  await cloudV2CommitWrites(writes);
+  if (typeof cloudRememberVersion === 'function') cloudRememberVersion(key, Date.now());
+  return true;
+}
+function cloudFlushSoon(){
+  try {
+    if (typeof cloudFlush !== 'function') return;
+    clearTimeout(_cloudTimer);
+    _cloudTimer = setTimeout(() => { cloudFlush().catch(e => console.warn('cloud flush failed:', e)); }, 0);
+  } catch(e){}
+}
 async function cloudLoadV2Key(key){
   if (typeof _cloudQueue !== 'undefined' && _cloudQueue && _cloudQueue.has(key)) return false;
   if (_cloudSavingKeys.has(key)) return false;
@@ -14122,12 +14255,14 @@ async function cloudLoadV2Key(key){
   if (ver && _cloudKeyApplied[key] && ver < _cloudKeyApplied[key]) return false;
   if (meta.sourceType === 'array' || !cloudV2MapKeys().includes(key)) {
     const itemsSnap = await entityRef.collection('items').get();
-    const rows = itemsSnap.docs.map(doc => {
+    const remoteRows = itemsSnap.docs.map(doc => {
       const data = doc.data() || {};
       const idx = data._mes && Number.isFinite(data._mes.sourceIndex) ? data._mes.sourceIndex : Number.MAX_SAFE_INTEGER;
       return { idx, id: doc.id, value: cloudV2StripMeta(data) };
     }).sort((a, b) => (a.idx - b.idx) || a.id.localeCompare(b.id));
+    const rows = remoteRows.filter(row => !cloudShouldSkipDeletedArrayRecord(key, row.id, row.value));
     localStorage.setItem('mes_' + key, JSON.stringify(rows.map(row => row.value)));
+    if (rows.length !== remoteRows.length && typeof cloudQueueSave === 'function') cloudQueueSave(key);
     if (ver) {
       _cloudKeyApplied[key] = ver;
       if (typeof cloudRememberVersion === 'function') cloudRememberVersion(key, ver);
@@ -14252,6 +14387,7 @@ async function cloudMirrorV2Key(key){
       used[id] = (used[id] || 0) + 1;
       if (used[id] > 1) id += '_' + used[id];
       nextIds.add(id);
+      cloudClearDeletedArrayRecord(key, item, id);
       writes.push({ ref: entityRef.collection('items').doc(id), data: cloudV2ItemPayload(item, key, index) });
     });
     if (key !== 'trash') {
