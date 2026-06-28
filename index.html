@@ -15777,11 +15777,11 @@ function openEmailModal(docObj, docType) {
     showToast('이메일에 발주서 PDF 파일이 성공적으로 조립되어 첨부되었습니다.', 'success');
   }).catch(err => {
     console.error('PDF 조립 실패:', err);
-    inp('em-attachment-status').textContent = 'PDF 첨부 실패 (메일본문 전송)';
+    inp('em-attachment-status').textContent = 'PDF 첨부 실패';
     inp('em-attachment-status').style.color = 'var(--tx-d)';
     inp('em-attachment-spinner').style.display = 'none';
-    inp('email-submit-btn').disabled = false;
-    showToast('PDF 파일 생성 중 오류가 발생했으나, 메일 본문은 발송이 가능합니다: ' + err.message, 'error');
+    inp('email-submit-btn').disabled = true;
+    showToast('PDF 파일 생성 중 오류가 발생했습니다. PDF가 준비되어야 직접 발송할 수 있습니다: ' + err.message, 'error');
   });
 }
 
@@ -15897,7 +15897,8 @@ function buildFirestoreEmailPayload(to, ci) {
     subject: v('em-subject'),
     text: v('em-body'),
     docType,
-    docId: doc.id || ''
+    docId: doc.id || '',
+    requireAttachment: true
   };
   const replyTo = normalizeEmailAddress(ci.email);
   if (replyTo) payload.replyTo = replyTo;
@@ -15955,6 +15956,10 @@ function doMailto() {
 async function doEmailJS() {
   const to = v('em-to');
   if (!to) { showToast('수신 이메일을 입력하세요.', 'error'); return; }
+  if (!_emailDocRef || !_emailDocRef.pdfBase64) {
+    showToast('PDF 첨부가 완료된 뒤 발송할 수 있습니다.', 'error');
+    return;
+  }
   const ci = getCompanyInfo();
   try {
     showToast('이메일 발송 요청 등록 중...', 'info');
