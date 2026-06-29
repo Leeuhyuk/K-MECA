@@ -41,6 +41,12 @@
   --mega-menu-width: 324px;
   --mega-menu-icon-size: 46px;
   --mega-menu-icon-font-size: 29px;
+  --mega-menu-button-min: 97px;
+  --mega-menu-grid-gap: 5px;
+  --mega-menu-pad-x: 12px;
+  --mega-menu-pad-y: 10px;
+  --mobile-tab-icon-size: 22px;
+  --mobile-tabbar-base-height: 58px;
 }
 :root.dark {
   --bg-p: #1a1a1e; --bg-s: #242428; --bg-t: #121214;
@@ -699,9 +705,10 @@ body.sb-mini .main { margin-left: 0 !important; }
   right: auto;
   z-index: 10000;
   width: min(var(--mega-menu-width), calc(100vw - 28px));
-  max-height: 52vh;
+  max-height: calc(100vh - 78px);
+  max-height: calc(100dvh - 78px);
   margin: 0;
-  padding: 10px 12px 12px;
+  padding: var(--mega-menu-pad-y) var(--mega-menu-pad-x) calc(var(--mega-menu-pad-y) + 2px);
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-gutter: stable;
@@ -775,19 +782,19 @@ body.sb-mini .main { margin-left: 0 !important; }
   min-width: 0;
   margin-top: 2px;
   padding: 0;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  column-gap: 4px;
-  row-gap: 4px;
+  grid-template-columns: repeat(auto-fit, minmax(var(--mega-menu-button-min), 1fr));
+  column-gap: var(--mega-menu-grid-gap);
+  row-gap: var(--mega-menu-grid-gap);
   border: 0;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
 }
-.topnav.mega-menu .topnav-menu-wide { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.topnav.mega-menu .topnav-menu-wide { grid-template-columns: repeat(auto-fit, minmax(var(--mega-menu-button-min), 1fr)); }
 .topnav.mega-menu .topnav-menu button {
   min-width: 0;
-  min-height: calc(var(--mega-menu-icon-size) + 20px);
-  padding: 3px 1px;
+  min-height: calc(var(--mega-menu-icon-size) + 22px);
+  padding: 4px 2px;
   flex-direction: column;
   justify-content: center;
   gap: 3px;
@@ -891,8 +898,8 @@ body.mega-menu-open { overflow: hidden; }
   margin-top: 13px;
   padding: 12px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 7px;
+  grid-template-columns: repeat(auto-fit, minmax(var(--mega-menu-button-min), 1fr));
+  gap: var(--mega-menu-grid-gap);
   border: 1px dashed var(--br-s);
   border-radius: var(--rm);
   background: var(--bg-s);
@@ -1097,6 +1104,7 @@ textarea { height: auto; resize: vertical; }
   align-items: center;
   gap: 5px !important;
   flex-wrap: wrap;
+  overflow: visible;
 }
 .selection-action-bar {
   min-height: 28px;
@@ -1120,6 +1128,51 @@ textarea { height: auto; resize: vertical; }
 }
 .date-view-clear-selection {
   margin-left: auto;
+}
+.bulk-doc-menu-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.bulk-doc-menu-trigger {
+  white-space: nowrap;
+}
+.bulk-doc-menu-caret {
+  margin-left: -2px;
+  font-size: 13px;
+  opacity: .72;
+}
+.bulk-doc-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 10060;
+  min-width: 154px;
+  display: none;
+  gap: 4px;
+  padding: 6px;
+  background: var(--bg-p);
+  border: 1px solid var(--br);
+  border-radius: var(--rm);
+  box-shadow: 0 14px 30px rgba(0,0,0,.28);
+}
+.bulk-doc-menu-wrap.open .bulk-doc-menu {
+  display: grid;
+}
+.bulk-doc-menu .btn {
+  justify-content: flex-start;
+  width: 100%;
+  height: 30px;
+  padding: 0 10px;
+}
+.bulk-doc-menu .btn i {
+  width: 16px;
+}
+@media (max-width: 680px) {
+  .bulk-doc-menu {
+    left: auto;
+    right: 0;
+  }
 }
 
 .del-btn, .edit-btn, .restore-btn { padding: 3px 8px; font-size: 11px; height: 24px; border-radius: 4px; cursor: pointer; background: transparent; font-family: var(--f); display: inline-flex; align-items: center; gap: 4px; transition: all .15s; border: 1px solid; }
@@ -2393,13 +2446,14 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     right: auto;
     bottom: auto;
     width: min(var(--mega-menu-width), calc(100vw - 16px));
-    max-height: 52vh;
+    max-height: calc(100vh - 72px - var(--mobile-tabbar-base-height));
+    max-height: calc(100dvh - 72px - var(--mobile-tabbar-base-height));
     padding: 9px 11px 11px;
     grid-template-columns: 1fr;
   }
   .topnav.mega-menu.mega-open { display: grid !important; }
   .topnav.mega-menu .topnav-menu,
-  .topnav.mega-menu .topnav-menu-wide { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .topnav.mega-menu .topnav-menu-wide { grid-template-columns: repeat(auto-fit, minmax(var(--mega-menu-button-min), 1fr)); }
 }
 @media screen and (max-width: 560px) {
   #menu-toggle-btn { width:38px; height:38px; flex-basis:38px; font-size:23px !important; }
@@ -2430,14 +2484,15 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     left: 10px;
     right: auto;
     bottom: auto;
-    width: min(312px, calc(100vw - 20px));
-    max-height: 52vh;
+    width: min(var(--mega-menu-width), calc(100vw - 20px));
+    max-height: calc(100vh - 70px - var(--mobile-tabbar-base-height));
+    max-height: calc(100dvh - 70px - var(--mobile-tabbar-base-height));
     grid-template-columns: 1fr;
     border-radius: 12px;
   }
   .topnav.mega-menu::before { left: 22px; }
   .topnav.mega-menu .topnav-menu,
-  .topnav.mega-menu .topnav-menu-wide { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .topnav.mega-menu .topnav-menu-wide { grid-template-columns: repeat(auto-fit, minmax(var(--mega-menu-button-min), 1fr)); }
   .topnav.mega-menu .topnav-menu button { min-height: calc(var(--mega-menu-icon-size) + 20px); font-size: 8.5px; gap:3px; }
   .topnav.mega-menu .topnav-menu button i { width: var(--mega-menu-icon-size); height: var(--mega-menu-icon-size); flex-basis: var(--mega-menu-icon-size); font-size: var(--mega-menu-icon-font-size); border-radius:13px; }
   .mega-menu-head { position: sticky; top: -12px; z-index: 2; padding: 10px 0; background: var(--bg-p); }
@@ -2480,7 +2535,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
   /* 하단 탭바 */
   #mobile-tabbar {
     display: flex; position: fixed; left: 0; right: 0; bottom: 0;
-    height: calc(58px + env(safe-area-inset-bottom, 0px));
+    height: calc(var(--mobile-tabbar-base-height) + env(safe-area-inset-bottom, 0px));
     padding-bottom: env(safe-area-inset-bottom, 0px);
     background: var(--bg-p); border-top: 1px solid var(--br);
     z-index: 800; box-shadow: 0 -2px 12px rgba(0,0,0,0.18);
@@ -2492,21 +2547,21 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     cursor: pointer; user-select: none; border: none; background: none;
     transition: color .15s; -webkit-tap-highlight-color: transparent;
   }
-  .mtab i { font-size: 21px; }
+  .mtab i { font-size: var(--mobile-tab-icon-size); }
   .mtab.active { color: var(--tx-i); }
   .mtab .mtab-badge {
-    position: absolute; top: 5px; left: 50%; margin-left: 6px;
+    position: absolute; top: max(4px, calc((var(--mobile-tabbar-base-height) - var(--mobile-tab-icon-size) - 18px) / 2)); left: 50%; margin-left: calc(var(--mobile-tab-icon-size) * .22);
     background: #e03131; color: #fff; font-size: 9px; font-weight: 700;
     border-radius: 9px; padding: 0 4px; line-height: 15px;
     min-width: 15px; height: 15px; text-align: center;
   }
   /* 하단 탭바에 가려지지 않도록 본문 여백 확보 */
-  .content { padding-bottom: 78px !important; }
+  .content { padding-bottom: calc(var(--mobile-tabbar-base-height) + 20px) !important; }
 
   /* 모바일 홈 컨테이너 */
   #mobile-home {
     position: fixed; left: 0; right: 0; top: 52px;
-    bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(var(--mobile-tabbar-base-height) + env(safe-area-inset-bottom, 0px));
     z-index: 700; overflow-y: auto; background: var(--bg-t);
     padding: 14px 14px 24px; flex-direction: column; gap: 14px;
     -webkit-overflow-scrolling: touch;
@@ -2568,6 +2623,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
   .mh-row .ti-chevron-right { font-size: 15px; color: var(--tx-t); opacity: .5; flex-shrink: 0; }
   .mh-empty { padding: 18px 14px; text-align: center; font-size: 11.5px; color: var(--tx-t); }
 }
+
 </style>
 </head>
 <body>
@@ -3743,12 +3799,13 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
             <span>아이콘 설정</span>
             <strong id="ui-menu-icon-value">46px</strong>
           </div>
-          <input id="ui-menu-icon-range" class="ui-scale-range" type="range" min="36" max="60" step="1" value="46"
+          <input id="ui-menu-icon-range" class="ui-scale-range" type="range" min="36" max="84" step="1" value="46"
             oninput="previewMenuIconSize(this.value)" onchange="saveMenuIconSize(this.value)">
           <div class="ui-menu-icon-presets ui-scale-presets">
-            <button class="btn btn-sm" type="button" onclick="setMenuIconSize(38)">작게</button>
-            <button class="btn btn-sm" type="button" onclick="setMenuIconSize(46)">기본</button>
-            <button class="btn btn-sm" type="button" onclick="setMenuIconSize(54)">크게</button>
+            <button class="btn btn-sm" type="button" data-size="38" onclick="setMenuIconSize(38)">작게</button>
+            <button class="btn btn-sm" type="button" data-size="46" onclick="setMenuIconSize(46)">기본</button>
+            <button class="btn btn-sm" type="button" data-size="62" onclick="setMenuIconSize(62)">크게</button>
+            <button class="btn btn-sm" type="button" data-size="76" onclick="setMenuIconSize(76)">아주 크게</button>
             <button class="btn btn-sm" type="button" onclick="resetMenuIconSize()"><i class="ti ti-restore"></i>기본값 복원</button>
           </div>
           <div class="ui-menu-icon-preview" aria-hidden="true">
@@ -13388,7 +13445,7 @@ const UI_SCALE_MAX = 120;
 const UI_FONT_MIN = 90;
 const UI_FONT_MAX = 120;
 const MENU_ICON_MIN = 36;
-const MENU_ICON_MAX = 60;
+const MENU_ICON_MAX = 84;
 const MENU_ICON_DEFAULT = 46;
 
 function getSavedUiScale() {
@@ -13512,8 +13569,21 @@ function getSavedMenuIconSize() {
 function applyMenuIconSize(value) {
   const requested = Number(value || getSavedMenuIconSize());
   const size = Math.min(MENU_ICON_MAX, Math.max(MENU_ICON_MIN, Math.round(requested)));
+  const gridGap = Math.min(12, Math.max(5, Math.round(size * 0.12)));
+  const padX = Math.min(22, Math.max(12, Math.round(size * 0.25)));
+  const buttonMin = Math.round(size + 51);
+  const menuWidth = Math.round((buttonMin * 3) + (gridGap * 2) + (padX * 2));
+  const mobileIcon = Math.min(42, Math.max(21, Math.round(size * 0.48)));
+  const mobileHeight = Math.max(58, mobileIcon + 38);
   document.documentElement.style.setProperty('--mega-menu-icon-size', `${size}px`);
   document.documentElement.style.setProperty('--mega-menu-icon-font-size', `${Math.round(size * 0.63)}px`);
+  document.documentElement.style.setProperty('--mega-menu-button-min', `${buttonMin}px`);
+  document.documentElement.style.setProperty('--mega-menu-grid-gap', `${gridGap}px`);
+  document.documentElement.style.setProperty('--mega-menu-pad-x', `${padX}px`);
+  document.documentElement.style.setProperty('--mega-menu-pad-y', `${Math.min(16, Math.max(10, Math.round(size * 0.2)))}px`);
+  document.documentElement.style.setProperty('--mega-menu-width', `${menuWidth}px`);
+  document.documentElement.style.setProperty('--mobile-tab-icon-size', `${mobileIcon}px`);
+  document.documentElement.style.setProperty('--mobile-tabbar-base-height', `${mobileHeight}px`);
   return size;
 }
 
@@ -13524,12 +13594,8 @@ function updateMenuIconControls(value) {
   if (range) range.value = String(size);
   if (label) label.textContent = `${size}px`;
   document.querySelectorAll('.ui-menu-icon-presets .btn').forEach(btn => {
-    const text = btn.textContent.trim();
-    btn.classList.toggle('active',
-      (size === 38 && text === '작게') ||
-      (size === MENU_ICON_DEFAULT && text === '기본') ||
-      (size === 54 && text === '크게')
-    );
+    const preset = Number(btn.dataset.size || 0);
+    btn.classList.toggle('active', preset > 0 && size === preset);
   });
 }
 
@@ -15587,7 +15653,55 @@ function bulkDateViewKey(key) {
   };
   return map[key] || key;
 }
+let _bulkDocMenuListenersRegistered = false;
+function registerBulkDocMenuListeners() {
+  if (_bulkDocMenuListenersRegistered) return;
+  _bulkDocMenuListenersRegistered = true;
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.bulk-doc-menu-wrap')) bulkCloseDocMenus();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') bulkCloseDocMenus();
+  });
+}
+function bulkCloseDocMenus(except) {
+  document.querySelectorAll('.bulk-doc-menu-wrap.open').forEach(wrap => {
+    if (wrap !== except) wrap.classList.remove('open');
+  });
+}
+function bulkToggleDocMenu(event, trigger) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  const wrap = trigger && trigger.closest('.bulk-doc-menu-wrap');
+  if (!wrap) return;
+  const willOpen = !wrap.classList.contains('open');
+  bulkCloseDocMenus(wrap);
+  wrap.classList.toggle('open', willOpen);
+}
+function bulkRunFromDocMenu(event, key, action) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  bulkCloseDocMenus();
+  bulkRun(key, action);
+}
+function bulkDocumentMenuHtml(key, c, canPdf, canCsv) {
+  const actions = [];
+  if (c.pdf && canPdf) actions.push({ action: 'pdf', icon: 'ti ti-printer', label: 'PDF 출력' });
+  if (c.csv && canCsv) actions.push({ action: 'csv', icon: 'ti ti-file-spreadsheet', label: '엑셀' });
+  if (c.drive && canPdf && canCsv) actions.push({ action: 'drive', icon: 'ti ti-cloud-upload', label: 'Drive 저장', cls: 'drive-save-btn' });
+  if (c.email) actions.push({ action: 'email', icon: 'ti ti-mail', label: '이메일', email: true });
+  if (!actions.length) return '';
+  const items = actions.map(item =>
+    `<button class="btn btn-sm ${item.cls || ''}" type="button" data-doc-action="${item.action}" ${item.email ? 'data-email' : ''} role="menuitem" onclick="bulkRunFromDocMenu(event,'${key}','${item.action}')"><i class="${item.icon}"></i>${item.label}</button>`
+  ).join('');
+  return `<span class="bulk-doc-menu-wrap" data-bulk-doc-wrap><button class="btn btn-sm bulk-doc-menu-trigger" type="button" data-bulk-doc-trigger onclick="bulkToggleDocMenu(event,this)"><i class="ti ti-folder-cog"></i>문서 처리<i class="ti ti-chevron-down bulk-doc-menu-caret"></i></button><span class="bulk-doc-menu" data-bulk-doc-menu role="menu">${items}</span></span>`;
+}
 function bulkActionButtons(key) {
+  registerBulkDocMenuListeners();
   const c = BULK_CFG[key];
   if (!c) return '';
   const canEdit = typeof roleFeatureAllowed !== 'function' || roleFeatureAllowed('edit');
@@ -15599,10 +15713,7 @@ function bulkActionButtons(key) {
   if(c.edit && canEdit) btns+=`<button class="btn btn-sm" data-edit onclick="bulkRun('${key}','edit')"><i class="ti ti-edit"></i>수정</button>`;
   if(c.clone && canCreate) btns+=`<button class="btn btn-sm" data-clone onclick="bulkRun('${key}','clone')"><i class="ti ti-copy"></i>복제</button>`;
   if(c.toPo && canCreate) btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','toPo')"><i class="ti ti-file-invoice"></i>발주서 생성</button>`;
-  if(c.pdf && canPdf)   btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','pdf')"><i class="ti ti-printer"></i>PDF 출력</button>`;
-  if(c.csv && canCsv)   btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','csv')"><i class="ti ti-file-spreadsheet"></i>엑셀</button>`;
-  if(c.drive && canPdf && canCsv) btns+=`<button class="btn btn-sm drive-save-btn" data-act onclick="bulkRun('${key}','drive')"><i class="ti ti-cloud-upload"></i>Google Drive 저장</button>`;
-  if(c.email) btns+=`<button class="btn btn-sm" data-email data-act onclick="bulkRun('${key}','email')"><i class="ti ti-mail"></i>이메일</button>`;
+  btns += bulkDocumentMenuHtml(key, c, canPdf, canCsv);
   if(canDelete) btns+=`<button class="btn btn-sm btn-danger" data-act onclick="bulkRun('${key}','delete')"><i class="ti ti-trash"></i>삭제</button>`;
   return btns;
 }
@@ -15699,10 +15810,16 @@ function updateBulkBar(key){
   }
   if(bar) bar.style.display = (!slotted && n>0) ? 'flex' : 'none';   // 선택 시에만 표시
   [bar, document.getElementById('date-view-'+viewKey)].filter(Boolean).forEach(scope => {
-    const edit=scope.querySelector('[data-edit]'); if(edit) edit.style.display = n===1 ? '' : 'none';
-    const clone=scope.querySelector('[data-clone]'); if(clone) clone.style.display = n===1 ? '' : 'none';
-    const email=scope.querySelector('[data-email]'); if(email) email.style.display = n===1 ? '' : 'none';
+    scope.querySelectorAll('[data-edit]').forEach(el => { el.style.display = n===1 ? '' : 'none'; });
+    scope.querySelectorAll('[data-clone]').forEach(el => { el.style.display = n===1 ? '' : 'none'; });
+    scope.querySelectorAll('[data-email]').forEach(el => { el.style.display = n===1 ? '' : 'none'; });
+    scope.querySelectorAll('[data-bulk-doc-menu]').forEach(menu => {
+      const visibleActions = [...menu.querySelectorAll('[data-doc-action]')].some(btn => btn.style.display !== 'none');
+      const wrap = menu.closest('[data-bulk-doc-wrap]');
+      if (wrap) wrap.style.display = visibleActions ? '' : 'none';
+    });
   });
+  if (!n) bulkCloseDocMenus();
 }
 function bulkSyncSelectionVisual(key) {
   const c = BULK_CFG[key];
@@ -15738,6 +15855,7 @@ function bulkToggleAll(key,on){
 }
 function bulkRun(key, action){
   const c=BULK_CFG[key]; let ids=[...(bulkSel[key]||[])]; if(!ids.length) return;
+  bulkCloseDocMenus();
   if(action==='edit' && c.edit){
     ids = bulkIdsForAction(key, ids, 'edit');
     if(!ids.length) return;
@@ -17118,18 +17236,35 @@ function poToggleAll(checked){
   poUpdateBulkBar();
 }
 function poSelectionBarHtml(count){
+  if (typeof registerBulkDocMenuListeners === 'function') registerBulkDocMenuListeners();
   const auditBtn = (typeof managedAuditButtonHtml === 'function') ? managedAuditButtonHtml('po', poCheckedIds()) : '';
   return `<span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${count}건 선택됨</span>
     ${auditBtn}
     <button class="btn btn-sm" data-edit onclick="poBulkEdit()"><i class="ti ti-edit"></i>수정</button>
     <button class="btn btn-sm" data-clone onclick="poBulkClone()"><i class="ti ti-copy"></i>복제</button>
-    <button class="btn btn-sm" onclick="poBulkPrint()"><i class="ti ti-printer"></i>PDF 출력</button>
-    <button class="btn btn-sm" onclick="poBulkExport()"><i class="ti ti-file-spreadsheet"></i>엑셀</button>
-    <button class="btn btn-sm drive-save-btn" onclick="poBulkDrive()"><i class="ti ti-cloud-upload"></i>Drive 저장</button>
-    <button class="btn btn-sm" onclick="poBulkEmail()"><i class="ti ti-mail"></i>이메일</button>
+    <span class="bulk-doc-menu-wrap" data-bulk-doc-wrap>
+      <button class="btn btn-sm bulk-doc-menu-trigger" type="button" data-bulk-doc-trigger onclick="bulkToggleDocMenu(event,this)"><i class="ti ti-folder-cog"></i>문서 처리<i class="ti ti-chevron-down bulk-doc-menu-caret"></i></button>
+      <span class="bulk-doc-menu" data-bulk-doc-menu role="menu">
+        <button class="btn btn-sm" type="button" data-doc-action="pdf" role="menuitem" onclick="poRunDocMenu(event,'print')"><i class="ti ti-printer"></i>PDF 출력</button>
+        <button class="btn btn-sm" type="button" data-doc-action="excel" role="menuitem" onclick="poRunDocMenu(event,'export')"><i class="ti ti-file-spreadsheet"></i>엑셀</button>
+        <button class="btn btn-sm drive-save-btn" type="button" data-doc-action="drive" role="menuitem" onclick="poRunDocMenu(event,'drive')"><i class="ti ti-cloud-upload"></i>Drive 저장</button>
+        <button class="btn btn-sm" type="button" data-doc-action="email" data-email role="menuitem" onclick="poRunDocMenu(event,'email')"><i class="ti ti-mail"></i>이메일</button>
+      </span>
+    </span>
     <button class="btn btn-sm" data-payreq onclick="poBulkPaymentRequest()"><i class="ti ti-send"></i>결제요청</button>
     <button class="btn btn-sm btn-danger" onclick="poBulkDelete()"><i class="ti ti-trash"></i>삭제</button>
     <button class="btn btn-sm date-view-clear-selection" onclick="poToggleAll(false)"><i class="ti ti-x"></i>해제</button>`;
+}
+function poRunDocMenu(event, action){
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  if (typeof bulkCloseDocMenus === 'function') bulkCloseDocMenus();
+  if (action === 'print') poBulkPrint();
+  else if (action === 'export') poBulkExport();
+  else if (action === 'drive') poBulkDrive();
+  else if (action === 'email') poBulkEmail();
 }
 function ensurePoDateSelectionClearer(){
   if (ensurePoDateSelectionClearer.done || typeof registerDateViewSelectionClearer !== 'function') return;
@@ -17143,9 +17278,10 @@ function poUpdateBulkBar(){
   const slotted = typeof setDateViewSelectionBar === 'function' && setDateViewSelectionBar('po', poSelectionBarHtml(ids.length), ids.length > 0);
   if(bar){ bar.style.display = (!slotted && ids.length) ? 'flex' : 'none'; const cnt=inp('po-sel-count'); if(cnt) cnt.textContent=ids.length; }
   [bar, inp('date-view-po')].filter(Boolean).forEach(scope => {
-    const edit=scope.querySelector('[data-edit],#po-edit-btn'); if(edit) edit.style.display=ids.length===1?'':'none';
-    const clone=scope.querySelector('[data-clone],#po-clone-btn'); if(clone) clone.style.display=ids.length===1?'':'none';
-    const payreq=scope.querySelector('[data-payreq]'); if(payreq) payreq.style.display=ids.length===1?'':'none';
+    scope.querySelectorAll('[data-edit],#po-edit-btn').forEach(el => { el.style.display=ids.length===1?'':'none'; });
+    scope.querySelectorAll('[data-clone],#po-clone-btn').forEach(el => { el.style.display=ids.length===1?'':'none'; });
+    scope.querySelectorAll('[data-email]').forEach(el => { el.style.display=ids.length===1?'':'none'; });
+    scope.querySelectorAll('[data-payreq]').forEach(el => { el.style.display=ids.length===1?'':'none'; });
   });
   const all=inp('po-check-all');
   if(all){ const total=document.querySelectorAll('#po-table .po-check').length;
