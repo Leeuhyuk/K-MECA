@@ -4998,6 +4998,7 @@ function reloadAllData() {
   if (!financeData.paymentRequests) financeData.paymentRequests = [];
   if (!financeData.fixedCosts) financeData.fixedCosts = [];
   if (!financeData.fixedCostPayments) financeData.fixedCostPayments = [];
+  if (!financeData.hometaxInvoices) financeData.hometaxInvoices = [];
   attendance   = loadStorage('attendance',   []);
   leaves       = loadStorage('leaves',       []);
   payrollRecords = loadStorage('payrollRecords', []);
@@ -5289,6 +5290,7 @@ if (!financeData.payrollSettings) financeData.payrollSettings = {};
 if (!financeData.paymentRequests) financeData.paymentRequests = [];
 if (!financeData.fixedCosts) financeData.fixedCosts = [];
 if (!financeData.fixedCostPayments) financeData.fixedCostPayments = [];
+if (!financeData.hometaxInvoices) financeData.hometaxInvoices = [];
 let attendance = loadStorage('attendance', []);
 let leaves = loadStorage('leaves', []);
 let payrollRecords = loadStorage('payrollRecords', []);
@@ -7865,10 +7867,13 @@ function deleteDelivery(id) {
   if (!checkAdminAction()) return;
   const target = deliveries.find(x=>x.id===id);
   if (!target || (typeof requireRecordPermission === 'function' && !requireRecordPermission('delete', target, 'delivery'))) return;
+  if (typeof guardFinanceMonth === 'function' && !guardFinanceMonth(target.deliveredAt || today())) return;
   confirm_('납품 기록 삭제', '이 납품 기록을 삭제하시겠습니까?<br><span style="font-size:11px;color:var(--tx-t);">제품 공정 정보는 유지됩니다.</span>', () => {
     deliveries = deliveries.filter(x=>x.id!==id);
+    if (financeData && financeData.paidReceivable) delete financeData.paidReceivable[id];
     if (target) writeAuditLog('delivery', id, 'delete', target, null, { summary:'납품 기록 삭제' });
     saveStorage('deliveries', deliveries);
+    if (financeData) saveStorage('financeData', financeData);
     updateDlvBadge();
     if (currentPage === 'deliveries') renderDeliveries();
     else renderDashboard();
@@ -9622,6 +9627,7 @@ function saveProd(clientId) {
   const name = v('pra-name').trim();
   if (!name) { showToast('제품 품목명은 필수입니다.', 'error'); return; }
   const stage = v('pra-stage');
+  if (stage === '납품' && typeof guardFinanceMonth === 'function' && !guardFinanceMonth(today())) return;
   const costFields = readProductCostFields();
   const product = stampRecordCreate({
     id: nextCode('PR', products), clientId, name,
@@ -9631,6 +9637,7 @@ function saveProd(clientId) {
     processStage: stage, status: stageToStatus(stage), processMemo: '', note: v('pra-note')
   }, 'products', { visibility:'company' });
   products.push(product);
+  if (product.processStage === '납품' && typeof onStageDelivered === 'function' && !onStageDelivered(product)) return;
   writeAuditLog('products', product.id, 'create', null, product, { summary:'제품 등록' });
   saveStorage('products', products);
   closeModal('prod-modal');
@@ -9645,12 +9652,18 @@ function saveProdEdit(clientId, productId) {
   if (!name) { showToast('제품 명칭은 비울 수 없습니다.', 'error'); return; }
   const before = _safeJsonClone(p);
   const stage = v('pra-stage');
+  if ((before.processStage === '납품' || stage === '납품') && typeof guardFinanceMonth === 'function') {
+    const linkedDelivery = typeof deliveryRecordForProduct === 'function' ? deliveryRecordForProduct(productId) : null;
+    if (!guardFinanceMonth(linkedDelivery?.deliveredAt || today())) return;
+  }
   const costFields = readProductCostFields(p);
   p.name = name; p.spec = v('pra-spec');
   p.qty = parseInt(v('pra-qty'))||1; p.unit = v('pra-unit')||'대';
   p.price = parseInt(v('pra-price'))||0; p.deliveryDate = v('pra-due');
   p.matCost = costFields.matCost; p.laborCost = costFields.laborCost; p.ovhCost = costFields.ovhCost;
   p.processStage = stage; p.status = stageToStatus(stage); p.note = v('pra-note');
+  if (p.processStage === '완료' && before.processStage !== '완료' && typeof onStageComplete === 'function') onStageComplete(p);
+  if (p.processStage === '납품' && typeof onStageDelivered === 'function' && !onStageDelivered(p)) return;
   stampRecordUpdate(p, before, 'products', { visibility:'company' });
   writeAuditLog('products', productId, 'update', before, p, { summary:'제품 정보 수정' });
   saveStorage('products', products);
@@ -9661,21 +9674,36 @@ function saveProdEdit(clientId, productId) {
 function changeProdStage(productId, stage) {
   const p = products.find(x => x.id === productId); if (!p) return;
   if (!roleFeatureAllowed('status') || !requireRecordPermission('edit', p, 'products')) return;
+  if (stage === '납품' && p.processStage !== '납품' && typeof guardFinanceMonth === 'function') {
+    const linkedDelivery = typeof deliveryRecordForProduct === 'function' ? deliveryRecordForProduct(productId) : null;
+    if (!guardFinanceMonth(linkedDelivery?.deliveredAt || today())) return;
+  }
   const before = _safeJsonClone(p);
   p.processStage = stage; p.status = stageToStatus(stage);
+  if (p.processStage === '완료' && before.processStage !== '완료' && typeof onStageComplete === 'function') onStageComplete(p);
+  if (p.processStage === '납품' && before.processStage !== '납품' && typeof onStageDelivered === 'function' && !onStageDelivered(p)) return;
   stampRecordUpdate(p, before, 'products', { visibility:'company' });
   writeAuditLog('products', productId, 'statusChange', before, p, { summary:`제품 공정 단계 변경: ${before.processStage || ''} → ${stage}` });
   saveStorage('products', products);
   renderClients();
-  if (typeof syncWorkOrdersOnProductComplete === 'function') syncWorkOrdersOnProductComplete(p);
 }
 function deleteProduct(id) {
   if (!checkAdminAction()) return;
   const p = products.find(x => x.id === id); if (!p) return;
   if (!requireRecordPermission('delete', p, 'products')) return;
+  const linkedDelivery = typeof deliveryRecordForProduct === 'function' ? deliveryRecordForProduct(id) : null;
+  if (linkedDelivery && typeof guardFinanceMonth === 'function' && !guardFinanceMonth(linkedDelivery.deliveredAt || today())) return;
   if (!confirm("'" + p.name + "' 제품을 삭제하시겠습니까?")) return;
   pushToTrash('product', p);
   products = products.filter(x => x.id !== id);
+  if (linkedDelivery) {
+    deliveries = deliveries.filter(d => d.id !== linkedDelivery.id);
+    if (financeData && financeData.paidReceivable) delete financeData.paidReceivable[linkedDelivery.id];
+    writeAuditLog('delivery', linkedDelivery.id, 'delete', linkedDelivery, null, { summary:'제품 삭제에 따른 납품 기록 삭제' });
+    saveStorage('deliveries', deliveries);
+    if (financeData) saveStorage('financeData', financeData);
+    if (typeof updateDlvBadge === 'function') updateDlvBadge();
+  }
   writeAuditLog('products', id, 'delete', p, null, { summary:'제품 삭제' });
   saveStorage('products', products);
   renderClients(); syncFilterDropdowns();
@@ -10843,7 +10871,8 @@ function saveOrderForm() {
 
 /* 생산지시 완료 시 연결 제품 상태 자동 동기화 헬퍼 */
 function syncWorkOrdersOnProductComplete(productId) {
-  workOrders.filter(o => o.productId === productId && o.status !== '완료').forEach(o => {
+  const id = typeof productId === 'object' && productId ? productId.id : productId;
+  workOrders.filter(o => o.productId === id && o.status !== '완료').forEach(o => {
     o.status = '완료';
     if (o.done < o.qty) o.done = o.qty;
   });
@@ -10979,6 +11008,57 @@ function processVisibleMaterials() {
 }
 function processVisibleOrders() {
   return (workOrders || []).filter(o => typeof canViewRecord !== 'function' || canViewRecord(o, 'workOrder'));
+}
+
+function deliveryRecordForProduct(productId) {
+  return (deliveries || []).find(d => d.productId === productId || d.sourceProductId === productId) || null;
+}
+
+function productDeliveryPayload(product, existing) {
+  return {
+    id: existing?.id || nextCode('DLV', deliveries || []),
+    productId: product.id,
+    sourceProductId: product.id,
+    sourceType: 'product',
+    clientId: product.clientId,
+    productName: product.name || '',
+    spec: product.spec || '',
+    qty: Number(product.qty) || 1,
+    unit: product.unit || 'EA',
+    price: Number(product.price) || 0,
+    deliveredAt: existing?.deliveredAt || today(),
+    note: product.note || product.processMemo || '',
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function onStageComplete(product) {
+  if (!product) return true;
+  if (typeof syncWorkOrdersOnProductComplete === 'function') {
+    syncWorkOrdersOnProductComplete(product.id || product);
+  }
+  return true;
+}
+
+function onStageDelivered(product) {
+  if (!product) return false;
+  const existing = deliveryRecordForProduct(product.id);
+  const next = productDeliveryPayload(product, existing);
+  if (typeof guardFinanceMonth === 'function' && !guardFinanceMonth(next.deliveredAt)) return false;
+  onStageComplete(product);
+  if (existing) {
+    const before = _safeJsonClone(existing);
+    Object.assign(existing, next);
+    stampRecordUpdate(existing, before, 'delivery');
+    writeAuditLog('delivery', existing.id, 'update', before, existing, { summary:'납품 기록 자동 갱신', detail:`${product.name || product.id} · ${fmtW((Number(existing.price)||0)*(Number(existing.qty)||0))}` });
+  } else {
+    const created = stampRecordCreate(next, 'delivery', { visibility:'company' });
+    deliveries.unshift(created);
+    writeAuditLog('delivery', created.id, 'create', null, created, { summary:'제품 납품 단계 전환으로 자동 등록', detail:`${product.name || product.id} · ${fmtW((Number(created.price)||0)*(Number(created.qty)||0))}` });
+  }
+  saveStorage('deliveries', deliveries);
+  if (typeof updateDlvBadge === 'function') updateDlvBadge();
+  return true;
 }
 
 function renderProcess() {
@@ -11271,11 +11351,16 @@ function saveKanbanChanges() {
   const p = getProductById(currentSelectedKanbanProductId);
   if (p) {
     const prevStage = p.processStage;
-    p.processStage  = v('km-stage');
+    const nextStage = v('km-stage');
+    if (nextStage === '납품' && prevStage !== '납품' && typeof guardFinanceMonth === 'function') {
+      const deliveryDate = deliveryRecordForProduct(p.id)?.deliveredAt || today();
+      if (!guardFinanceMonth(deliveryDate)) return;
+    }
+    p.processStage  = nextStage;
     p.status        = stageToStatus(p.processStage);
     p.processMemo   = inp('km-memo').value.trim();
     if (p.processStage === '완료' && prevStage !== '완료') onStageComplete(p);
-    if (p.processStage === '납품' && prevStage !== '납품') onStageDelivered(p);
+    if (p.processStage === '납품' && prevStage !== '납품' && !onStageDelivered(p)) return;
     
     saveStorage('products', products);
     renderProcess();
@@ -14615,6 +14700,7 @@ function cloudResyncGlobals(changedKeys){
   if(!financeData.paymentRequests) financeData.paymentRequests=[];
   if(!financeData.fixedCosts) financeData.fixedCosts=[];
   if(!financeData.fixedCostPayments) financeData.fixedCostPayments=[];
+  if(!financeData.hometaxInvoices) financeData.hometaxInvoices=[];
   }
   if(shouldLoad('asList')) asList=L('asList',asList);
   if(shouldLoad('bomList')) bomList=L('bomList',bomList);
@@ -17328,9 +17414,16 @@ function poBulkDelete(){
   const rows=typeof visiblePurchaseOrderList==='function'?visiblePurchaseOrderList():poList;
   const targets = rows.filter(p=>ids.includes(p.id));
   if (targets.some(p => !canDeleteRecord(p, 'po'))) { showToast('삭제 권한이 없는 구매발주서가 포함되어 있습니다.', 'error'); return; }
+  const locked = targets.find(p => typeof guardFinanceMonth === 'function' && !guardFinanceMonth(p.date || today()));
+  if (locked) return;
   if(!confirm(ids.length+'건의 구매발주서를 삭제하시겠습니까?')) return;
   targets.forEach(p => writeAuditLog('po', p.id, 'delete', p, null, { summary:'구매발주서 일괄 삭제', source:'bulkAction' }));
   poList=poList.filter(p=>!ids.includes(p.id));
+  if (financeData) {
+    if (financeData.paidPayable) ids.forEach(id => delete financeData.paidPayable[id]);
+    if (Array.isArray(financeData.paymentRequests)) financeData.paymentRequests = financeData.paymentRequests.filter(req => !ids.includes(req.poId));
+    saveStorage('financeData', financeData);
+  }
   saveStorage('poList', poList); renderPo();
   showToast(ids.length+'건이 삭제되었습니다.');
 }
@@ -17392,14 +17485,18 @@ function savePoForm() {
     if (idx !== -1) {
       const before = _safeJsonClone(poList[idx]);
       if (!requireRecordPermission('edit', before, 'po')) return;
-      const next = stampRecordUpdate({ ...poList[idx], ...buildPoObj(editId) }, before, 'po');
+      const draft = buildPoObj(editId);
+      if (typeof guardFinanceMonth === 'function' && (!guardFinanceMonth(before.date || today()) || !guardFinanceMonth(draft.date || today()))) return;
+      const next = stampRecordUpdate({ ...poList[idx], ...draft }, before, 'po');
       poList[idx] = next;
       writeAuditLog('po', editId, 'update', before, next, { summary:'구매발주서 수정' });
     }
     delete modal.dataset.editId;
   } else {
     if (typeof requireCreateAction === 'function' && !requireCreateAction('po', '구매발주서 등록')) return;
-    const next = stampRecordCreate(buildPoObj(v('po-id')), 'po');
+    const draft = buildPoObj(v('po-id'));
+    if (typeof guardFinanceMonth === 'function' && !guardFinanceMonth(draft.date || today())) return;
+    const next = stampRecordCreate(draft, 'po');
     poList.unshift(next);
     writeAuditLog('po', next.id, 'create', null, next, { summary:'구매발주서 등록' });
   }
@@ -17477,6 +17574,7 @@ function changePoStatus(id, val) {
   const p = poList.find(x => x.id === id);
   if (!p) return;
   if (!roleFeatureAllowed('status') || !requireRecordPermission('edit', p, 'po')) return;
+  if (typeof guardFinanceMonth === 'function' && !guardFinanceMonth(p.date || today())) return;
   const before = _safeJsonClone(p);
   p.status = val;
   stampRecordUpdate(p, before, 'po');
@@ -17488,8 +17586,14 @@ function deletePo(id) {
   if (!checkAdminAction()) return;
   const target = poList.find(p => p.id === id);
   if (!target || !requireRecordPermission('delete', target, 'po')) return;
+  if (typeof guardFinanceMonth === 'function' && !guardFinanceMonth(target.date || today())) return;
   if (!confirm('이 구매발주서를 삭제하시겠습니까?')) return;
   poList = poList.filter(p => p.id !== id);
+  if (financeData) {
+    if (financeData.paidPayable) delete financeData.paidPayable[id];
+    if (Array.isArray(financeData.paymentRequests)) financeData.paymentRequests = financeData.paymentRequests.filter(req => req.poId !== id);
+    saveStorage('financeData', financeData);
+  }
   writeAuditLog('po', id, 'delete', target, null, { summary:'구매발주서 삭제' });
   saveStorage('poList', poList); renderPo();
   showToast('구매발주서가 삭제되었습니다.');
@@ -21756,8 +21860,16 @@ function fixedCostExpenseMonth(ym) {
     .filter(row => row.status !== '보류')
     .reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
 }
+function fixedCostPaidMonth(ym) {
+  return fixedCostRows(ym, false)
+    .filter(row => row.status === '지급완료')
+    .reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+}
 function finFixedCostRange(rangeInfo) {
   return finRangeMonths(rangeInfo).reduce((sum, ym) => sum + fixedCostExpenseMonth(ym), 0);
+}
+function finFixedCostPaidRange(rangeInfo) {
+  return finRangeMonths(rangeInfo).reduce((sum, ym) => sum + fixedCostPaidMonth(ym), 0);
 }
 function fixedCostSavePayment(itemId, ym, patch, options={}) {
   if (!options.skipGuard && !checkAdminAction()) return false;
@@ -22237,6 +22349,12 @@ function poPaymentCell(p) {
 function finPoAmount(p) { return typeof _docAmount === 'function' ? _docAmount(p, 'po') : (p.unitPrice||0)*(p.qty||0); }
 function finPoItemSummary(p) { return typeof _docItemSummary === 'function' ? _docItemSummary(p) : (p.itemName || ''); }
 function finPoItemSearchText(p) { return typeof _docItemsSearchText === 'function' ? _docItemsSearchText(p) : (p.itemName || '').toLowerCase(); }
+function finPoCountsAsPurchase(p) {
+  return ['발송완료','확인완료','입고완료'].includes(p?.status || '작성중');
+}
+function financeAccountingPoList() {
+  return financeVisiblePoList().filter(finPoCountsAsPurchase);
+}
 function financeFilteredRows(tab) {
   const s=finState(tab), q=s.query.trim().toLowerCase();
   if(tab==='revenue')return financeVisibleDeliveries().filter(d=>finMatchDate(d.deliveredAt,s)&&finMatchAmount((d.price||0)*(d.qty||0),s)&&(!q||[d.id,getClientName(d.clientId),d.productName,getProductName(d.productId)].join(' ').toLowerCase().includes(q)));
@@ -22261,7 +22379,7 @@ function exportFinanceViewXLS(tab){
       const total=(d.price||0)*(d.qty||0), pay=finPaymentRecord('ar',d.id,total);
       rows.push(['미수금',d.deliveredAt,getClientName(d.clientId),d.productName||getProductName(d.productId),total,pay.amount,pay.remaining,pay.status,pay.date,pay.method,pay.note]);
     });
-    financeVisiblePoList().filter(p=>{
+    financeAccountingPoList().filter(p=>{
       const total=finPoAmount(p), pay=finPaymentRecord('ap',p.id,total);
       return finMatchDate(p.date,s)&&finMatchAmount(total,s)&&(!s.status||pay.status===s.status)&&(!q||[p.id,p.supplier,finPoItemSearchText(p)].join(' ').toLowerCase().includes(q));
     }).forEach(p=>{
@@ -22299,6 +22417,34 @@ function financeAuditRows() {
   const rows = Array.isArray(financeData.auditLog) ? financeData.auditLog : [];
   return rows.filter(log => typeof isFinanceAuditLogEntry === 'function' ? isFinanceAuditLogEntry(log) : true);
 }
+function financeHometaxRows(rangeInfo) {
+  const rows = Array.isArray(financeData.hometaxInvoices) ? financeData.hometaxInvoices : [];
+  return rows.filter(row => !rangeInfo || finDateInRange(row.writeDate || row.collectedAt, rangeInfo));
+}
+function financeHometaxSummaryHtml(rangeInfo) {
+  const rows = financeHometaxRows(rangeInfo);
+  if (!rows.length) return '';
+  const sales = rows.filter(row => row.type === '매출').reduce((sum,row)=>sum+(Number(row.amount)||0),0);
+  const buys = rows.filter(row => row.type === '매입').reduce((sum,row)=>sum+(Number(row.amount)||0),0);
+  const recent = rows.slice(0,5).map(row => `<tr>
+    <td>${esc(row.writeDate || '—')}</td>
+    <td>${esc(row.type || '—')}</td>
+    <td>${esc(row.type === '매입' ? row.supplier : row.buyer) || '—'}</td>
+    <td style="text-align:right;font-weight:700;">${fmtW(row.amount || 0)}</td>
+  </tr>`).join('');
+  return `<div class="card" style="margin-top:16px;">
+    <div class="card-hd">
+      <span class="card-ttl"><i class="ti ti-file-search"></i>홈택스 세금계산서 수집 자료</span>
+      <span style="font-size:11px;color:var(--tx-t);">재무 장부 자동 반영 전 대사 참고</span>
+    </div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:12px;margin-bottom:10px;">
+      <span>수집 ${rows.length}건</span>
+      <span>매출 자료 <b style="color:var(--tx-i);">${fmtW(sales)}</b></span>
+      <span>매입 자료 <b style="color:#e8590c;">${fmtW(buys)}</b></span>
+    </div>
+    <div style="overflow-x:auto;"><table><thead><tr><th>작성일</th><th>구분</th><th>거래처</th><th style="text-align:right;">금액</th></tr></thead><tbody>${recent}</tbody></table></div>
+  </div>`;
+}
 function isFinanceMonthClosed(ym) { return financeData.closedMonths.includes(ym); }
 function toggleFinanceMonthClose(ym) {
   if (!checkAdminAction()) return;
@@ -22318,11 +22464,14 @@ function guardFinanceMonth(date) {
 
 /* ── 집계 헬퍼 ── */
 function finRevenueTotal()  { return financeVisibleDeliveries().reduce((s,d)=>s+(d.price||0)*(d.qty||0),0); }
-function finPurchaseTotal() { return financeVisiblePoList().reduce((s,p)=>s+finPoAmount(p),0); }
+function finPurchaseTotal() { return financeAccountingPoList().reduce((s,p)=>s+finPoAmount(p),0); }
 function finPayrollMonthly(ym=today().slice(0,7)){
-  // 입사일 이후의 달만 인건비에 반영(입사 전 달을 현재 급여로 과대 계상하지 않도록).
-  // 단, 해당 달에 저장된 급여기록이 있으면 입사일과 무관하게 그대로 반영.
-  return financeVisibleWorkers().reduce((s,w)=>{
+  const savedRows = (payrollRecords || []).filter(record => record.month === ym);
+  const savedByWorker = new Map(savedRows.map(record => [record.workerId, record]));
+  const savedTotal = savedRows.reduce((sum, record) => sum + (Number(record.gross) || 0), 0);
+  if (ym !== today().slice(0,7)) return savedTotal;
+  // 현재 월은 아직 확정 전일 수 있으므로 저장된 급여는 고정하고, 미저장 직원만 추정치로 보탭니다.
+  return savedTotal + financeVisibleWorkers().filter(w => !savedByWorker.has(w.id)).reduce((s,w)=>{
     const hired = !w.hireDate || String(w.hireDate).slice(0,7) <= ym;
     if (!hired && !payrollRecord(w.id, ym)) return s;
     return s + calcPayroll(w,ym).gross;
@@ -22340,7 +22489,7 @@ function finMonthList(n) {
   return arr;
 }
 function finRevenueMonth(ym)  { return financeVisibleDeliveries().filter(d=>(d.deliveredAt||'').slice(0,7)===ym).reduce((s,d)=>s+(d.price||0)*(d.qty||0),0); }
-function finPurchaseMonth(ym) { return financeVisiblePoList().filter(p=>(p.date||'').slice(0,7)===ym).reduce((s,p)=>s+finPoAmount(p),0); }
+function finPurchaseMonth(ym) { return financeAccountingPoList().filter(p=>(p.date||'').slice(0,7)===ym).reduce((s,p)=>s+finPoAmount(p),0); }
 function finEntryMonth(ym,type){ return financeVisibleEntries().filter(e=>e.type===type && (e.date||'').slice(0,7)===ym).reduce((s,e)=>s+(Number(e.amount)||0),0); }
 function finRangeInfo(range = finDashboardRange) {
   const now = new Date(today());
@@ -22372,14 +22521,14 @@ function finRangeMonths(rangeInfo) {
   if (rangeInfo.from || rangeInfo.to) return finMonthsBetween(rangeInfo.from, rangeInfo.to);
   const set = new Set();
   financeVisibleDeliveries().forEach(d => { if (d.deliveredAt) set.add(String(d.deliveredAt).slice(0,7)); });
-  financeVisiblePoList().forEach(p => { if (p.date) set.add(String(p.date).slice(0,7)); });
+  financeAccountingPoList().forEach(p => { if (p.date) set.add(String(p.date).slice(0,7)); });
   financeVisibleEntries().forEach(e => { if (e.date) set.add(String(e.date).slice(0,7)); });
   payrollRecords.forEach(p => { if (p.month) set.add(p.month); });
   if (!set.size) set.add(today().slice(0,7));
   return [...set].sort();
 }
 function finRevenueRange(rangeInfo) { return financeVisibleDeliveries().filter(d=>finDateInRange(d.deliveredAt, rangeInfo)).reduce((s,d)=>s+(d.price||0)*(d.qty||0),0); }
-function finPurchaseRange(rangeInfo) { return financeVisiblePoList().filter(p=>finDateInRange(p.date, rangeInfo)).reduce((s,p)=>s+finPoAmount(p),0); }
+function finPurchaseRange(rangeInfo) { return financeAccountingPoList().filter(p=>finDateInRange(p.date, rangeInfo)).reduce((s,p)=>s+finPoAmount(p),0); }
 function finEntryRange(rangeInfo,type) { return financeVisibleEntries().filter(e=>e.type===type && finDateInRange(e.date, rangeInfo)).reduce((s,e)=>s+(Number(e.amount)||0),0); }
 function finPayrollRange(rangeInfo) { return finRangeMonths(rangeInfo).reduce((sum, ym)=>sum+finPayrollMonthly(ym),0); }
 
@@ -22446,6 +22595,7 @@ function _finDashboard() {
   const payroll = finPayrollRange(rangeInfo);
   const inc = finEntryRange(rangeInfo,'수입'), exp = finEntryRange(rangeInfo,'비용');
   const fixedExp = finFixedCostRange(rangeInfo);
+  const fixedPaid = finFixedCostPaidRange(rangeInfo);
   const net = rev - pur - payroll - fixedExp - exp + inc;
   const months = finMonthList(6);
   const maxV = Math.max(1, ...months.map(m => Math.max(finRevenueMonth(m.ym), finPurchaseMonth(m.ym))));
@@ -22480,10 +22630,10 @@ function _finDashboard() {
     </div>
     <div class="metrics">
       <div class="mc"><div class="mc-lbl"><i class="ti ti-trending-up"></i>${rangeInfo.label} 매출 (납품 기준)</div><div class="mc-val" style="color:var(--tx-i);">${fmtW(rev)}</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-trending-down"></i>${rangeInfo.label} 매입/지출</div><div class="mc-val" style="color:#e8590c;">${fmtW(pur)}</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-trending-down"></i>${rangeInfo.label} 매입/지출</div><div class="mc-val" style="color:#e8590c;">${fmtW(pur)}</div><div class="mc-sub">작성중 발주 제외</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-report-money"></i>매출총이익</div><div class="mc-val" style="color:${gross>=0?'var(--tx-ok)':'var(--tx-err)'};">${fmtW(gross)}</div><div class="mc-sub">이익률 ${grossRate}%</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-cash"></i>${rangeInfo.label} 인건비</div><div class="mc-val">${fmtW(payroll)}</div><div class="mc-sub">${finRangeMonths(rangeInfo).length}개월 반영</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-repeat"></i>${rangeInfo.label} 고정비</div><div class="mc-val" style="color:#e8590c;">${fmtW(fixedExp)}</div><div class="mc-sub">급여 제외 반복 지출</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-repeat"></i>${rangeInfo.label} 고정비</div><div class="mc-val" style="color:#e8590c;">${fmtW(fixedExp)}</div><div class="mc-sub">발생 기준 · 지급완료 ${fmtW(fixedPaid)}</div></div>
     </div>
 
     <div class="card" style="margin-bottom:16px;">
@@ -22492,7 +22642,7 @@ function _finDashboard() {
         <div>매출 <b style="color:var(--tx-i);">${fmtW(rev)}</b></div>
         <div>− 매입/지출 <b style="color:#e8590c;">${fmtW(pur)}</b></div>
         <div>− 인건비 <b>${fmtW(payroll)}</b></div>
-        <div>− 고정비 <b>${fmtW(fixedExp)}</b></div>
+        <div>− 고정비(발생) <b>${fmtW(fixedExp)}</b></div>
         <div>− 기타비용 <b>${fmtW(exp)}</b></div>
         <div>+ 기타수입 <b>${fmtW(inc)}</b></div>
         <div style="border-left:2px solid var(--br);padding-left:24px;">순이익 <b style="color:${net>=0?'var(--tx-ok)':'var(--tx-err)'};font-size:15px;">${fmtW(net)}</b></div>
@@ -22509,6 +22659,7 @@ function _finDashboard() {
       </div>
       <div style="display:flex;gap:8px;align-items:flex-end;padding:10px 4px 0;">${bars}</div>
     </div>
+    ${financeHometaxSummaryHtml(rangeInfo)}
     <div class="card" style="margin-top:16px;">
       <div class="card-hd"><span class="card-ttl"><i class="ti ti-history"></i>최근 재무 변경 이력</span><span style="font-size:10px;color:var(--tx-t);">최대 300건 보관</span></div>
       ${financeLogs.length?`<div style="overflow-x:auto;"><table><thead><tr><th>일시</th><th>작업</th><th>상세</th></tr></thead><tbody>${financeLogs.slice(0,10).map(log=>`<tr><td>${new Date(log.at).toLocaleString('ko-KR')}</td><td style="font-weight:700;">${esc(log.summary || log.action)}</td><td>${esc(log.detail || log.entityId || '')}</td></tr>`).join('')}</tbody></table></div>`:empty('아직 재무 변경 이력이 없습니다.')}
@@ -22549,7 +22700,8 @@ function _finPurchase() {
   let list=financeVisiblePoList().filter(p=>finMatchDate(p.date,state) && finMatchAmount(finPoAmount(p),state) && (!state.status || (p.status||'작성중')===state.status) &&
     (!query || [p.id,p.supplier,finPoItemSearchText(p)].join(' ').toLowerCase().includes(query)));
   list=finSort(list,state,p=>p.date,p=>finPoAmount(p));
-  const total=list.reduce((sum,p)=>sum+finPoAmount(p),0), page=finPaged(list,state);
+  const total=list.reduce((sum,p)=>sum+finPoAmount(p),0);
+  const accountingTotal=list.filter(finPoCountsAsPurchase).reduce((sum,p)=>sum+finPoAmount(p),0), page=finPaged(list,state);
   const body = page.rows.length ? page.rows.map(p => `
     <tr>
       <td>${esc(p.date)||'—'}</td>
@@ -22564,7 +22716,8 @@ function _finPurchase() {
     ${finFilterBar('purchase',{placeholder:'공급처·품목·발주번호 검색',statuses:['작성중','발송완료','확인완료','입고완료']})}
     <div class="card">
       <div class="card-hd"><span class="card-ttl"><i class="ti ti-trending-down"></i>매입/지출 내역 (구매발주 기준)</span>
-        <span style="font-size:13px;">총 매입 <b style="color:#e8590c;">${fmtW(total)}</b></span></div>
+        <span style="font-size:13px;">조회 합계 <b style="color:#e8590c;">${fmtW(total)}</b> · 회계 반영 <b style="color:#e8590c;">${fmtW(accountingTotal)}</b></span></div>
+      <div class="al al-info" style="margin-bottom:10px;"><i class="ti ti-info-circle"></i><div><div class="al-t">재무 반영 기준</div><div class="al-s">작성중 발주서는 손익·미지급 집계에서 제외하고, 발송완료·확인완료·입고완료 상태만 매입으로 반영합니다.</div></div></div>
       <div style="overflow-x:auto;"><table>
         <thead><tr><th>발주일</th><th>공급처</th><th>품목</th><th>수량</th><th>단가</th><th>매입액</th><th>상태</th></tr></thead>
         <tbody>${body}</tbody>
@@ -22576,6 +22729,7 @@ function financePaymentSource(kind, id) {
   if (kind === 'ap') {
     const p = financeVisiblePoList().find(x => x.id === id);
     if (!p) return null;
+    if (!finPoCountsAsPurchase(p)) return null;
     return { date:p.date, partner:p.supplier, item:finPoItemSummary(p), total:finPoAmount(p), title:'미지급금', po:p };
   }
   const d = financeVisibleDeliveries().find(x => x.id === id);
@@ -22753,7 +22907,7 @@ function _finAR() {
     const total=(d.price||0)*(d.qty||0), pay=finPaymentRecord('ar',d.id,total);
     rows.push({kind:'ar', id:d.id, date:d.deliveredAt, partner:getClientName(d.clientId), item:d.productName||getProductName(d.productId), total, pay});
   });
-  financeVisiblePoList().forEach(p => {
+  financeAccountingPoList().forEach(p => {
     const total=finPoAmount(p), pay=finPaymentRecord('ap',p.id,total);
     rows.push({kind:'ap', id:p.id, date:p.date, partner:p.supplier, item:finPoItemSummary(p), total, pay});
   });
@@ -22799,6 +22953,7 @@ function openPaymentRequestFromPo(poId) {
   const p = financeVisiblePoList().find(x => x.id === poId);
   if (!p) { showToast('구매발주서를 찾을 수 없습니다.', 'error'); return; }
   if (!canViewRecord(p, 'po')) { showToast('이 발주서에 접근할 권한이 없습니다.', 'error'); return; }
+  if (!finPoCountsAsPurchase(p)) { showToast('작성중 발주서는 결제 요청 전에 발송완료 이상으로 변경하세요.', 'info'); return; }
   const total = finPoAmount(p);
   const pay = finPaymentRecord('ap', p.id, total);
   if (pay.done) { showToast('이미 지급 완료된 발주서입니다.', 'info'); return; }
@@ -23167,11 +23322,11 @@ function _finPnl() {
     <div class="metrics">
       <div class="mc"><div class="mc-lbl"><i class="ti ti-trending-up"></i>매출 합계</div><div class="mc-val" style="color:var(--tx-i);">${fmtW(totals.revenue)}</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-trending-down"></i>매입/비용 합계</div><div class="mc-val" style="color:#e8590c;">${fmtW(totals.purchase + totals.fixedCost + totals.expense)}</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-repeat"></i>고정비 합계</div><div class="mc-val" style="color:#e8590c;">${fmtW(totals.fixedCost)}</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-repeat"></i>고정비 합계</div><div class="mc-val" style="color:#e8590c;">${fmtW(totals.fixedCost)}</div><div class="mc-sub">발생 기준</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-report-money"></i>순이익</div><div class="mc-val" style="color:${totals.net>=0?'var(--tx-ok)':'var(--tx-err)'};">${fmtW(totals.net)}</div></div>
     </div>
     <div class="card"><div class="card-hd"><span class="card-ttl"><i class="ti ti-report-money"></i>월별 손익</span></div>
-      <div style="overflow-x:auto;"><table><thead><tr><th>월</th><th style="text-align:right;">매출</th><th style="text-align:right;">매입</th><th style="text-align:right;">인건비</th><th style="text-align:right;">고정비</th><th style="text-align:right;">기타수입</th><th style="text-align:right;">기타비용</th><th style="text-align:right;">순이익</th></tr></thead><tbody>${body}</tbody></table></div></div>`;
+      <div style="overflow-x:auto;"><table><thead><tr><th>월</th><th style="text-align:right;">매출</th><th style="text-align:right;">매입</th><th style="text-align:right;">인건비</th><th style="text-align:right;">고정비(발생)</th><th style="text-align:right;">기타수입</th><th style="text-align:right;">기타비용</th><th style="text-align:right;">순이익</th></tr></thead><tbody>${body}</tbody></table></div></div>`;
 }
 function openFinanceAdd() {
   if (!checkAdminAction()) return;
@@ -26623,8 +26778,64 @@ async function pbHtSearch() {
   _pbLoading('pb-ht-result');
   try {
     const res = await _pbCallable('popbillHometaxSearch')({ jobID: pbHtJobID, page: 1, perPage: 50 });
+    const list = res.data && Array.isArray(res.data.list) ? res.data.list : [];
+    if (list.length) pbSaveHometaxFinanceSnapshot(v('pb-ht-type'), list);
     _pbResultBox('pb-ht-result', _pbRenderHtList(res.data));
   } catch (e) { _pbError('pb-ht-result', _pbErrMsg(e)); }
+}
+
+function pbDateText(value) {
+  const raw = String(value || '').replace(/[^0-9]/g, '');
+  if (raw.length === 8) return `${raw.slice(0,4)}-${raw.slice(4,6)}-${raw.slice(6,8)}`;
+  return String(value || '').slice(0,10);
+}
+
+function pbNumber(value) {
+  return Number(String(value ?? '').replace(/[^0-9.-]/g, '')) || 0;
+}
+
+function pbRowFirst(row, keys) {
+  for (const key of keys) {
+    if (row && row[key] != null && row[key] !== '') return row[key];
+  }
+  return '';
+}
+
+function pbNormalizeHometaxInvoice(queryType, row) {
+  const type = queryType === 'BUY' ? '매입' : (queryType === 'SELL' ? '매출' : '위수탁');
+  const confirmNo = pbRowFirst(row, ['ntsconfirmNum','ntsConfirmNum','confirmNum','invoiceID','mgtKey']);
+  const writeDate = pbDateText(pbRowFirst(row, ['writeDate','issueDate','regDT','sendDate']));
+  const supplier = pbRowFirst(row, ['invoicerCorpName','supplierCorpName','corpName','sellerCorpName']);
+  const buyer = pbRowFirst(row, ['invoiceeCorpName','buyerCorpName','customerCorpName']);
+  const amount = pbNumber(pbRowFirst(row, ['totalAmount','supplyCostTotal','supplyCost','totalAmt','chargeTotal']));
+  return {
+    id: `HT-${queryType || 'ETC'}-${confirmNo || writeDate || Date.now()}-${Math.random().toString(36).slice(2,6)}`,
+    queryType: queryType || '',
+    type,
+    confirmNo: String(confirmNo || ''),
+    writeDate,
+    supplier: String(supplier || ''),
+    buyer: String(buyer || ''),
+    amount,
+    collectedAt: new Date().toISOString(),
+    raw: row
+  };
+}
+
+function pbSaveHometaxFinanceSnapshot(queryType, rows) {
+  if (typeof financeData !== 'object' || !financeData) return;
+  if (!Array.isArray(financeData.hometaxInvoices)) financeData.hometaxInvoices = [];
+  const normalized = rows.map(row => pbNormalizeHometaxInvoice(queryType, row));
+  const keyOf = row => [row.queryType, row.confirmNo, row.writeDate, row.supplier, row.buyer, row.amount].join('|');
+  const existing = new Map(financeData.hometaxInvoices.map(row => [keyOf(row), row]));
+  normalized.forEach(row => existing.set(keyOf(row), Object.assign(existing.get(keyOf(row)) || {}, row)));
+  financeData.hometaxInvoices = Array.from(existing.values())
+    .sort((a,b) => String(b.writeDate || b.collectedAt || '').localeCompare(String(a.writeDate || a.collectedAt || '')))
+    .slice(0, 500);
+  if (typeof writeAuditLog === 'function') {
+    writeAuditLog('finance', 'hometaxInvoices', 'update', null, null, { summary:'홈택스 세금계산서 수집 저장', detail:`${queryType || '전체'} · ${normalized.length}건` });
+  }
+  saveStorage('financeData', financeData);
 }
 
 function _pbRenderHtList(data) {
