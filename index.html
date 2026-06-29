@@ -5027,7 +5027,7 @@ const DATA_KEYS = [
   'checkRecords','alerts','inventory','deliveries','stages','trash','rfqList',
   'poList','partners','financeData','attendance','leaves','payrollRecords','statementList',
   'taxList','quoteList','orderList','inventoryLedger','alimtalkSettings','memoList','todoList','memoAttachmentData','auditLog','emailSendHistory',
-  'asList','bomList','companyInfo','docXlsxTemplates','driveOAuthSettings'
+  'asList','bomList','companyInfo','docXlsxTemplates','driveOAuthSettings','googleDriveConfig'
 ];
 const LOCAL_ONLY_DATA_KEYS = ['alimtalkSettings','memoAttachmentData','auditLog'];
 
@@ -13884,7 +13884,7 @@ const FIREBASE_CONFIG = Object.assign(
 /* 클라우드로 공유할 데이터 키(테마/관리자비번 등 기기·보안 로컬값은 제외) */
 const CLOUD_KEYS = (typeof cloudDataKeysFromBackupKeys === 'function')
   ? cloudDataKeysFromBackupKeys()
-  : ['clients','products','materials','workOrders','workers','defects','claims','checkRecords','alerts','inventory','inventoryLedger','deliveries','stages','trash','rfqList','poList','partners','statementList','taxList','quoteList','orderList','financeData','attendance','leaves','payrollRecords','asList','bomList','memoList','todoList','companyInfo','docXlsxTemplates','driveOAuthSettings'];
+  : ['clients','products','materials','workOrders','workers','defects','claims','checkRecords','alerts','inventory','inventoryLedger','deliveries','stages','trash','rfqList','poList','partners','statementList','taxList','quoteList','orderList','financeData','attendance','leaves','payrollRecords','asList','bomList','memoList','todoList','companyInfo','docXlsxTemplates','driveOAuthSettings','googleDriveConfig'];
 var _fbAuth=null, _fbDb=null, _cloudUser=null;   // 초기 데이터 마이그레이션에서도 안전하게 참조되도록 var 사용
 const _cloudQueue=new Set(); let _cloudTimer=null; let _cloudUnsub=null;
 
@@ -24442,6 +24442,29 @@ let _driveTokenExpiresAt = 0;
 let _driveBackups = [];
 let _driveAutoBackupTimer = null;
 let _driveAutoConnectAttempted = false;
+let _driveConfigCloudSyncQueued = false;
+
+function driveConfigHasMeaningfulValue(config) {
+  if (!config || typeof config !== 'object') return false;
+  return !!(
+    config.clientId ||
+    config.folderId ||
+    config.folderUrl ||
+    config.connectedEmail ||
+    config.lastBackupAt ||
+    config.autoConnectEnabled ||
+    config.autoBackupEnabled
+  );
+}
+
+function queueExistingDriveConfigCloudSync(config) {
+  if (_driveConfigCloudSyncQueued) return;
+  if (!driveConfigHasMeaningfulValue(config)) return;
+  if (typeof cloudQueueSave !== 'function') return;
+  if (typeof _cloudActive === 'undefined' || !_cloudActive) return;
+  _driveConfigCloudSyncQueued = true;
+  cloudQueueSave('googleDriveConfig');
+}
 
 function getDriveConfig() {
   const defaults = {
@@ -24454,17 +24477,21 @@ function getDriveConfig() {
     autoBackupEnabled: false,
     autoBackupHours: 24
   };
+  const hasLocalConfig = localStorage.getItem('mes_googleDriveConfig') != null;
   const localConfig = loadStorage('googleDriveConfig', defaults) || {};
   const sharedOAuth = loadStorage(DRIVE_OAUTH_SETTINGS_KEY, {}) || {};
-  return Object.assign({}, defaults, localConfig, {
+  const merged = Object.assign({}, defaults, localConfig, {
     clientId: localConfig.clientId || sharedOAuth.clientId || ''
   });
+  if (hasLocalConfig) queueExistingDriveConfigCloudSync(merged);
+  return merged;
 }
 
 function saveDriveConfig(config) {
   const nextConfig = config || {};
   try {
-    localStorage.setItem('mes_googleDriveConfig', JSON.stringify(nextConfig));
+    if (typeof saveStorage === 'function') saveStorage('googleDriveConfig', nextConfig);
+    else localStorage.setItem('mes_googleDriveConfig', JSON.stringify(nextConfig));
   } catch(e) {
     if (typeof showToast === 'function') showToast('Google Drive 설정을 저장하지 못했습니다. 브라우저 저장 공간을 확인하세요.', 'error');
     console.error('Google Drive 설정 저장 실패:', e);
