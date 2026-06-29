@@ -782,7 +782,7 @@ body.sb-mini .main { margin-left: 0 !important; }
   min-width: 0;
   margin-top: 2px;
   padding: 0;
-  grid-template-columns: repeat(auto-fit, minmax(var(--mega-menu-button-min), 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   column-gap: var(--mega-menu-grid-gap);
   row-gap: var(--mega-menu-grid-gap);
   border: 0;
@@ -790,7 +790,7 @@ body.sb-mini .main { margin-left: 0 !important; }
   background: transparent;
   box-shadow: none;
 }
-.topnav.mega-menu .topnav-menu-wide { grid-template-columns: repeat(auto-fit, minmax(var(--mega-menu-button-min), 1fr)); }
+.topnav.mega-menu .topnav-menu-wide { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .topnav.mega-menu .topnav-menu button {
   min-width: 0;
   min-height: calc(var(--mega-menu-icon-size) + 22px);
@@ -898,7 +898,7 @@ body.mega-menu-open { overflow: hidden; }
   margin-top: 13px;
   padding: 12px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(var(--mega-menu-button-min), 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--mega-menu-grid-gap);
   border: 1px dashed var(--br-s);
   border-radius: var(--rm);
@@ -2453,7 +2453,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
   }
   .topnav.mega-menu.mega-open { display: grid !important; }
   .topnav.mega-menu .topnav-menu,
-  .topnav.mega-menu .topnav-menu-wide { grid-template-columns: repeat(auto-fit, minmax(var(--mega-menu-button-min), 1fr)); }
+  .topnav.mega-menu .topnav-menu-wide { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media screen and (max-width: 560px) {
   #menu-toggle-btn { width:38px; height:38px; flex-basis:38px; font-size:23px !important; }
@@ -2492,7 +2492,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
   }
   .topnav.mega-menu::before { left: 22px; }
   .topnav.mega-menu .topnav-menu,
-  .topnav.mega-menu .topnav-menu-wide { grid-template-columns: repeat(auto-fit, minmax(var(--mega-menu-button-min), 1fr)); }
+  .topnav.mega-menu .topnav-menu-wide { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .topnav.mega-menu .topnav-menu button { min-height: calc(var(--mega-menu-icon-size) + 20px); font-size: 8.5px; gap:3px; }
   .topnav.mega-menu .topnav-menu button i { width: var(--mega-menu-icon-size); height: var(--mega-menu-icon-size); flex-basis: var(--mega-menu-icon-size); font-size: var(--mega-menu-icon-font-size); border-radius:13px; }
   .mega-menu-head { position: sticky; top: -12px; z-index: 2; padding: 10px 0; background: var(--bg-p); }
@@ -14198,13 +14198,39 @@ function cloudBootstrap(){
 }
 
 function cloudV2MapKeys(){
-  return ['financeData', 'companyInfo', 'docXlsxTemplates'];
+  return ['financeData', 'companyInfo', 'docXlsxTemplates', 'driveOAuthSettings', 'googleDriveConfig'];
 }
 function cloudV2StripMeta(value){
   if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
   const out = Object.assign({}, value);
   delete out._mes;
   return out;
+}
+function cloudMergeProtectedMapValue(key, remoteValue){
+  if (key !== 'googleDriveConfig' && key !== 'driveOAuthSettings') return remoteValue;
+  const remote = remoteValue && typeof remoteValue === 'object' && !Array.isArray(remoteValue) ? Object.assign({}, remoteValue) : {};
+  let local = {};
+  try {
+    const raw = localStorage.getItem('mes_' + key);
+    local = raw ? JSON.parse(raw) : {};
+  } catch(e) {
+    local = {};
+  }
+  if (!local || typeof local !== 'object' || Array.isArray(local)) local = {};
+  const keepText = field => {
+    if (!String(remote[field] || '').trim() && String(local[field] || '').trim()) remote[field] = local[field];
+  };
+  keepText('clientId');
+  if (key === 'googleDriveConfig') {
+    keepText('folderId');
+    keepText('folderUrl');
+    keepText('connectedEmail');
+    keepText('lastBackupAt');
+    if (typeof remote.autoConnectEnabled !== 'boolean' && typeof local.autoConnectEnabled === 'boolean') remote.autoConnectEnabled = local.autoConnectEnabled;
+    if (typeof remote.autoBackupEnabled !== 'boolean' && typeof local.autoBackupEnabled === 'boolean') remote.autoBackupEnabled = local.autoBackupEnabled;
+    if (!Number.isFinite(Number(remote.autoBackupHours)) && Number.isFinite(Number(local.autoBackupHours))) remote.autoBackupHours = local.autoBackupHours;
+  }
+  return remote;
 }
 const _cloudKeyApplied = {};   // key -> 마지막으로 로컬에 반영한 sourceUpdatedAt(ms). 비순차 원격 읽기 거부용
 const _cloudSavingKeys = new Set(); // 저장 중인 키는 이전 원격 스냅샷으로 덮지 않음
@@ -14344,6 +14370,7 @@ async function cloudLoadV2Key(key){
   // (비동기 .get()이 스냅샷 발생 순서와 다르게 완료돼 최신 데이터를 되돌리는 것을 방지)
   const ver = (meta.sourceUpdatedAt && typeof meta.sourceUpdatedAt.toMillis === 'function') ? meta.sourceUpdatedAt.toMillis() : 0;
   if (ver && _cloudKeyApplied[key] && ver < _cloudKeyApplied[key]) return false;
+  if ((key === 'googleDriveConfig' || key === 'driveOAuthSettings') && meta.sourceType === 'array') return false;
   if (meta.sourceType === 'array' || !cloudV2MapKeys().includes(key)) {
     const itemsSnap = await entityRef.collection('items').get();
     const remoteRows = itemsSnap.docs.map(doc => {
@@ -14362,7 +14389,8 @@ async function cloudLoadV2Key(key){
   }
   const stateSnap = await entityRef.collection('state').doc('current').get();
   if (!stateSnap.exists) return false;
-  localStorage.setItem('mes_' + key, JSON.stringify(cloudV2StripMeta(stateSnap.data() || {})));
+  const remoteState = cloudMergeProtectedMapValue(key, cloudV2StripMeta(stateSnap.data() || {}));
+  localStorage.setItem('mes_' + key, JSON.stringify(remoteState));
   if (ver) {
     _cloudKeyApplied[key] = ver;
     if (typeof cloudRememberVersion === 'function') cloudRememberVersion(key, ver);
