@@ -9831,6 +9831,39 @@ registerBulkEntryTable('mat', {
     { name: 'note', type: 'text', placeholder: '비고', width: '160px' }
   ]
 });
+function materialCodeRefs() {
+  const refs = [];
+  const add = value => {
+    const id = String(value || '').trim();
+    if (id) refs.push({ id });
+  };
+  if (typeof materials !== 'undefined' && Array.isArray(materials)) materials.forEach(m => add(m && m.id));
+  if (typeof trash !== 'undefined' && Array.isArray(trash)) {
+    trash.forEach(item => {
+      if (!item || item.type !== 'material') return;
+      add(item.originalId);
+      if (item.data && typeof item.data === 'object') add(item.data.id);
+    });
+  }
+  const auditSources = [];
+  if (typeof auditLog !== 'undefined' && Array.isArray(auditLog)) auditSources.push(auditLog);
+  if (typeof financeData === 'object' && financeData && Array.isArray(financeData.auditLog)) auditSources.push(financeData.auditLog);
+  if (typeof serverAuditLogCache !== 'undefined' && Array.isArray(serverAuditLogCache)) auditSources.push(serverAuditLogCache);
+  auditSources.forEach(source => {
+    source.forEach(log => {
+      const type = String(log && log.entityType || '').trim();
+      if (type === 'material' || type === 'materials') add(log.entityId);
+    });
+  });
+  return refs;
+}
+function nextMaterialCode() {
+  return nextCode('MT', materialCodeRefs());
+}
+function materialCodeExistsAnywhere(id) {
+  const code = String(id || '').trim();
+  return !!code && materialCodeRefs().some(ref => ref.id === code);
+}
 function setMaterialEntryMode(mode) {
   const bulk = mode === 'bulk';
   setBulkEntryMode('mat', bulk);
@@ -9939,7 +9972,7 @@ function openMatAdd() {
   if (typeof requireCreateAction === 'function' && !requireCreateAction('materials', '자재 발주 등록')) return;
   editMatId = null;
   inp('mat-modal-ttl').innerHTML = '<i class="ti ti-package-import" style="color:var(--tx-i);"></i>자재 수급/발주 등록';
-  sv('ma-id', nextCode('MT', materials));
+  sv('ma-id', nextMaterialCode());
   fillClientSelect('ma-client', false);
   sv('ma-client', v('mat-fc') || clients[0]?.id || '');
   onAddMatClientChange();
@@ -9978,7 +10011,7 @@ function cloneMat(id) {
   const m = materials.find(x=>x.id===id); if (!m) return;
   editMatId = null;
   inp('mat-modal-ttl').innerHTML = '<i class="ti ti-copy" style="color:var(--tx-i);"></i>자재 발주 복제 등록';
-  sv('ma-id', nextCode('MT', materials));
+  sv('ma-id', nextMaterialCode());
   const prod = getProductById(m.productId);
   fillClientSelect('ma-client', false);
   sv('ma-client', prod?prod.clientId:'');
@@ -10005,7 +10038,7 @@ function saveMaterialForm() {
     if (invalid) { showToast('자재명과 수량은 각 행에 필요합니다.', 'error'); return; }
     rows.slice().reverse().forEach(r => {
       const item = stampRecordCreate({
-        id: nextCode('MT', materials),
+        id: nextMaterialCode(),
         productId,
         name: r.name.trim(),
         spec: r.spec.trim(),
@@ -10030,8 +10063,14 @@ function saveMaterialForm() {
   }
   const name = v('ma-name').trim();
   if (!name) { showToast('자재명은 필수입니다.', 'error'); return; }
+  const requestedId = String(v('ma-id') || '').trim();
+  if (!editMatId && requestedId && materialCodeExistsAnywhere(requestedId)) {
+    showToast('이미 사용된 자재코드입니다. 삭제/휴지통 이력에 있는 번호도 다시 사용할 수 없습니다.', 'error');
+    sv('ma-id', nextMaterialCode());
+    return;
+  }
   const obj = {
-    id: editMatId || v('ma-id') || nextCode('MT', materials),
+    id: editMatId || requestedId || nextMaterialCode(),
     productId: v('ma-product'), name, spec: v('ma-spec').trim(), supplier: v('ma-supplier'),
     unitPrice: parseInt(v('ma-price'))||0, qty: parseInt(v('ma-qty'))||0,
     unit: v('ma-unit')||'EA', orderDate: v('ma-odate'), expectedDate: v('ma-edate'),
@@ -13090,6 +13129,11 @@ function markTrashInactive(item, status) {
   item.trashRemovedByName = actor.name;
 }
 
+function trashAuditDetail(item) {
+  if (!item) return '';
+  return [item.type || 'trash', item.originalId || item.id || '', item.name || ''].filter(Boolean).join(' · ');
+}
+
 function pushToTrash(type, name, originalId, data, cascadeData = null) {
   if (data == null && name && typeof name === 'object') {
     data = name;
@@ -13256,7 +13300,7 @@ function restoreTrash(id) {
 
   markTrashInactive(item, 'restored');
   saveStorage('trash', trash);
-  writeAuditLog(item.type || 'trash', item.originalId || id, 'restore', item, item.data, { summary:'휴지통 복구', detail:item.name || id });
+  writeAuditLog(item.type || 'trash', item.originalId || id, 'restore', null, item.data, { summary:'휴지통 복구', detail:trashAuditDetail(item), changes:[] });
   
   syncFilterDropdowns();
   updateTrashBadge();
@@ -13271,7 +13315,7 @@ function deleteTrashPermanently(id) {
 
   confirm_('데이터 영구 삭제 경고', `<strong>[${item.name}]</strong> 데이터를 휴지통에서 완전히 삭제하시겠습니까?<br><span style="color:var(--tx-d); font-weight:700;">이 작업은 복구가 절대 불가능하며 데이터가 완전히 유실됩니다.</span>`, () => {
     markTrashInactive(item, 'deleted');
-    writeAuditLog(item.type || 'trash', item.originalId || id, 'delete', item, null, { summary:'휴지통 영구 삭제', detail:item.name || id });
+    writeAuditLog('trash', item.id || id, 'delete', item, null, { summary:'휴지통 영구 삭제', detail:trashAuditDetail(item), changes:[] });
     saveStorage('trash', trash);
     updateTrashBadge();
     renderTrash();
@@ -13288,7 +13332,7 @@ function emptyTrash() {
   if (typeof roleFeatureAllowed === 'function' && !roleFeatureAllowed('delete')) { showToast('삭제 권한이 없습니다.', 'error'); return; }
   confirm_('휴지통 전체 비우기', `휴지통 내부 <strong>총 ${active.length}건</strong>의 모든 백업 데이터를 영구 파기하시겠습니까?<br><span style="color:var(--tx-d); font-weight:700;">비워진 메모리 데이터는 복구 조작을 진행할 수 없습니다.</span>`, () => {
     active.forEach(item => {
-      writeAuditLog(item.type || 'trash', item.originalId || item.id, 'delete', item, null, { summary:'휴지통 전체 비우기', source:'bulkAction' });
+      writeAuditLog('trash', item.id || item.originalId || '', 'delete', item, null, { summary:'휴지통 전체 비우기', source:'bulkAction', detail:trashAuditDetail(item), changes:[] });
       markTrashInactive(item, 'deleted');
     });
     saveStorage('trash', trash);
@@ -27326,7 +27370,17 @@ function auditLogRowsLocal() {
   }).sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')));
 }
 
+function isTrashWrapperAuditLog(log) {
+  if (!log || !Array.isArray(log.changes)) return false;
+  if (String(log.entityType || '').trim() === 'trash') return false;
+  const summary = String(log.summary || log.detail || '');
+  if (summary.includes('휴지통 영구 삭제') || summary.includes('휴지통 전체 비우기')) return true;
+  const fields = new Set(log.changes.map(c => String(c && c.field || '')));
+  return fields.has('originalId') && fields.has('data') && (fields.has('trashStatus') || fields.has('cascadeData') || summary.includes('휴지통'));
+}
+
 function auditLogMatchesRef(log, ref) {
+  if (isTrashWrapperAuditLog(log)) return false;
   const entityId = String(ref && ref.entityId || '').trim();
   if (!entityId || String(log.entityId || '').trim() !== entityId) return false;
   const type = String(ref && ref.entityType || '').trim();
@@ -27589,11 +27643,12 @@ async function openAuditDetailsForRefs(refs) {
   const list = (refs || []).filter(ref => ref && ref.entityId);
   if (!list.length) { showToast('이력을 확인할 항목을 찾지 못했습니다.', 'info'); return; }
   const modal = ensureAuditDetailModal();
-  document.getElementById('audit-detail-title').textContent = list.length === 1 ? '이력 세부사항' : `이력 세부사항 (${list.length}건)`;
-  document.getElementById('audit-detail-sub').textContent = list.map(ref => `${ref.entityType || '항목'} ${ref.entityId}`).join(' · ');
+  document.getElementById('audit-detail-title').textContent = '이력 세부사항';
+  document.getElementById('audit-detail-sub').textContent = (list.length > 1 ? `선택 ${list.length}건 · ` : '') + list.map(ref => `${ref.entityType || '항목'} ${ref.entityId}`).join(' · ');
   document.getElementById('audit-detail-body').innerHTML = `<div class="empty"><i class="ti ti-loader animate-spin"></i>이력을 불러오는 중입니다.</div>`;
   modal.classList.add('open');
   const rows = await auditRowsForRefs(list);
+  document.getElementById('audit-detail-title').textContent = `이력 세부사항 (${rows.length}건)`;
   renderAuditDetailRows(list, rows);
 }
 
