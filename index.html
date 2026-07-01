@@ -15604,8 +15604,17 @@ function auditChangeRowsForDisplay(log){
   const hasItemChange = changes.some(c => c && (c.field === 'items' || /^items\.\d+\./.test(String(c.field || ''))));
   return hasItemChange ? changes.filter(c => !AUDIT_CHANGE_DOC_MIRROR_FIELDS.has(String(c.field || ''))) : changes;
 }
+function auditCreateDateText(log) {
+  const raw = (log && (log.targetCreatedAt || log.createdAt || log.at)) || '';
+  if (!raw) return '-';
+  const date = new Date(raw);
+  return Number.isNaN(date.getTime()) ? String(raw) : date.toLocaleString('ko-KR');
+}
 function auditChangeText(log){
   log = log || {};
+  if (String(log.action || '') === 'create') {
+    return `<div class="audit-change-line"><b>등록일자</b>: <span class="audit-after">${esc(auditCreateDateText(log))}</span></div>`;
+  }
   const changes = auditChangeRowsForDisplay(log || {});
   if (!changes.length) return esc(log.detail || log.summary || '');
   const itemFieldTable = auditChangeItemFieldTable(changes);
@@ -27610,6 +27619,12 @@ function ensureAuditDetailModal() {
 
 function auditChangeHtml(log) {
   if (typeof auditChangeText === 'function') return auditChangeText(log);
+  if (String(log && log.action || '') === 'create') {
+    const raw = (log && (log.targetCreatedAt || log.createdAt || log.at)) || '';
+    const date = raw ? new Date(raw) : null;
+    const text = date && !Number.isNaN(date.getTime()) ? date.toLocaleString('ko-KR') : (raw || '-');
+    return `<div class="audit-change-line"><b>등록일자</b>: <span class="audit-after">${esc(text)}</span></div>`;
+  }
   const changes = Array.isArray(log.changes) ? log.changes : [];
   if (!changes.length) return esc(log.detail || log.summary || '');
   return changes.map(c => `<div><b>${esc(c.field)}</b>: <span style="color:var(--tx-d);">${esc(c.before)}</span> → <span style="color:var(--tx-ok);">${esc(c.after)}</span></div>`).join('');
