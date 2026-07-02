@@ -495,6 +495,18 @@ td {
 th:first-child,
 td:first-child { border-left: 1px solid var(--tbl-grid); }
 thead tr:first-child th { border-top: 1px solid var(--tbl-grid); }
+:root.table-grid-vertical-off :where(table:not(.xlsx-print-table) th, table:not(.xlsx-print-table) td) {
+  border-right-color: transparent !important;
+}
+:root.table-grid-vertical-off :where(th:first-child, td:first-child) {
+  border-left-color: transparent !important;
+}
+:root.table-grid-horizontal-off :where(table:not(.xlsx-print-table) th, table:not(.xlsx-print-table) td) {
+  border-bottom-color: transparent !important;
+}
+:root.table-grid-horizontal-off thead tr:first-child th {
+  border-top-color: transparent !important;
+}
 .content { font-size: calc(12px * var(--ui-font-scale)); }
 .content :where(input, select, textarea, button, .btn, .bd, .pill, .empty, .stat-sel, .table-action-select) { font-size: calc(12px * var(--ui-font-scale)) !important; }
 .content :where(table th, table td, table th *, table td *) { font-size: calc(12px * var(--ui-font-scale)) !important; }
@@ -894,6 +906,27 @@ body.mega-menu-open { overflow: hidden; }
 }
 .ui-font-preview strong { display: block; font-size: calc(14px * var(--ui-font-scale)); }
 .ui-font-preview span { display: block; margin-top: 3px; color: var(--tx-t); font-size: calc(11px * var(--ui-font-scale)); }
+.ui-table-grid-settings { max-width: 820px; padding: 8px 2px; display: grid; gap: 10px; }
+.ui-table-grid-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--br);
+  border-radius: var(--rm);
+  background: var(--bg-s);
+  cursor: pointer;
+}
+.ui-table-grid-option input { width: 16px; height: 16px; margin-top: 1px; accent-color: var(--tx-i); cursor: pointer; }
+.ui-table-grid-option strong { display: block; color: var(--tx); font-size: 12.5px; }
+.ui-table-grid-option small { display: block; margin-top: 3px; color: var(--tx-t); font-size: 11px; line-height: 1.45; }
+.ui-table-grid-preview {
+  overflow-x: auto;
+  border: 1px solid var(--br);
+  border-radius: var(--rm);
+  background: var(--tbl-bg);
+}
+.ui-table-grid-preview table { min-width: 420px; margin: 0; }
 .ui-menu-icon-preview {
   margin-top: 13px;
   padding: 12px;
@@ -3838,6 +3871,38 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
             <strong>표 본문 예시</strong>
             <span>수주 제품, 자재 발주, 재고 관리 화면의 글자 크기에 함께 적용됩니다.</span>
           </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-table"></i>테이블 선 표시</span>
+          <span style="font-size:11px;color:var(--tx-t);">목록 표의 가로줄과 세로줄을 화면에서 켜고 끕니다.</span>
+        </div>
+        <div class="ui-table-grid-settings">
+          <label class="ui-table-grid-option">
+            <input id="table-grid-horizontal" type="checkbox" onchange="toggleTableGridLine('horizontal',this.checked)">
+            <span>
+              <strong>가로줄 표시</strong>
+              <small>행 사이 구분선을 표시합니다.</small>
+            </span>
+          </label>
+          <label class="ui-table-grid-option">
+            <input id="table-grid-vertical" type="checkbox" onchange="toggleTableGridLine('vertical',this.checked)">
+            <span>
+              <strong>세로줄 표시</strong>
+              <small>열 사이 구분선을 표시합니다.</small>
+            </span>
+          </label>
+          <div class="ui-table-grid-preview">
+            <table>
+              <thead><tr><th>문서번호</th><th>거래처</th><th>상태</th></tr></thead>
+              <tbody>
+                <tr><td>Q-0001</td><td>현대리바트</td><td>요청중</td></tr>
+                <tr><td>P-0001</td><td>모티브</td><td>입고완료</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <button class="btn btn-sm" type="button" onclick="resetTableGridLineSettings()"><i class="ti ti-restore"></i>기본값 복원</button>
         </div>
       </div>
       <div class="card">
@@ -13576,6 +13641,7 @@ const UI_FONT_MAX = 120;
 const MENU_ICON_MIN = 36;
 const MENU_ICON_MAX = 84;
 const MENU_ICON_DEFAULT = 46;
+const TABLE_GRID_STORAGE_KEY = 'mes_tableGridLines';
 
 function getSavedUiScale() {
   const value = Number(localStorage.getItem('mes_uiScale') || 100);
@@ -13757,7 +13823,55 @@ function renderUiScaleSettings() {
   updateUiScaleControls(getSavedUiScale());
   updateUiFontControls(getSavedUiFontScale());
   updateMenuIconControls(getSavedMenuIconSize());
+  updateTableGridLineControls(getTableGridLineSettings());
   renderUiColorSettings();
+}
+
+function getTableGridLineSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(TABLE_GRID_STORAGE_KEY) || '{}');
+    return {
+      horizontal: saved.horizontal !== false,
+      vertical: saved.vertical !== false
+    };
+  } catch(e) {
+    return { horizontal:true, vertical:true };
+  }
+}
+
+function applyTableGridLineSettings(settings) {
+  const next = Object.assign({ horizontal:true, vertical:true }, settings || getTableGridLineSettings());
+  document.documentElement.classList.toggle('table-grid-horizontal-off', next.horizontal === false);
+  document.documentElement.classList.toggle('table-grid-vertical-off', next.vertical === false);
+  return next;
+}
+
+function updateTableGridLineControls(settings) {
+  const next = applyTableGridLineSettings(settings || getTableGridLineSettings());
+  const horizontal = inp('table-grid-horizontal');
+  const vertical = inp('table-grid-vertical');
+  if (horizontal) horizontal.checked = next.horizontal !== false;
+  if (vertical) vertical.checked = next.vertical !== false;
+}
+
+function saveTableGridLineSettings(settings, quiet) {
+  const next = applyTableGridLineSettings(settings);
+  localStorage.setItem(TABLE_GRID_STORAGE_KEY, JSON.stringify(next));
+  updateTableGridLineControls(next);
+  if (!quiet) showToast('테이블 선 표시 설정을 저장했습니다.', 'success');
+}
+
+function toggleTableGridLine(axis, checked) {
+  const next = getTableGridLineSettings();
+  if (axis === 'horizontal') next.horizontal = !!checked;
+  if (axis === 'vertical') next.vertical = !!checked;
+  saveTableGridLineSettings(next);
+}
+
+function resetTableGridLineSettings() {
+  localStorage.removeItem(TABLE_GRID_STORAGE_KEY);
+  updateTableGridLineControls({ horizontal:true, vertical:true });
+  showToast('테이블 선 표시를 기본값으로 복원했습니다.', 'success');
 }
 
 /* ════════ 테마별 화면 색상 ════════ */
@@ -14023,6 +14137,7 @@ initTheme();
 applyUiScale(getSavedUiScale());
 applyUiFontScale(getSavedUiFontScale());
 applyMenuIconSize(getSavedMenuIconSize());
+applyTableGridLineSettings(getTableGridLineSettings());
 repairWorkerTimeValues();
 // 햄버거 메가 메뉴에서는 이전 사이드바 표시 상태를 사용하지 않음
 if (typeof applySidebarMode === 'function') applySidebarMode();
@@ -21839,10 +21954,53 @@ function finPaymentStatusBadge(kind, payment) {
 }
 function financePaymentRequests() {
   if (!financeData.paymentRequests) financeData.paymentRequests = [];
+  financeData.paymentRequests.forEach(ensurePaymentRequestApprovalFields);
   return financeData.paymentRequests;
 }
 function financeCurrentUserName() {
   return localStorage.getItem('mes_myName') || (_cloudUser && (_cloudUser.displayName || _cloudUser.email)) || '';
+}
+const PAYREQ_APPROVAL_LABELS = {
+  draft:'작성중',
+  pending:'결재대기',
+  approved:'승인',
+  rejected:'반려'
+};
+function ensurePaymentRequestApprovalFields(req) {
+  if (!req || typeof req !== 'object') return req;
+  if (!req.approvalStatus) req.approvalStatus = 'approved';
+  if (!Array.isArray(req.approvalHistory)) req.approvalHistory = [];
+  return req;
+}
+function payreqApprovalStatus(req) {
+  ensurePaymentRequestApprovalFields(req);
+  return req && req.approvalStatus || 'approved';
+}
+function payreqApprovalLabel(req) {
+  return PAYREQ_APPROVAL_LABELS[payreqApprovalStatus(req)] || payreqApprovalStatus(req);
+}
+function finPaymentRequestApprovalBadge(req) {
+  const status = payreqApprovalStatus(req);
+  const cls = { draft:'bd-neu', pending:'bd-warn', approved:'bd-ok', rejected:'bd-err' }[status] || 'bd-neu';
+  return `<span class="bd ${cls}">${esc(PAYREQ_APPROVAL_LABELS[status] || status)}</span>`;
+}
+function payreqIsApprovalEditable(req) {
+  const status = payreqApprovalStatus(req);
+  return status === 'draft' || status === 'rejected';
+}
+function payreqCanSubmit(req) {
+  return !!req && payreqIsApprovalEditable(req) && canEditRecord(req, 'paymentRequest') && !payreqIsPaidDone(req);
+}
+function payreqCanApproveAction(req) {
+  if (!req || payreqApprovalStatus(req) !== 'pending') return false;
+  if (typeof currentRole !== 'undefined' && currentRole === 'admin') return true;
+  return roleFeatureAllowed('approve') && canViewRecord(req, 'paymentRequest');
+}
+function payreqIsApproved(req) {
+  return payreqApprovalStatus(req) === 'approved';
+}
+function payreqIsPaymentActionable(req) {
+  return !!req && payreqIsApproved(req) && !payreqIsPaidDone(req);
 }
 function finPaymentRequestForPo(poId) {
   return financePaymentRequests().find(r => r.sourceType === 'po' && r.poId === poId) || null;
@@ -21851,12 +22009,19 @@ function finPaymentRequestStatusBadge(status) {
   const cls = { '요청':'bd-warn', '확인':'bd-info', '지급예정':'bd-info', '지급완료':'bd-ok', '반려':'bd-err' }[status] || 'bd-neu';
   return `<span class="bd ${cls}">${esc(status || '미요청')}</span>`;
 }
+function finPaymentRequestCountsAsOpen(req) {
+  const approval = payreqApprovalStatus(req);
+  return approval !== 'draft' && approval !== 'rejected' && !['지급완료','반려'].includes(req && req.status);
+}
 function finPaymentRequestOpenCount() {
-  return financePaymentRequests().filter(r => canViewRecord(r, 'paymentRequest') && !['지급완료','반려'].includes(r.status)).length;
+  return financePaymentRequests().filter(r => canViewRecord(r, 'paymentRequest') && finPaymentRequestCountsAsOpen(r)).length;
+}
+function finPaymentRequestApprovalPendingCount() {
+  return financePaymentRequests().filter(r => canViewRecord(r, 'paymentRequest') && payreqApprovalStatus(r) === 'pending').length;
 }
 function updatePaymentRequestBadge() {
   const b = inp('payreqBadge'); if (!b) return;
-  const n = finPaymentRequestOpenCount();
+  const n = finPaymentRequestApprovalPendingCount() || finPaymentRequestOpenCount();
   b.textContent = n;
   b.style.display = n ? '' : 'none';
 }
@@ -22396,8 +22561,11 @@ function poPaymentCell(p) {
   const pay = finPaymentRecord('ap', p.id, total);
   const req = finPaymentRequestForPo(p.id);
   if (pay.done) return `${finPaymentStatusBadge('ap', pay)}<div style="margin-top:4px;font-size:10px;color:var(--tx-t);">${esc(pay.date || '')}</div>`;
-  const badge = req ? finPaymentRequestStatusBadge(req.status) : '<span class="bd bd-neu">미요청</span>';
-  return `${badge}<div style="margin-top:5px;"><button class="btn btn-sm" onclick="event.stopPropagation();openPaymentRequestFromPo('${esc(p.id)}')"><i class="ti ti-send"></i>${req ? '요청수정' : '결제요청'}</button></div>`;
+  const badge = req
+    ? `${finPaymentRequestApprovalBadge(req)}${payreqIsApproved(req) ? `<div style="margin-top:3px;">${finPaymentRequestStatusBadge(req.status)}</div>` : ''}`
+    : '<span class="bd bd-neu">미요청</span>';
+  const label = !req ? '결제요청' : (payreqIsApprovalEditable(req) ? '요청수정' : '요청보기');
+  return `${badge}<div style="margin-top:5px;"><button class="btn btn-sm" onclick="event.stopPropagation();openPaymentRequestFromPo('${esc(p.id)}')"><i class="ti ti-send"></i>${label}</button></div>`;
 }
 function finPoAmount(p) { return typeof _docAmount === 'function' ? _docAmount(p, 'po') : (p.unitPrice||0)*(p.qty||0); }
 function finPoItemSummary(p) { return typeof _docItemSummary === 'function' ? _docItemSummary(p) : (p.itemName || ''); }
@@ -22408,11 +22576,39 @@ function finPoCountsAsPurchase(p) {
 function financeAccountingPoList() {
   return financeVisiblePoList().filter(finPoCountsAsPurchase);
 }
+function payreqApprovalSummaryHtml(req) {
+  if (!req) return '';
+  const decided = req.decidedAt ? `<span>결정일 <b>${esc(req.decidedAt.slice(0, 10))}</b></span>` : '';
+  const submitted = req.submittedAt ? `<span>요청일시 <b>${esc(req.submittedAt.slice(0, 16).replace('T', ' '))}</b></span>` : '';
+  const approver = req.approverName ? `<span>승인자 <b>${esc(req.approverName)}</b></span>` : '';
+  const note = req.decisionNote ? `<div style="margin-top:6px;color:var(--tx-s);font-size:12px;">결정 메모: ${esc(req.decisionNote)}</div>` : '';
+  return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;">
+    <span style="font-weight:800;">결재 상태</span>${finPaymentRequestApprovalBadge(req)}${submitted}${approver}${decided}
+  </div>${note}`;
+}
+function setPaymentRequestModalEditable(editable) {
+  ['payreq-date','payreq-due','payreq-amount','payreq-assignee','payreq-requester','payreq-tax','payreq-note'].forEach(id => {
+    const el = inp(id);
+    if (el) el.disabled = !editable;
+  });
+  const draftBtn = inp('payreq-draft-btn');
+  const submitBtn = inp('payreq-submit-btn');
+  if (draftBtn) draftBtn.style.display = editable ? '' : 'none';
+  if (submitBtn) submitBtn.style.display = editable ? '' : 'none';
+}
+function updatePaymentRequestModalState(req) {
+  const summary = inp('payreq-approval-summary');
+  if (summary) {
+    summary.innerHTML = payreqApprovalSummaryHtml(req);
+    summary.style.display = req ? '' : 'none';
+  }
+  setPaymentRequestModalEditable(!req || payreqIsApprovalEditable(req));
+}
 function financeFilteredRows(tab) {
   const s=finState(tab), q=s.query.trim().toLowerCase();
   if(tab==='revenue')return financeVisibleDeliveries().filter(d=>finMatchDate(d.deliveredAt,s)&&finMatchAmount((d.price||0)*(d.qty||0),s)&&(!q||[d.id,getClientName(d.clientId),d.productName,getProductName(d.productId)].join(' ').toLowerCase().includes(q)));
   if(tab==='purchase')return financeVisiblePoList().filter(p=>finMatchDate(p.date,s)&&finMatchAmount(finPoAmount(p),s)&&(!s.status||(p.status||'작성중')===s.status)&&(!q||[p.id,p.supplier,finPoItemSearchText(p)].join(' ').toLowerCase().includes(q)));
-  if(tab==='payreq')return financePaymentRequests().filter(r=>canViewRecord(r,'paymentRequest')&&finMatchDate(r.requestDate,s)&&finMatchAmount(r.amount,s)&&(!s.status||r.status===s.status)&&(!q||[r.id,r.poId,r.supplier,r.itemSummary,r.assignee,r.requester,r.note].join(' ').toLowerCase().includes(q)));
+  if(tab==='payreq')return financePaymentRequests().filter(r=>canViewRecord(r,'paymentRequest')&&finMatchDate(r.requestDate,s)&&finMatchAmount(r.amount,s)&&(!s.status||r.status===s.status)&&(!q||[r.id,r.poId,r.supplier,r.itemSummary,r.assignee,r.requester,r.note,r.decisionNote,payreqApprovalLabel(r)].join(' ').toLowerCase().includes(q)));
   if(tab==='fixed')return fixedCostRows(fixedCostMonth, fixedCostShowInactive).filter(r=>finMatchAmount(r.amount,s)&&(!s.status||r.status===s.status)&&(!q||[r.name,r.category,r.vendor,r.method,r.note].join(' ').toLowerCase().includes(q)));
   if(tab==='cost')return financeCostInfoAllowed() ? financeVisibleProducts().filter(p=>finMatchAmount(prodUnitCost(p),s)&&(!q||[p.id,p.name,getClientName(p.clientId)].join(' ').toLowerCase().includes(q))) : [];
   if(tab==='labor')return financeVisibleWorkers().filter(w=>finMatchAmount(calcPayroll(w,payrollMonth).net,s)&&(!s.status||(calcPayroll(w,payrollMonth).confirmed?'확정':'작성중')===s.status)&&(!q||[w.id,w.name,w.dept,w.position].join(' ').toLowerCase().includes(q)));
@@ -22444,7 +22640,7 @@ function exportFinanceViewXLS(tab){
   const list=financeFilteredRows(tab); let header=[],rows=[];
   if(tab==='revenue'){header=['납품일','고객사','제품','수량','단가','매출액'];rows=list.map(d=>[d.deliveredAt,getClientName(d.clientId),d.productName||getProductName(d.productId),d.qty,d.price,(d.price||0)*(d.qty||0)]);}
   else if(tab==='purchase'){header=['발주일','공급처','품목','수량','단가','매입액','상태'];rows=list.map(p=>[p.date,p.supplier,finPoItemSummary(p),typeof _docQtySummary==='function'?_docQtySummary(p):p.qty,p.unitPrice,finPoAmount(p),p.status]);}
-  else if(tab==='payreq'){header=['요청번호','요청일','희망지급일','발주번호','공급처','품목','요청금액','담당자','요청자','상태','세금계산서','비고'];rows=list.map(r=>[r.id,r.requestDate,r.dueDate,r.poId,r.supplier,r.itemSummary,r.amount,r.assignee,r.requester,r.status,r.taxInvoiceStatus,r.note]);}
+  else if(tab==='payreq'){header=['요청번호','요청일','희망지급일','발주번호','공급처','품목','요청금액','담당자','요청자','결재상태','지급상태','세금계산서','결정메모','비고'];rows=list.map(r=>[r.id,r.requestDate,r.dueDate,r.poId,r.supplier,r.itemSummary,r.amount,r.assignee,r.requester,payreqApprovalLabel(r),r.status,r.taxInvoiceStatus,r.decisionNote||'',r.note]);}
   else if(tab==='fixed'){header=['월','항목명','분류','지급처','예정일','금액','상태','지급일','결제방법','비고'];rows=list.map(r=>[r.ym,r.name,r.category,r.vendor,r.dueDate,r.amount,r.status,r.paidDate,r.method,r.note]);}
   else if(tab==='cost'){header=['코드','제품','고객사','재료비','노무비','경비','제조원가','수주단가'];rows=list.map(p=>[p.id,p.name,getClientName(p.clientId),typeof prodMaterialCost==='function'?prodMaterialCost(p):p.matCost,p.laborCost,p.ovhCost,prodUnitCost(p),p.price]);}
   else if(tab==='labor'){exportPayrollXLS();return;}
@@ -22796,6 +22992,8 @@ function openFinancePayment(kind, id) {
   if (kind === 'ap') {
     const p = financeVisiblePoList().find(x => x.id === id);
     if (p && !requireRecordPermission('edit', p, 'po')) return;
+    const req = finPaymentRequestForPo(id);
+    if (!req || !payreqIsApproved(req)) { showToast('승인된 결제 요청이 있어야 지급 처리할 수 있습니다.', 'info'); return; }
   }
   const pay = finPaymentRecord(kind, id, src.total);
   sv('payment-kind', kind);
@@ -22818,6 +23016,10 @@ function saveFinancePayment() {
   const kind = v('payment-kind'), id = v('payment-id');
   const src = financePaymentSource(kind, id);
   if (!src) { showToast('처리할 항목을 찾을 수 없습니다.', 'error'); return; }
+  if (kind === 'ap') {
+    const req = finPaymentRequestForPo(id);
+    if (!req || !payreqIsApproved(req)) { showToast('승인된 결제 요청이 있어야 지급 처리할 수 있습니다.', 'info'); return; }
+  }
   const date = v('payment-date') || today();
   if (!guardFinanceMonth(date)) return;
   const amount = Math.max(0, Number(v('payment-amount')) || 0);
@@ -23020,6 +23222,7 @@ function openPaymentRequestFromPo(poId) {
     </div>`;
   const assignees = financeVisibleWorkers().map(w => `<option value="${esc(w.name)}">${esc(w.dept || '')}${w.position ? ' · ' + esc(w.position) : ''}</option>`).join('');
   if (inp('payreq-assignee-list')) inp('payreq-assignee-list').innerHTML = assignees;
+  sv('payreq-id', req?.id || '');
   sv('payreq-date', req?.requestDate || today());
   sv('payreq-due', req?.dueDate || '');
   sv('payreq-amount', req?.amount || pay.remaining || total);
@@ -23027,10 +23230,12 @@ function openPaymentRequestFromPo(poId) {
   sv('payreq-requester', req?.requester || financeCurrentUserName());
   sv('payreq-tax', req?.taxInvoiceStatus || '미확인');
   sv('payreq-note', req?.note || '');
+  updatePaymentRequestModalState(req);
   inp('payreq-modal').classList.add('open');
 }
-function savePaymentRequest() {
+function savePaymentRequest(nextApprovalStatus = 'pending') {
   if (!checkAdminAction()) return;
+  nextApprovalStatus = nextApprovalStatus === 'draft' ? 'draft' : 'pending';
   const poId = v('payreq-po-id');
   const p = financeVisiblePoList().find(x => x.id === poId);
   if (!p) { showToast('구매발주서를 찾을 수 없습니다.', 'error'); return; }
@@ -23042,35 +23247,46 @@ function savePaymentRequest() {
   let req = finPaymentRequestForPo(poId);
   const before = req ? _safeJsonClone(req) : null;
   if (before && !requireRecordPermission('edit', before, 'paymentRequest')) return;
+  if (before && !payreqIsApprovalEditable(req)) { showToast('작성중 또는 반려 상태의 결제 요청만 수정할 수 있습니다.', 'info'); return; }
   if (!req) {
-    req = stampRecordCreate({ id:nextCode('PAY', list), sourceType:'po', poId, status:'요청', createdAt:new Date().toISOString() }, 'paymentRequest');
+    req = stampRecordCreate({ id:nextCode('PAY', list), sourceType:'po', poId, status:'요청', approvalStatus:nextApprovalStatus, createdAt:new Date().toISOString() }, 'paymentRequest');
     list.unshift(req);
   } else if (req.status === '반려') {
     req.status = '요청';
   }
+  const actor = typeof getCurrentActor === 'function' ? getCurrentActor() : {};
   Object.assign(req, {
     requestDate, dueDate:v('payreq-due'), amount,
     requester:v('payreq-requester') || financeCurrentUserName(),
+    requesterUid: req.requesterUid || actor.userId || '',
+    requesterEmail: req.requesterEmail || actor.email || '',
     assignee:v('payreq-assignee'), taxInvoiceStatus:v('payreq-tax') || '미확인',
     supplier:p.supplier || '', itemSummary:finPoItemSummary(p), payMethod:p.payMethod || '현금',
-    note:v('payreq-note'), updatedAt:new Date().toISOString()
+    note:v('payreq-note'), approvalStatus:nextApprovalStatus,
+    submittedAt: nextApprovalStatus === 'pending' ? new Date().toISOString() : '',
+    approverUid: '', approverName: '', decidedAt: '', decisionNote: '',
+    updatedAt:new Date().toISOString()
   });
   stampRecordUpdate(req, before, 'paymentRequest');
-  writeAuditLog('paymentRequest', req.id, before ? 'update' : 'create', before, req, { summary:'결제 요청 저장', detail:`${poId} · ${p.supplier || ''} · ${fmtW(amount)}` });
+  writeAuditLog('paymentRequest', req.id, before ? 'update' : 'create', before, req, {
+    summary: nextApprovalStatus === 'draft' ? '결제 요청 작성중 저장' : '결재 요청 전송',
+    detail:`${poId} · ${p.supplier || ''} · ${fmtW(amount)}`
+  });
   saveStorage('financeData', financeData);
-  if (typeof generateAlert === 'function') {
+  if (nextApprovalStatus === 'pending' && typeof generateAlert === 'function') {
     generateAlert('info', `결제 요청: ${poId}`, `${req.assignee || '결제 담당자'} · ${p.supplier || ''} · ${fmtW(amount)}`, 'manual');
   }
   closeModal('payreq-modal');
   if (typeof renderPo === 'function') renderPo();
   renderFinance();
-  showToast('결제 요청이 등록되었습니다.', 'success');
+  showToast(nextApprovalStatus === 'draft' ? '작성중으로 저장했습니다.' : '결재 요청을 전송했습니다.', 'success');
 }
 function changePaymentRequestStatus(id, status) {
   if (!checkAdminAction()) return;
   const req = financePaymentRequests().find(r => r.id === id);
   if (!req) return;
   if (!roleFeatureAllowed('status') || !requireRecordPermission('edit', req, 'paymentRequest')) return;
+  if (!payreqIsApproved(req)) { showToast('승인된 결제 요청만 지급 상태를 변경할 수 있습니다.', 'info'); return; }
   const before = _safeJsonClone(req);
   req.status = status;
   req.updatedAt = new Date().toISOString();
@@ -23135,13 +23351,22 @@ function payreqSelectedAuditRefs() {
 function payreqMutableSelectedRows() {
   return payreqSelectedRows().filter(req => !payreqIsPaidDone(req));
 }
+function payreqPaymentMutableSelectedRows() {
+  return payreqSelectedRows().filter(req => payreqIsPaymentActionable(req));
+}
+function payreqSubmittableSelectedRows() {
+  return payreqSelectedRows().filter(payreqCanSubmit);
+}
+function payreqApprovalPendingSelectedRows() {
+  return payreqSelectedRows().filter(payreqCanApproveAction);
+}
 function selectedPayreqRow() {
   return payreqSelectedRows()[0] || null;
 }
 function openSelectedPaymentRequestEdit() {
   if (payreqSelected.size !== 1) { showToast('결제 요청 한 건만 선택하세요.', 'info'); return; }
   const req = selectedPayreqRow();
-  if (!req || payreqIsPaidDone(req)) { showToast('지급완료된 요청은 수정할 수 없습니다.', 'info'); return; }
+  if (!req || !payreqCanSubmit(req)) { showToast('작성중 또는 반려 상태의 요청만 수정할 수 있습니다.', 'info'); return; }
   openPaymentRequestFromPo(req.poId);
 }
 function openSelectedPaymentRequestPayment() {
@@ -23149,12 +23374,63 @@ function openSelectedPaymentRequestPayment() {
   const req = selectedPayreqRow();
   if (!req) return;
   const p = financeVisiblePoList().find(x => x.id === req.poId);
-  if (!p || payreqIsPaidDone(req)) { showToast('지급 처리할 수 없는 요청입니다.', 'info'); return; }
+  if (!p || !payreqIsPaymentActionable(req)) { showToast('승인된 결제 요청만 지급 처리할 수 있습니다.', 'info'); return; }
   openFinancePayment('ap', req.poId);
 }
+function payreqSubmitSelected() {
+  const rows = payreqSubmittableSelectedRows();
+  if (!rows.length) { showToast('결재 요청으로 전송할 작성중/반려 건이 없습니다.', 'info'); return; }
+  rows.forEach(req => {
+    const before = _safeJsonClone(req);
+    req.approvalStatus = 'pending';
+    req.status = '요청';
+    req.submittedAt = new Date().toISOString();
+    req.decisionNote = '';
+    req.approverUid = '';
+    req.approverName = '';
+    req.decidedAt = '';
+    req.updatedAt = new Date().toISOString();
+    stampRecordUpdate(req, before, 'paymentRequest');
+    writeAuditLog('paymentRequest', req.id, 'statusChange', before, req, { summary:'결재 요청 전송', source: rows.length > 1 ? 'bulkAction' : 'ui' });
+  });
+  payreqSelected.clear();
+  saveStorage('financeData', financeData);
+  renderFinance();
+  if (typeof renderPo === 'function') renderPo();
+  showToast(`${rows.length}건을 결재 요청으로 전송했습니다.`, 'success');
+}
+function payreqDecideSelected(nextStatus) {
+  const rows = payreqApprovalPendingSelectedRows();
+  if (!rows.length) { showToast('승인/반려할 결재대기 건이 없습니다.', 'info'); return; }
+  const approved = nextStatus === 'approved';
+  const note = approved ? '' : window.prompt('반려 사유를 입력하세요.', '') ;
+  if (!approved && note === null) return;
+  const actor = typeof getCurrentActor === 'function' ? getCurrentActor() : {};
+  rows.forEach(req => {
+    const before = _safeJsonClone(req);
+    req.approvalStatus = approved ? 'approved' : 'rejected';
+    req.status = approved ? (req.status === '반려' ? '요청' : (req.status || '요청')) : '반려';
+    req.approverUid = actor.userId || '';
+    req.approverName = actor.name || financeCurrentUserName() || '승인자';
+    req.decidedAt = new Date().toISOString();
+    req.decisionNote = approved ? (req.decisionNote || '') : String(note || '').trim();
+    req.updatedAt = new Date().toISOString();
+    if (!Array.isArray(req.approvalHistory)) req.approvalHistory = [];
+    req.approvalHistory.push({ status:req.approvalStatus, at:req.decidedAt, by:req.approverName, note:req.decisionNote });
+    stampRecordUpdate(req, before, 'paymentRequest');
+    writeAuditLog('paymentRequest', req.id, approved ? 'approve' : 'reject', before, req, { summary: approved ? '결제 요청 승인' : '결제 요청 반려', detail:req.decisionNote || req.poId, source: rows.length > 1 ? 'bulkAction' : 'ui' });
+  });
+  payreqSelected.clear();
+  saveStorage('financeData', financeData);
+  renderFinance();
+  if (typeof renderPo === 'function') renderPo();
+  showToast(`${rows.length}건을 ${approved ? '승인' : '반려'}했습니다.`, 'success');
+}
+function payreqApproveSelected() { payreqDecideSelected('approved'); }
+function payreqRejectSelected() { payreqDecideSelected('rejected'); }
 function payreqBulkStatus(status) {
-  const rows = payreqMutableSelectedRows();
-  if (!rows.length) { showToast('처리 가능한 결제 요청이 없습니다.', 'info'); return; }
+  const rows = payreqPaymentMutableSelectedRows();
+  if (!rows.length) { showToast('승인되어 지급 진행 가능한 결제 요청이 없습니다.', 'info'); return; }
   if (!checkAdminAction()) return;
   if (rows.some(req => !canEditRecord(req, 'paymentRequest'))) { showToast('상태 변경 권한이 없는 결제 요청이 포함되어 있습니다.', 'error'); return; }
   rows.forEach(req => {
@@ -23189,17 +23465,22 @@ function payreqSelectionBarHtml() {
   const selected = payreqSelectedRows();
   const count = selected.length;
   const mutableCount = selected.filter(req => !payreqIsPaidDone(req)).length;
+  const paymentCount = payreqPaymentMutableSelectedRows().length;
+  const submitCount = payreqSubmittableSelectedRows().length;
+  const approveCount = payreqApprovalPendingSelectedRows().length;
   const single = count === 1;
   const singleReq = single ? selected[0] : null;
-  const singleMutable = !!(singleReq && !payreqIsPaidDone(singleReq));
-  const canPay = !!(singleReq && !payreqIsPaidDone(singleReq) && financeVisiblePoList().some(p => p.id === singleReq.poId));
+  const singleMutable = !!(singleReq && payreqCanSubmit(singleReq));
+  const canPay = !!(singleReq && payreqIsPaymentActionable(singleReq) && financeVisiblePoList().some(p => p.id === singleReq.poId));
   const auditBtn = (typeof managedAuditButtonHtml === 'function') ? `<button class="btn btn-sm" data-audit-detail-btn onclick="openAuditDetailsForRefs(payreqSelectedAuditRefs())"><i class="ti ti-history"></i>세부사항</button>` : '';
   return `<div class="selection-action-bar payreq-selection-bar" style="display:flex;">
     <span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${count}건 선택됨</span>
     ${auditBtn}
-    <button class="btn btn-sm" onclick="payreqBulkStatus('확인')" ${mutableCount?'':'disabled'}><i class="ti ti-check"></i>확인</button>
-    <button class="btn btn-sm" onclick="payreqBulkStatus('지급예정')" ${mutableCount?'':'disabled'}><i class="ti ti-calendar-dollar"></i>지급예정</button>
-    <button class="btn btn-sm" onclick="payreqBulkStatus('반려')" ${mutableCount?'':'disabled'}><i class="ti ti-ban"></i>반려</button>
+    <button class="btn btn-sm" onclick="payreqSubmitSelected()" ${submitCount?'':'disabled'}><i class="ti ti-send"></i>결재요청</button>
+    <button class="btn btn-sm" onclick="payreqApproveSelected()" ${approveCount?'':'disabled'}><i class="ti ti-check"></i>승인</button>
+    <button class="btn btn-sm" onclick="payreqRejectSelected()" ${approveCount?'':'disabled'}><i class="ti ti-ban"></i>반려</button>
+    <button class="btn btn-sm" onclick="payreqBulkStatus('확인')" ${paymentCount?'':'disabled'}><i class="ti ti-check"></i>확인</button>
+    <button class="btn btn-sm" onclick="payreqBulkStatus('지급예정')" ${paymentCount?'':'disabled'}><i class="ti ti-calendar-dollar"></i>지급예정</button>
     <button class="btn btn-sm" onclick="openSelectedPaymentRequestPayment()" ${canPay?'':'disabled'} title="${canPay?'선택한 요청 지급 처리':'한 건만 선택하면 지급 처리할 수 있습니다.'}"><i class="ti ti-cash-banknote"></i>지급처리</button>
     <button class="btn btn-sm" onclick="openSelectedPaymentRequestEdit()" ${singleMutable?'':'disabled'} title="${singleMutable?'선택한 요청 수정':'한 건만 선택하면 수정할 수 있습니다.'}"><i class="ti ti-edit"></i>요청 수정</button>
     <button class="btn btn-sm btn-danger" onclick="payreqBulkDelete()" ${mutableCount?'':'disabled'}><i class="ti ti-trash"></i>삭제</button>
@@ -23209,10 +23490,12 @@ function payreqSelectionBarHtml() {
 function _finPayRequests() {
   const state=finState('payreq'), q=state.query.trim().toLowerCase();
   let list=financePaymentRequests().filter(r => canViewRecord(r,'paymentRequest') && finMatchDate(r.requestDate,state) && finMatchAmount(r.amount,state) && (!state.status || r.status===state.status) &&
-    (!q || [r.id,r.poId,r.supplier,r.itemSummary,r.assignee,r.requester,r.note].join(' ').toLowerCase().includes(q)));
+    (!q || [r.id,r.poId,r.supplier,r.itemSummary,r.assignee,r.requester,r.note,r.decisionNote,payreqApprovalLabel(r)].join(' ').toLowerCase().includes(q)));
   list=finSort(list,state,r=>r.requestDate,r=>r.amount);
   payreqPruneSelection(list.map(r => r.id));
-  const open=list.filter(r=>!['지급완료','반려'].includes(r.status));
+  const open=list.filter(finPaymentRequestCountsAsOpen);
+  const pendingApproval=list.filter(r=>payreqApprovalStatus(r)==='pending');
+  const draftApproval=list.filter(r=>payreqApprovalStatus(r)==='draft');
   const amount=open.reduce((s,r)=>s+(Number(r.amount)||0),0);
   const page=finPaged(list,state);
   const pageIds = page.rows.map(r => r.id);
@@ -23226,25 +23509,27 @@ function _finPayRequests() {
     const reqIdJson = JSON.stringify(r.id);
     return `<tr class="${checked?'table-row-selected':''}" onclick='payreqToggleRow(event, ${reqIdJson})' style="cursor:pointer;">
       <td class="payreq-check-cell"><input class="payreq-check" type="checkbox" ${checked?'checked':''} onclick="event.stopPropagation()" onchange='payreqToggleSelected(${reqIdJson}, this.checked)'></td>
-      <td>${esc(r.requestDate||'—')}</td>
+      <td>${esc(r.requestDate||'—')}<span style="display:block;font-size:10px;color:var(--tx-t);">${r.submittedAt ? '요청 ' + esc(r.submittedAt.slice(0,16).replace('T',' ')) : ''}</span></td>
       <td>${esc(r.dueDate||'—')}</td>
       <td style="font-weight:700;color:var(--tx-i);">${esc(r.poId)}<span style="display:block;font-size:10px;color:var(--tx-t);">${esc(r.id)}</span></td>
       <td style="font-weight:700;">${esc(r.supplier||'—')}<span style="display:block;font-size:10px;color:var(--tx-t);">${esc(r.itemSummary||'')}</span></td>
       <td style="text-align:right;font-weight:700;color:#e8590c;">${fmtW(r.amount)}</td>
       <td>${esc(r.assignee||'미지정')}<span style="display:block;font-size:10px;color:var(--tx-t);">요청 ${esc(r.requester||'')}</span></td>
+      <td>${finPaymentRequestApprovalBadge(r)}${r.decisionNote?`<span style="display:block;font-size:10px;color:var(--tx-t);">${esc(r.decisionNote)}</span>`:''}</td>
       <td>${paidDone?finPaymentRequestStatusBadge('지급완료'):finPaymentRequestStatusBadge(r.status)}</td>
       <td>${esc(r.taxInvoiceStatus||'미확인')}</td>
     </tr>`;
-  }).join(''):`<tr><td colspan="9">${empty('결제 요청이 없습니다.')}</td></tr>`;
+  }).join(''):`<tr><td colspan="10">${empty('결제 요청이 없습니다.')}</td></tr>`;
   return `
     ${finFilterBar('payreq',{placeholder:'발주번호·공급처·담당자 검색',statuses:['요청','확인','지급예정','지급완료','반려']})}
     <div class="metrics">
       <div class="mc"><div class="mc-lbl"><i class="ti ti-send"></i>진행 요청</div><div class="mc-val" style="color:var(--tx-i);">${open.length}</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-checklist"></i>결재대기</div><div class="mc-val" style="color:var(--tx-w);">${pendingApproval.length}</div><div class="mc-sub">작성중 ${draftApproval.length}건</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-cash-banknote"></i>요청 금액</div><div class="mc-val" style="color:#e8590c;">${fmtW(amount)}</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-check"></i>지급완료</div><div class="mc-val">${financePaymentRequests().filter(r=>canViewRecord(r,'paymentRequest')&&r.status==='지급완료').length}</div></div>
     </div>
     <div class="card"><div class="card-hd"><span class="card-ttl"><i class="ti ti-cash-banknote"></i>결제 요청함</span><span style="font-size:11px;color:var(--tx-t);">구매발주서와 연결된 결제 요청</span></div>
-      <div style="overflow-x:auto;"><table class="payreq-table" data-no-managed-table><thead><tr><th class="payreq-check-cell"><input class="payreq-check" type="checkbox" ${allPageSelected?'checked':''} ${pageIds.length?'':'disabled'} onclick="event.stopPropagation()" onchange='payreqTogglePage(${pageIdsJson}, this.checked)'></th><th>요청일</th><th>희망지급일</th><th>발주번호</th><th>공급처 / 품목</th><th style="text-align:right;">금액</th><th>담당자</th><th>상태</th><th>세금계산서</th></tr></thead><tbody>${body}</tbody></table></div>${finPager('payreq',page)}</div>`;
+      <div style="overflow-x:auto;"><table class="payreq-table" data-no-managed-table><thead><tr><th class="payreq-check-cell"><input class="payreq-check" type="checkbox" ${allPageSelected?'checked':''} ${pageIds.length?'':'disabled'} onclick="event.stopPropagation()" onchange='payreqTogglePage(${pageIdsJson}, this.checked)'></th><th>요청일</th><th>희망지급일</th><th>발주번호</th><th>공급처 / 품목</th><th style="text-align:right;">금액</th><th>담당자</th><th>결재</th><th>지급상태</th><th>세금계산서</th></tr></thead><tbody>${body}</tbody></table></div>${finPager('payreq',page)}</div>`;
 }
 
 /* ── 제품별 제조원가 ── */
@@ -29073,8 +29358,10 @@ window.addEventListener('resize', () => {
 <div class="overlay" id="payreq-modal">
   <div class="dlg" style="max-width:620px;width:96%;">
     <div class="dlg-title"><i class="ti ti-cash-banknote" style="color:var(--tx-i);"></i>결제 요청</div>
+    <input type="hidden" id="payreq-id">
     <input type="hidden" id="payreq-po-id">
     <div id="payreq-source-summary" class="card" style="padding:12px;margin-bottom:14px;background:var(--bg-s);"></div>
+    <div id="payreq-approval-summary" class="card" style="padding:10px 12px;margin-bottom:14px;background:var(--bg-p);display:none;"></div>
     <div class="fg fg3" style="gap:10px;margin-bottom:14px;">
       <div class="ff"><label>요청일 *</label><input id="payreq-date" type="date"></div>
       <div class="ff"><label>희망 지급일</label><input id="payreq-due" type="date"></div>
@@ -29089,7 +29376,8 @@ window.addEventListener('resize', () => {
     <datalist id="payreq-assignee-list"></datalist>
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('payreq-modal')">취소</button>
-      <button class="btn btn-primary" onclick="savePaymentRequest()"><i class="ti ti-send"></i>요청 저장</button>
+      <button class="btn" id="payreq-draft-btn" onclick="savePaymentRequest('draft')"><i class="ti ti-device-floppy"></i>작성중 저장</button>
+      <button class="btn btn-primary" id="payreq-submit-btn" onclick="savePaymentRequest('pending')"><i class="ti ti-send"></i>결재 요청</button>
     </div>
   </div>
 </div>
