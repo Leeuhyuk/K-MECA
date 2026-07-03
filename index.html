@@ -49,6 +49,8 @@
   --mega-menu-pad-y: 10px;
   --mobile-tab-icon-size: 22px;
   --mobile-tabbar-base-height: 58px;
+  --app-logo-size: 20px;
+  --app-brand-title-size: 15px;
 }
 :root.dark {
   --bg: #14171c;
@@ -96,9 +98,12 @@ body.auth-shell-locked #sb-overlay {
 .sidebar.is-scrolling::-webkit-scrollbar-thumb { background: var(--br-s); }
 .logo { padding: 16px 14px 16px 20px; border-bottom: 1px solid var(--br); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 #sb-toggle-btn { flex-shrink: 0; font-size: 18px; padding: 4px 6px; }
-.logo-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--tx-i); }
-.logo-title i { font-size: 20px; }
-.logo-sub { font-size: 11px; color: var(--tx-t); margin-top: 3px; padding-left: 28px; font-weight: 500; }
+.logo-text { min-width: 0; }
+.logo-title { font-size: var(--app-brand-title-size); font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--tx-i); min-width: 0; line-height: 1.08; }
+.logo-title #app-brand-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.logo-mark { width: var(--app-logo-size); height: var(--app-logo-size); flex: 0 0 var(--app-logo-size); display: inline-flex; align-items: center; justify-content: center; }
+.logo-mark i { font-size: var(--app-logo-size); }
+.logo-mark img { width: 100%; height: 100%; display: block; object-fit: contain; border-radius: 4px; }
 .nav-g { padding: 10px 0 4px; }
 .nav-lbl { font-size: 10px; color: var(--tx-t); padding: 8px 20px 4px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; }
 .ni { display: flex; align-items: center; gap: 10px; padding: 8px 18px; font-size: 13px; color: var(--tx-s); cursor: pointer; border-left: 3px solid transparent; transition: background .15s, color .15s, border-color .15s; user-select: none; }
@@ -574,8 +579,7 @@ body.sb-mini .sidebar {
 body.sb-mini .main { margin-left: 72px; }
 body.sb-mini .sidebar .logo { padding: 12px 0; text-align: center; flex-direction: column; gap: 10px; }
 body.sb-mini .sidebar .logo-title { justify-content: center; font-size: 0; gap: 0; }
-body.sb-mini .sidebar .logo-title i { font-size: 20px; }
-body.sb-mini .sidebar .logo-sub { display: none; }
+body.sb-mini .sidebar .logo-title i { font-size: var(--app-logo-size); }
 body.sb-mini .sidebar .global-search-wrapper { display: none; }
 body.sb-mini .sidebar .nav-lbl { display: none; }
 body.sb-mini .sidebar .ni {
@@ -613,8 +617,7 @@ body.sb-mini.sb-expanded .sidebar {
 }
 body.sb-mini.sb-expanded .sidebar .logo { padding: 18px 14px 18px 20px; text-align: left; flex-direction: row; }
 body.sb-mini.sb-expanded .sidebar .global-search-wrapper { display: block; }
-body.sb-mini.sb-expanded .sidebar .logo-title { font-size: 15px; gap: 8px; justify-content: flex-start; }
-body.sb-mini.sb-expanded .sidebar .logo-sub { display: block; }
+body.sb-mini.sb-expanded .sidebar .logo-title { font-size: var(--app-brand-title-size); gap: 8px; justify-content: flex-start; }
 body.sb-mini.sb-expanded .sidebar .nav-lbl { display: block; }
 body.sb-mini.sb-expanded .sidebar .ni {
   flex-direction: row;
@@ -871,6 +874,23 @@ body.mega-menu-open .topnav.mega-menu {
 body.mega-menu-open { overflow: hidden; }
 
 /* 시스템 관리 > 화면 크기 */
+.ui-brand-settings { max-width: 840px; display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 14px; align-items: stretch; padding: 8px 2px; }
+.ui-brand-form { min-width: 0; display: grid; gap: 10px; }
+.ui-brand-size-control { padding: 4px 0 2px; }
+.ui-brand-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 2px; }
+.ui-brand-preview {
+  min-height: 132px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border: 1px solid var(--br);
+  border-radius: var(--rl);
+  background: var(--bg-s);
+}
+.ui-brand-preview-title { min-width: 0; display: flex; align-items: center; gap: 8px; color: var(--tx-i); }
+.ui-brand-preview-title strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--app-brand-title-size); line-height: 1.08; }
+.ui-brand-preview-meta { margin-top: 16px; color: var(--tx-t); font-size: 10.5px; }
 .ui-scale-settings { max-width: 720px; padding: 8px 2px; }
 .ui-scale-current {
   display: flex;
@@ -2708,8 +2728,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     z-index: 9999 !important;   /* 백드롭(9998) 위로 올려 흐릿함·클릭 차단 해결 (base의 z-index:1500 덮어쓰기) */
   }
   body.sb-mini .sidebar .logo { padding: 18px 20px !important; text-align: left !important; }
-  body.sb-mini .sidebar .logo-title { justify-content: flex-start !important; font-size: 15px !important; gap: 8px !important; }
-  body.sb-mini .sidebar .logo-sub { display: block !important; }
+  body.sb-mini .sidebar .logo-title { justify-content: flex-start !important; font-size: var(--app-brand-title-size) !important; gap: 8px !important; }
   body.sb-mini .sidebar .nav-lbl { display: block !important; }
   body.sb-mini .sidebar .ni {
     flex-direction: row !important;
@@ -3057,6 +3076,8 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
 @media screen and (max-width: 900px) {
   .system-shell { grid-template-columns: 1fr; gap: 12px; }
   .system-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ui-brand-settings { grid-template-columns: 1fr; }
+  .ui-brand-preview { min-height: 104px; }
   .system-kpi-row { grid-template-columns: 1fr; }
   .system-check-head, .system-check-row { grid-template-columns: 90px 160px minmax(260px, 1fr); min-width: 560px; }
   .table-display-layout { grid-template-columns: 1fr; }
@@ -3178,7 +3199,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
   <div style="width:340px;max-width:92%;background:var(--bg-s,#161b2e);border:1px solid var(--br,#2a3350);border-radius:14px;padding:28px 26px;box-shadow:0 12px 40px rgba(0,0,0,.5);">
     <div style="text-align:center;margin-bottom:18px;">
       <i class="ti ti-cloud-lock" style="font-size:34px;color:#4dabf7;"></i>
-      <div style="font-size:17px;font-weight:800;margin-top:6px;color:#e9ecf5;">MES Pro 클라우드 로그인</div>
+      <div style="font-size:17px;font-weight:800;margin-top:6px;color:#e9ecf5;"><span data-app-brand-title>MES Pro</span> 클라우드 로그인</div>
       <div style="font-size:11.5px;color:#8a93ad;margin-top:3px;">팀이 같은 데이터를 공유합니다</div>
     </div>
     <input id="cl-name" type="text" placeholder="이름 (신규 가입 시 입력)" autocomplete="name" style="width:100%;height:40px;margin-bottom:8px;padding:0 12px;border-radius:8px;border:1px solid var(--br,#2a3350);background:#0e1426;color:#e9ecf5;">
@@ -3264,8 +3285,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
 <div class="sidebar">
   <div class="logo">
     <div class="logo-text">
-      <div class="logo-title"><i class="ti ti-building-factory-2"></i>MES Pro</div>
-      <div class="logo-sub">제조실행 시스템 v3.8</div>
+      <div class="logo-title"><span class="logo-mark" id="app-brand-mark"><i class="ti ti-building-factory-2"></i></span><span id="app-brand-title">MES Pro</span></div>
     </div>
     <button class="theme-btn" id="sb-toggle-btn" onclick="toggleSidebar()" title="사이드바 숨기기" aria-label="사이드바 숨기기"><i class="ti ti-layout-sidebar"></i></button>
   </div>
@@ -4301,6 +4321,56 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     </div>
 
     <div class="system-panel" id="system-panel-display" style="display:none;">
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-id-badge"></i>앱 로고·명칭</span>
+          <span style="font-size:11px;color:var(--tx-t);">이 브라우저 화면에만 적용됩니다.</span>
+        </div>
+        <div class="ui-brand-settings">
+          <div class="ui-brand-form">
+            <div class="ff">
+              <label>명칭</label>
+              <input id="ui-brand-title" maxlength="28" placeholder="MES Pro">
+            </div>
+            <div class="ui-brand-size-control">
+              <div class="ui-scale-current">
+                <span>로고 크기</span>
+                <strong id="ui-brand-logo-size-value">20px</strong>
+              </div>
+              <input id="ui-brand-logo-size" class="ui-scale-range" type="range" min="16" max="100" step="1" value="20"
+                oninput="previewBrandLogoSize(this.value)" onchange="saveBrandLogoSize(this.value)">
+              <div class="ui-brand-size-presets ui-scale-presets">
+                <button class="btn btn-sm" type="button" onclick="setBrandLogoSize(20)">기본</button>
+                <button class="btn btn-sm" type="button" onclick="setBrandLogoSize(32)">크게</button>
+                <button class="btn btn-sm" type="button" onclick="setBrandLogoSize(56)">대형</button>
+                <button class="btn btn-sm" type="button" onclick="setBrandLogoSize(100)">최대</button>
+              </div>
+            </div>
+            <div class="ui-brand-size-control">
+              <div class="ui-scale-current">
+                <span>명칭 크기</span>
+                <strong id="ui-brand-title-size-value">15px</strong>
+              </div>
+              <input id="ui-brand-title-size" class="ui-scale-range" type="range" min="12" max="100" step="1" value="15"
+                oninput="previewBrandTitleSize(this.value)" onchange="saveBrandTitleSize(this.value)">
+              <div class="ui-brand-size-presets ui-scale-presets">
+                <button class="btn btn-sm" type="button" onclick="setBrandTitleSize(15)">기본</button>
+                <button class="btn btn-sm" type="button" onclick="setBrandTitleSize(24)">크게</button>
+                <button class="btn btn-sm" type="button" onclick="setBrandTitleSize(40)">대형</button>
+                <button class="btn btn-sm" type="button" onclick="setBrandTitleSize(100)">최대</button>
+              </div>
+            </div>
+            <div class="ui-brand-actions">
+              <button class="btn btn-primary" type="button" onclick="saveBrandTextSettings()"><i class="ti ti-device-floppy"></i>저장</button>
+              <button class="btn" type="button" onclick="inp('ui-brand-logo-file').click()"><i class="ti ti-photo-up"></i>로고 이미지</button>
+              <button class="btn" type="button" onclick="clearBrandLogo()"><i class="ti ti-building-factory-2"></i>기본 아이콘</button>
+              <button class="btn" type="button" onclick="resetBrandSettings()"><i class="ti ti-restore"></i>전체 기본값</button>
+              <input id="ui-brand-logo-file" type="file" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="handleBrandLogoFile(this)">
+            </div>
+          </div>
+          <div class="ui-brand-preview" id="ui-brand-preview" aria-live="polite"></div>
+        </div>
+      </div>
       <div class="card">
         <div class="card-hd">
           <span class="card-ttl"><i class="ti ti-arrows-maximize"></i>화면 밀도</span>
@@ -7610,7 +7680,7 @@ function _goTo(id, el) {
     popbill: 'Popbill API'
   };
   inp('ptitle').textContent = PN[id] || id;
-  document.title = (PN[id] || id) + ' — MES Pro';
+  document.title = (PN[id] || id) + ' — ' + (typeof getAppBrandTitle === 'function' ? getAppBrandTitle() : 'MES Pro');
   currentPage = id;
   syncTopNavActive(id);
   refreshPage(id);
@@ -7650,7 +7720,7 @@ function _showInventoryPage(key, meta, el) {
     if (item.getAttribute('onclick')?.includes(`goInventory('${key}'`)) item.classList.add('active');
   });
   inp('ptitle').textContent = meta.title;
-  document.title = meta.title + ' — MES Pro';
+  document.title = meta.title + ' — ' + (typeof getAppBrandTitle === 'function' ? getAppBrandTitle() : 'MES Pro');
   currentPage = 'inventory';
   syncTopNavActive('inventory', key);
   renderInventory();
@@ -14159,6 +14229,215 @@ const MENU_ICON_MIN = 36;
 const MENU_ICON_MAX = 84;
 const MENU_ICON_DEFAULT = 46;
 const TABLE_GRID_STORAGE_KEY = 'mes_tableGridLines';
+const BRAND_SETTINGS_KEY = 'mes_uiBrandSettings';
+const BRAND_LOGO_MIN = 16;
+const BRAND_LOGO_MAX = 100;
+const BRAND_LOGO_DEFAULT = 20;
+const BRAND_TITLE_MIN = 12;
+const BRAND_TITLE_MAX = 100;
+const BRAND_TITLE_DEFAULT = 15;
+const BRAND_DEFAULTS = {
+  title: 'MES Pro',
+  logoDataUrl: '',
+  logoName: '',
+  logoSize: BRAND_LOGO_DEFAULT,
+  titleSize: BRAND_TITLE_DEFAULT
+};
+
+function normalizeBrandSettings(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  const title = String(source.title == null ? BRAND_DEFAULTS.title : source.title).trim().slice(0, 28) || BRAND_DEFAULTS.title;
+  const logoDataUrl = isSafeBrandLogoUrl(source.logoDataUrl) ? source.logoDataUrl : '';
+  const logoName = logoDataUrl ? String(source.logoName || '').slice(0, 80) : '';
+  const logoSizeRaw = Number(source.logoSize == null ? BRAND_LOGO_DEFAULT : source.logoSize);
+  const logoSize = Number.isFinite(logoSizeRaw)
+    ? Math.min(BRAND_LOGO_MAX, Math.max(BRAND_LOGO_MIN, Math.round(logoSizeRaw)))
+    : BRAND_LOGO_DEFAULT;
+  const titleSizeRaw = Number(source.titleSize == null ? BRAND_TITLE_DEFAULT : source.titleSize);
+  const titleSize = Number.isFinite(titleSizeRaw)
+    ? Math.min(BRAND_TITLE_MAX, Math.max(BRAND_TITLE_MIN, Math.round(titleSizeRaw)))
+    : BRAND_TITLE_DEFAULT;
+  return { title, logoDataUrl, logoName, logoSize, titleSize };
+}
+
+function getBrandSettings() {
+  try {
+    return normalizeBrandSettings(JSON.parse(localStorage.getItem(BRAND_SETTINGS_KEY) || '{}'));
+  } catch(e) {
+    return normalizeBrandSettings({});
+  }
+}
+
+function isSafeBrandLogoUrl(url) {
+  return /^data:image\/(?:png|jpeg|webp);base64,/i.test(String(url || ''));
+}
+
+function renderBrandMarkElement(el, settings) {
+  if (!el) return;
+  const s = normalizeBrandSettings(settings || getBrandSettings());
+  el.innerHTML = '';
+  el.classList.toggle('has-image', !!s.logoDataUrl);
+  if (s.logoDataUrl) {
+    const img = new Image();
+    img.alt = '';
+    img.src = s.logoDataUrl;
+    el.appendChild(img);
+  } else {
+    const icon = document.createElement('i');
+    icon.className = 'ti ti-building-factory-2';
+    el.appendChild(icon);
+  }
+}
+
+function getAppBrandTitle() {
+  return getBrandSettings().title || BRAND_DEFAULTS.title;
+}
+
+function applyBrandSettings(settings) {
+  const s = normalizeBrandSettings(settings || getBrandSettings());
+  const title = inp('app-brand-title');
+  document.documentElement.style.setProperty('--app-logo-size', s.logoSize + 'px');
+  document.documentElement.style.setProperty('--app-brand-title-size', s.titleSize + 'px');
+  renderBrandMarkElement(inp('app-brand-mark'), s);
+  if (title) title.textContent = s.title;
+  document.querySelectorAll('[data-app-brand-title]').forEach(el => { el.textContent = s.title; });
+  const pageTitle = inp('ptitle');
+  document.title = pageTitle && pageTitle.textContent
+    ? pageTitle.textContent + ' — ' + s.title
+    : s.title + ' — 제조실행 생산관리 시스템';
+  renderBrandPreview(s);
+}
+
+function renderBrandPreview(settings) {
+  const box = inp('ui-brand-preview');
+  if (!box) return;
+  const s = normalizeBrandSettings(settings || getBrandSettings());
+  box.innerHTML = `
+    <div class="ui-brand-preview-title"><span class="logo-mark" id="ui-brand-preview-mark"></span><strong>${esc(s.title)}</strong></div>
+    <div class="ui-brand-preview-meta">${s.logoDataUrl ? esc(s.logoName || '사용자 로고') : '기본 아이콘 사용 중'} · 로고 ${s.logoSize}px · 명칭 ${s.titleSize}px</div>`;
+  renderBrandMarkElement(inp('ui-brand-preview-mark'), s);
+}
+
+function saveBrandSettings(next, quiet) {
+  const settings = normalizeBrandSettings(Object.assign({}, getBrandSettings(), next || {}));
+  try {
+    localStorage.setItem(BRAND_SETTINGS_KEY, JSON.stringify(settings));
+  } catch(e) {
+    showToast('로고 이미지 저장 공간이 부족합니다. 더 작은 이미지를 사용하세요.', 'error');
+    return false;
+  }
+  applyBrandSettings(settings);
+  updateBrandControls(settings);
+  if (!quiet) showToast('앱 로고 설정을 저장했습니다.', 'success');
+  return true;
+}
+
+function updateBrandControls(settings) {
+  const s = normalizeBrandSettings(settings || getBrandSettings());
+  const title = inp('ui-brand-title');
+  const logoRange = inp('ui-brand-logo-size');
+  const logoValue = inp('ui-brand-logo-size-value');
+  const titleRange = inp('ui-brand-title-size');
+  const titleValue = inp('ui-brand-title-size-value');
+  if (title) title.value = s.title;
+  if (logoRange) logoRange.value = String(s.logoSize);
+  if (logoValue) logoValue.textContent = s.logoSize + 'px';
+  if (titleRange) titleRange.value = String(s.titleSize);
+  if (titleValue) titleValue.textContent = s.titleSize + 'px';
+  renderBrandPreview(s);
+}
+
+function saveBrandTextSettings() {
+  saveBrandSettings({
+    title: v('ui-brand-title')
+  });
+}
+
+function clearBrandLogo() {
+  saveBrandSettings({ logoDataUrl: '', logoName: '' });
+}
+
+function previewBrandLogoSize(value) {
+  const size = Math.min(BRAND_LOGO_MAX, Math.max(BRAND_LOGO_MIN, Math.round(Number(value) || BRAND_LOGO_DEFAULT)));
+  const settings = Object.assign({}, getBrandSettings(), { logoSize: size });
+  applyBrandSettings(settings);
+  updateBrandControls(settings);
+}
+
+function saveBrandLogoSize(value) {
+  const size = Math.min(BRAND_LOGO_MAX, Math.max(BRAND_LOGO_MIN, Math.round(Number(value) || BRAND_LOGO_DEFAULT)));
+  saveBrandSettings({ logoSize: size });
+}
+
+function setBrandLogoSize(value) {
+  saveBrandLogoSize(value);
+}
+
+function previewBrandTitleSize(value) {
+  const size = Math.min(BRAND_TITLE_MAX, Math.max(BRAND_TITLE_MIN, Math.round(Number(value) || BRAND_TITLE_DEFAULT)));
+  const settings = Object.assign({}, getBrandSettings(), { titleSize: size });
+  applyBrandSettings(settings);
+  updateBrandControls(settings);
+}
+
+function saveBrandTitleSize(value) {
+  const size = Math.min(BRAND_TITLE_MAX, Math.max(BRAND_TITLE_MIN, Math.round(Number(value) || BRAND_TITLE_DEFAULT)));
+  saveBrandSettings({ titleSize: size });
+}
+
+function setBrandTitleSize(value) {
+  saveBrandTitleSize(value);
+}
+
+function resetBrandSettings() {
+  try { localStorage.removeItem(BRAND_SETTINGS_KEY); } catch(e){}
+  applyBrandSettings(BRAND_DEFAULTS);
+  updateBrandControls(BRAND_DEFAULTS);
+  showToast('앱 로고 설정을 기본값으로 복원했습니다.', 'success');
+}
+
+function handleBrandLogoFile(input) {
+  const file = input && input.files && input.files[0];
+  if (input) input.value = '';
+  if (!file) return;
+  if (!/^image\/(?:png|jpeg|webp)$/i.test(file.type || '')) {
+    showToast('PNG, JPG, WebP 이미지만 사용할 수 있습니다.', 'error');
+    return;
+  }
+  if (file.size > 3 * 1024 * 1024) {
+    showToast('로고 이미지는 3MB 이하 파일을 사용하세요.', 'error');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onerror = () => showToast('로고 이미지를 읽지 못했습니다.', 'error');
+  reader.onload = () => {
+    const img = new Image();
+    img.onerror = () => showToast('지원하지 않는 이미지입니다.', 'error');
+    img.onload = () => {
+      const size = 128;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        showToast('로고 이미지를 처리하지 못했습니다.', 'error');
+        return;
+      }
+      ctx.clearRect(0, 0, size, size);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      const scale = Math.min(size / img.width, size / img.height);
+      const width = Math.max(1, Math.round(img.width * scale));
+      const height = Math.max(1, Math.round(img.height * scale));
+      const x = Math.round((size - width) / 2);
+      const y = Math.round((size - height) / 2);
+      ctx.drawImage(img, x, y, width, height);
+      saveBrandSettings({ logoDataUrl: canvas.toDataURL('image/png'), logoName: file.name });
+    };
+    img.src = String(reader.result || '');
+  };
+  reader.readAsDataURL(file);
+}
 
 function getSavedUiScale() {
   const value = Number(localStorage.getItem('mes_uiScale') || 100);
@@ -14337,6 +14616,7 @@ function resetMenuIconSize() {
 }
 
 function renderUiScaleSettings() {
+  updateBrandControls(getBrandSettings());
   updateUiScaleControls(getSavedUiScale());
   updateUiFontControls(getSavedUiFontScale());
   updateMenuIconControls(getSavedMenuIconSize());
@@ -14662,6 +14942,7 @@ applyUiScale(getSavedUiScale());
 applyUiFontScale(getSavedUiFontScale());
 applyMenuIconSize(getSavedMenuIconSize());
 applyTableGridLineSettings(getTableGridLineSettings());
+applyBrandSettings();
 repairWorkerTimeValues();
 // 햄버거 메가 메뉴에서는 이전 사이드바 표시 상태를 사용하지 않음
 if (typeof applySidebarMode === 'function') applySidebarMode();
@@ -29113,10 +29394,11 @@ function renderMobileHome() {
   const recentAlerts = alertsList.slice(0, 4);
   const alertIco = { err: 'ti-alert-triangle', warn: 'ti-alert-circle', info: 'ti-info-circle' };
   const alertCol = { err: 'var(--tx-d)', warn: 'var(--tx-w)', info: 'var(--tx-i)' };
+  const brandTitle = typeof getAppBrandTitle === 'function' ? getAppBrandTitle() : 'MES Pro';
 
   el.innerHTML = `
     <div class="mh-hero">
-      <span class="mh-greet">MES Pro</span>
+      <span class="mh-greet" data-app-brand-title>${esc(brandTitle)}</span>
       <span class="mh-date">${today()}</span>
     </div>
 
