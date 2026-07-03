@@ -67,6 +67,17 @@
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: var(--f); font-size: calc(12px * var(--ui-font-scale)); background: var(--bg-t); color: var(--tx); height: 100vh; overflow: hidden; display: flex; transition: background 0.2s, color 0.2s; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+body.auth-shell-locked { background: #0b1020; }
+body.auth-shell-locked .sidebar,
+body.auth-shell-locked .main,
+body.auth-shell-locked #mobile-home,
+body.auth-shell-locked #mobile-tabbar,
+body.auth-shell-locked #global-search-results,
+body.auth-shell-locked #sidebar-backdrop,
+body.auth-shell-locked #sb-overlay {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
 
 /* 토스트 알림 컨테이너 */
 #toast-container { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 10000; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
@@ -6933,6 +6944,11 @@ function dayBadge(d) {
 function v(id) { return document.getElementById(id)?.value || ''; }
 function sv(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
 function inp(id) { return document.getElementById(id); }
+
+function setAuthShellLocked(locked) {
+  if (!document.body) return;
+  document.body.classList.toggle('auth-shell-locked', !!locked);
+}
 
 function nextCode(prefix, list, field='id') {
   const nums = list.map(x => parseInt((x[field] || '').split('-').pop()) || 0);
@@ -14625,6 +14641,13 @@ const FIREBASE_CONFIG = Object.assign(
   DEFAULT_FIREBASE_CONFIG,
   loadStorage('firebaseConfig', {})
 );
+function shouldLockCloudShellOnBoot() {
+  const host = (location && location.hostname) || '';
+  const isLocal = location.protocol === 'file:' || host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  if (isLocal && localStorage.getItem('mes_enableCloudOnLocal') !== 'true') return false;
+  return !!(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId);
+}
+if (typeof setAuthShellLocked === 'function') setAuthShellLocked(shouldLockCloudShellOnBoot());
 /* 클라우드로 공유할 데이터 키(테마/관리자비번 등 기기·보안 로컬값은 제외) */
 const CLOUD_KEYS = (typeof cloudDataKeysFromBackupKeys === 'function')
   ? cloudDataKeysFromBackupKeys()
@@ -15518,15 +15541,32 @@ function cloudSignup(){
 function cloudLogout(){
   if(!_fbAuth) return;
   if(!confirm('로그아웃 하시겠습니까?')) return;
+  _cloudActive = false;
+  _cloudUser = null;
   sessionStorage.removeItem('mes_cloud_synced');
-  _fbAuth.signOut().then(()=>location.reload());
+  try { if (_cloudUnsub) _cloudUnsub(); } catch(e){}
+  try { closeMegaMenu(); closeTopbarAlerts(); closeTopbarMoreMenu(); closeSbOverlay(); } catch(e){}
+  document.querySelectorAll('.overlay.open').forEach(el => el.classList.remove('open'));
+  _showLogin();
+  _cloudMsg('로그아웃 중…','#8a93ad');
+  _fbAuth.signOut()
+    .then(()=>_cloudMsg('', '#8a93ad'))
+    .catch(e=>_cloudMsg(_cloudErr(e)));
 }
 function _cloudErr(e){
   const m={'auth/invalid-credential':'이메일 또는 비밀번호가 올바르지 않습니다.','auth/user-not-found':'등록되지 않은 계정입니다.','auth/wrong-password':'비밀번호가 올바르지 않습니다.','auth/email-already-in-use':'이미 가입된 이메일입니다.','auth/invalid-email':'이메일 형식이 올바르지 않습니다.','auth/weak-password':'비밀번호는 6자 이상이어야 합니다.'};
   return m[e.code]||('오류: '+(e.message||e.code));
 }
-function _showLogin(){ const el=inp('cloud-login'); if(el) el.style.display='flex'; const c=inp('cloud-chip'); if(c) c.style.display='none'; }
-function _hideLogin(){ const el=inp('cloud-login'); if(el) el.style.display='none'; }
+function _showLogin(){
+  if (typeof setAuthShellLocked === 'function') setAuthShellLocked(true);
+  const el=inp('cloud-login'); if(el) el.style.display='flex';
+  const pw=inp('cl-pw'); if(pw) pw.value='';
+  const c=inp('cloud-chip'); if(c) c.style.display='none';
+}
+function _hideLogin(){
+  const el=inp('cloud-login'); if(el) el.style.display='none';
+  if (typeof setAuthShellLocked === 'function') setAuthShellLocked(false);
+}
 function _cloudMsg(t,color){ const el=inp('cl-msg'); if(el){ el.textContent=t||''; el.style.color=color||'#ff8787'; } }
 function _cloudChip(state){
   const chip=inp('cloud-chip'), ic=inp('cloud-chip-icon'), tx=inp('cloud-chip-txt');
