@@ -23,19 +23,21 @@
 <script id="embedded-data" type="application/json">{}</script>
 <style>
 :root {
-  --bg-p: #eef0f3; --bg-s: #e4e7ec; --bg-t: #d9dde4;
-  --bg-top: #eef0f3;
-  --bg-i: #e6f1fb; --bg-ok: #eaf3de; --bg-w: #faeeda; --bg-d: #fcebeb;
-  --tbl-bg: #ffffff; --tbl-head: #f3f5f8; --tbl-alt: #fbfcfe;
-  --tbl-grid: #d8dee8; --tbl-hover: #eef5ff; --tbl-selected: #e7f0ff;
-  --tx: #212529; --tx-s: #495057; --tx-t: #868e96;
-  --tx-i: #185FA5; --tx-ok: #3B6D11; --tx-w: #854F0B; --tx-d: #791F1F;
-  --br: rgba(0, 0, 0, 0.08); --br-s: rgba(0, 0, 0, 0.15);
-  --br-i: rgba(24, 95, 165, 0.25); --br-ok: rgba(59, 109, 17, 0.25);
-  --br-w: rgba(133, 79, 11, 0.25); --br-d: rgba(121, 31, 31, 0.25);
-  --rm: 8px; --rl: 12px;
+  --bg: #f7f8fb;
+  --bg-p: #ffffff; --bg-s: #f4f6fa; --bg-t: #eceff4;
+  --bg-top: rgba(255, 255, 255, 0.94);
+  --bg-i: #e8f2ff; --bg-ok: #eaf7ee; --bg-w: #fff3da; --bg-d: #fff0ef;
+  --tbl-bg: #ffffff; --tbl-head: #f3f6fb; --tbl-alt: #fafbfd;
+  --tbl-grid: #dfe5ee; --tbl-hover: #edf5ff; --tbl-selected: #deecff;
+  --tx: #1f242b; --tx-s: #4a5564; --tx-t: #8792a2;
+  --tx-i: #1667bd; --tx-ok: #237a3b; --tx-w: #965d00; --tx-d: #b42318;
+  --br: rgba(31, 41, 55, 0.10); --br-s: rgba(31, 41, 55, 0.18);
+  --br-i: rgba(22, 103, 189, 0.26); --br-ok: rgba(35, 122, 59, 0.23);
+  --br-w: rgba(150, 93, 0, 0.24); --br-d: rgba(180, 35, 24, 0.23);
+  --rs: 5px; --rm: 6px; --rl: 8px;
   --f: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', '맑은 고딕', sans-serif;
-  --shadow: 0 2px 8px rgba(0,0,0,0.05);
+  --shadow: 0 1px 2px rgba(16,24,40,.06), 0 10px 26px rgba(16,24,40,.07);
+  --shadow-strong: 0 18px 46px rgba(16,24,40,.16);
   --ui-density-scale: 1;
   --ui-font-scale: 1;
   --mega-menu-width: 324px;
@@ -49,20 +51,22 @@
   --mobile-tabbar-base-height: 58px;
 }
 :root.dark {
-  --bg-p: #1a1a1e; --bg-s: #242428; --bg-t: #121214;
-  --bg-top: #1a1a1e;
-  --bg-i: #062b4e; --bg-ok: #153205; --bg-w: #3d2304; --bg-d: #491212;
-  --tbl-bg: #1c1d21; --tbl-head: #282b31; --tbl-alt: #202228;
-  --tbl-grid: #383d47; --tbl-hover: #113251; --tbl-selected: #0d3a62;
-  --tx: #f1f3f5; --tx-s: #ced4da; --tx-t: #868e96;
-  --tx-i: #85B7EB; --tx-ok: #97C459; --tx-w: #EF9F27; --tx-d: #F09595;
-  --br: rgba(255, 255, 255, 0.08); --br-s: rgba(255, 255, 255, 0.15);
-  --br-i: rgba(133, 183, 235, 0.2); --br-ok: rgba(151, 196, 89, 0.2);
-  --br-w: rgba(239, 159, 39, 0.2); --br-d: rgba(240, 149, 149, 0.2);
-  --shadow: 0 4px 12px rgba(0,0,0,0.3);
+  --bg: #14171c;
+  --bg-p: #191d23; --bg-s: #232832; --bg-t: #0f1115;
+  --bg-top: rgba(25, 29, 35, 0.94);
+  --bg-i: #102f4f; --bg-ok: #163520; --bg-w: #3e2b0f; --bg-d: #3f1f1f;
+  --tbl-bg: #1b2027; --tbl-head: #252b35; --tbl-alt: #20262f;
+  --tbl-grid: #343b47; --tbl-hover: #163653; --tbl-selected: #153d62;
+  --tx: #f4f7fb; --tx-s: #c8d0dc; --tx-t: #909aaa;
+  --tx-i: #86bdff; --tx-ok: #8fd187; --tx-w: #f4b64d; --tx-d: #ff9b9b;
+  --br: rgba(232, 238, 247, 0.10); --br-s: rgba(232, 238, 247, 0.18);
+  --br-i: rgba(134, 189, 255, 0.26); --br-ok: rgba(143, 209, 135, 0.21);
+  --br-w: rgba(244, 182, 77, 0.24); --br-d: rgba(255, 155, 155, 0.24);
+  --shadow: 0 1px 2px rgba(0,0,0,.32), 0 16px 40px rgba(0,0,0,.28);
+  --shadow-strong: 0 24px 70px rgba(0,0,0,.42);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: var(--f); font-size: calc(12px * var(--ui-font-scale)); background: var(--bg-t); color: var(--tx); height: 100vh; overflow: hidden; display: flex; transition: background 0.2s, color 0.2s; }
+body { font-family: var(--f); font-size: calc(12px * var(--ui-font-scale)); background: var(--bg-t); color: var(--tx); height: 100vh; overflow: hidden; display: flex; transition: background 0.2s, color 0.2s; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
 
 /* 토스트 알림 컨테이너 */
 #toast-container { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 10000; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
@@ -73,28 +77,28 @@ body { font-family: var(--f); font-size: calc(12px * var(--ui-font-scale)); back
 @keyframes toastIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
 
 /* 사이드바 */
-.sidebar { width: 210px; min-width: 210px; background: var(--bg-p); border-right: 1px solid var(--br); display: flex; flex-direction: column; align-self: stretch; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; flex-shrink: 0; scrollbar-width: thin; scrollbar-color: transparent transparent; }
+.sidebar { width: 210px; min-width: 210px; background: var(--bg-p); border-right: 1px solid var(--br); display: flex; flex-direction: column; align-self: stretch; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; flex-shrink: 0; scrollbar-width: thin; scrollbar-color: transparent transparent; box-shadow: inset -1px 0 0 rgba(255,255,255,.04); }
 .sidebar::-webkit-scrollbar { width: 5px; }
 .sidebar::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
 .sidebar::-webkit-scrollbar-track { background: transparent; }
 .sidebar.is-scrolling { scrollbar-color: var(--br-s) transparent; }
 .sidebar.is-scrolling::-webkit-scrollbar-thumb { background: var(--br-s); }
-.logo { padding: 18px 14px 18px 20px; border-bottom: 1px solid var(--br); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.logo { padding: 16px 14px 16px 20px; border-bottom: 1px solid var(--br); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 #sb-toggle-btn { flex-shrink: 0; font-size: 18px; padding: 4px 6px; }
 .logo-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--tx-i); }
 .logo-title i { font-size: 20px; }
 .logo-sub { font-size: 11px; color: var(--tx-t); margin-top: 3px; padding-left: 28px; font-weight: 500; }
 .nav-g { padding: 10px 0 4px; }
 .nav-lbl { font-size: 10px; color: var(--tx-t); padding: 8px 20px 4px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; }
-.ni { display: flex; align-items: center; gap: 10px; padding: 9px 20px; font-size: 13px; color: var(--tx-s); cursor: pointer; border-left: 3px solid transparent; transition: all .15s; user-select: none; }
+.ni { display: flex; align-items: center; gap: 10px; padding: 8px 18px; font-size: 13px; color: var(--tx-s); cursor: pointer; border-left: 3px solid transparent; transition: background .15s, color .15s, border-color .15s; user-select: none; }
 .ni:hover { background: var(--bg-s); color: var(--tx); }
-.ni.active { background: var(--bg-s); color: var(--tx-i); border-left-color: var(--tx-i); font-weight: 600; }
+.ni.active { background: var(--bg-i); color: var(--tx-i); border-left-color: var(--tx-i); font-weight: 800; box-shadow: inset 0 0 0 1px var(--br-i); }
 .ni i { font-size: 16px; flex-shrink: 0; }
 .nbadge { margin-left: auto; font-size: 10px; background: #e03131; color: #fff; border-radius: 10px; padding: 1px 6px; font-weight: 600; }
 
 /* 메인 영역 */
 .main { flex: 1; display: flex; flex-direction: column; overflow: visible; min-width: 0; min-height: 0; }
-.topbar { position: relative; z-index: 9000; overflow: visible; background: var(--bg-top); border-bottom: 1px solid var(--br); padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; min-height: 52px; flex-shrink: 0; }
+.topbar { position: relative; z-index: 9000; overflow: visible; background: var(--bg-top); border-bottom: 1px solid var(--br); padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; min-height: 52px; flex-shrink: 0; -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); box-shadow: 0 1px 0 rgba(255,255,255,.04), 0 10px 24px rgba(16,24,40,.06); }
 .topbar-left { min-width: 0; display: flex; align-items: center; gap: 8px; }
 .tb-title { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tb-right { display: flex; align-items: center; gap: 12px; }
@@ -111,6 +115,7 @@ body { font-family: var(--f); font-size: calc(12px * var(--ui-font-scale)); back
   background: var(--bg-s);
   color: var(--tx-s);
   cursor: pointer;
+  box-shadow: 0 1px 2px rgba(16,24,40,.08);
 }
 .topnav-back:hover,
 .topnav-home:hover,
@@ -163,7 +168,7 @@ body { font-family: var(--f); font-size: calc(12px * var(--ui-font-scale)); back
   border: 1px solid var(--br-s);
   border-radius: var(--rl);
   background: var(--bg-p);
-  box-shadow: 0 10px 28px rgba(0,0,0,.24);
+  box-shadow: var(--shadow-strong);
 }
 .topnav-group::after {
   content: '';
@@ -374,17 +379,17 @@ body { font-family: var(--f); font-size: calc(12px * var(--ui-font-scale)); back
 .theme-btn:hover { background: var(--bg-s); }
 
 /* 컨텐츠 및 레이아웃 */
-.content { flex: 1; overflow-y: auto; padding: calc(6px * var(--ui-density-scale)) calc(8px * var(--ui-density-scale)); display: none; }
+.content { flex: 1; overflow-y: auto; padding: calc(8px * var(--ui-density-scale)) calc(10px * var(--ui-density-scale)); display: none; }
 .content.active { display: block; }
-.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; margin-bottom: 5px; }
-.mc { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rm); padding: 6px 8px; cursor: default; box-shadow: var(--shadow); transition: transform 0.15s, border-color 0.15s; min-width: 0; min-height: 52px; display: flex; flex-direction: column; justify-content: center; }
+.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 6px; }
+.mc { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: 8px 10px; cursor: default; box-shadow: 0 1px 2px rgba(16,24,40,.06), inset 0 1px 0 rgba(255,255,255,.05); transition: background 0.15s, border-color 0.15s, box-shadow 0.15s; min-width: 0; min-height: 54px; display: flex; flex-direction: column; justify-content: center; }
 .mc.clickable { cursor: pointer; }
-.mc.clickable:hover { border-color: var(--tx-i); transform: translateY(-1px); }
-.mc.clickable.kpi-active { border-color: var(--tx-i); box-shadow: 0 0 0 2px var(--br-i) inset, var(--shadow); }
+.mc.clickable:hover { background: var(--bg-s); border-color: var(--br-i); box-shadow: 0 0 0 1px var(--br-i) inset; }
+.mc.clickable.kpi-active { background: var(--bg-i); border-color: var(--br-i); box-shadow: 0 0 0 1px var(--br-i) inset; }
 .mc.clickable.kpi-active .mc-lbl::after { content: '필터됨'; margin-left: auto; font-size: 9px; font-weight: 700; color: var(--tx-i); background: var(--bg-i); border: 1px solid var(--br-i); border-radius: 8px; padding: 0 6px; }
-.mc-lbl { font-size: 11px; color: var(--tx-s); margin-bottom: 3px; display: flex; align-items: center; gap: 5px; font-weight: 500; line-height: 1.2; min-width: 0; }
+.mc-lbl { font-size: 11px; color: var(--tx-s); margin-bottom: 3px; display: flex; align-items: center; gap: 5px; font-weight: 700; line-height: 1.2; min-width: 0; }
 .mc-lbl i { font-size: 13px; flex: 0 0 auto; }
-.mc-val { font-size: 20px; font-weight: 700; letter-spacing: 0; line-height: 1.05; min-width: 0; overflow-wrap: anywhere; }
+.mc-val { font-size: 20px; font-weight: 850; letter-spacing: 0; line-height: 1.05; min-width: 0; overflow-wrap: anywhere; }
 .mc-sub { font-size: 10.5px; color: var(--tx-t); margin-top: 2px; font-weight: 500; line-height: 1.2; }
 .up { color: var(--tx-ok) !important; }
 .dn { color: var(--tx-d) !important; }
@@ -392,12 +397,12 @@ body { font-family: var(--f); font-size: calc(12px * var(--ui-font-scale)); back
 .row2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
 .row3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
 
-.card { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: calc(10px * var(--ui-density-scale)) calc(12px * var(--ui-density-scale)); box-shadow: var(--shadow); margin-bottom: calc(6px * var(--ui-density-scale)); min-width: 0; }
+.card { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: calc(11px * var(--ui-density-scale)) calc(13px * var(--ui-density-scale)); box-shadow: var(--shadow); margin-bottom: calc(7px * var(--ui-density-scale)); min-width: 0; }
 .content > .card:has(> div[id$="-table"]),
 .content > .card:has(> .trash-table-scroll) {
   padding: calc(3px * var(--ui-density-scale)) calc(4px * var(--ui-density-scale));
 }
-.card-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+.card-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--br); flex-wrap: wrap; gap: 8px; }
 .hr-view-toolbar {
   min-height: 34px;
   margin-bottom: 12px;
@@ -460,7 +465,7 @@ body { font-family: var(--f); font-size: calc(12px * var(--ui-font-scale)); back
 .att-quick-note { min-width: 120px; width: 100%; height: 28px; padding: 0 7px; font-size: 11px; }
 .att-quick-actions { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
 .att-quick-exception td { box-shadow: inset 0 1px 0 var(--br-w), inset 0 -1px 0 var(--br-w); }
-.card-ttl { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.card-ttl { font-size: 14px; font-weight: 750; display: flex; align-items: center; gap: 8px; }
 .card-ttl i { font-size: 16px; color: var(--tx-i); }
 
 /* 테이블 스타일 */
@@ -473,17 +478,18 @@ table {
 }
 th {
   text-align: left;
-  padding: calc(8px * var(--ui-density-scale)) calc(11px * var(--ui-density-scale));
+  padding: calc(7px * var(--ui-density-scale)) calc(10px * var(--ui-density-scale));
   color: var(--tx);
   border-right: 1px solid var(--tbl-grid);
   border-bottom: 1px solid var(--tbl-grid);
-  font-weight: 700;
+  font-weight: 800;
   white-space: nowrap;
   background: var(--tbl-head);
   line-height: 1.25;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
 }
 td {
-  padding: calc(8px * var(--ui-density-scale)) calc(11px * var(--ui-density-scale));
+  padding: calc(7px * var(--ui-density-scale)) calc(10px * var(--ui-density-scale));
   border-right: 1px solid var(--tbl-grid);
   border-bottom: 1px solid var(--tbl-grid);
   vertical-align: middle;
@@ -522,9 +528,11 @@ tr:hover td { background: var(--tbl-hover); }
 .content thead th { position: sticky; top: 0; z-index: 3; }
 .content div:has(> table) {
   max-height: calc(100vh - 170px);
-  overflow-y: auto;
+  overflow: auto;
   background: var(--tbl-bg);
-  border-radius: 6px;
+  border: 1px solid var(--br);
+  border-radius: var(--rl);
+  box-shadow: 0 1px 2px rgba(16,24,40,.05);
 }
 .content th:first-child, .content td:first-child { position: sticky; left: 0; z-index: 2; }
 .content thead th:first-child { z-index: 4; }
@@ -1010,7 +1018,7 @@ body.mega-menu-open { overflow: hidden; }
 .ui-color-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 
 /* 뱃지 및 프로그레스 */
-.bd { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 4px; border: 1px solid; white-space: nowrap; font-weight: 600; }
+.bd { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 999px; border: 1px solid; white-space: nowrap; font-weight: 800; }
 .bd-ok { background: var(--bg-ok); color: var(--tx-ok); border-color: var(--br-ok); }
 .bd-warn { background: var(--bg-w); color: var(--tx-w); border-color: var(--br-w); }
 .bd-err { background: var(--bg-d); color: var(--tx-d); border-color: var(--br-d); }
@@ -1047,7 +1055,7 @@ body.mega-menu-open { overflow: hidden; }
 .pf { height: 100%; border-radius: 3px; transition: width 0.3s ease; }
 
 /* 폼 컨트롤 */
-input, select, textarea { font-size: 12px; padding: 6px 10px; height: 32px; font-family: var(--f); background: var(--bg-p); color: var(--tx); border: 1px solid var(--br-s); border-radius: var(--rm); outline: none; transition: border-color .15s, box-shadow .15s; }
+input, select, textarea { font-size: 12px; padding: 6px 10px; height: 32px; font-family: var(--f); background: var(--bg-p); color: var(--tx); border: 1px solid var(--br); border-radius: var(--rm); outline: none; box-shadow: inset 0 1px 0 rgba(255,255,255,.04); transition: background .15s, border-color .15s, box-shadow .15s; }
 select { color-scheme: light; }
 :root.dark select { color-scheme: dark; }
 select option,
@@ -1068,7 +1076,8 @@ select option:checked {
   background: #062b4e;
   color: #ffffff;
 }
-input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:focus { border-color: var(--tx-i); box-shadow: 0 0 0 3px rgba(24, 95, 165, 0.15); }
+input:not([type="checkbox"]):not([type="radio"]):hover, select:hover, textarea:hover { border-color: var(--br-s); background: var(--bg-s); }
+input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:focus { border-color: var(--tx-i); box-shadow: 0 0 0 3px var(--br-i), inset 0 1px 0 rgba(255,255,255,.06); background: var(--bg-p); }
 input[type="checkbox"], input[type="radio"] { width: 16px; height: 16px; min-width: 16px; flex: 0 0 16px; margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; accent-color: var(--tx-i); cursor: pointer; vertical-align: middle; transition: none; }
 input[type="checkbox"]:active, input[type="radio"]:active { transform: none; }
 input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { outline: 2px solid var(--tx-i); outline-offset: 2px; }
@@ -1077,13 +1086,14 @@ textarea { height: auto; resize: vertical; }
 
 .toolbar { display: flex; gap: 6px; margin-bottom: 5px; align-items: center; flex-wrap: wrap; }
 .content > .toolbar { margin-bottom: 5px !important; }
-.btn { padding: 6px 14px; border-radius: var(--rm); font-size: 12px; cursor: pointer; border: 1px solid var(--br-s); background: var(--bg-p); color: var(--tx); height: 32px; display: inline-flex; align-items: center; gap: 6px; font-family: var(--f); font-weight: 500; transition: all .15s; white-space: nowrap; }
-.btn:hover { background: var(--bg-s); border-color: var(--tx-s); }
-.btn:active { transform: scale(.97); }
-.btn-primary { background: var(--tx-i); color: #fff; border-color: var(--tx-i); }
-.btn-primary:hover { background: #134e8a; border-color: #134e8a; }
+.btn { padding: 6px 14px; border-radius: var(--rm); font-size: 12px; cursor: pointer; border: 1px solid var(--br); background: var(--bg-p); color: var(--tx); height: 32px; display: inline-flex; align-items: center; gap: 6px; font-family: var(--f); font-weight: 750; box-shadow: 0 1px 2px rgba(16,24,40,.06), inset 0 1px 0 rgba(255,255,255,.05); transition: background .15s, border-color .15s, color .15s, box-shadow .15s, transform .08s; white-space: nowrap; }
+.btn:hover { background: var(--bg-s); border-color: var(--br-s); box-shadow: 0 2px 6px rgba(16,24,40,.10), inset 0 1px 0 rgba(255,255,255,.06); }
+.btn:active { transform: translateY(1px); }
+.btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--br-i), 0 1px 2px rgba(16,24,40,.06); }
+.btn-primary { background: var(--tx-i); color: #fff; border-color: var(--tx-i); box-shadow: 0 5px 14px var(--br-i); }
+.btn-primary:hover { background: var(--tx-i); border-color: var(--tx-i); color: #fff; filter: brightness(.96); box-shadow: 0 8px 18px var(--br-i); }
 .btn-danger { background: var(--bg-d); color: var(--tx-d); border-color: var(--br-d); }
-.btn-danger:hover { background: #f03e3e; color: #fff; }
+.btn-danger:hover { background: var(--tx-d); border-color: var(--tx-d); color: #fff; box-shadow: 0 8px 18px var(--br-d); }
 .btn-sm { padding: 4px 10px; font-size: 11px; height: 26px; border-radius: 6px; }
 .btn-icon { padding: 6px; width: 32px; justify-content: center; gap: 0; }
 .btn-icon i { font-size: 16px; }
@@ -1287,28 +1297,29 @@ textarea { height: auto; resize: vertical; }
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(10, 14, 20, 0.56);
   display: none;
   align-items: flex-start; /* 모바일 수직 오버플로우 대비 */
   justify-content: center;
   z-index: 9999; /* 오버레이 z-index 최상위 확보 */
-  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   overflow-y: auto; /* 수직 스크롤 허용 */
   padding: 20px 0; /* 상하 여백 확보 */
 }
 .overlay.open { display: flex; }
 .dlg {
   background: var(--bg-p);
-  border: 1px solid var(--br);
+  border: 1px solid var(--br-s);
   border-radius: var(--rl);
-  padding: 24px;
+  padding: 22px;
   max-width: 420px;
   width: 90%;
   margin: auto; /* 상하 스크롤 시 자동 가운데 배치 및 잘림 방지 */
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-strong);
   animation: scaleUp 0.15s ease;
 }
-.dlg-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.dlg-title { font-size: 15px; font-weight: 850; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
 .dlg-msg { font-size: 12.5px; color: var(--tx-s); margin-bottom: 20px; line-height: 1.6; }
 .dlg-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
@@ -1350,7 +1361,7 @@ textarea { height: auto; resize: vertical; }
   border: 1px solid var(--br);
   border-radius: var(--rm);
   background: var(--bg-p);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-strong);
 }
 .inline-search-item {
   width: 100%;
@@ -1620,6 +1631,245 @@ textarea { height: auto; resize: vertical; }
   cursor: pointer;
   accent-color: var(--tx-i);
 }
+.payreq-approval-card {
+  overflow: hidden;
+}
+.payreq-approval-card .card-hd {
+  margin-bottom: 0;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, var(--bg-p), var(--bg-s));
+}
+.payreq-approval-subtitle {
+  color: var(--tx-t);
+  font-size: 11px;
+  font-weight: 650;
+}
+.payreq-approval-metrics {
+  padding: 12px 14px 6px;
+  background: var(--bg-p);
+}
+.payreq-approval-table-wrap {
+  padding: 0 4px 4px;
+}
+.payreq-table {
+  min-width: 1080px;
+}
+.payreq-table th {
+  font-size: 11px;
+  letter-spacing: .01em;
+}
+.payreq-table td {
+  height: 44px;
+}
+.payreq-id-pill {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 3px 8px;
+  border: 1px solid var(--br-i);
+  border-radius: 6px;
+  background: var(--bg-i);
+  color: var(--tx-i);
+  font-size: 11px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+.payreq-main-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.payreq-main-cell strong {
+  color: var(--tx);
+  font-size: 12.5px;
+  font-weight: 850;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.payreq-main-cell span {
+  color: var(--tx-t);
+  font-size: 10.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.payreq-muted-line {
+  display: block;
+  margin-top: 3px;
+  color: var(--tx-t);
+  font-size: 10.5px;
+}
+.payreq-amount {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 12.5px;
+  font-weight: 850;
+  color: #e8590c;
+  letter-spacing: 0;
+}
+.payreq-table tbody tr.payreq-row-pending td {
+  background: var(--bg-w);
+}
+.payreq-table tbody tr.payreq-row-rejected td {
+  background: var(--bg-d);
+}
+.payreq-table tbody tr.payreq-row-approved td {
+  background: var(--tbl-bg);
+}
+.payreq-table tbody tr.payreq-row-draft td {
+  background: var(--bg-s);
+}
+.payreq-table tbody tr.table-row-selected td {
+  background: var(--tbl-selected) !important;
+}
+.payreq-selection-bar {
+  align-items: center;
+  gap: 6px;
+  padding: 7px 9px;
+  border: 1px solid var(--br-i);
+  border-radius: var(--rl);
+  background: var(--bg-i);
+}
+.payreq-selection-bar .btn[data-payreq-action="approve"] {
+  border-color: var(--br-ok);
+  background: var(--bg-ok);
+  color: var(--tx-ok);
+}
+.payreq-selection-bar .btn[data-payreq-action="reject"] {
+  border-color: var(--br-d);
+  background: var(--bg-d);
+  color: var(--tx-d);
+}
+.payreq-dialog {
+  max-width: min(920px, 96vw) !important;
+}
+.payreq-dialog .dlg-title {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--br);
+}
+.payreq-report-summary {
+  margin-bottom: 14px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--br);
+  border-radius: var(--rl);
+  background: var(--bg-p);
+  box-shadow: 0 4px 24px rgba(20,25,40,.06);
+}
+.payreq-report-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--br);
+  background: linear-gradient(180deg, var(--bg-p), var(--bg-s));
+}
+.payreq-report-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.payreq-report-title strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 850;
+}
+.payreq-report-body {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-bottom: 1px solid var(--br);
+}
+.payreq-report-body > div {
+  min-width: 0;
+  padding: 12px 14px;
+  border-right: 1px solid var(--br);
+}
+.payreq-report-body > div:last-child {
+  border-right: 0;
+}
+.payreq-report-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--tx-t);
+  font-size: 10.5px;
+  font-weight: 800;
+}
+.payreq-report-value {
+  display: block;
+  min-width: 0;
+  color: var(--tx);
+  font-size: 13px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.payreq-report-amount {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 18px;
+  font-weight: 850;
+  color: #e8590c;
+}
+.payreq-report-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg-s);
+  color: var(--tx-s);
+  font-size: 11.5px;
+}
+.payreq-approval-mini {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.payreq-approval-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--tx-t);
+  flex: 0 0 auto;
+}
+.payreq-approval-dot.pending { background: var(--tx-w); }
+.payreq-approval-dot.approved { background: var(--tx-ok); }
+.payreq-approval-dot.rejected { background: var(--tx-d); }
+.payreq-approval-dot.draft { background: var(--tx-t); }
+.payreq-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+.payreq-form-grid .ff:nth-child(6) {
+  grid-column: 1 / -1;
+}
+@media (max-width: 720px) {
+  .payreq-report-head,
+  .payreq-report-foot {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .payreq-report-body {
+    grid-template-columns: 1fr;
+  }
+  .payreq-report-body > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--br);
+  }
+  .payreq-report-body > div:last-child {
+    border-bottom: 0;
+  }
+  .payreq-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
 .finance-payment-table,
 .finance-etc-table {
   table-layout: fixed;
@@ -1649,6 +1899,177 @@ textarea { height: auto; resize: vertical; }
   height: 16px;
   cursor: pointer;
   accent-color: var(--tx-i);
+}
+.finance-flow-card {
+  margin-bottom: 16px;
+}
+.finance-flow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+}
+.finance-flow-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--br);
+  border-radius: 10px;
+  background: rgba(255,255,255,.025);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+.finance-flow-item > i {
+  flex: 0 0 auto;
+  color: var(--tx-i);
+  font-size: 18px;
+  margin-top: 1px;
+}
+.finance-flow-item strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--tx);
+  font-size: 12.5px;
+}
+.finance-flow-item span {
+  display: block;
+  color: var(--tx-s);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.finance-link-status {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.finance-link-stat {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--br);
+  border-radius: 10px;
+  background: var(--bg-s);
+  color: var(--tx);
+  text-align: left;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, box-shadow .15s;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+.finance-link-stat:hover {
+  border-color: var(--br-i);
+  background: var(--bg-i);
+  box-shadow: 0 0 0 1px var(--br-i) inset;
+}
+.finance-link-stat > i {
+  flex: 0 0 auto;
+  color: var(--tx-i);
+  font-size: 18px;
+  margin-top: 2px;
+}
+.finance-link-stat b,
+.finance-link-stat strong,
+.finance-link-stat em {
+  display: block;
+  font-style: normal;
+  line-height: 1.35;
+}
+.finance-link-stat b {
+  color: var(--tx-s);
+  font-size: 11px;
+}
+.finance-link-stat strong {
+  color: var(--tx);
+  font-size: 17px;
+  font-weight: 850;
+}
+.finance-link-stat em {
+  color: var(--tx-t);
+  font-size: 11px;
+}
+.finance-link-stat-orange > i,
+.finance-link-stat-orange strong {
+  color: #e8590c;
+}
+.finance-link-stat-warn > i,
+.finance-link-stat-warn strong {
+  color: var(--tx-w);
+}
+.finance-link-checks {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--br);
+}
+.finance-link-check-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 7px;
+  color: var(--tx-s);
+  font-size: 11.5px;
+  font-weight: 800;
+}
+.finance-link-issue,
+.finance-link-ok {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  margin-top: 5px;
+  padding: 8px 10px;
+  border: 1px solid var(--br);
+  border-radius: 9px;
+  background: rgba(255,255,255,.02);
+  color: var(--tx-s);
+  text-align: left;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+}
+.finance-link-issue {
+  cursor: pointer;
+}
+.finance-link-issue:hover {
+  background: var(--bg-s);
+  border-color: var(--br-s);
+}
+.finance-link-issue i,
+.finance-link-ok i {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  font-size: 15px;
+}
+.finance-link-issue span,
+.finance-link-ok {
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+.finance-link-issue-info i {
+  color: var(--tx-i);
+}
+.finance-link-issue-warn i {
+  color: var(--tx-w);
+}
+.finance-link-issue-danger i {
+  color: var(--tx-d);
+}
+.finance-link-ok {
+  color: var(--tx-ok);
+}
+.finance-audit-type {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 3px 8px;
+  border: 1px solid rgba(96,165,250,.28);
+  border-radius: 999px;
+  background: rgba(96,165,250,.1);
+  color: var(--tx-i);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 .fixed-cost-month-note {
   max-width: 220px;
@@ -1699,16 +2120,16 @@ textarea { height: auto; resize: vertical; }
 }
 
 .sum-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
-.sum-box { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: 10px 14px; display: flex; align-items: center; gap: 10px; box-shadow: var(--shadow); min-width: 0; }
-.sum-box.clickable { cursor: pointer; transition: border-color .15s, transform .15s; }
-.sum-box.clickable:hover { border-color: var(--tx-i); transform: translateY(-2px); }
-.sum-box.kpi-active { border-color: var(--tx-i); box-shadow: 0 0 0 2px var(--br-i) inset, var(--shadow); }
+.sum-box { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: 10px 14px; display: flex; align-items: center; gap: 10px; box-shadow: 0 1px 2px rgba(16,24,40,.04); min-width: 0; }
+.sum-box.clickable { cursor: pointer; transition: background .15s, border-color .15s, box-shadow .15s; }
+.sum-box.clickable:hover { background: var(--bg-s); border-color: var(--br-i); box-shadow: 0 0 0 1px var(--br-i) inset; }
+.sum-box.kpi-active { background: var(--bg-i); border-color: var(--br-i); box-shadow: 0 0 0 1px var(--br-i) inset; }
 .si { font-size: 20px; color: var(--tx-s); }
 .sn { font-size: 17px; font-weight: 700; }
 .sl { font-size: 10.5px; color: var(--tx-t); font-weight: 500; }
 
 /* 수주처 카드 & 드래그엔드롭 스타일 */
-.client-card { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); overflow: hidden; margin-bottom: 12px; box-shadow: var(--shadow); transition: transform 0.15s, border-color 0.15s; min-width: 0; }
+.client-card { background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); overflow: hidden; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(16,24,40,.04); transition: background .15s, border-color 0.15s; min-width: 0; }
 .client-card.expanded { border-color: var(--tx-i); }
 .client-card.client-closed { border-color: var(--br); opacity: .85; background: var(--bg-s); }
 .client-card.dragging { opacity: 0.4; border: 1px dashed var(--tx-i); transform: scale(0.98); }
@@ -1848,17 +2269,17 @@ textarea { height: auto; resize: vertical; }
 /* 시스템 관리 */
 #pg-system { background: var(--bg-t); }
 .system-shell { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 22px; align-items: start; }
-.system-sidebar { position: static; align-self: start; margin: 0; background: var(--bg-p); border: 1px solid var(--br); border-radius: 14px; padding: 18px 14px 14px; box-shadow: var(--shadow); }
+.system-sidebar { position: static; align-self: start; margin: 0; background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: 16px 12px 12px; box-shadow: 0 1px 2px rgba(16,24,40,.04); }
 .system-sidebar-title { padding: 0 10px 14px; color: var(--tx-t); font-size: 13px; font-weight: 700; }
 .system-nav { display: flex; flex-direction: column; gap: 8px; }
 .system-nav button { width: 100%; min-height: 46px; display: flex; align-items: center; gap: 12px; border: 1px solid var(--br); border-radius: 10px; background: var(--bg-s); color: var(--tx); padding: 0 16px; font-family: var(--f); font-size: 13px; font-weight: 700; text-align: left; cursor: pointer; transition: background .15s, border-color .15s, color .15s, transform .15s; }
 .system-nav button i { width: 17px; color: var(--tx-i); font-size: 16px; text-align: center; }
 .system-nav button:hover { border-color: var(--br-i); background: var(--bg-i); }
-.system-nav button.active, .system-nav button.btn-primary { border-color: var(--tx-i); background: var(--tx-i); color: #fff; box-shadow: 0 8px 18px rgba(25, 113, 194, .22); }
+.system-nav button.active, .system-nav button.btn-primary { border-color: var(--tx-i); background: var(--tx-i); color: #fff; box-shadow: 0 8px 18px var(--br-i); }
 .system-nav button.active i, .system-nav button.btn-primary i { color: #fff; }
 .system-workspace { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
 .system-workspace .system-panel { min-width: 0; }
-.system-workspace > .system-panel > .card, .system-workspace .system-panel > .card:first-child { border-radius: 14px; }
+.system-workspace > .system-panel > .card, .system-workspace .system-panel > .card:first-child { border-radius: var(--rl); }
 .system-workspace .system-panel > .card:first-child,
 .system-workspace .system-panel > div > .card:first-child { margin-top: 0; }
 #system-panel-trash .trash-table-card,
@@ -1915,7 +2336,7 @@ textarea { height: auto; resize: vertical; }
 .system-section-title i { color: var(--tx-i); font-size: 18px; }
 .system-hero { padding: 18px 28px 28px; border-color: var(--br-i); }
 .system-kpi-row { display: grid; grid-template-columns: repeat(3, minmax(190px, 1fr)); gap: 14px; overflow: hidden; }
-.system-kpi { min-height: 104px; padding: 18px 20px; border: 1px solid var(--br); border-radius: 14px; background: var(--bg-s); box-shadow: var(--shadow); }
+.system-kpi { min-height: 104px; padding: 18px 20px; border: 1px solid var(--br); border-radius: var(--rl); background: var(--bg-s); box-shadow: 0 1px 2px rgba(16,24,40,.04); }
 .system-kpi-label { display: flex; align-items: center; gap: 8px; color: var(--tx-s); font-size: 12px; font-weight: 700; }
 .system-kpi-label i { color: var(--tx-i); }
 .system-kpi strong { display: block; margin-top: 10px; font-size: 24px; line-height: 1; color: var(--tx); }
@@ -6867,8 +7288,8 @@ function applySidebarMode() {
   const body = document.body;
   try { localStorage.removeItem('mes_sbHidden'); } catch(e){}
   body.classList.remove('sb-mini', 'sb-expanded', 'sb-collapsed', 'wide-sidebar');
-  closeMegaMenu();
   if (window.innerWidth < SB_WIDE_MIN || isSidebarHiddenByUser()) return;
+  closeMegaMenu();
   body.classList.add('wide-sidebar');
 }
 window.addEventListener('resize', scheduleSidebarModeCheck);
@@ -21984,6 +22405,46 @@ function finPaymentRequestApprovalBadge(req) {
   const cls = { draft:'bd-neu', pending:'bd-warn', approved:'bd-ok', rejected:'bd-err' }[status] || 'bd-neu';
   return `<span class="bd ${cls}">${esc(PAYREQ_APPROVAL_LABELS[status] || status)}</span>`;
 }
+function payreqApprovalTone(req) {
+  return { draft:'draft', pending:'pending', approved:'approved', rejected:'rejected' }[payreqApprovalStatus(req)] || 'draft';
+}
+function payreqApprovalRowClass(req) {
+  return `payreq-row-${payreqApprovalTone(req)}`;
+}
+function payreqSourceSummaryHtml(p, pay, total) {
+  const remaining = pay ? Number(pay.remaining) || 0 : 0;
+  const docNo = esc(p.id || '');
+  const supplier = esc(p.supplier || '공급처 미지정');
+  const itemSummary = esc(finPoItemSummary(p));
+  const payMethod = esc(p.payMethod || '현금');
+  const remainingTone = remaining > 0 ? 'warn' : 'approved';
+  return `
+    <div class="payreq-report-head">
+      <div class="payreq-report-title">
+        <span class="payreq-id-pill">${docNo}</span>
+        <strong>${supplier}</strong>
+      </div>
+      <span class="bd bd-warn">결제 요청</span>
+    </div>
+    <div class="payreq-report-body">
+      <div>
+        <span class="payreq-report-label">발주 품목</span>
+        <span class="payreq-report-value">${itemSummary || '-'}</span>
+      </div>
+      <div>
+        <span class="payreq-report-label">발주 금액</span>
+        <span class="payreq-report-amount">${fmtW(total)}</span>
+      </div>
+      <div>
+        <span class="payreq-report-label">미지급 금액</span>
+        <span class="payreq-report-amount">${fmtW(remaining)}</span>
+      </div>
+    </div>
+    <div class="payreq-report-foot">
+      <span class="payreq-approval-mini"><i class="payreq-approval-dot ${remainingTone}"></i>결제조건 <b>${payMethod}</b></span>
+      <span>구매발주서와 연결된 결제 요청입니다.</span>
+    </div>`;
+}
 function payreqIsApprovalEditable(req) {
   const status = payreqApprovalStatus(req);
   return status === 'draft' || status === 'rejected';
@@ -22578,12 +23039,13 @@ function financeAccountingPoList() {
 }
 function payreqApprovalSummaryHtml(req) {
   if (!req) return '';
-  const decided = req.decidedAt ? `<span>결정일 <b>${esc(req.decidedAt.slice(0, 10))}</b></span>` : '';
-  const submitted = req.submittedAt ? `<span>요청일시 <b>${esc(req.submittedAt.slice(0, 16).replace('T', ' '))}</b></span>` : '';
-  const approver = req.approverName ? `<span>승인자 <b>${esc(req.approverName)}</b></span>` : '';
-  const note = req.decisionNote ? `<div style="margin-top:6px;color:var(--tx-s);font-size:12px;">결정 메모: ${esc(req.decisionNote)}</div>` : '';
+  const statusTone = payreqApprovalTone(req);
+  const decided = req.decidedAt ? `<span class="payreq-approval-mini"><i class="payreq-approval-dot ${statusTone}"></i>결정일 <b>${esc(req.decidedAt.slice(0, 10))}</b></span>` : '';
+  const submitted = req.submittedAt ? `<span class="payreq-approval-mini"><i class="payreq-approval-dot pending"></i>요청일시 <b>${esc(req.submittedAt.slice(0, 16).replace('T', ' '))}</b></span>` : '';
+  const approver = req.approverName ? `<span class="payreq-approval-mini"><i class="payreq-approval-dot approved"></i>승인자 <b>${esc(req.approverName)}</b></span>` : '';
+  const note = req.decisionNote ? `<div class="payreq-muted-line" style="font-size:12px;">결정 메모: ${esc(req.decisionNote)}</div>` : '';
   return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;">
-    <span style="font-weight:800;">결재 상태</span>${finPaymentRequestApprovalBadge(req)}${submitted}${approver}${decided}
+    <span style="font-weight:850;">결재 상태</span>${finPaymentRequestApprovalBadge(req)}${submitted}${approver}${decided}
   </div>${note}`;
 }
 function setPaymentRequestModalEditable(editable) {
@@ -22662,9 +23124,187 @@ function finAudit(action, detail='') {
   financeData.auditLog.unshift({id:'FA-'+Date.now(),at:new Date().toISOString(),action,detail});
   financeData.auditLog=financeData.auditLog.slice(0,300);
 }
+const FINANCE_AUDIT_TYPES_LOCAL = new Set([
+  'finance',
+  'financePayment',
+  'fixedCost',
+  'fixedCostPayment',
+  'paymentRequest',
+  'payreq',
+  'financeEntry'
+]);
+function financeAuditLogAllowed(log, source='') {
+  if (!log) return false;
+  const type = String(log.entityType || '').trim();
+  if (type) {
+    if (typeof isFinanceAuditLogEntry === 'function') return isFinanceAuditLogEntry(log) || FINANCE_AUDIT_TYPES_LOCAL.has(type);
+    return FINANCE_AUDIT_TYPES_LOCAL.has(type);
+  }
+  return source === 'financeData' && !!(log.action || log.summary || log.detail);
+}
 function financeAuditRows() {
-  const rows = Array.isArray(financeData.auditLog) ? financeData.auditLog : [];
-  return rows.filter(log => typeof isFinanceAuditLogEntry === 'function' ? isFinanceAuditLogEntry(log) : true);
+  const rows = [];
+  const addRows = (list, source) => {
+    if (!Array.isArray(list)) return;
+    list.forEach(log => {
+      if (financeAuditLogAllowed(log, source)) rows.push(log);
+    });
+  };
+  addRows(Array.isArray(financeData.auditLog) ? financeData.auditLog : [], 'financeData');
+  if (typeof auditLog !== 'undefined') addRows(auditLog, 'auditLog');
+  if (typeof serverAuditLogCache !== 'undefined') addRows(serverAuditLogCache, 'server');
+  const seen = new Set();
+  return rows.filter(log => {
+    const key = log.id || [log.at, log.entityType, log.entityId, log.action, log.summary || log.detail].join('|');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).sort((a,b) => String(b.at || '').localeCompare(String(a.at || ''))).slice(0, 300);
+}
+function financeAuditEntityLabel(log) {
+  const type = String(log && log.entityType || '').trim();
+  const labels = {
+    finance: '재무',
+    financePayment: '수금/지급',
+    fixedCost: '고정비',
+    fixedCostPayment: '월 고정비',
+    paymentRequest: '결제요청',
+    payreq: '결제요청',
+    financeEntry: '기타 수입/비용'
+  };
+  return labels[type] || '재무';
+}
+function financeAuditActionText(log) {
+  if (!log) return '변경';
+  if (log.summary) return log.summary;
+  if (typeof auditLabelForAction === 'function') return auditLabelForAction(log.action || '');
+  return log.action || '변경';
+}
+function financeAuditDetailText(log) {
+  if (!log) return '';
+  return log.detail || log.entityId || '';
+}
+function financeAuditDateText(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  return isNaN(date.getTime()) ? String(value) : date.toLocaleString('ko-KR');
+}
+function financeAuditTableHtml(rows) {
+  if (!rows.length) return empty('아직 재무 변경 이력이 없습니다.');
+  return `<div style="overflow-x:auto;">
+    <table>
+      <thead><tr><th>일시</th><th>분류</th><th>작업</th><th>상세</th></tr></thead>
+      <tbody>${rows.slice(0,10).map(log=>`<tr>
+        <td>${financeAuditDateText(log.at)}</td>
+        <td><span class="finance-audit-type">${esc(financeAuditEntityLabel(log))}</span></td>
+        <td style="font-weight:700;">${esc(financeAuditActionText(log))}</td>
+        <td>${esc(financeAuditDetailText(log))}</td>
+      </tr>`).join('')}</tbody>
+    </table>
+  </div>`;
+}
+function financeDeliveryAmount(row) {
+  return (Number(row && row.price) || 0) * (Number(row && row.qty) || 0);
+}
+function financeIntegrationStats(rangeInfo) {
+  const deliveriesAll = financeVisibleDeliveries();
+  const deliveries = deliveriesAll.filter(row => finDateInRange(row.deliveredAt, rangeInfo));
+  const revenueAmount = deliveries.reduce((sum,row)=>sum+financeDeliveryAmount(row),0);
+  const receivable = deliveries.reduce((sum,row)=>{
+    const total = financeDeliveryAmount(row);
+    return sum + finPaymentRecord('ar', row.id, total).remaining;
+  },0);
+  const poAll = financeVisiblePoList();
+  const poInRange = poAll.filter(row => finDateInRange(row.date, rangeInfo));
+  const purchaseRows = poInRange.filter(finPoCountsAsPurchase);
+  const purchaseAmount = purchaseRows.reduce((sum,row)=>sum+finPoAmount(row),0);
+  const payable = purchaseRows.reduce((sum,row)=>{
+    const total = finPoAmount(row);
+    return sum + finPaymentRecord('ap', row.id, total).remaining;
+  },0);
+  const payreqRows = financePaymentRequests()
+    .filter(row => canViewRecord(row, 'paymentRequest'))
+    .filter(row => finDateInRange(row.requestDate || row.dueDate, rangeInfo));
+  const fixedRows = fixedCostRows(fixedCostMonth, false);
+  const fixedActiveRows = fixedRows.filter(row => row.status !== '보류');
+  return {
+    deliveries,
+    revenueAmount,
+    receivable,
+    revenueZeroCount: deliveries.filter(row => financeDeliveryAmount(row) <= 0).length,
+    undatedDeliveries: deliveriesAll.filter(row => !row.deliveredAt).length,
+    purchaseRows,
+    purchaseAmount,
+    payable,
+    draftPoCount: poInRange.filter(row => !finPoCountsAsPurchase(row)).length,
+    purchaseZeroCount: purchaseRows.filter(row => finPoAmount(row) <= 0).length,
+    undatedPoCount: poAll.filter(row => !row.date).length,
+    payreqRows,
+    pendingApprovalCount: payreqRows.filter(row => payreqApprovalStatus(row) === 'pending').length,
+    approvedOpenCount: payreqRows.filter(row => payreqIsApproved(row) && !payreqIsPaidDone(row) && row.status !== '반려').length,
+    rejectedCount: payreqRows.filter(row => payreqApprovalStatus(row) === 'rejected' || row.status === '반려').length,
+    fixedRows: fixedActiveRows,
+    fixedTotal: fixedActiveRows.reduce((sum,row)=>sum+(Number(row.amount)||0),0),
+    fixedPaidCount: fixedActiveRows.filter(row => row.status === '지급완료').length,
+    fixedRequestCount: fixedActiveRows.filter(row => row.status === '결제요청').length
+  };
+}
+function financeIntegrationMetricHtml(icon, label, value, sub, tab, tone='') {
+  const toneClass = tone ? ` finance-link-stat-${tone}` : '';
+  return `<button type="button" class="finance-link-stat${toneClass}" onclick="switchFinTab('${tab}')">
+    <i class="ti ${icon}"></i>
+    <span><b>${label}</b><strong>${value}</strong><em>${sub}</em></span>
+  </button>`;
+}
+function financeIntegrationIssues(stats) {
+  const issues = [];
+  if (stats.undatedDeliveries) issues.push({ level:'warn', tab:'revenue', text:`납품일 없는 납품 ${stats.undatedDeliveries}건은 기간별 매출에서 빠질 수 있습니다.` });
+  if (stats.revenueZeroCount) issues.push({ level:'warn', tab:'revenue', text:`매출 금액이 0원인 납품 ${stats.revenueZeroCount}건을 확인하세요.` });
+  if (stats.draftPoCount) issues.push({ level:'info', tab:'purchase', text:`작성중 구매발주 ${stats.draftPoCount}건은 매입에 반영하지 않습니다.` });
+  if (stats.undatedPoCount) issues.push({ level:'warn', tab:'purchase', text:`발주일 없는 구매발주 ${stats.undatedPoCount}건은 기간별 매입에서 빠질 수 있습니다.` });
+  if (stats.purchaseZeroCount) issues.push({ level:'warn', tab:'purchase', text:`매입 금액이 0원인 반영 대상 발주 ${stats.purchaseZeroCount}건을 확인하세요.` });
+  if (stats.pendingApprovalCount) issues.push({ level:'warn', tab:'payreq', text:`결재 승인 대기 중인 결제요청 ${stats.pendingApprovalCount}건이 있습니다.` });
+  if (stats.rejectedCount) issues.push({ level:'danger', tab:'payreq', text:`반려된 결제요청 ${stats.rejectedCount}건은 지급 처리 전 재요청이 필요합니다.` });
+  if (stats.receivable > 0) issues.push({ level:'info', tab:'ar', text:`선택 기간 미수금 잔액 ${fmtW(stats.receivable)}이 남아 있습니다.` });
+  if (stats.payable > 0) issues.push({ level:'info', tab:'ar', text:`선택 기간 미지급금 잔액 ${fmtW(stats.payable)}이 남아 있습니다.` });
+  return issues;
+}
+function financeIntegrationIssueHtml(issue) {
+  const icon = issue.level === 'danger' ? 'ti-alert-octagon' : (issue.level === 'warn' ? 'ti-alert-triangle' : 'ti-info-circle');
+  return `<button type="button" class="finance-link-issue finance-link-issue-${issue.level}" onclick="switchFinTab('${issue.tab}')">
+    <i class="ti ${icon}"></i><span>${esc(issue.text)}</span>
+  </button>`;
+}
+function financeIntegrationGuideHtml(rangeInfo = finRangeInfo()) {
+  const stats = financeIntegrationStats(rangeInfo);
+  const issues = financeIntegrationIssues(stats);
+  const items = [
+    ['ti-package-export', '매출', '납품 현황의 납품 완료/납품일 기준으로 반영'],
+    ['ti-shopping-cart', '매입', '구매발주에서 작성중을 제외하고 발주·입고 흐름 반영'],
+    ['ti-checklist', '결제요청', '구매발주 지급 전 승인 상태와 지급 처리 연결'],
+    ['ti-repeat', '고정비/급여/기타', '월 마감 기준으로 손익과 변경 이력에 반영']
+  ];
+  return `<div class="card finance-flow-card">
+    <div class="card-hd">
+      <span class="card-ttl"><i class="ti ti-plug-connected"></i>재무 연동 기준</span>
+      <span style="font-size:11px;color:var(--tx-t);">각 업무 데이터가 재무 요약에 반영되는 기준입니다.</span>
+    </div>
+    <div class="finance-flow-grid">${items.map(([icon,title,desc])=>`
+      <div class="finance-flow-item">
+        <i class="ti ${icon}"></i>
+        <div><strong>${title}</strong><span>${desc}</span></div>
+      </div>`).join('')}</div>
+    <div class="finance-link-status">
+      ${financeIntegrationMetricHtml('ti-trending-up', '매출 연동', `${stats.deliveries.length}건`, `${fmtW(stats.revenueAmount)} · 미수 ${fmtW(stats.receivable)}`, 'revenue', 'blue')}
+      ${financeIntegrationMetricHtml('ti-trending-down', '매입 연동', `${stats.purchaseRows.length}건`, `${fmtW(stats.purchaseAmount)} · 미지급 ${fmtW(stats.payable)}`, 'purchase', 'orange')}
+      ${financeIntegrationMetricHtml('ti-cash-banknote', '결제요청', `${stats.payreqRows.length}건`, `승인대기 ${stats.pendingApprovalCount} · 지급전 ${stats.approvedOpenCount}`, 'payreq', stats.pendingApprovalCount ? 'warn' : '')}
+      ${financeIntegrationMetricHtml('ti-repeat', '고정비', `${stats.fixedRows.length}건`, `${monthLabel(fixedCostMonth)} · 지급완료 ${stats.fixedPaidCount}건`, 'fixed')}
+    </div>
+    <div class="finance-link-checks">
+      <div class="finance-link-check-title"><i class="ti ti-stethoscope"></i>연동 점검</div>
+      ${issues.length ? issues.slice(0,6).map(financeIntegrationIssueHtml).join('') : '<div class="finance-link-ok"><i class="ti ti-circle-check"></i>현재 기준에서 바로 확인할 연동 누락 의심 항목이 없습니다.</div>'}
+    </div>
+  </div>`;
 }
 function financeHometaxRows(rangeInfo) {
   const rows = Array.isArray(financeData.hometaxInvoices) ? financeData.hometaxInvoices : [];
@@ -22885,6 +23525,8 @@ function _finDashboard() {
       <div class="mc"><div class="mc-lbl"><i class="ti ti-repeat"></i>${rangeInfo.label} 고정비</div><div class="mc-val" style="color:#e8590c;">${fmtW(fixedExp)}</div><div class="mc-sub">발생 기준 · 지급완료 ${fmtW(fixedPaid)}</div></div>
     </div>
 
+    ${financeIntegrationGuideHtml()}
+
     <div class="card" style="margin-bottom:16px;">
       <div class="card-hd"><span class="card-ttl"><i class="ti ti-calendar-stats"></i>${rangeInfo.label} 손익 요약</span></div>
       <div style="display:flex;flex-wrap:wrap;gap:24px;padding:6px 4px;font-size:13px;">
@@ -22910,8 +23552,8 @@ function _finDashboard() {
     </div>
     ${financeHometaxSummaryHtml(rangeInfo)}
     <div class="card" style="margin-top:16px;">
-      <div class="card-hd"><span class="card-ttl"><i class="ti ti-history"></i>최근 재무 변경 이력</span><span style="font-size:10px;color:var(--tx-t);">최대 300건 보관</span></div>
-      ${financeLogs.length?`<div style="overflow-x:auto;"><table><thead><tr><th>일시</th><th>작업</th><th>상세</th></tr></thead><tbody>${financeLogs.slice(0,10).map(log=>`<tr><td>${new Date(log.at).toLocaleString('ko-KR')}</td><td style="font-weight:700;">${esc(log.summary || log.action)}</td><td>${esc(log.detail || log.entityId || '')}</td></tr>`).join('')}</tbody></table></div>`:empty('아직 재무 변경 이력이 없습니다.')}
+      <div class="card-hd"><span class="card-ttl"><i class="ti ti-history"></i>최근 재무 변경 이력</span><span style="font-size:10px;color:var(--tx-t);">재무 항목만 표시 · 최대 300건 보관</span></div>
+      ${financeAuditTableHtml(financeLogs)}
     </div>`;
 }
 
@@ -23214,12 +23856,7 @@ function openPaymentRequestFromPo(poId) {
   if (pay.done) { showToast('이미 지급 완료된 발주서입니다.', 'info'); return; }
   const req = finPaymentRequestForPo(poId);
   sv('payreq-po-id', poId);
-  inp('payreq-source-summary').innerHTML = `
-    <div style="font-weight:800;margin-bottom:4px;">${esc(p.id)} · ${esc(p.supplier || '공급처 미지정')}</div>
-    <div style="font-size:12px;color:var(--tx-s);">${esc(finPoItemSummary(p))}</div>
-    <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;font-size:12px;">
-      <span>발주금액 <b>${fmtW(total)}</b></span><span>미지급 <b style="color:#e8590c;">${fmtW(pay.remaining)}</b></span><span>결제조건 <b>${esc(p.payMethod || '현금')}</b></span>
-    </div>`;
+  inp('payreq-source-summary').innerHTML = payreqSourceSummaryHtml(p, pay, total);
   const assignees = financeVisibleWorkers().map(w => `<option value="${esc(w.name)}">${esc(w.dept || '')}${w.position ? ' · ' + esc(w.position) : ''}</option>`).join('');
   if (inp('payreq-assignee-list')) inp('payreq-assignee-list').innerHTML = assignees;
   sv('payreq-id', req?.id || '');
@@ -23477,8 +24114,8 @@ function payreqSelectionBarHtml() {
     <span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${count}건 선택됨</span>
     ${auditBtn}
     <button class="btn btn-sm" onclick="payreqSubmitSelected()" ${submitCount?'':'disabled'}><i class="ti ti-send"></i>결재요청</button>
-    <button class="btn btn-sm" onclick="payreqApproveSelected()" ${approveCount?'':'disabled'}><i class="ti ti-check"></i>승인</button>
-    <button class="btn btn-sm" onclick="payreqRejectSelected()" ${approveCount?'':'disabled'}><i class="ti ti-ban"></i>반려</button>
+    <button class="btn btn-sm" data-payreq-action="approve" onclick="payreqApproveSelected()" ${approveCount?'':'disabled'}><i class="ti ti-check"></i>승인</button>
+    <button class="btn btn-sm" data-payreq-action="reject" onclick="payreqRejectSelected()" ${approveCount?'':'disabled'}><i class="ti ti-ban"></i>반려</button>
     <button class="btn btn-sm" onclick="payreqBulkStatus('확인')" ${paymentCount?'':'disabled'}><i class="ti ti-check"></i>확인</button>
     <button class="btn btn-sm" onclick="payreqBulkStatus('지급예정')" ${paymentCount?'':'disabled'}><i class="ti ti-calendar-dollar"></i>지급예정</button>
     <button class="btn btn-sm" onclick="openSelectedPaymentRequestPayment()" ${canPay?'':'disabled'} title="${canPay?'선택한 요청 지급 처리':'한 건만 선택하면 지급 처리할 수 있습니다.'}"><i class="ti ti-cash-banknote"></i>지급처리</button>
@@ -23507,29 +24144,30 @@ function _finPayRequests() {
     const paidDone=!!(pay&&pay.done);
     const checked = payreqSelected.has(r.id);
     const reqIdJson = JSON.stringify(r.id);
-    return `<tr class="${checked?'table-row-selected':''}" onclick='payreqToggleRow(event, ${reqIdJson})' style="cursor:pointer;">
+    const rowClass = [checked ? 'table-row-selected' : '', payreqApprovalRowClass(r)].filter(Boolean).join(' ');
+    return `<tr class="${rowClass}" onclick='payreqToggleRow(event, ${reqIdJson})' style="cursor:pointer;">
       <td class="payreq-check-cell"><input class="payreq-check" type="checkbox" ${checked?'checked':''} onclick="event.stopPropagation()" onchange='payreqToggleSelected(${reqIdJson}, this.checked)'></td>
-      <td>${esc(r.requestDate||'—')}<span style="display:block;font-size:10px;color:var(--tx-t);">${r.submittedAt ? '요청 ' + esc(r.submittedAt.slice(0,16).replace('T',' ')) : ''}</span></td>
+      <td>${esc(r.requestDate||'—')}<span class="payreq-muted-line">${r.submittedAt ? '요청 ' + esc(r.submittedAt.slice(0,16).replace('T',' ')) : ''}</span></td>
       <td>${esc(r.dueDate||'—')}</td>
-      <td style="font-weight:700;color:var(--tx-i);">${esc(r.poId)}<span style="display:block;font-size:10px;color:var(--tx-t);">${esc(r.id)}</span></td>
-      <td style="font-weight:700;">${esc(r.supplier||'—')}<span style="display:block;font-size:10px;color:var(--tx-t);">${esc(r.itemSummary||'')}</span></td>
-      <td style="text-align:right;font-weight:700;color:#e8590c;">${fmtW(r.amount)}</td>
-      <td>${esc(r.assignee||'미지정')}<span style="display:block;font-size:10px;color:var(--tx-t);">요청 ${esc(r.requester||'')}</span></td>
-      <td>${finPaymentRequestApprovalBadge(r)}${r.decisionNote?`<span style="display:block;font-size:10px;color:var(--tx-t);">${esc(r.decisionNote)}</span>`:''}</td>
+      <td><span class="payreq-id-pill">${esc(r.poId)}</span><span class="payreq-muted-line">${esc(r.id)}</span></td>
+      <td><div class="payreq-main-cell"><strong>${esc(r.supplier||'—')}</strong><span>${esc(r.itemSummary||'')}</span></div></td>
+      <td style="text-align:right;"><span class="payreq-amount">${fmtW(r.amount)}</span></td>
+      <td><div class="payreq-main-cell"><strong>${esc(r.assignee||'미지정')}</strong><span>요청 ${esc(r.requester||'')}</span></div></td>
+      <td>${finPaymentRequestApprovalBadge(r)}${r.decisionNote?`<span class="payreq-muted-line">${esc(r.decisionNote)}</span>`:''}</td>
       <td>${paidDone?finPaymentRequestStatusBadge('지급완료'):finPaymentRequestStatusBadge(r.status)}</td>
       <td>${esc(r.taxInvoiceStatus||'미확인')}</td>
     </tr>`;
   }).join(''):`<tr><td colspan="10">${empty('결제 요청이 없습니다.')}</td></tr>`;
   return `
     ${finFilterBar('payreq',{placeholder:'발주번호·공급처·담당자 검색',statuses:['요청','확인','지급예정','지급완료','반려']})}
-    <div class="metrics">
+    <div class="metrics payreq-approval-metrics">
       <div class="mc"><div class="mc-lbl"><i class="ti ti-send"></i>진행 요청</div><div class="mc-val" style="color:var(--tx-i);">${open.length}</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-checklist"></i>결재대기</div><div class="mc-val" style="color:var(--tx-w);">${pendingApproval.length}</div><div class="mc-sub">작성중 ${draftApproval.length}건</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-cash-banknote"></i>요청 금액</div><div class="mc-val" style="color:#e8590c;">${fmtW(amount)}</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-check"></i>지급완료</div><div class="mc-val">${financePaymentRequests().filter(r=>canViewRecord(r,'paymentRequest')&&r.status==='지급완료').length}</div></div>
     </div>
-    <div class="card"><div class="card-hd"><span class="card-ttl"><i class="ti ti-cash-banknote"></i>결제 요청함</span><span style="font-size:11px;color:var(--tx-t);">구매발주서와 연결된 결제 요청</span></div>
-      <div style="overflow-x:auto;"><table class="payreq-table" data-no-managed-table><thead><tr><th class="payreq-check-cell"><input class="payreq-check" type="checkbox" ${allPageSelected?'checked':''} ${pageIds.length?'':'disabled'} onclick="event.stopPropagation()" onchange='payreqTogglePage(${pageIdsJson}, this.checked)'></th><th>요청일</th><th>희망지급일</th><th>발주번호</th><th>공급처 / 품목</th><th style="text-align:right;">금액</th><th>담당자</th><th>결재</th><th>지급상태</th><th>세금계산서</th></tr></thead><tbody>${body}</tbody></table></div>${finPager('payreq',page)}</div>`;
+    <div class="card payreq-approval-card"><div class="card-hd"><span class="card-ttl"><i class="ti ti-cash-banknote"></i>결제 요청함</span><span class="payreq-approval-subtitle">구매발주서와 연결된 결재 대기 문서</span></div>
+      <div class="payreq-approval-table-wrap" style="overflow-x:auto;"><table class="payreq-table" data-no-managed-table><thead><tr><th class="payreq-check-cell"><input class="payreq-check" type="checkbox" ${allPageSelected?'checked':''} ${pageIds.length?'':'disabled'} onclick="event.stopPropagation()" onchange='payreqTogglePage(${pageIdsJson}, this.checked)'></th><th>요청일</th><th>희망지급일</th><th>발주번호</th><th>공급처 / 품목</th><th style="text-align:right;">금액</th><th>담당자</th><th>결재</th><th>지급상태</th><th>세금계산서</th></tr></thead><tbody>${body}</tbody></table></div>${finPager('payreq',page)}</div>`;
 }
 
 /* ── 제품별 제조원가 ── */
@@ -29356,13 +29994,13 @@ window.addEventListener('resize', () => {
 
 <!-- ══ 구매발주 결제 요청 모달 ══ -->
 <div class="overlay" id="payreq-modal">
-  <div class="dlg" style="max-width:620px;width:96%;">
+  <div class="dlg payreq-dialog" style="width:96%;">
     <div class="dlg-title"><i class="ti ti-cash-banknote" style="color:var(--tx-i);"></i>결제 요청</div>
     <input type="hidden" id="payreq-id">
     <input type="hidden" id="payreq-po-id">
-    <div id="payreq-source-summary" class="card" style="padding:12px;margin-bottom:14px;background:var(--bg-s);"></div>
+    <div id="payreq-source-summary" class="payreq-report-summary"></div>
     <div id="payreq-approval-summary" class="card" style="padding:10px 12px;margin-bottom:14px;background:var(--bg-p);display:none;"></div>
-    <div class="fg fg3" style="gap:10px;margin-bottom:14px;">
+    <div class="payreq-form-grid" style="margin-bottom:14px;">
       <div class="ff"><label>요청일 *</label><input id="payreq-date" type="date"></div>
       <div class="ff"><label>희망 지급일</label><input id="payreq-due" type="date"></div>
       <div class="ff"><label>요청 금액 *</label><input id="payreq-amount" type="number" min="0" step="10" inputmode="numeric"></div>
@@ -29371,7 +30009,7 @@ window.addEventListener('resize', () => {
       <div class="ff"><label>세금계산서</label>
         <select id="payreq-tax"><option>미확인</option><option>수취완료</option><option>수취예정</option><option>해당없음</option></select>
       </div>
-      <div class="ff" style="grid-column:span 3;"><label>요청 메모</label><input id="payreq-note" maxlength="200" placeholder="지급 계좌, 긴급 여부, 확인 사항 등"></div>
+      <div class="ff"><label>요청 메모</label><input id="payreq-note" maxlength="200" placeholder="지급 계좌, 긴급 여부, 확인 사항 등"></div>
     </div>
     <datalist id="payreq-assignee-list"></datalist>
     <div class="dlg-actions">
