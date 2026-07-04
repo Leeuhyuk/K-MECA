@@ -2500,6 +2500,114 @@ textarea { height: auto; resize: vertical; }
   padding-top: 8px;
   padding-bottom: 8px;
 }
+.process-standard-table {
+  width: 100%;
+  min-width: 1080px;
+}
+.narrow-table-card {
+  padding: calc(3px * var(--ui-density-scale)) calc(4px * var(--ui-density-scale));
+  overflow: hidden;
+}
+.narrow-compact-table {
+  width: max-content;
+  min-width: var(--narrow-table-min, 860px);
+}
+.narrow-compact-table th,
+.narrow-compact-table td {
+  white-space: nowrap;
+}
+.narrow-compact-table .btn.btn-sm,
+.narrow-compact-table .edit-btn,
+.narrow-compact-table .del-btn {
+  height: 24px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.quality-compact-table { --narrow-table-min: 820px; }
+.check-compact-table { --narrow-table-min: 860px; }
+.claim-compact-table { --narrow-table-min: 900px; }
+.todo-compact-table { --narrow-table-min: 760px; }
+.workers-compact-table { --narrow-table-min: 980px; }
+.rfq-compact-table { --narrow-table-min: 980px; }
+.salesdoc-compact-table { --narrow-table-min: 1080px; }
+.quality-compact-table td:nth-child(3),
+.quality-compact-table td:nth-child(8),
+.todo-compact-table td:nth-child(2),
+.workers-compact-table td:nth-child(2),
+.rfq-compact-table td:nth-child(6),
+.salesdoc-compact-table td:nth-child(5) {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.inventory-compact-table {
+  width: max-content;
+  min-width: 860px;
+}
+#pg-inventory .inventory-table-card {
+  padding: calc(3px * var(--ui-density-scale)) calc(4px * var(--ui-density-scale));
+  overflow: hidden;
+}
+.inventory-compact-table th,
+.inventory-compact-table td {
+  white-space: nowrap;
+}
+.inventory-compact-table .table-row-select-th,
+.inventory-compact-table .table-row-select-td {
+  width: 34px;
+  min-width: 34px;
+}
+.inventory-compact-table th:nth-child(2),
+.inventory-compact-table td:nth-child(2) {
+  width: 104px;
+  min-width: 104px;
+}
+.inventory-compact-table th:nth-child(3),
+.inventory-compact-table td:nth-child(3) {
+  width: 250px;
+  min-width: 250px;
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.inventory-compact-table th:nth-child(4),
+.inventory-compact-table td:nth-child(4) {
+  width: 88px;
+  min-width: 88px;
+}
+.inventory-compact-table th:nth-child(5),
+.inventory-compact-table td:nth-child(5) {
+  width: 150px;
+  min-width: 150px;
+}
+.inventory-compact-table th:nth-child(6),
+.inventory-compact-table td:nth-child(6) {
+  width: 92px;
+  min-width: 92px;
+}
+.inventory-compact-table th:nth-child(7),
+.inventory-compact-table td:nth-child(7) {
+  width: 120px;
+  min-width: 120px;
+}
+.inventory-compact-table th:nth-child(8),
+.inventory-compact-table td:nth-child(8) {
+  width: 110px;
+  min-width: 110px;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.inventory-compact-table th:nth-child(9),
+.inventory-compact-table td:nth-child(9) {
+  width: 96px;
+  min-width: 96px;
+}
+.inventory-compact-table .btn.btn-sm {
+  height: 24px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
 .po-doc-cell,
 .po-main-cell,
 .po-status-note {
@@ -3673,7 +3781,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
           </div>
         </div>
         <div id="proc-detail-table" style="overflow-x:auto; display:none;">
-    <table style="min-width:860px;">
+    <table class="process-standard-table" style="min-width:1080px;">
       <thead>
         <tr>
           <th>고객사</th><th>제품명</th><th>공정 단계</th><th>납기</th><th>D-Day</th>
@@ -3820,9 +3928,9 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
 
     <!-- 재고 추가/수정 패널 -->
 
-    <div class="card">
+    <div class="card inventory-table-card">
       <div id="inventory-table" style="overflow-x:auto;">
-    <table>
+    <table class="inventory-compact-table" style="min-width: 860px;">
       <thead>
         <tr>
           <th>재고 코드</th>
@@ -3963,7 +4071,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     </div>
     <div class="quality-tab-panel active" data-quality-panel="defects">
     <div class="row2">
-      <div class="card" style="grid-column:1 / -1;">
+      <div class="card narrow-table-card" style="grid-column:1 / -1;">
         <div class="card-hd" style="justify-content:flex-start;">
           <span class="card-ttl"><i class="ti ti-alert-triangle" style="color:var(--tx-w);"></i>공정 내 불량 기록 관리</span>
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
@@ -3981,7 +4089,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
         
         <!-- 불량 추가/수정 패널 -->
         <div id="defect-table" style="overflow-x:auto;">
-    <table>
+    <table class="narrow-compact-table quality-compact-table">
       <thead>
         <tr><th>코드</th><th>일자</th><th>제품</th><th>발생공정</th><th>하자유형</th><th>수량</th><th>상태</th><th>비고</th><th>관리 작업</th></tr>
       </thead>
@@ -3989,7 +4097,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     </table></div>
       </div>
       
-      <div class="card" style="display:none;"><!-- 사이드바 '고객 클레임' 전용 페이지와 중복되어 숨김 -->
+      <div class="card narrow-table-card" style="display:none;"><!-- 사이드바 '고객 클레임' 전용 페이지와 중복되어 숨김 -->
         <div class="card-hd">
           <span class="card-ttl"><i class="ti ti-message-report" style="color:var(--tx-d);"></i>납품 후 고객사 클레임 내역</span>
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
@@ -4007,7 +4115,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
         
         <!-- 클레임 추가/수정 패널 -->
         <div id="claim-table" style="overflow-x:auto;">
-    <table>
+    <table class="narrow-compact-table quality-compact-table claim-compact-table">
       <thead>
         <tr><th>인입일</th><th>의뢰 고객사</th><th>해당 제품</th><th>피드백 본문</th><th>조치 방안</th><th>상태</th><th>관리 작업</th></tr>
       </thead>
@@ -4018,7 +4126,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     </div>
     
     <div class="quality-tab-panel" data-quality-panel="checks">
-    <div class="card">
+    <div class="card narrow-table-card">
       <div class="card-hd" style="justify-content:flex-start;">
         <span class="card-ttl"><i class="ti ti-clipboard-check"></i>최종 출하 납품 전수/샘플링 체크리스트</span>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
@@ -4077,7 +4185,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <div class="mc"><div class="mc-lbl"><i class="ti ti-cash"></i>월 인건비 합계</div><div class="mc-val" id="w-payroll">—</div><div class="mc-sub">연 환산 <span id="w-payroll-y">—</span></div></div>
     </div>
 
-    <div class="card">
+    <div class="card narrow-table-card">
       <div class="card-hd">
         <span class="card-ttl"><i class="ti ti-users"></i>직원 인사 정보 관리</span>
         <div style="display:flex; gap:6px;">
@@ -4324,7 +4432,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <div class="card">
         <div class="card-hd">
           <span class="card-ttl"><i class="ti ti-id-badge"></i>앱 로고·명칭</span>
-          <span style="font-size:11px;color:var(--tx-t);">이 브라우저 화면에만 적용됩니다.</span>
+          <span style="font-size:11px;color:var(--tx-t);">클라우드 로그인 시 다른 PC에도 적용됩니다.</span>
         </div>
         <div class="ui-brand-settings">
           <div class="ui-brand-form">
@@ -4743,7 +4851,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="btn btn-icon" onclick="openRfqPrint(null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
       <button class="btn btn-icon" onclick="saveDocumentBundleToGoogleDrive('rfq',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
     </div>
-    <div class="card">
+    <div class="card narrow-table-card">
       <div id="rfq-table" style="overflow-x:auto;"><div class="empty"><i class="ti ti-inbox"></i>등록된 견적요청서가 없습니다.</div></div>
     </div>
   </div>
@@ -4851,7 +4959,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="btn btn-icon" onclick="openSODocPrint('quote',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
       <button class="btn btn-icon" onclick="saveDocumentBundleToGoogleDrive('quote',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
     </div>
-    <div class="card"><div id="qt-table" style="overflow-x:auto;"></div></div>
+    <div class="card narrow-table-card"><div id="qt-table" style="overflow-x:auto;"></div></div>
     </div><!-- /sd-tab-quote -->
 
     <div id="sd-tab-order" style="display:none;">
@@ -4869,7 +4977,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="btn btn-icon" onclick="openSODocPrint('order',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
       <button class="btn btn-icon" onclick="saveDocumentBundleToGoogleDrive('order',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
     </div>
-    <div class="card"><div id="so-table" style="overflow-x:auto;"></div></div>
+    <div class="card narrow-table-card"><div id="so-table" style="overflow-x:auto;"></div></div>
     </div><!-- /sd-tab-order -->
   </div>
 
@@ -5675,7 +5783,8 @@ const DATA_KEYS = [
   'checkRecords','alerts','inventory','deliveries','stages','trash','rfqList',
   'poList','partners','financeData','attendance','leaves','payrollRecords','statementList',
   'taxList','quoteList','orderList','inventoryLedger','alimtalkSettings','memoList','todoList','memoAttachmentData','auditLog','emailSendHistory',
-  'asList','bomList','companyInfo','docXlsxTemplates','driveOAuthSettings','googleDriveConfig'
+  'asList','bomList','companyInfo','docXlsxTemplates','driveOAuthSettings','googleDriveConfig',
+  'tableDisplayConfig','uiBrandSettings','uiScale','uiFontScale','menuIconSize','tableGridLines','uiColors','theme'
 ];
 const LOCAL_ONLY_DATA_KEYS = ['alimtalkSettings','memoAttachmentData','auditLog'];
 
@@ -10905,7 +11014,7 @@ function renderInventory() {
   if (!cont) return;
   if (!rows.length) { cont.innerHTML = empty(`${invCategory} 분류에 등록된 재고가 없습니다. [신규 재고 품목 등록] 버튼으로 추가하세요.`); }
   const tColor = {자재:'bd-info',완제품:'bd-ok',반제품:'bd-warn',소모품:'bd-neu',비품:'bd-neu'};
-  if (rows.length) cont.innerHTML = '<table style="min-width:900px;"><thead><tr>' +
+  if (rows.length) cont.innerHTML = '<table class="inventory-compact-table" style="min-width:860px;"><thead><tr>' +
     '<th onclick="toggleSort(\'inventory\', \'id\')" style="cursor:pointer; user-select:none;">재고코드 ' + sortIcon('inventory', 'id') + '</th>' +
     '<th onclick="toggleSort(\'inventory\', \'name\')" style="cursor:pointer; user-select:none;">품목명 ' + sortIcon('inventory', 'name') + '</th>' +
     '<th onclick="toggleSort(\'inventory\', \'type\')" style="cursor:pointer; user-select:none;">분류 ' + sortIcon('inventory', 'type') + '</th>' +
@@ -12115,7 +12224,7 @@ function renderProcDetail() {
       <button class="btn btn-sm" onclick="togglePipeFilter('${procStageFilter}')"><i class="ti ti-x"></i>필터 해제</button>
     </div>` : '';
   inp('proc-detail-table').innerHTML = filterBanner + (allProd.length ? `
-    <table style="min-width:860px;">
+    <table class="process-standard-table" style="min-width:1080px;">
       <thead>
         <tr>
           <th onclick="toggleSort('process', 'client')" style="cursor:pointer; user-select:none;">고객사 ${sortIcon('process', 'client')}</th>
@@ -12289,7 +12398,7 @@ function renderQuality() {
   }
 
   inp('defect-table').innerHTML = filteredDefects.length ? `
-    <table>
+    <table class="narrow-compact-table quality-compact-table">
       <thead>
         <tr>
           <th onclick="toggleSort('defects', 'id')" style="cursor:pointer; user-select:none;">코드 ${sortIcon('defects', 'id')}</th>
@@ -12360,7 +12469,7 @@ function renderQuality() {
   }
 
   inp('claim-table').innerHTML = filteredClaims.length ? `
-    <table>
+    <table class="narrow-compact-table quality-compact-table claim-compact-table">
       <thead>
         <tr>
           <th onclick="toggleSort('claims', 'date')" style="cursor:pointer; user-select:none;">인입일 ${sortIcon('claims', 'date')}</th>
@@ -12430,7 +12539,7 @@ function renderQuality() {
   }
 
   inp('check-table').innerHTML = filteredChecks.length ? `
-    <table>
+    <table class="narrow-compact-table quality-compact-table check-compact-table">
       <thead>
         <tr>
           <th onclick="toggleSort('checks', 'date')" style="cursor:pointer; user-select:none;">검사일 ${sortIcon('checks', 'date')}</th>
@@ -13280,7 +13389,7 @@ function renderWorkers() {
     ? empty('등록된 직원이 아직 없습니다.')
     : (!filteredWorkers.length)
       ? empty('검색 조건에 맞는 직원이 없습니다.')
-      : `<table>
+      : `<table class="narrow-compact-table workers-compact-table">
       <thead>
         <tr>
           ${['id:사번','name:이름','dept:부서','position:직급','empType:고용형태','hireDate:입사일'].map(s=>{const[k,l]=s.split(':');return`<th onclick="toggleSort('workers','${k}')" style="cursor:pointer;user-select:none;">${l} ${sortIcon('workers',k)}</th>`;}).join('')}
@@ -13328,7 +13437,7 @@ function renderWorkers() {
       <div class="card" style="margin-top:16px;">
         <div class="card-hd"><span class="card-ttl"><i class="ti ti-user-question" style="color:var(--tx-w);"></i>미등록 로그인 계정 (직원 명부에 없음)</span>
           <span style="font-size:11px;color:var(--tx-t);">이메일이 명부와 매칭되지 않은 가입 계정 · 직원으로 등록하면 연결됩니다</span></div>
-        <div style="overflow-x:auto;"><table>
+        <div style="overflow-x:auto;"><table class="narrow-compact-table workers-compact-table">
           <thead><tr><th>이름</th><th>이메일</th><th>역할</th><th style="text-align:center;">승인</th><th style="text-align:center;">명부 등록</th></tr></thead>
           <tbody>${orphans.map(u=>{
             const isOwner=BOOTSTRAP_ADMIN_EMAILS.includes((u.email||'').toLowerCase()); const act=u.active!==false;
@@ -14189,7 +14298,7 @@ document.addEventListener('keydown', e => {
 
 /* ════════ 실시간 다크 모드 수동전환 ════════ */
 function initTheme() {
-  const t = localStorage.getItem('mes_theme');
+  const t = getSavedThemeMode();
   if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
     document.documentElement.classList.add('dark');
     inp('themeIcon').className = 'ti ti-sun';
@@ -14204,11 +14313,11 @@ function toggleTheme() {
   const root = document.documentElement;
   if (root.classList.contains('dark')) {
     root.classList.remove('dark');
-    localStorage.setItem('mes_theme', 'light');
+    saveThemeMode('light');
     inp('themeIcon').className = 'ti ti-moon';
   } else {
     root.classList.add('dark');
-    localStorage.setItem('mes_theme', 'dark');
+    saveThemeMode('dark');
     inp('themeIcon').className = 'ti ti-sun';
   }
   applyUiThemeColors(getCurrentThemeMode());
@@ -14228,8 +14337,17 @@ const UI_FONT_MAX = 120;
 const MENU_ICON_MIN = 36;
 const MENU_ICON_MAX = 84;
 const MENU_ICON_DEFAULT = 46;
-const TABLE_GRID_STORAGE_KEY = 'mes_tableGridLines';
-const BRAND_SETTINGS_KEY = 'mes_uiBrandSettings';
+const THEME_STORAGE_KEY = 'theme';
+const UI_SCALE_STORAGE_KEY = 'uiScale';
+const UI_FONT_STORAGE_KEY = 'uiFontScale';
+const MENU_ICON_STORAGE_KEY = 'menuIconSize';
+const TABLE_GRID_STORAGE_KEY = 'tableGridLines';
+const UI_COLORS_STORAGE_KEY = 'uiColors';
+const BRAND_SETTINGS_KEY = 'uiBrandSettings';
+const SCREEN_SETTINGS_SYNC_KEYS = [
+  THEME_STORAGE_KEY, UI_SCALE_STORAGE_KEY, UI_FONT_STORAGE_KEY, MENU_ICON_STORAGE_KEY,
+  TABLE_GRID_STORAGE_KEY, UI_COLORS_STORAGE_KEY, BRAND_SETTINGS_KEY
+];
 const BRAND_LOGO_MIN = 16;
 const BRAND_LOGO_MAX = 100;
 const BRAND_LOGO_DEFAULT = 20;
@@ -14243,6 +14361,104 @@ const BRAND_DEFAULTS = {
   logoSize: BRAND_LOGO_DEFAULT,
   titleSize: BRAND_TITLE_DEFAULT
 };
+
+function readSyncedSetting(key, defaultVal) {
+  if (typeof loadStorage === 'function') return loadStorage(key, defaultVal);
+  try {
+    const raw = localStorage.getItem('mes_' + key);
+    return raw == null ? defaultVal : JSON.parse(raw);
+  } catch(e) {
+    return defaultVal;
+  }
+}
+
+function writeSyncedSetting(key, value) {
+  if (typeof saveStorage === 'function') {
+    saveStorage(key, value);
+    return;
+  }
+  localStorage.setItem('mes_' + key, JSON.stringify(value));
+}
+
+function getSettingValue(key, defaultVal) {
+  const saved = readSyncedSetting(key, defaultVal);
+  if (saved && typeof saved === 'object' && !Array.isArray(saved) && Object.prototype.hasOwnProperty.call(saved, 'value')) {
+    return saved.value;
+  }
+  return saved;
+}
+
+function getNumberSetting(key, defaultVal, min, max) {
+  const value = Number(getSettingValue(key, defaultVal));
+  return Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : defaultVal;
+}
+
+function saveNumberSetting(key, value, defaultVal, min, max) {
+  const raw = Number(value);
+  const normalized = Math.round(Number.isFinite(raw) ? raw : defaultVal);
+  const next = Math.min(max, Math.max(min, normalized));
+  writeSyncedSetting(key, { value: next });
+  return next;
+}
+
+function getSavedThemeMode() {
+  const raw = localStorage.getItem('mes_' + THEME_STORAGE_KEY);
+  if (raw === 'dark' || raw === 'light') return raw;
+  try {
+    const parsed = raw ? JSON.parse(raw) : '';
+    const value = parsed && typeof parsed === 'object' ? parsed.value : parsed;
+    if (value === 'dark' || value === 'light') return value;
+  } catch(e) {
+    /* legacy non-JSON values are handled above */
+  }
+  const saved = getSettingValue(THEME_STORAGE_KEY, '');
+  return saved === 'dark' || saved === 'light' ? saved : '';
+}
+
+function saveThemeMode(mode) {
+  writeSyncedSetting(THEME_STORAGE_KEY, { value: mode === 'dark' ? 'dark' : 'light' });
+}
+
+function normalizeScreenSettingsStorageForCloud() {
+  const migrateNumber = (key, min, max) => {
+    const raw = localStorage.getItem('mes_' + key);
+    if (raw == null) return;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Object.prototype.hasOwnProperty.call(parsed, 'value')) return;
+      const value = Number(parsed);
+      if (Number.isFinite(value)) {
+        localStorage.setItem('mes_' + key, JSON.stringify({ value: Math.min(max, Math.max(min, Math.round(value))) }));
+      }
+    } catch(e) {
+      const value = Number(raw);
+      if (Number.isFinite(value)) {
+        localStorage.setItem('mes_' + key, JSON.stringify({ value: Math.min(max, Math.max(min, Math.round(value))) }));
+      }
+    }
+  };
+  migrateNumber(UI_SCALE_STORAGE_KEY, UI_SCALE_MIN, UI_SCALE_MAX);
+  migrateNumber(UI_FONT_STORAGE_KEY, UI_FONT_MIN, UI_FONT_MAX);
+  migrateNumber(MENU_ICON_STORAGE_KEY, MENU_ICON_MIN, MENU_ICON_MAX);
+  const rawTheme = localStorage.getItem('mes_' + THEME_STORAGE_KEY);
+  if (rawTheme != null) {
+    let theme = rawTheme === 'dark' || rawTheme === 'light' ? rawTheme : '';
+    try {
+      const parsed = JSON.parse(rawTheme);
+      const value = parsed && typeof parsed === 'object' ? parsed.value : parsed;
+      if (value === 'dark' || value === 'light') theme = value;
+    } catch(e) {}
+    if (theme) localStorage.setItem('mes_' + THEME_STORAGE_KEY, JSON.stringify({ value: theme }));
+  }
+}
+
+function queueScreenSettingsCloudSave() {
+  if (typeof cloudQueueSave !== 'function') return;
+  SCREEN_SETTINGS_SYNC_KEYS.forEach(key => {
+    if (localStorage.getItem('mes_' + key) != null) cloudQueueSave(key);
+  });
+  if (localStorage.getItem('mes_tableDisplayConfig') != null) cloudQueueSave('tableDisplayConfig');
+}
 
 function normalizeBrandSettings(value) {
   const source = value && typeof value === 'object' ? value : {};
@@ -14262,7 +14478,7 @@ function normalizeBrandSettings(value) {
 
 function getBrandSettings() {
   try {
-    return normalizeBrandSettings(JSON.parse(localStorage.getItem(BRAND_SETTINGS_KEY) || '{}'));
+    return normalizeBrandSettings(readSyncedSetting(BRAND_SETTINGS_KEY, {}));
   } catch(e) {
     return normalizeBrandSettings({});
   }
@@ -14321,7 +14537,7 @@ function renderBrandPreview(settings) {
 function saveBrandSettings(next, quiet) {
   const settings = normalizeBrandSettings(Object.assign({}, getBrandSettings(), next || {}));
   try {
-    localStorage.setItem(BRAND_SETTINGS_KEY, JSON.stringify(settings));
+    writeSyncedSetting(BRAND_SETTINGS_KEY, settings);
   } catch(e) {
     showToast('로고 이미지 저장 공간이 부족합니다. 더 작은 이미지를 사용하세요.', 'error');
     return false;
@@ -14390,9 +14606,7 @@ function setBrandTitleSize(value) {
 }
 
 function resetBrandSettings() {
-  try { localStorage.removeItem(BRAND_SETTINGS_KEY); } catch(e){}
-  applyBrandSettings(BRAND_DEFAULTS);
-  updateBrandControls(BRAND_DEFAULTS);
+  saveBrandSettings(BRAND_DEFAULTS, true);
   showToast('앱 로고 설정을 기본값으로 복원했습니다.', 'success');
 }
 
@@ -14440,8 +14654,7 @@ function handleBrandLogoFile(input) {
 }
 
 function getSavedUiScale() {
-  const value = Number(localStorage.getItem('mes_uiScale') || 100);
-  return Number.isFinite(value) ? Math.min(UI_SCALE_MAX, Math.max(UI_SCALE_MIN, value)) : 100;
+  return getNumberSetting(UI_SCALE_STORAGE_KEY, 100, UI_SCALE_MIN, UI_SCALE_MAX);
 }
 
 function getAutoUiScale() {
@@ -14487,8 +14700,7 @@ function previewUiScale(value) {
 }
 
 function saveUiScale(value) {
-  const normalized = Math.round(Number(value));
-  localStorage.setItem('mes_uiScale', String(Math.min(UI_SCALE_MAX, Math.max(UI_SCALE_MIN, normalized))));
+  const normalized = saveNumberSetting(UI_SCALE_STORAGE_KEY, value, 100, UI_SCALE_MIN, UI_SCALE_MAX);
   applyUiScale(normalized);
   updateUiScaleControls(normalized);
   showToast(`화면 크기를 ${normalized}%로 저장했습니다.`, 'success');
@@ -14499,15 +14711,14 @@ function setUiScale(value) {
 }
 
 function resetUiScale() {
-  localStorage.removeItem('mes_uiScale');
+  writeSyncedSetting(UI_SCALE_STORAGE_KEY, { value: 100 });
   applyUiScale(100);
   updateUiScaleControls(100);
   showToast('화면 크기를 기본값 100%로 복원했습니다.', 'success');
 }
 
 function getSavedUiFontScale() {
-  const value = Number(localStorage.getItem('mes_uiFontScale') || 100);
-  return Number.isFinite(value) ? Math.min(UI_FONT_MAX, Math.max(UI_FONT_MIN, value)) : 100;
+  return getNumberSetting(UI_FONT_STORAGE_KEY, 100, UI_FONT_MIN, UI_FONT_MAX);
 }
 
 function applyUiFontScale(value) {
@@ -14534,8 +14745,7 @@ function previewUiFontScale(value) {
 }
 
 function saveUiFontScale(value) {
-  const normalized = Math.round(Number(value));
-  localStorage.setItem('mes_uiFontScale', String(Math.min(UI_FONT_MAX, Math.max(UI_FONT_MIN, normalized))));
+  const normalized = saveNumberSetting(UI_FONT_STORAGE_KEY, value, 100, UI_FONT_MIN, UI_FONT_MAX);
   applyUiFontScale(normalized);
   updateUiFontControls(normalized);
   showToast(`글자 크기를 ${normalized}%로 저장했습니다.`, 'success');
@@ -14546,15 +14756,14 @@ function setUiFontScale(value) {
 }
 
 function resetUiFontScale() {
-  localStorage.removeItem('mes_uiFontScale');
+  writeSyncedSetting(UI_FONT_STORAGE_KEY, { value: 100 });
   applyUiFontScale(100);
   updateUiFontControls(100);
   showToast('글자 크기를 기본값 100%로 복원했습니다.', 'success');
 }
 
 function getSavedMenuIconSize() {
-  const value = Number(localStorage.getItem('mes_menuIconSize') || MENU_ICON_DEFAULT);
-  return Number.isFinite(value) ? Math.min(MENU_ICON_MAX, Math.max(MENU_ICON_MIN, value)) : MENU_ICON_DEFAULT;
+  return getNumberSetting(MENU_ICON_STORAGE_KEY, MENU_ICON_DEFAULT, MENU_ICON_MIN, MENU_ICON_MAX);
 }
 
 function applyMenuIconSize(value) {
@@ -14596,9 +14805,7 @@ function previewMenuIconSize(value) {
 }
 
 function saveMenuIconSize(value) {
-  const normalized = Math.round(Number(value));
-  const size = Math.min(MENU_ICON_MAX, Math.max(MENU_ICON_MIN, normalized));
-  localStorage.setItem('mes_menuIconSize', String(size));
+  const size = saveNumberSetting(MENU_ICON_STORAGE_KEY, value, MENU_ICON_DEFAULT, MENU_ICON_MIN, MENU_ICON_MAX);
   applyMenuIconSize(size);
   updateMenuIconControls(size);
   showToast(`메뉴 아이콘 크기를 ${size}px로 저장했습니다.`, 'success');
@@ -14609,7 +14816,7 @@ function setMenuIconSize(value) {
 }
 
 function resetMenuIconSize() {
-  localStorage.removeItem('mes_menuIconSize');
+  writeSyncedSetting(MENU_ICON_STORAGE_KEY, { value: MENU_ICON_DEFAULT });
   applyMenuIconSize(MENU_ICON_DEFAULT);
   updateMenuIconControls(MENU_ICON_DEFAULT);
   showToast('메뉴 아이콘 크기를 기본값으로 복원했습니다.', 'success');
@@ -14626,7 +14833,7 @@ function renderUiScaleSettings() {
 
 function getTableGridLineSettings() {
   try {
-    const saved = JSON.parse(localStorage.getItem(TABLE_GRID_STORAGE_KEY) || '{}');
+    const saved = readSyncedSetting(TABLE_GRID_STORAGE_KEY, {});
     return {
       horizontal: saved.horizontal !== false,
       vertical: saved.vertical !== false
@@ -14653,7 +14860,7 @@ function updateTableGridLineControls(settings) {
 
 function saveTableGridLineSettings(settings, quiet) {
   const next = applyTableGridLineSettings(settings);
-  localStorage.setItem(TABLE_GRID_STORAGE_KEY, JSON.stringify(next));
+  writeSyncedSetting(TABLE_GRID_STORAGE_KEY, next);
   updateTableGridLineControls(next);
   if (!quiet) showToast('테이블 선 표시 설정을 저장했습니다.', 'success');
 }
@@ -14666,8 +14873,7 @@ function toggleTableGridLine(axis, checked) {
 }
 
 function resetTableGridLineSettings() {
-  localStorage.removeItem(TABLE_GRID_STORAGE_KEY);
-  updateTableGridLineControls({ horizontal:true, vertical:true });
+  saveTableGridLineSettings({ horizontal:true, vertical:true }, true);
   showToast('테이블 선 표시를 기본값으로 복원했습니다.', 'success');
 }
 
@@ -14722,7 +14928,7 @@ function mixHex(base, overlay, ratio) {
 
 function getUiColorStore() {
   try {
-    const saved = JSON.parse(localStorage.getItem('mes_uiColors') || '{}');
+    const saved = readSyncedSetting(UI_COLORS_STORAGE_KEY, {});
     return saved && typeof saved === 'object' ? saved : {};
   } catch(e) {
     return {};
@@ -14817,7 +15023,7 @@ function renderUiColorSettings() {
 function selectUiColorTheme(theme) {
   uiColorTheme = theme === 'dark' ? 'dark' : 'light';
   document.documentElement.classList.toggle('dark', uiColorTheme === 'dark');
-  localStorage.setItem('mes_theme', uiColorTheme);
+  saveThemeMode(uiColorTheme);
   const icon = inp('themeIcon');
   if (icon) icon.className = uiColorTheme === 'dark' ? 'ti ti-sun' : 'ti ti-moon';
   uiColorDraft = getUiThemeColors(uiColorTheme);
@@ -14855,7 +15061,7 @@ function saveUiColors() {
   if (!uiColorDraft || !uiColorTheme) return;
   const store = getUiColorStore();
   store[uiColorTheme] = Object.assign({}, uiColorDraft);
-  localStorage.setItem('mes_uiColors', JSON.stringify(store));
+  writeSyncedSetting(UI_COLORS_STORAGE_KEY, store);
   applyUiThemeColors(uiColorTheme, uiColorDraft);
   const ratio = Math.min(colorContrast(uiColorDraft.text, uiColorDraft.card), colorContrast(uiColorDraft.text, uiColorDraft.page));
   showToast(ratio >= 4.5 ? '화면 색상을 저장했습니다.' : '색상을 저장했습니다. 글자 대비 경고를 확인해주세요.', ratio >= 4.5 ? 'success' : 'info');
@@ -14872,11 +15078,26 @@ function resetUiColors() {
   const mode = uiColorTheme || getCurrentThemeMode();
   const store = getUiColorStore();
   delete store[mode];
-  localStorage.setItem('mes_uiColors', JSON.stringify(store));
+  writeSyncedSetting(UI_COLORS_STORAGE_KEY, store);
   uiColorDraft = Object.assign({}, UI_COLOR_DEFAULTS[mode]);
   applyUiThemeColors(mode, uiColorDraft);
   renderUiColorFields();
   showToast(`${mode === 'dark' ? '어두운' : '밝은'} 테마 색상을 기본값으로 복원했습니다.`, 'success');
+}
+
+function applyScreenSettingsFromStorage() {
+  initTheme();
+  applyUiScale(getSavedUiScale());
+  applyUiFontScale(getSavedUiFontScale());
+  applyMenuIconSize(getSavedMenuIconSize());
+  applyTableGridLineSettings(getTableGridLineSettings());
+  applyBrandSettings();
+  if (typeof currentPage !== 'undefined' && currentPage === 'system' && typeof systemTab !== 'undefined' && systemTab === 'display') {
+    renderUiScaleSettings();
+  }
+  if (typeof currentPage !== 'undefined' && currentPage === 'dashboard' && typeof renderDashboard === 'function') {
+    renderDashboard();
+  }
 }
 
 window.addEventListener('resize', () => {
@@ -14937,6 +15158,7 @@ const _cloudQueue=new Set(); let _cloudTimer=null; let _cloudUnsub=null;
 
 /* ════════ 프로그램 기동 초기화 (FIREBASE_CONFIG 선언 이후에 실행) ════════ */
 syncFilterDropdowns();
+normalizeScreenSettingsStorageForCloud();
 initTheme();
 applyUiScale(getSavedUiScale());
 applyUiFontScale(getSavedUiFontScale());
@@ -15230,6 +15452,7 @@ function cloudBootstrap(){
           _fbAuth.signOut(); return;
         }
         _cloudActive = true; _hideLogin(); _cloudChip('online');
+        if (typeof queueScreenSettingsCloudSave === 'function') queueScreenSettingsCloudSave();
         if (typeof flushClientMasterMigrationSync === 'function') flushClientMasterMigrationSync();
         updateAdminUI(); applyRoleGating(); applyColumnGating(); applyFeatureGating(); cloudSubscribe();   // 역할 UI/컬럼/기능 반영 + 실시간 동기화 시작
         if (currentPage !== 'dashboard' && !pageAllowed(currentPage)) {
@@ -15247,7 +15470,11 @@ function cloudBootstrap(){
 }
 
 function cloudV2MapKeys(){
-  return ['financeData', 'companyInfo', 'docXlsxTemplates', 'driveOAuthSettings', 'googleDriveConfig'];
+  return [
+    'financeData', 'companyInfo', 'docXlsxTemplates', 'driveOAuthSettings', 'googleDriveConfig',
+    'tableDisplayConfig', 'uiBrandSettings', 'uiScale', 'uiFontScale', 'menuIconSize',
+    'tableGridLines', 'uiColors', 'theme'
+  ];
 }
 function cloudV2StripMeta(value){
   if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
@@ -15672,6 +15899,16 @@ function cloudResyncGlobals(changedKeys){
   if(shouldLoad('todoList')) todoList=L('todoList',todoList);
   if(shouldLoad('auditLog')) auditLog=L('auditLog',auditLog);
   if(shouldLoad('emailSendHistory')) emailSendHistory=L('emailSendHistory',emailSendHistory);
+  const screenSettingKeys = ['uiBrandSettings','uiScale','uiFontScale','menuIconSize','tableGridLines','uiColors','theme'];
+  if (screenSettingKeys.some(key => shouldLoad(key)) && typeof applyScreenSettingsFromStorage === 'function') {
+    applyScreenSettingsFromStorage();
+  }
+  if (shouldLoad('tableDisplayConfig') && typeof applyTableDisplaySettings === 'function') {
+    applyTableDisplaySettings();
+    if (typeof currentPage !== 'undefined' && currentPage === 'system' && typeof systemTab !== 'undefined' && systemTab === 'columns' && typeof renderTableDisplaySettings === 'function') {
+      renderTableDisplaySettings();
+    }
+  }
   if ((!changedSet || shouldLoad('clients') || shouldLoad('partners')) && typeof migrateClientMasterToPartners === 'function') migrateClientMasterToPartners();
 }
 let _cloudRemoteRefreshTimer = null;
@@ -17860,7 +18097,7 @@ function renderRfq() {
     return;
   }
   const _rfqth = (k, l) => `<th onclick="toggleSort('rfq','${k}')" style="cursor:pointer;user-select:none;">${l} ${sortIcon('rfq',k)}</th>`;
-  cont.innerHTML = `<table style="min-width:980px;">
+  cont.innerHTML = `<table class="narrow-compact-table rfq-compact-table" style="min-width:980px;">
     <thead><tr>
       ${_rfqth('id','문서번호')}${_rfqth('date','요청일')}${_rfqth('client','고객사')}${_rfqth('product','연결제품')}
       ${_rfqth('supplier','공급처')}${_rfqth('itemName','품목명')}<th>규격</th>${_rfqth('qty','수량')}
@@ -20373,7 +20610,7 @@ function renderSODoc(type) {
   }
 
   const headExtra = type === 'quote' ? '<th>납기</th>' : '<th>사업자번호</th>';
-  cont.innerHTML = `<table style="min-width:1080px;">
+  cont.innerHTML = `<table class="narrow-compact-table salesdoc-compact-table" style="min-width:1080px;">
     <thead><tr>
       <th>${type==='quote'?'견적번호':'수주번호'}</th><th>일자</th><th>고객사</th>
       <th>품목명</th><th>규격</th><th>수량</th><th>단가</th><th>공급가액</th>${headExtra}<th>상태</th><th>관리</th>
@@ -27252,7 +27489,7 @@ function renderTodoList() {
   var visibleSelected = list.filter(function(t) { return _todoSelected.has(t.id); }).length;
   var allVisibleSelected = list.length > 0 && visibleSelected === list.length;
   setNotesSelectionBar(todoSelectionBarHtml(_todoSelected.size), _todoSelected.size > 0);
-  content.innerHTML = '<div class="card" style="overflow-x:auto;"><table style="min-width:900px;"><thead><tr>' +
+  content.innerHTML = '<div class="card narrow-table-card" style="overflow-x:auto;"><table class="narrow-compact-table todo-compact-table" style="min-width:760px;"><thead><tr>' +
     '<th style="width:34px;text-align:center;"><input type="checkbox" id="todo-check-all" title="현재 목록 전체 선택" ' +
     (allVisibleSelected ? 'checked ' : '') + (visibleSelected && !allVisibleSelected ? 'data-indeterminate="1" ' : '') +
     'onchange="toggleAllVisibleTodos(this.checked)"></th>' +
