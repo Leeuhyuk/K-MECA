@@ -966,6 +966,34 @@ body.mega-menu-open { overflow: hidden; }
   background: var(--tbl-bg);
 }
 .ui-table-grid-preview table { min-width: 420px; margin: 0; }
+
+.backup-export-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 8px 0 10px; }
+.backup-export-count { margin-left: auto; color: var(--tx-t); font-size: 11px; font-weight: 700; }
+.backup-export-group { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--br); }
+.backup-export-group-title { margin-bottom: 8px; color: var(--tx); font-size: 12.5px; font-weight: 800; }
+.backup-export-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 7px; }
+.backup-export-check,
+.backup-export-doc {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--br);
+  border-radius: 8px;
+  background: var(--bg-s);
+  cursor: pointer;
+}
+.backup-export-check:hover,
+.backup-export-doc:hover { border-color: var(--br-i); background: var(--bg-i); }
+.backup-export-check input,
+.backup-export-doc input { width: 15px; height: 15px; margin-top: 1px; accent-color: var(--tx-i); cursor: pointer; }
+.backup-export-check span { min-width: 0; display: grid; gap: 2px; }
+.backup-export-check strong,
+.backup-export-doc span { color: var(--tx); font-size: 12px; font-weight: 800; line-height: 1.35; }
+.backup-export-check small { color: var(--tx-t); font-size: 10.5px; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.backup-export-docs { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 7px; margin: 8px 0 10px; }
+.backup-export-doc { align-items: center; }
 .ui-menu-icon-preview {
   margin-top: 13px;
   padding: 12px;
@@ -3697,7 +3725,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
             </div>
             <select id="proc-fc" onchange="renderProcess()" style="font-size:11px; height:26px; min-width:110px;"><option value="">전체 의뢰 고객사</option></select>
             <button class="btn btn-sm" onclick="openProcStagePanel()"><i class="ti ti-settings"></i></button>
-            <button class="btn btn-sm" onclick="exportProcessCSV()"><i class="ti ti-download"></i></button>
           </div>
         </div>
         <div id="pipeline-view" class="pipeline">
@@ -3871,7 +3898,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
           <i class="ti ti-file-import"></i>
           <input type="file" id="xls-po-input" accept=".xls,.xlsx" style="display:none;" onchange="importPoXLS(this)">
         </label>
-        <button class="btn btn-icon pc-only" onclick="exportMatCSV()" title="엑셀 내보내기"><i class="ti ti-download"></i></button>
       </div>
     </div>
     
@@ -3923,7 +3949,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       </select>
       <input type="text" id="inv-q" placeholder="재고명, 보관위치 검색..." style="min-width:200px;" oninput="renderInventory()">
       <button class="btn btn-primary btn-icon" onclick="openInvAdd()" title="신규 재고 품목 등록"><i class="ti ti-plus"></i></button>
-      <button class="btn btn-icon" onclick="exportInvCSV()" title="엑셀 내보내기"><i class="ti ti-download"></i></button>
     </div>
 
     <!-- 재고 추가/수정 패널 -->
@@ -3992,7 +4017,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
           <div style="display:flex; gap:6px; align-items:center;">
             <select id="dlv-filter-client" onchange="renderDeliveries()" style="min-width:130px; height:28px; font-size:11px;"><option value="">전체 고객사</option></select>
             <input type="text" id="dlv-q" placeholder="제품명·납품번호 검색..." style="width:200px; height:28px; font-size:11px;" oninput="renderDeliveries()">
-            <button class="btn btn-sm btn-icon" onclick="exportDeliveriesCSV()" title="엑셀 내보내기"><i class="ti ti-download"></i></button>
           </div>
         </div>
         <div id="dlv-table" style="overflow-x:auto;"><div class="empty"><i class="ti ti-inbox"></i>납품 기록이 없습니다. 공정관리에서 [납품] 단계로 변경하면 자동 등록됩니다.</div></div>
@@ -4082,7 +4106,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
             <option>완료</option>
             <option>보류</option>
           </select>
-          <button class="btn btn-sm btn-icon" onclick="exportDefectsCSV()" title="엑셀 내보내기"><i class="ti ti-download"></i></button>
             <button class="btn btn-sm btn-primary btn-icon" onclick="openDefectAdd()" title="불량 리포트 등록"><i class="ti ti-plus"></i></button>
           </div>
         </div>
@@ -4108,7 +4131,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
               <option>처리중</option>
               <option>완료</option>
             </select>
-            <button class="btn btn-sm btn-icon" onclick="exportClaimsCSV()" title="엑셀 내보내기"><i class="ti ti-download"></i></button>
             <button class="btn btn-sm btn-primary btn-icon" onclick="openClaimAdd()" title="클레임 등록"><i class="ti ti-plus"></i></button>
           </div>
         </div>
@@ -4137,7 +4159,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
             <option>불합격</option>
             <option>조건부합격</option>
           </select>
-          <button class="btn btn-sm btn-icon" onclick="exportChecksCSV()" title="엑셀 내보내기"><i class="ti ti-download"></i></button>
           <button class="btn btn-sm btn-primary btn-icon" onclick="openCheckAdd()" title="검사 기록 추가"><i class="ti ti-plus"></i></button>
         </div>
       </div>
@@ -4161,7 +4182,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
             <option>처리중</option>
             <option>완료</option>
           </select>
-          <button class="btn btn-sm btn-icon" onclick="exportClaimsCSV()" title="엑셀 내보내기"><i class="ti ti-download"></i></button>
           <button class="btn btn-sm btn-primary btn-icon" onclick="openClaimAdd()" title="클레임 등록"><i class="ti ti-plus"></i></button>
         </div>
       </div>
@@ -4197,7 +4217,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
             <option>결근</option>
             <option>휴가</option>
           </select>
-          <button class="btn btn-sm btn-icon" onclick="exportWorkersCSV()" title="엑셀 내보내기"><i class="ti ti-download"></i></button>
           <button class="btn btn-sm btn-primary btn-icon" onclick="openWorkerAdd()" title="신규 직원 등록"><i class="ti ti-plus"></i></button>
         </div>
       </div>
@@ -4395,6 +4414,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
           <button type="button" data-systab="columns" onclick="switchSystemTab('columns')"><i class="ti ti-table-options"></i>표시 설정</button>
           <button type="button" data-systab="display" onclick="switchSystemTab('display')"><i class="ti ti-palette"></i>화면 설정</button>
           <button type="button" data-systab="templates" onclick="switchSystemTab('templates')"><i class="ti ti-template"></i>양식 내보내기</button>
+          <button type="button" data-systab="backup" onclick="switchSystemTab('backup')"><i class="ti ti-database-export"></i>백업/내보내기</button>
           <button type="button" data-systab="api" onclick="switchSystemTab('api')"><i class="ti ti-key"></i>API 관리</button>
           <button type="button" data-systab="storage" onclick="switchSystemTab('storage')"><i class="ti ti-database-dollar"></i>스토리지/요금</button>
           <button type="button" class="drive-save-btn" data-systab="drive" onclick="switchSystemTab('drive')"><i class="ti ti-cloud"></i>Google Drive 저장</button>
@@ -4705,6 +4725,10 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       </div>
     </div>
 
+    <div class="system-panel" id="system-panel-backup" style="display:none;">
+      <div id="backup-export-body"></div>
+    </div>
+
     <div class="system-panel" id="system-panel-api" style="display:none;">
       <div id="api-settings-body"></div>
     </div>
@@ -4828,7 +4852,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       </select>
       <input type="text" id="bp-q" placeholder="거래처명·담당자·이메일 검색..." style="min-width:200px;" oninput="renderPartners()">
       <button class="btn btn-primary btn-icon" onclick="openPartnerModal()" title="거래처 등록"><i class="ti ti-plus"></i></button>
-      <button class="btn btn-icon" onclick="exportPartnersXLS()" title="전체 엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
     </div>
     <div class="card">
       <div id="bp-table" style="overflow-x:auto;"><div class="empty"><i class="ti ti-inbox"></i>등록된 거래처가 없습니다.</div></div>
@@ -4852,9 +4875,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <input type="text" id="rfq-q" placeholder="품목명·공급처 검색..." style="min-width:180px;" oninput="renderRfq()">
       <button class="btn btn-primary btn-icon" onclick="openRfqAdd()" title="견적요청서 등록"><i class="ti ti-plus"></i></button>
       <button class="btn btn-icon" onclick="importRfqXLS()" title="엑셀 가져오기"><i class="ti ti-file-import"></i></button>
-      <button class="btn btn-icon" onclick="exportRfqXLS()" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
-      <button class="btn btn-icon" onclick="openRfqPrint(null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
-      <button class="btn btn-icon" onclick="saveDocumentBundleToGoogleDrive('rfq',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
     </div>
     <div class="card narrow-table-card">
       <div id="rfq-table" style="overflow-x:auto;"><div class="empty"><i class="ti ti-inbox"></i>등록된 견적요청서가 없습니다.</div></div>
@@ -4878,9 +4898,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <input type="text" id="po-q" placeholder="품목명·공급처 검색..." style="min-width:180px;" oninput="renderPo()">
       <button class="btn btn-primary btn-icon" onclick="openPoAdd()" title="구매발주서 등록"><i class="ti ti-plus"></i></button>
       <button class="btn btn-icon" onclick="importPoListXLS()" title="엑셀 가져오기"><i class="ti ti-file-import"></i></button>
-      <button class="btn btn-icon" onclick="exportPoXLS()" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
-      <button class="btn btn-icon" onclick="openPoPrint(null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
-      <button class="btn btn-icon" onclick="saveDocumentBundleToGoogleDrive('po',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
     </div>
 
     <!-- 선택 일괄 동작 바 -->
@@ -4914,9 +4931,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <select id="st-fs" onchange="renderSalesDoc('statement')"><option value="">전체 상태</option><option>작성</option><option>발송완료</option><option>수령확인</option></select>
       <input type="text" id="st-q" placeholder="품목명·고객사 검색..." style="min-width:180px;" oninput="renderSalesDoc('statement')">
       <button class="btn btn-primary btn-icon" onclick="openSalesDocAdd('statement')" title="거래명세표 등록"><i class="ti ti-plus"></i></button>
-      <button class="btn btn-icon" onclick="exportSalesDocCSV('statement')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
-      <button class="btn btn-icon" onclick="openSalesDocPrint('statement',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
-      <button class="btn btn-icon" onclick="saveDocumentBundleToGoogleDrive('statement',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
     </div>
     <div class="card"><div id="st-table" style="overflow-x:auto;"></div></div>
   </div>
@@ -4934,9 +4948,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <select id="tx-fs" onchange="renderSalesDoc('tax')"><option value="">전체 상태</option><option>작성</option><option>발행완료</option><option>전송완료</option></select>
       <input type="text" id="tx-q" placeholder="품목명·고객사 검색..." style="min-width:180px;" oninput="renderSalesDoc('tax')">
       <button class="btn btn-primary btn-icon" onclick="openSalesDocAdd('tax')" title="세금계산서 등록"><i class="ti ti-plus"></i></button>
-      <button class="btn btn-icon" onclick="exportSalesDocCSV('tax')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
-      <button class="btn btn-icon" onclick="openSalesDocPrint('tax',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
-      <button class="btn btn-icon" onclick="saveDocumentBundleToGoogleDrive('tax',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
     </div>
     <div class="card"><div id="tx-table" style="overflow-x:auto;"></div></div>
   </div>
@@ -4960,9 +4971,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <select id="qt-fs" onchange="renderSODoc('quote')"><option value="">전체 상태</option><option>작성</option><option>발송</option><option>협의중</option><option>보류</option><option>수주전환</option></select>
       <input type="text" id="qt-q" placeholder="품목명·고객사 검색..." style="min-width:180px;" oninput="renderSODoc('quote')">
       <button class="btn btn-primary btn-icon" onclick="openSODocAdd('quote')" title="견적서 등록"><i class="ti ti-plus"></i></button>
-      <button class="btn btn-icon" onclick="exportSODocCSV('quote')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
-      <button class="btn btn-icon" onclick="openSODocPrint('quote',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
-      <button class="btn btn-icon" onclick="saveDocumentBundleToGoogleDrive('quote',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
     </div>
     <div class="card narrow-table-card"><div id="qt-table" style="overflow-x:auto;"></div></div>
     </div><!-- /sd-tab-quote -->
@@ -4978,9 +4986,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <select id="so-fc" onchange="renderSODoc('order')" style="min-width:140px;"><option value="">전체 고객사</option></select>
       <select id="so-fs" onchange="renderSODoc('order')"><option value="">전체 상태</option><option>수주확정</option><option>진행중</option><option>완료</option></select>
       <input type="text" id="so-q" placeholder="품목명·고객사 검색..." style="min-width:180px;" oninput="renderSODoc('order')">
-      <button class="btn btn-icon" onclick="exportSODocCSV('order')" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
-      <button class="btn btn-icon" onclick="openSODocPrint('order',null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
-      <button class="btn btn-icon" onclick="saveDocumentBundleToGoogleDrive('order',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
     </div>
     <div class="card narrow-table-card"><div id="so-table" style="overflow-x:auto;"></div></div>
     </div><!-- /sd-tab-order -->
@@ -16121,6 +16126,7 @@ function switchSystemTab(tab) {
   else if (systemTab === 'columns') renderTableDisplaySettings();
   else if (systemTab === 'display') renderUiScaleSettings();
   else if (systemTab === 'templates') renderDocTemplateManagement();
+  else if (systemTab === 'backup') renderBackupExportSettings();
   else if (systemTab === 'api') renderApiSettings();
   else if (systemTab === 'storage') renderFirebaseUsageSettings();
   else if (systemTab === 'drive') renderGoogleDriveSettings();
@@ -27555,6 +27561,385 @@ async function renderGoogleDriveSettings() {
         '<button class="btn" onclick="loadGoogleDriveBackups()" ' + (!connected ? 'disabled' : '') + '><i class="ti ti-refresh"></i>목록 새로고침</button>' +
       '</div><div id="drive-backup-list"><div class="empty"><i class="ti ti-brand-google-drive"></i>Drive를 연결하면 최근 백업 30개를 확인할 수 있습니다.</div></div></div>';
   if (connected) loadGoogleDriveBackups();
+}
+
+/* ════════ 시스템 관리: 백업/내보내기 허브 ════════ */
+const BACKUP_EXPORT_SELECTION_KEY = 'backupExportSelectedKeys';
+const DOCUMENT_EXPORT_SELECTION_KEY = 'documentExportSelectedTypes';
+
+const BACKUP_EXPORT_ITEMS = [
+  { key:'clients', label:'고객사', group:'기초 데이터' },
+  { key:'partners', label:'거래처', group:'기초 데이터' },
+  { key:'products', label:'제품', group:'기초 데이터' },
+  { key:'materials', label:'자재', group:'기초 데이터' },
+  { key:'bomList', label:'BOM/자재명세', group:'기초 데이터' },
+  { key:'inventory', label:'재고', group:'재고/물류' },
+  { key:'inventoryLedger', label:'입출고 이력', group:'재고/물류' },
+  { key:'deliveries', label:'납품 현황', group:'재고/물류' },
+  { key:'workOrders', label:'생산지시', group:'생산/품질' },
+  { key:'stages', label:'공정 단계', group:'생산/품질' },
+  { key:'defects', label:'불량 기록', group:'생산/품질' },
+  { key:'claims', label:'고객 클레임', group:'생산/품질' },
+  { key:'checkRecords', label:'검사 기록', group:'생산/품질' },
+  { key:'asList', label:'고객 A/S', group:'생산/품질' },
+  { key:'rfqList', label:'견적요청서', group:'문서' },
+  { key:'poList', label:'구매발주서', group:'문서' },
+  { key:'quoteList', label:'견적서', group:'문서' },
+  { key:'orderList', label:'수주서', group:'문서' },
+  { key:'statementList', label:'거래명세표', group:'문서' },
+  { key:'taxList', label:'세금계산서', group:'문서' },
+  { key:'memoList', label:'메모/할 일', group:'업무 기록' },
+  { key:'todoList', label:'할 일', group:'업무 기록' },
+  { key:'memoAttachmentData', label:'메모 첨부파일', group:'업무 기록', heavy:true },
+  { key:'emailSendHistory', label:'이메일 발송 이력', group:'업무 기록' },
+  { key:'auditLog', label:'변경 이력', group:'업무 기록', heavy:true },
+  { key:'alerts', label:'알림', group:'업무 기록' },
+  { key:'trash', label:'휴지통', group:'업무 기록', heavy:true },
+  { key:'workers', label:'작업자/직원', group:'인사/재무' },
+  { key:'attendance', label:'근태', group:'인사/재무' },
+  { key:'leaves', label:'휴가', group:'인사/재무' },
+  { key:'payrollRecords', label:'급여 기록', group:'인사/재무' },
+  { key:'financeData', label:'재무 데이터', group:'인사/재무' },
+  { key:'companyInfo', label:'회사 정보', group:'설정' },
+  { key:'docXlsxTemplates', label:'문서 양식', group:'설정' },
+  { key:'driveOAuthSettings', label:'Drive OAuth ID', group:'설정' },
+  { key:'googleDriveConfig', label:'Google Drive 설정', group:'설정' },
+  { key:'alimtalkSettings', label:'알림톡 설정', group:'설정' },
+  { key:'tableDisplayConfig', label:'표시 설정', group:'설정' },
+  { key:'uiBrandSettings', label:'로고/명칭', group:'설정' },
+  { key:'uiScale', label:'화면 밀도', group:'설정' },
+  { key:'uiFontScale', label:'글자 크기', group:'설정' },
+  { key:'menuIconSize', label:'메뉴 아이콘', group:'설정' },
+  { key:'tableGridLines', label:'테이블 선', group:'설정' },
+  { key:'uiColors', label:'화면 색상', group:'설정' },
+  { key:'theme', label:'테마', group:'설정' }
+];
+
+const DOCUMENT_EXPORT_ITEMS = [
+  { type:'rfq', label:'견적요청서', excel:()=>exportRfqXLS(), pdf:()=>openRfqPrint(null), drive:()=>saveDocumentBundleToGoogleDrive('rfq', null) },
+  { type:'po', label:'구매발주서', excel:()=>exportPoXLS(), pdf:()=>openPoPrint(null), drive:()=>saveDocumentBundleToGoogleDrive('po', null) },
+  { type:'statement', label:'거래명세표', excel:()=>exportSalesDocCSV('statement'), pdf:()=>openSalesDocPrint('statement', null), drive:()=>saveDocumentBundleToGoogleDrive('statement', null) },
+  { type:'tax', label:'세금계산서', excel:()=>exportSalesDocCSV('tax'), pdf:()=>openSalesDocPrint('tax', null), drive:()=>saveDocumentBundleToGoogleDrive('tax', null) },
+  { type:'quote', label:'견적서', excel:()=>exportSODocCSV('quote'), pdf:()=>openSODocPrint('quote', null), drive:()=>saveDocumentBundleToGoogleDrive('quote', null) },
+  { type:'order', label:'수주서', excel:()=>exportSODocCSV('order'), pdf:()=>openSODocPrint('order', null), drive:()=>saveDocumentBundleToGoogleDrive('order', null) }
+];
+
+function backupExportEsc(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function backupExportKnownKeys() {
+  const fromDataKeys = Array.isArray(window.DATA_KEYS) ? window.DATA_KEYS : (typeof DATA_KEYS !== 'undefined' ? DATA_KEYS : []);
+  const known = new Set(BACKUP_EXPORT_ITEMS.map(item => item.key));
+  return [
+    ...BACKUP_EXPORT_ITEMS,
+    ...fromDataKeys.filter(key => !known.has(key)).map(key => ({ key, label:key, group:'기타' }))
+  ];
+}
+
+function backupExportDefaultKeys() {
+  return backupExportKnownKeys().map(item => item.key);
+}
+
+function backupExportLoadKeys() {
+  const defaults = backupExportDefaultKeys();
+  const saved = loadStorage(BACKUP_EXPORT_SELECTION_KEY, null);
+  if (!Array.isArray(saved) || !saved.length) return defaults;
+  const valid = new Set(defaults);
+  const filtered = saved.filter(key => valid.has(key));
+  return filtered.length ? filtered : defaults;
+}
+
+function backupExportSaveKeys(keys) {
+  const valid = new Set(backupExportDefaultKeys());
+  const next = Array.from(new Set((keys || []).filter(key => valid.has(key))));
+  saveStorage(BACKUP_EXPORT_SELECTION_KEY, next);
+  renderBackupExportSettings();
+}
+
+function documentExportLoadTypes() {
+  const defaults = DOCUMENT_EXPORT_ITEMS.map(item => item.type);
+  const saved = loadStorage(DOCUMENT_EXPORT_SELECTION_KEY, null);
+  if (!Array.isArray(saved) || !saved.length) return defaults;
+  const valid = new Set(defaults);
+  const filtered = saved.filter(type => valid.has(type));
+  return filtered.length ? filtered : defaults;
+}
+
+function documentExportSaveTypes(types) {
+  const valid = new Set(DOCUMENT_EXPORT_ITEMS.map(item => item.type));
+  const next = Array.from(new Set((types || []).filter(type => valid.has(type))));
+  saveStorage(DOCUMENT_EXPORT_SELECTION_KEY, next);
+  renderBackupExportSettings();
+}
+
+function backupExportCountValue(key) {
+  const raw = localStorage.getItem('mes_' + key);
+  if (raw == null) return '없음';
+  try {
+    const data = JSON.parse(raw);
+    if (Array.isArray(data)) return data.length + '건';
+    if (data && typeof data === 'object') return Object.keys(data).length + '개';
+    return '1개';
+  } catch (e) {
+    return '손상';
+  }
+}
+
+function backupExportPayload(keys) {
+  const out = {
+    _savedAt: new Date().toISOString(),
+    _selectedKeys: keys.slice()
+  };
+  keys.forEach(key => {
+    const raw = localStorage.getItem('mes_' + key);
+    if (raw != null) {
+      try { out[key] = JSON.parse(raw); } catch(e) {}
+    }
+  });
+  return out;
+}
+
+function backupExportFileStamp() {
+  const now = new Date();
+  return [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0')
+  ].join('') + '-' + [
+    String(now.getHours()).padStart(2, '0'),
+    String(now.getMinutes()).padStart(2, '0'),
+    String(now.getSeconds()).padStart(2, '0')
+  ].join('');
+}
+
+function backupExportDownloadBlob(blob, fileName) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fileName;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function backupExportSelectedJson() {
+  if (typeof requireAdminAction === 'function' && !requireAdminAction('선택 데이터 JSON 내보내기')) return;
+  const keys = backupExportLoadKeys();
+  if (!keys.length) { showToast('선택된 데이터 항목이 없습니다.', 'error'); return; }
+  const payload = backupExportPayload(keys);
+  backupExportDownloadBlob(
+    new Blob([JSON.stringify(payload, null, 2)], { type:'application/json;charset=utf-8' }),
+    'mes-selected-data-' + backupExportFileStamp() + '.json'
+  );
+  showToast('선택 데이터 JSON 저장 완료', 'success');
+}
+
+function backupExportRowsForSheet(value) {
+  if (Array.isArray(value)) {
+    if (!value.length) return [];
+    return value.map(row => row && typeof row === 'object' && !Array.isArray(row) ? row : { value: row });
+  }
+  if (value && typeof value === 'object') {
+    return Object.keys(value).map(key => {
+      const item = value[key];
+      if (item && typeof item === 'object' && !Array.isArray(item)) return Object.assign({ key }, item);
+      return { key, value: item };
+    });
+  }
+  return [{ value }];
+}
+
+function backupExportSelectedXls() {
+  if (typeof requireAdminAction === 'function' && !requireAdminAction('선택 데이터 엑셀 내보내기')) return;
+  if (typeof XLSX === 'undefined') {
+    showToast('SheetJS 라이브러리 로딩 중입니다. 잠시 후 다시 시도해주세요.', 'error');
+    return;
+  }
+  const keys = backupExportLoadKeys();
+  if (!keys.length) { showToast('선택된 데이터 항목이 없습니다.', 'error'); return; }
+  const labels = new Map(backupExportKnownKeys().map(item => [item.key, item.label]));
+  const wb = XLSX.utils.book_new();
+  keys.forEach((key, index) => {
+    const raw = localStorage.getItem('mes_' + key);
+    let value = null;
+    if (raw != null) {
+      try { value = JSON.parse(raw); } catch(e) { value = { error:'JSON 파싱 실패' }; }
+    }
+    const rows = backupExportRowsForSheet(value);
+    const sheet = rows.length
+      ? XLSX.utils.json_to_sheet(rows)
+      : XLSX.utils.aoa_to_sheet([['데이터 없음']]);
+    const base = String(labels.get(key) || key).replace(/[\\/?*[\]:]/g, ' ').slice(0, 26) || ('sheet' + index);
+    XLSX.utils.book_append_sheet(wb, sheet, (index + 1 + '-' + base).slice(0, 31));
+  });
+  XLSX.writeFile(wb, 'mes-selected-data-' + backupExportFileStamp() + '.xlsx');
+  showToast('선택 데이터 엑셀 저장 완료', 'success');
+}
+
+async function backupExportSelectedDrive() {
+  if (typeof requireAdminAction === 'function' && !requireAdminAction('선택 데이터 Google Drive 백업')) return;
+  if (typeof uploadBlobToGoogleDrive !== 'function') {
+    showToast('Google Drive 모듈이 준비되지 않았습니다.', 'error');
+    return;
+  }
+  const keys = backupExportLoadKeys();
+  if (!keys.length) { showToast('선택된 데이터 항목이 없습니다.', 'error'); return; }
+  const button = inp('backup-export-drive-btn');
+  if (button) { button.disabled = true; button.innerHTML = '<i class="ti ti-loader animate-spin"></i>Drive 저장 중'; }
+  try {
+    await requestDriveAccessToken('');
+    const fileName = 'mes-selected-data-' + backupExportFileStamp() + '.json';
+    const payload = JSON.stringify(backupExportPayload(keys), null, 2);
+    const file = await uploadBlobToGoogleDrive(new Blob([payload], { type:'application/json' }), fileName, 'Backups');
+    const config = typeof getDriveConfig === 'function' ? getDriveConfig() : null;
+    if (config) {
+      config.lastBackupAt = new Date().toISOString();
+      saveDriveConfig(config);
+    }
+    showToast(file.name + ' Drive 백업 완료', 'success');
+    if (typeof loadGoogleDriveBackups === 'function') await loadGoogleDriveBackups();
+  } catch (error) {
+    showToast(error.message || 'Google Drive 백업에 실패했습니다.', 'error');
+  } finally {
+    if (button) { button.disabled = false; button.innerHTML = '<i class="ti ti-brand-google-drive"></i>Drive 저장'; }
+  }
+}
+
+function backupExportApplyPreset(preset) {
+  const items = backupExportKnownKeys();
+  const byGroup = group => items.filter(item => item.group === group).map(item => item.key);
+  let keys;
+  if (preset === 'all') keys = items.map(item => item.key);
+  else if (preset === 'light') keys = items.filter(item => !item.heavy).map(item => item.key);
+  else if (preset === 'master') keys = ['clients','partners','products','materials','bomList','inventory','inventoryLedger'];
+  else if (preset === 'documents') keys = byGroup('문서').concat(['companyInfo','docXlsxTemplates','emailSendHistory']);
+  else if (preset === 'settings') keys = byGroup('설정');
+  else if (preset === 'finance') keys = byGroup('인사/재무');
+  else keys = items.map(item => item.key);
+  backupExportSaveKeys(keys);
+}
+
+function backupExportToggleAll(checked) {
+  backupExportSaveKeys(checked ? backupExportDefaultKeys() : []);
+}
+
+function backupExportToggleKey(key, checked) {
+  const current = new Set(backupExportLoadKeys());
+  if (checked) current.add(key);
+  else current.delete(key);
+  backupExportSaveKeys([...current]);
+}
+
+function documentExportToggleAll(checked) {
+  documentExportSaveTypes(checked ? DOCUMENT_EXPORT_ITEMS.map(item => item.type) : []);
+}
+
+function documentExportToggleType(type, checked) {
+  const current = new Set(documentExportLoadTypes());
+  if (checked) current.add(type);
+  else current.delete(type);
+  documentExportSaveTypes([...current]);
+}
+
+function documentExportSelectedItems() {
+  const selected = new Set(documentExportLoadTypes());
+  return DOCUMENT_EXPORT_ITEMS.filter(item => selected.has(item.type));
+}
+
+async function documentExportRun(kind) {
+  const items = documentExportSelectedItems();
+  if (!items.length) { showToast('선택된 문서 종류가 없습니다.', 'error'); return; }
+  if (kind === 'pdf' && items.length > 1) {
+    showToast('PDF 출력은 브라우저 팝업 제한을 피하기 위해 문서 종류를 하나씩 선택해 실행해주세요.', 'info');
+    return;
+  }
+  const actionName = kind === 'excel' ? '문서 엑셀 저장' : (kind === 'pdf' ? '문서 PDF 출력' : '문서 Drive 저장');
+  if (kind === 'excel' && typeof requireCsvAction === 'function' && !requireCsvAction(actionName)) return;
+  if (kind === 'pdf' && typeof requirePdfAction === 'function' && !requirePdfAction(actionName)) return;
+  for (const item of items) {
+    const fn = item[kind];
+    if (typeof fn === 'function') await fn();
+  }
+}
+
+function renderBackupExportSettings() {
+  const body = inp('backup-export-body');
+  if (!body) return;
+  const selected = new Set(backupExportLoadKeys());
+  const selectedDocs = new Set(documentExportLoadTypes());
+  const items = backupExportKnownKeys();
+  const grouped = items.reduce((acc, item) => {
+    (acc[item.group] = acc[item.group] || []).push(item);
+    return acc;
+  }, {});
+  const groupHtml = Object.entries(grouped).map(([group, groupItems]) => `
+    <div class="backup-export-group">
+      <div class="backup-export-group-title">${backupExportEsc(group)}</div>
+      <div class="backup-export-grid">
+        ${groupItems.map(item => `
+          <label class="backup-export-check">
+            <input type="checkbox" ${selected.has(item.key) ? 'checked' : ''} onchange="backupExportToggleKey('${backupExportEsc(item.key)}',this.checked)">
+            <span>
+              <strong>${backupExportEsc(item.label)}</strong>
+              <small>${backupExportEsc(item.key)} · ${backupExportEsc(backupExportCountValue(item.key))}</small>
+            </span>
+          </label>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+
+  body.innerHTML = `
+    <div class="card">
+      <div class="card-hd">
+        <span class="card-ttl"><i class="ti ti-database-export"></i>데이터 백업/내보내기</span>
+        <span style="font-size:11px;color:var(--tx-t);">선택한 항목만 JSON, 엑셀, Google Drive로 저장</span>
+      </div>
+      <div class="backup-export-actions">
+        <button class="btn btn-sm" onclick="backupExportApplyPreset('all')"><i class="ti ti-checks"></i>전체</button>
+        <button class="btn btn-sm" onclick="backupExportApplyPreset('light')"><i class="ti ti-filter-check"></i>가벼운 백업</button>
+        <button class="btn btn-sm" onclick="backupExportApplyPreset('master')"><i class="ti ti-address-book"></i>기초/재고</button>
+        <button class="btn btn-sm" onclick="backupExportApplyPreset('documents')"><i class="ti ti-files"></i>문서</button>
+        <button class="btn btn-sm" onclick="backupExportApplyPreset('finance')"><i class="ti ti-coin"></i>인사/재무</button>
+        <button class="btn btn-sm" onclick="backupExportApplyPreset('settings')"><i class="ti ti-settings"></i>설정</button>
+        <span class="backup-export-count">${selected.size} / ${items.length}개 선택</span>
+      </div>
+      <div class="backup-export-actions">
+        <button class="btn btn-primary" onclick="backupExportSelectedJson()"><i class="ti ti-file-type-json"></i>JSON 저장</button>
+        <button class="btn" onclick="backupExportSelectedXls()"><i class="ti ti-file-spreadsheet"></i>엑셀 저장</button>
+        <button class="btn drive-save-btn" id="backup-export-drive-btn" onclick="backupExportSelectedDrive()"><i class="ti ti-brand-google-drive"></i>Drive 저장</button>
+        <button class="btn btn-sm" onclick="backupExportToggleAll(true)"><i class="ti ti-square-check"></i>모두 선택</button>
+        <button class="btn btn-sm" onclick="backupExportToggleAll(false)"><i class="ti ti-square"></i>전체 해제</button>
+      </div>
+      ${groupHtml}
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <div class="card-hd">
+        <span class="card-ttl"><i class="ti ti-file-export"></i>문서 출력/Drive</span>
+        <span style="font-size:11px;color:var(--tx-t);">업무 문서의 전체 엑셀, PDF, PDF/XLSX Drive 저장을 한 곳에서 실행</span>
+      </div>
+      <div class="backup-export-docs">
+        ${DOCUMENT_EXPORT_ITEMS.map(item => `
+          <label class="backup-export-doc">
+            <input type="checkbox" ${selectedDocs.has(item.type) ? 'checked' : ''} onchange="documentExportToggleType('${item.type}',this.checked)">
+            <span>${backupExportEsc(item.label)}</span>
+          </label>
+        `).join('')}
+      </div>
+      <div class="backup-export-actions">
+        <button class="btn btn-primary" onclick="documentExportRun('excel')"><i class="ti ti-file-spreadsheet"></i>선택 문서 엑셀</button>
+        <button class="btn" onclick="documentExportRun('pdf')"><i class="ti ti-printer"></i>선택 문서 PDF</button>
+        <button class="btn drive-save-btn" onclick="documentExportRun('drive')"><i class="ti ti-brand-google-drive"></i>선택 문서 Drive 저장</button>
+        <button class="btn btn-sm" onclick="documentExportToggleAll(true)"><i class="ti ti-square-check"></i>모두 선택</button>
+        <button class="btn btn-sm" onclick="documentExportToggleAll(false)"><i class="ti ti-square"></i>전체 해제</button>
+      </div>
+      <div style="font-size:11.5px;color:var(--tx-t);line-height:1.7;margin-top:8px;">
+        PDF 출력은 브라우저 팝업 제한 때문에 한 종류씩 실행하는 방식이 안정적입니다. Drive 저장은 기존 PDF/XLSX 묶음 저장 양식을 그대로 사용합니다.
+      </div>
+    </div>
+  `;
 }
 
 /* ════════ 메모·할 일 통합 관리 ════════ */
