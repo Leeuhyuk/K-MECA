@@ -1271,17 +1271,27 @@ textarea { height: auto; resize: vertical; }
   align-items: center;
   gap: 5px;
 }
+.date-view-mode-select,
 .date-view-period input {
   width: 132px;
-  height: 28px;
+  height: calc(32px * var(--ui-font-scale));
+  min-height: 32px;
   padding: 0 7px;
-  font-size: 11px;
+  line-height: 1.35;
+}
+.date-view-mode-select {
+  width: auto;
+  padding: 0 28px 0 12px;
+  font-weight: 750;
 }
 .date-view-nav,
 .date-view-today,
-.date-view-quick .btn {
-  height: 28px;
+.date-view-quick .btn,
+.date-view-reset {
+  height: calc(32px * var(--ui-font-scale));
+  min-height: 32px;
   padding: 0 9px;
+  line-height: 1.25;
 }
 .date-view-label {
   min-width: 115px;
@@ -1316,7 +1326,6 @@ textarea { height: auto; resize: vertical; }
   border: 1px solid var(--br-i);
   border-radius: var(--rm);
 }
-#po-bulkbar,
 #memo-bulkbar {
   gap: 5px !important;
   margin: 0 0 5px !important;
@@ -1521,6 +1530,12 @@ body.selection-detail-resizing {
   font-size: 14px;
   font-weight: 900;
 }
+.selection-detail-section-subtitle {
+  margin: 13px 0 8px;
+  color: var(--detail-panel-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
 .selection-detail-summary-card {
   display: flex;
   align-items: flex-start;
@@ -1538,7 +1553,7 @@ body.selection-detail-resizing {
   font-weight: 900;
   line-height: 1.2;
 }
-.selection-detail-summary-card span:not(.selection-detail-status) {
+.selection-detail-summary-card > div > span {
   display: block;
   margin-top: 7px;
   color: var(--detail-panel-muted);
@@ -1556,6 +1571,89 @@ body.selection-detail-resizing {
   border: 1px solid var(--br-i);
   border-radius: 8px;
   background: var(--bg-i);
+}
+.selection-detail-status-menu-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+.selection-detail-status-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 31px;
+  max-width: 136px;
+  padding: 5px 9px 5px 11px;
+  cursor: pointer;
+  font-family: var(--f);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.selection-detail-status-control span {
+  display: block;
+  margin-top: 0;
+  color: inherit;
+  font-size: inherit;
+  line-height: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.selection-detail-status-control i {
+  flex: 0 0 auto;
+  font-size: 13px;
+  line-height: 1;
+}
+.selection-detail-status-select {
+  min-width: 116px;
+  height: 34px;
+  padding: 4px 28px 4px 12px;
+  cursor: pointer;
+  font-family: var(--f);
+  text-align: left;
+  appearance: auto;
+}
+.selection-detail-status-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 80;
+  display: none;
+  min-width: 116px;
+  padding: 4px;
+  background: var(--detail-panel-card);
+  border: 1px solid var(--detail-panel-border);
+  border-radius: var(--rm);
+  box-shadow: var(--detail-panel-shadow);
+}
+.selection-detail-status-menu-wrap.open .selection-detail-status-menu {
+  display: grid;
+  gap: 2px;
+}
+.selection-detail-status-option {
+  width: 100%;
+  min-height: 28px;
+  padding: 0 9px;
+  color: var(--detail-panel-text);
+  text-align: left;
+  font-size: 11.5px;
+  font-weight: 750;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font-family: var(--f);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.selection-detail-status-option:hover,
+.selection-detail-status-option.is-selected {
+  color: var(--tx-i);
+  background: var(--bg-i);
+}
+.selection-detail-status-option:disabled {
+  color: var(--detail-panel-muted);
+  cursor: default;
+  opacity: .55;
 }
 .selection-detail-status.is-ok {
   color: var(--tx-ok);
@@ -1611,6 +1709,81 @@ body.selection-detail-resizing {
   border-color: var(--br-d);
   background: var(--bg-d);
 }
+.selection-detail-edit-section {
+  padding-top: 13px;
+}
+.selection-detail-edit-grid {
+  display: grid;
+  gap: 8px;
+}
+.selection-detail-edit-row {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+.selection-detail-edit-row span {
+  color: var(--detail-panel-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.selection-detail-edit-control {
+  width: 100%;
+  height: 31px;
+  min-width: 0;
+  padding: 0 9px;
+  color: var(--detail-panel-text);
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid var(--detail-panel-border);
+  border-radius: var(--rm);
+  background: var(--detail-panel-subtle);
+  font-family: var(--f);
+}
+.selection-detail-edit-control:focus {
+  outline: none;
+  border-color: var(--br-i);
+  box-shadow: 0 0 0 2px var(--bg-i);
+}
+.readonly-status-source {
+  display: none !important;
+}
+.readonly-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 74px;
+  min-height: 26px;
+  padding: 0 10px;
+  color: var(--tx-i);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  border: 1px solid var(--br-i);
+  border-radius: var(--rm);
+  background: var(--bg-i);
+  white-space: nowrap;
+}
+.readonly-status-pill.is-ok {
+  color: var(--tx-ok);
+  border-color: var(--br-ok);
+  background: var(--bg-ok);
+}
+.readonly-status-pill.is-danger {
+  color: var(--tx-d);
+  border-color: var(--br-d);
+  background: var(--bg-d);
+}
+.readonly-status-pill.is-warn {
+  color: var(--tx-w);
+  border-color: var(--br-w);
+  background: var(--bg-w);
+}
+.readonly-status-pill.is-muted {
+  color: var(--tx-s);
+  border-color: var(--br);
+  background: var(--bg-t);
+}
 .selection-detail-kv {
   display: grid;
   gap: 11px;
@@ -1633,6 +1806,86 @@ body.selection-detail-resizing {
   font-weight: 500;
   line-height: 1.35;
   overflow-wrap: anywhere;
+}
+.selection-detail-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.selection-detail-metric-card {
+  min-width: 0;
+  padding: 9px 10px;
+  background: var(--detail-panel-subtle);
+  border: 1px solid var(--detail-panel-border);
+  border-radius: var(--rm);
+}
+.selection-detail-metric-card span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--detail-panel-muted);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.selection-detail-metric-card b {
+  display: block;
+  color: var(--detail-panel-text);
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.selection-detail-status-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.selection-detail-mini-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  color: var(--tx-i);
+  font-size: 10.5px;
+  font-weight: 900;
+  line-height: 1;
+  background: var(--bg-i);
+  border: 1px solid var(--br-i);
+  border-radius: 999px;
+}
+.selection-detail-mini-chip.is-ok {
+  color: var(--tx-ok);
+  background: var(--bg-ok);
+  border-color: var(--br-ok);
+}
+.selection-detail-mini-chip.is-danger {
+  color: var(--tx-d);
+  background: var(--bg-d);
+  border-color: var(--br-d);
+}
+.selection-detail-mini-chip.is-muted {
+  color: var(--tx-s);
+  background: var(--bg-t);
+  border-color: var(--br);
+}
+.selection-detail-notice-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+.selection-detail-notice-list div {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 6px;
+  align-items: start;
+  color: var(--detail-panel-muted);
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+.selection-detail-notice-list i {
+  color: var(--tx-w);
+  font-size: 13px;
+  line-height: 1;
+  margin-top: 1px;
 }
 .selection-detail-selected-list {
   display: grid;
@@ -1665,6 +1918,55 @@ body.selection-detail-resizing {
   font-size: 10.5px;
   font-weight: 400;
   line-height: 1.35;
+}
+.selection-detail-selected-list-rich {
+  gap: 8px;
+}
+.selection-detail-selected-item-rich {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+.selection-detail-selected-meta {
+  display: grid;
+  gap: 3px;
+  justify-items: end;
+  color: var(--detail-panel-muted);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.selection-detail-selected-meta span {
+  margin-top: 0;
+}
+.selection-detail-selected-meta em {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 6px;
+  color: var(--tx-i);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  background: var(--bg-i);
+  border: 1px solid var(--br-i);
+  border-radius: 999px;
+}
+.selection-detail-selected-meta em.is-ok {
+  color: var(--tx-ok);
+  background: var(--bg-ok);
+  border-color: var(--br-ok);
+}
+.selection-detail-selected-meta em.is-danger {
+  color: var(--tx-d);
+  background: var(--bg-d);
+  border-color: var(--br-d);
+}
+.selection-detail-selected-meta em.is-muted {
+  color: var(--tx-s);
+  background: var(--bg-t);
+  border-color: var(--br);
 }
 .selection-detail-email-row {
   cursor: pointer;
@@ -6329,20 +6631,6 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
       <button class="btn btn-primary btn-icon" onclick="openPoAdd()" title="구매발주서 등록"><i class="ti ti-plus"></i></button>
       <button class="btn btn-icon" onclick="importPoListXLS()" title="엑셀 가져오기"><i class="ti ti-file-import"></i></button>
     </div>
-
-    <!-- 선택 일괄 동작 바 -->
-    <div id="po-bulkbar" style="display:none;align-items:center;gap:5px;margin:0 0 5px;padding:4px 8px;background:var(--bg-i);border:1px solid var(--br-i);border-radius:8px;flex-wrap:wrap;">
-      <span style="font-weight:700;font-size:12.5px;color:var(--tx-i);"><i class="ti ti-checkbox"></i> <span id="po-sel-count">0</span>건 선택됨</span>
-      <button class="btn btn-sm" id="po-edit-btn" onclick="poBulkEdit()"><i class="ti ti-edit"></i>수정</button>
-      <button class="btn btn-sm" id="po-clone-btn" onclick="poBulkClone()"><i class="ti ti-copy"></i>복제</button>
-      <button class="btn btn-sm" onclick="poBulkPrint()"><i class="ti ti-printer"></i>PDF 출력</button>
-      <button class="btn btn-sm" onclick="poBulkExport()"><i class="ti ti-file-spreadsheet"></i>엑셀</button>
-      <button class="btn btn-sm drive-save-btn" onclick="poBulkDrive()"><i class="ti ti-cloud-upload"></i>Drive 저장</button>
-      <button class="btn btn-sm" onclick="poBulkEmail()"><i class="ti ti-mail"></i>이메일</button>
-      <button class="btn btn-sm btn-danger" onclick="poBulkDelete()"><i class="ti ti-trash"></i>삭제</button>
-      <button class="btn btn-sm" style="margin-left:auto;" onclick="poToggleAll(false)"><i class="ti ti-x"></i>해제</button>
-    </div>
-
     <div class="card">
       <div id="po-table" style="overflow-x:auto;"><div class="empty"><i class="ti ti-inbox"></i>등록된 구매발주서가 없습니다.</div></div>
     </div>
@@ -7870,15 +8158,17 @@ function selectionActionBarsMobileVisible() {
 }
 function setDateViewSelectionBar(key, html, active) {
   if (!key) return false;
-  const showSelectionBar = selectionActionBarsMobileVisible();
-  if (active && html && showSelectionBar) dateViewSelectionState[key] = { html };
+  const nextHtml = active && html ? html : '';
+  const prevHtml = dateViewSelectionState[key] && dateViewSelectionState[key].html || '';
+  if (nextHtml) dateViewSelectionState[key] = { html:nextHtml };
   else delete dateViewSelectionState[key];
   const bar = inp('date-view-' + key);
-  if (bar) {
+  const renderedInDateView = !!(bar && nextHtml && selectionActionBarsMobileVisible());
+  const modeChanged = bar && bar.classList.contains('date-view-selected-mode') !== renderedInDateView;
+  if (bar && (prevHtml !== nextHtml || modeChanged)) {
     _renderDateViewBar(key, bar);
-    return true;
   }
-  return !!(active && !showSelectionBar);
+  return renderedInDateView;
 }
 function clearDateViewSelection(key) {
   if (!key) return;
@@ -7905,7 +8195,7 @@ function _renderDateViewBar(key, bar) {
   const disabled = state.mode === 'all' || state.mode === 'range';
   const range = state.mode === 'range';
   bar.innerHTML = `
-    <select onchange="dateViewModeChange('${key}',this.value)" style="height:28px;min-width:96px;font-size:11px;">
+    <select class="date-view-mode-select" onchange="dateViewModeChange('${key}',this.value)" style="min-width:96px;">
       <option value="all"${state.mode==='all'?' selected':''}>전체</option>
       <option value="year"${state.mode==='year'?' selected':''}>연</option>
       <option value="month"${state.mode==='month'?' selected':''}>월</option>
@@ -7926,7 +8216,7 @@ function _renderDateViewBar(key, bar) {
       <button class="btn btn-sm" onclick="dateViewQuickRange('${key}','month')">이번 달</button>
       <button class="btn btn-sm" onclick="dateViewQuickRange('${key}','prevMonth')">지난달</button>
     </div>
-    <button class="btn btn-sm" style="height:28px;padding:0 9px;" onclick="dateViewReset('${key}')" title="전체 보기"><i class="ti ti-x"></i></button>`;
+    <button class="btn btn-sm date-view-reset" onclick="dateViewReset('${key}')" title="전체 보기"><i class="ti ti-x"></i></button>`;
 }
 window.addEventListener('resize', () => {
   Object.keys(dateViewSelectionState).forEach(key => {
@@ -12494,6 +12784,7 @@ function renderMaterials() {
     '</tr></thead><tbody>' + rows.map(m=>{
       const prod = getProductById(m.productId);
       const cname = prod ? getClientName(prod.clientId) : '—';
+      const statusClass = typeof selectionDetailStatusClass === 'function' ? selectionDetailStatusClass(m.status) : '';
       return '<tr>' +
         '<td>'+esc(m.id)+'</td>' +
         '<td>'+esc(cname)+'</td>' +
@@ -12505,7 +12796,7 @@ function renderMaterials() {
         '<td style="font-weight:700;color:var(--tx-i);">'+fmtW(getMatAmt(m))+'</td>' +
         '<td>'+(esc(m.orderDate)||'—')+'</td>' +
         '<td>'+(esc(m.expectedDate)||'—')+'</td>' +
-        '<td><select class="stat-sel" style="color:'+(sColor[m.status]||'')+'" onchange="changeMatStatus(\''+esc(m.id)+'\',this.value)">' +
+        '<td><span class="readonly-status-pill '+statusClass+'">'+esc(m.status||'—')+'</span><select class="stat-sel readonly-status-source" aria-hidden="true" tabindex="-1" style="color:'+(sColor[m.status]||'')+'" onchange="changeMatStatus(\''+esc(m.id)+'\',this.value)">' +
           ['발주전','발주중','입고완료','지연'].map(s=>'<option'+(s===m.status?' selected':'')+'>'+s+'</option>').join('') +
         '</select></td>' +
         '<td style="font-size:11px;color:var(--tx-t);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+esc(m.note||'')+'">'+(esc(m.note)||'—')+'</td>' +
@@ -18957,6 +19248,13 @@ function bulkSelectionBarHtml(key, count) {
     : '';
   return `<span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${count}건 선택됨</span><span data-bulk-audit-slot>${auditBtn}</span>${bulkActionButtons(key)}<button class="btn btn-sm date-view-clear-selection" onclick="bulkToggleAll('${key}',false)"><i class="ti ti-x"></i>해제</button>`;
 }
+function bulkSelectionBarsMobileVisible() {
+  return typeof selectionActionBarsMobileVisible === 'function' ? selectionActionBarsMobileVisible() : false;
+}
+function removeBulkBar(key) {
+  const bar = document.getElementById('bulkbar-' + key);
+  if (bar) bar.remove();
+}
 function registerBulkDateViewClearers() {
   if (_bulkDateViewClearersRegistered || typeof registerDateViewSelectionClearer !== 'function') return;
   _bulkDateViewClearersRegistered = true;
@@ -19021,6 +19319,10 @@ function hideBulkActionColumn(table) {
 }
 function ensureBulkBar(key, table, cont){
   if(document.getElementById('bulkbar-'+key)) return;
+  if(!bulkSelectionBarsMobileVisible() || !(bulkSel[key] && bulkSel[key].size)) {
+    removeBulkBar(key);
+    return;
+  }
   const c=BULK_CFG[key]; const wrap=table.parentElement; if(!wrap||!wrap.parentNode) return;
   const bar=document.createElement('div'); bar.id='bulkbar-'+key;
   bar.className='selection-action-bar';
@@ -19032,17 +19334,42 @@ function ensureBulkBar(key, table, cont){
   if(key==='products' || key==='bom') cont.parentNode.insertBefore(bar, cont);
   else wrap.parentNode.insertBefore(bar, wrap);
 }
+function bulkSelectionDetailReady() {
+  return window.__selectionDetailReady === true && typeof updateSelectionDetailPanelFromBulk === 'function';
+}
+
+function syncBulkSelectionDetailPanel(key) {
+  if (!bulkSelectionDetailReady()) return;
+  updateSelectionDetailPanelFromBulk(key);
+}
+
+function scheduleBulkSelectionDetailVisibilitySync() {
+  if (window.__selectionDetailReady !== true || typeof syncSelectionDetailPanelVisibility !== 'function') return;
+  setTimeout(syncSelectionDetailPanelVisibility, 0);
+  setTimeout(syncSelectionDetailPanelVisibility, 80);
+}
+
 function updateBulkBar(key){
   const n=(bulkSel[key]||new Set()).size;
   const cnt=document.getElementById('bulkcnt-'+key); if(cnt) cnt.textContent=n;
-  const bar=document.getElementById('bulkbar-'+key);
+  let bar=document.getElementById('bulkbar-'+key);
   const viewKey=bulkDateViewKey(key);
   const slotted = typeof setDateViewSelectionBar === 'function' && setDateViewSelectionBar(viewKey, bulkSelectionBarHtml(key,n), n>0);
+  if (!bulkSelectionBarsMobileVisible() || slotted || !n) {
+    removeBulkBar(key);
+    bar = null;
+  } else if (!bar) {
+    const c = BULK_CFG[key];
+    const cont = c && document.querySelector(c.sel);
+    const table = cont && cont.querySelector('table');
+    if (table) ensureBulkBar(key, table, cont);
+    bar = document.getElementById('bulkbar-'+key);
+  }
   if (bar && typeof managedAuditButtonHtml === 'function') {
     const old = bar.querySelector('[data-bulk-audit-slot]');
     if (old) old.outerHTML = `<span data-bulk-audit-slot>${managedAuditButtonHtml(typeof auditEntityTypeForBulkKey === 'function' ? auditEntityTypeForBulkKey(key) : key, [...(bulkSel[key] || [])])}</span>`;
   }
-  if(bar) bar.style.display = (!slotted && n>0) ? 'flex' : 'none';   // 선택 시에만 표시
+  if(bar) bar.style.display = 'flex';   // 모바일 보조 선택바는 선택 시에만 생성
   [bar, document.getElementById('date-view-'+viewKey)].filter(Boolean).forEach(scope => {
     scope.querySelectorAll('[data-edit]').forEach(el => { el.style.display = n===1 ? '' : 'none'; });
     scope.querySelectorAll('[data-clone]').forEach(el => { el.style.display = n===1 ? '' : 'none'; });
@@ -19054,7 +19381,7 @@ function updateBulkBar(key){
     });
   });
   if (!n) bulkCloseDocMenus();
-  if (typeof updateSelectionDetailPanelFromBulk === 'function') updateSelectionDetailPanelFromBulk(key);
+  syncBulkSelectionDetailPanel(key);
 }
 function bulkSyncSelectionVisual(key) {
   const c = BULK_CFG[key];
@@ -19080,6 +19407,7 @@ function bulkToggle(key,id,on){
   }else s.delete(id);
   bulkSyncSelectionVisual(key);
   updateBulkBar(key);
+  scheduleBulkSelectionDetailVisibilitySync();
 }
 function bulkToggleAll(key,on){
   const s=bulkSel[key]=new Set();
@@ -19087,6 +19415,7 @@ function bulkToggleAll(key,on){
   if(cont) cont.querySelectorAll('tbody input[type=checkbox][data-bid]').forEach(cb=>{ cb.checked=on; if(on) s.add(cb.getAttribute('data-bid')); });
   bulkSyncSelectionVisual(key);
   updateBulkBar(key);
+  scheduleBulkSelectionDetailVisibilitySync();
 }
 function bulkRun(key, action){
   const c=BULK_CFG[key]; let ids=[...(bulkSel[key]||[])]; if(!ids.length) return;
@@ -19174,6 +19503,11 @@ cloudBootstrap();   // 클라우드(Firebase) 연동 시작 — 설정 시 로�
 initRole();         // 역할 기반 접근제어(RBAC) 적용 — 사이드바/페이지 권한
 registerBulkDateViewClearers();
 watchBulk();        // 일괄 선택/동작 활성화
+window.addEventListener('resize', () => {
+  Object.keys(BULK_CFG).forEach(key => {
+    try { updateBulkBar(key); } catch(e) {}
+  });
+}, { passive:true });
 
 /* 탑바 시계 제거됨 (tick/setInterval 삭제) */
 
@@ -20937,7 +21271,7 @@ function renderPo() {
         <td><span class="bd bd-neu">${esc(p.payMethod || '현금')}</span></td>
         <td><span class="bd bd-info">${esc(p.dlvMethod || '직납')}</span></td>
         <td style="min-width:94px;">${typeof poPaymentCell === 'function' ? poPaymentCell(p) : '<span class="bd bd-neu">미요청</span>'}</td>
-        <td><select class="stat-sel" onclick="event.stopPropagation()" onchange="changePoStatus('${p.id}',this.value)" style="color:${poStatusColor(p.status)}">
+        <td><span class="readonly-status-pill ${poStatusPillClass(p.status)}" title="상태">${esc(p.status || '작성중')}</span><select class="stat-sel readonly-status-source" aria-hidden="true" tabindex="-1" onchange="changePoStatus('${p.id}',this.value)" style="color:${poStatusColor(p.status)}">
           ${['작성중','발송완료','확인완료','입고완료'].map(s=>`<option${s===p.status?' selected':''}>${s}</option>`).join('')}
         </select></td>
         <td class="po-note-cell" title="${esc(p.note||'')}">${esc(p.note||'—')}</td>
@@ -21011,12 +21345,11 @@ function ensurePoDateSelectionClearer(){
 function poUpdateBulkBar(){
   ensurePoDateSelectionClearer();
   poSyncSelectedRows();
-  const ids=poCheckedIds(), bar=inp('po-bulkbar');
-  const slotted = typeof setDateViewSelectionBar === 'function' && setDateViewSelectionBar('po', poSelectionBarHtml(ids.length), ids.length > 0);
-  if(bar){ bar.style.display = (!slotted && ids.length) ? 'flex' : 'none'; const cnt=inp('po-sel-count'); if(cnt) cnt.textContent=ids.length; }
-  [bar, inp('date-view-po')].filter(Boolean).forEach(scope => {
-    scope.querySelectorAll('[data-edit],#po-edit-btn').forEach(el => { el.style.display=ids.length===1?'':'none'; });
-    scope.querySelectorAll('[data-clone],#po-clone-btn').forEach(el => { el.style.display=ids.length===1?'':'none'; });
+  const ids=poCheckedIds();
+  if (typeof setDateViewSelectionBar === 'function') setDateViewSelectionBar('po', poSelectionBarHtml(ids.length), ids.length > 0);
+  [inp('date-view-po')].filter(Boolean).forEach(scope => {
+    scope.querySelectorAll('[data-edit]').forEach(el => { el.style.display=ids.length===1?'':'none'; });
+    scope.querySelectorAll('[data-clone]').forEach(el => { el.style.display=ids.length===1?'':'none'; });
     scope.querySelectorAll('[data-email]').forEach(el => { el.style.display=ids.length===1?'':'none'; });
     scope.querySelectorAll('[data-payreq]').forEach(el => { el.style.display=ids.length===1?'':'none'; });
   });
@@ -21055,6 +21388,11 @@ function poBulkDelete(){
 function poStatusColor(s) {
   const m = { '발송완료':'var(--tx-i)', '확인완료':'var(--tx-w)', '입고완료':'var(--tx-ok)' };
   return m[s] || 'var(--tx-s)';
+}
+
+function poStatusPillClass(s) {
+  const m = { '작성중':'is-muted', '확인완료':'is-warn', '입고완료':'is-ok' };
+  return m[s] || 'is-info';
 }
 
 function openPoAdd() {
@@ -25222,7 +25560,7 @@ function finDateViewLabel(tab) {
 function finDateViewBar(tab) {
   const state = finState(tab), mode = finDateMode(tab), range = mode === 'range', disabled = mode === 'all' || mode === 'range';
   return `<div class="date-view-bar finance-date-view-bar" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin:0 0 5px;padding:3px 6px;background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rm);">
-    <select onchange="finDateViewModeChange('${tab}',this.value)" style="height:28px;min-width:140px;font-size:11px;">
+    <select class="date-view-mode-select" onchange="finDateViewModeChange('${tab}',this.value)" style="min-width:140px;">
       <option value="all"${mode==='all'?' selected':''}>전체</option>
       <option value="year"${mode==='year'?' selected':''}>년</option>
       <option value="month"${mode==='month'?' selected':''}>월</option>
@@ -25238,7 +25576,7 @@ function finDateViewBar(tab) {
     <span class="date-view-label"${range?' style="display:none;"':''}>${finDateViewLabel(tab)}</span>
     <button class="btn btn-sm date-view-nav" onclick="finDateViewMove('${tab}',1)" title="다음" ${disabled?'disabled':''}><i class="ti ti-chevron-right"></i></button>
     <button class="btn btn-sm date-view-today" onclick="finDateViewToday('${tab}')" title="오늘" ${disabled?'disabled':''}>오늘</button>
-    <button class="btn btn-sm" style="height:28px;padding:0 9px;" onclick="finDateViewReset('${tab}')" title="전체 보기"><i class="ti ti-x"></i></button>
+    <button class="btn btn-sm date-view-reset" onclick="finDateViewReset('${tab}')" title="전체 보기"><i class="ti ti-x"></i></button>
   </div>`;
 }
 function finMatchDate(date, state) {
@@ -32091,9 +32429,11 @@ function inferRowAuditRef(row, table) {
 }
 
 function selectedManagedRows(table) {
-  return Array.from(table.querySelectorAll('tbody .table-row-select, tbody input[type="checkbox"][data-bid]'))
-    .filter(chk => chk.checked)
-    .map(chk => chk.closest('tr'))
+  return Array.from(table.querySelectorAll('tbody tr'))
+    .filter(row => {
+      const chk = rowSelectionCheckbox(row);
+      return chk && chk.checked;
+    })
     .filter(Boolean);
 }
 
@@ -32194,6 +32534,7 @@ function ensureManagedSelectionBar(table) {
   const token = managedTableToken(table);
   let bar = document.getElementById('managed-selection-bar-' + token);
   if (bar) return bar;
+  if (typeof selectionActionBarsMobileVisible === 'function' && !selectionActionBarsMobileVisible()) return null;
   bar = document.createElement('div');
   bar.id = 'managed-selection-bar-' + token;
   bar.className = 'selection-action-bar managed-selection-bar';
@@ -32207,28 +32548,41 @@ function ensureManagedSelectionBar(table) {
   return bar;
 }
 
+function removeManagedSelectionBar(table) {
+  const token = table && table.dataset && table.dataset.managedToken;
+  if (!token) return;
+  const bar = document.getElementById('managed-selection-bar-' + token);
+  if (bar) bar.remove();
+}
+
 function updateManagedSelectionBar(table) {
   if (!table || table.closest('.overlay')) return;
   if (tableBulkKey(table)) {
-    const token = table.dataset.managedToken;
-    const bar = token ? document.getElementById('managed-selection-bar-' + token) : null;
-    if (bar) bar.style.display = 'none';
+    removeManagedSelectionBar(table);
     return;
   }
   const rows = selectedManagedRows(table);
+  const showSelectionBar = typeof selectionActionBarsMobileVisible === 'function' ? selectionActionBarsMobileVisible() : true;
+  if (!showSelectionBar || !rows.length) {
+    removeManagedSelectionBar(table);
+    return;
+  }
   const bar = ensureManagedSelectionBar(table);
+  if (!bar) return;
   const countEl = bar.querySelector('[data-managed-count]');
   const auditBtn = bar.querySelector('[data-managed-audit-btn]');
   if (countEl) countEl.textContent = rows.length;
   if (auditBtn) auditBtn.disabled = rows.length < 1;
-  const showSelectionBar = typeof selectionActionBarsMobileVisible === 'function' ? selectionActionBarsMobileVisible() : true;
-  bar.style.display = rows.length && showSelectionBar ? 'flex' : 'none';
+  bar.style.display = 'flex';
 }
 
 function clearManagedTableSelection(token) {
   const table = MANAGED_TABLES.get(token);
   if (!table) return;
-  table.querySelectorAll('tbody .table-row-select, tbody input[type="checkbox"][data-bid]').forEach(chk => { chk.checked = false; });
+  table.querySelectorAll('tbody tr').forEach(row => {
+    const chk = rowSelectionCheckbox(row);
+    if (chk) chk.checked = false;
+  });
   syncManagedTableRows(table);
 }
 
@@ -32415,8 +32769,37 @@ function selectionDetailStatusClass(status) {
   return 'is-info';
 }
 
-function selectionDetailStatusBadge(status) {
+function selectionDetailIsStatusControlEntry(entry) {
+  if (!entry || !entry.control) return false;
+  const label = String(entry.label || '');
+  const onchange = String(entry.control.getAttribute('onchange') || '');
+  return entry.control.classList.contains('stat-sel') ||
+    /Status|status/i.test(onchange) ||
+    /(상태|진행상황|판정|결재|지급상태|수금상태)/.test(label);
+}
+
+function selectionDetailStatusControlEntry(context) {
+  return selectionDetailEditableControls(context).find(selectionDetailIsStatusControlEntry) || null;
+}
+
+function selectionDetailStatusBadge(status, context) {
   const text = status || '진행중';
+  const entry = context && context.count === 1 ? selectionDetailStatusControlEntry(context) : null;
+  if (entry && entry.tag === 'select') {
+    const selectedValue = entry.control.value || entry.value || text;
+    const options = Array.from(entry.control.options || []).map(option => {
+      const value = option.value || option.textContent || '';
+      const label = option.textContent || value;
+      const selected = option.selected || value === selectedValue || label === selectedValue || label === text;
+      return `<button class="selection-detail-status-option${selected ? ' is-selected' : ''}" type="button" data-selection-status-option data-value="${selectionDetailEsc(value)}"${option.disabled ? ' disabled' : ''}>${selectionDetailEsc(label)}</button>`;
+    }).join('');
+    return `<span class="selection-detail-status-menu-wrap">
+      <button class="selection-detail-status selection-detail-status-control ${selectionDetailStatusClass(text)}" type="button" data-selection-status-toggle title="상태 변경">
+        <span>${selectionDetailEsc(text)}</span><i class="ti ti-chevron-down"></i>
+      </button>
+      <span class="selection-detail-status-menu" data-selection-status-menu>${options}</span>
+    </span>`;
+  }
   return `<span class="selection-detail-status ${selectionDetailStatusClass(text)}">${selectionDetailEsc(text)}</span>`;
 }
 
@@ -32471,7 +32854,226 @@ function selectionDetailDocumentContext(record, type) {
   };
 }
 
+function selectionDetailNumber(value) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  const text = String(value ?? '').replace(/[,\s₩원]/g, '').trim();
+  if (!text) return 0;
+  const n = Number(text);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function selectionDetailItemQtyInfo(item) {
+  const record = item && item.record || {};
+  const ref = item && item.ref || {};
+  if (record && ['rfq','po','statement','tax','quote','order'].includes(ref.entityType) && typeof _docItems === 'function') {
+    const rows = _docItems(record);
+    const byUnit = new Map();
+    rows.forEach(row => {
+      const unit = row.unit || record.unit || '';
+      const qty = selectionDetailNumber(row.qty);
+      if (!qty) return;
+      byUnit.set(unit, (byUnit.get(unit) || 0) + qty);
+    });
+    return { byUnit };
+  }
+  const qty = selectionDetailNumber(record.qty ?? record.quantity ?? record.stock ?? record.targetQty ?? 0);
+  const unit = record.unit || '';
+  const byUnit = new Map();
+  if (qty) byUnit.set(unit, qty);
+  return { byUnit };
+}
+
+function selectionDetailQtyMapLabel(byUnit) {
+  const rows = Array.from((byUnit || new Map()).entries()).filter(([, qty]) => Number(qty) !== 0);
+  if (!rows.length) return '-';
+  return rows.slice(0, 3).map(([unit, qty]) => `${selectionDetailFormatValue('qty', qty)}${unit ? ' ' + unit : ''}`).join(' / ') +
+    (rows.length > 3 ? ` 외 ${rows.length - 3}` : '');
+}
+
+function selectionDetailItemAmount(item) {
+  const record = item && item.record || {};
+  const ref = item && item.ref || {};
+  if (!record) return 0;
+  if (ref.entityType === 'material') return selectionDetailMaterialContext(record).amount;
+  if (ref.entityType === 'po') return selectionDetailPoContext(record).amount;
+  if (['rfq','statement','tax','quote','order'].includes(ref.entityType)) return selectionDetailDocumentContext(record, ref.entityType).amount;
+  const direct = record.amount ?? record.total ?? record.totalAmt ?? record.grandTotal ?? record.cost;
+  if (direct != null && direct !== '') return selectionDetailNumber(direct);
+  return selectionDetailNumber(record.unitPrice ?? record.price) * selectionDetailNumber(record.qty ?? record.quantity);
+}
+
+function selectionDetailItemStatus(item) {
+  const record = item && item.record || {};
+  return record.status || record.paymentStatus || record.payStatus || record.result || '';
+}
+
+function selectionDetailItemCounterparty(item) {
+  const record = item && item.record || {};
+  const ref = item && item.ref || {};
+  if (record.supplier || record.vendor) return record.supplier || record.vendor;
+  if (['material','workOrder','claim','checkRecord','as','po','rfq','statement','tax','quote','order'].includes(ref.entityType)) {
+    const name = selectionDetailClientName(record);
+    if (name && name !== '-') return name;
+  }
+  return record.company || record.customer || record.clientName || '';
+}
+
+function selectionDetailItemMiniMeta(item) {
+  const record = item && item.record || {};
+  const ref = item && item.ref || {};
+  if (ref.entityType === 'material') {
+    return {
+      qty: selectionDetailQtyUnit(record.qty || 0, record.unit),
+      amount: selectionDetailMoney(selectionDetailItemAmount(item)),
+      counterparty: record.supplier || '-',
+      status: selectionDetailItemStatus(item) || '발주중'
+    };
+  }
+  if (ref.entityType === 'po') {
+    const po = selectionDetailPoContext(record);
+    return { qty: po.qty, amount: selectionDetailMoney(po.amount), counterparty: record.supplier || '-', status: selectionDetailItemStatus(item) || '작성중' };
+  }
+  if (['rfq','statement','tax','quote','order'].includes(ref.entityType)) {
+    const doc = selectionDetailDocumentContext(record, ref.entityType);
+    return { qty: doc.qtySummary, amount: selectionDetailMoney(doc.amount), counterparty: doc.clientName, status: selectionDetailItemStatus(item) || '작성중' };
+  }
+  return {
+    qty: selectionDetailQtyMapLabel(selectionDetailItemQtyInfo(item).byUnit),
+    amount: selectionDetailItemAmount(item) ? selectionDetailMoney(selectionDetailItemAmount(item)) : '-',
+    counterparty: selectionDetailItemCounterparty(item) || '-',
+    status: selectionDetailItemStatus(item) || '-'
+  };
+}
+
+function selectionDetailMultiStats(context) {
+  const items = context && context.items || [];
+  const statusCounts = new Map();
+  const types = new Set();
+  const counterparties = new Set();
+  const qtyByUnit = new Map();
+  let amount = 0;
+  let amountCount = 0;
+  let missingPrice = 0;
+  let completed = 0;
+  items.forEach(item => {
+    const ref = item.ref || {};
+    const record = item.record || {};
+    if (ref.entityType) types.add(ref.entityType);
+    const status = selectionDetailItemStatus(item) || '미지정';
+    statusCounts.set(status, (statusCounts.get(status) || 0) + 1);
+    if (/(완료|입고완료|지급완료)/.test(status)) completed += 1;
+    const counterparty = selectionDetailItemCounterparty(item);
+    if (counterparty && counterparty !== '-') counterparties.add(counterparty);
+    selectionDetailItemQtyInfo(item).byUnit.forEach((qty, unit) => {
+      qtyByUnit.set(unit, (qtyByUnit.get(unit) || 0) + qty);
+    });
+    const itemAmount = selectionDetailItemAmount(item);
+    if (itemAmount) {
+      amount += itemAmount;
+      amountCount += 1;
+    }
+    if (['material','po','rfq','statement','tax','quote','order'].includes(ref.entityType)) {
+      const price = selectionDetailNumber(record.unitPrice ?? record.targetPrice ?? record.price);
+      if (!price && !itemAmount) missingPrice += 1;
+    }
+  });
+  const typeLabels = Array.from(types).map(selectionDetailEntityLabel);
+  const statuses = Array.from(statusCounts.entries()).sort((a, b) => b[1] - a[1]);
+  return {
+    count: items.length,
+    typeLabel: typeLabels.length ? typeLabels.slice(0, 2).join(' · ') + (typeLabels.length > 2 ? ` 외 ${typeLabels.length - 2}` : '') : '선택 항목',
+    counterpartyCount: counterparties.size,
+    qtyLabel: selectionDetailQtyMapLabel(qtyByUnit),
+    amount,
+    amountCount,
+    statuses,
+    completed,
+    missingPrice
+  };
+}
+
+function selectionDetailMultiHeaderSub(stats) {
+  const parts = [stats.typeLabel];
+  if (stats.counterpartyCount) parts.push(`거래처/공급처 ${stats.counterpartyCount}곳`);
+  if (stats.statuses.length) parts.push(`상태 ${stats.statuses.length}종`);
+  return parts.join(' · ');
+}
+
+function selectionDetailMultiSummaryHtml(context) {
+  const stats = selectionDetailMultiStats(context);
+  const counterpartyLabel = stats.counterpartyCount ? `${stats.counterpartyCount}곳` : '-';
+  const statusChips = stats.statuses.length ? `<div class="selection-detail-status-chips">
+    ${stats.statuses.slice(0, 5).map(([status, count]) => `<span class="selection-detail-mini-chip ${selectionDetailStatusClass(status)}">${selectionDetailEsc(status)} ${count}</span>`).join('')}
+    ${stats.statuses.length > 5 ? `<span class="selection-detail-mini-chip is-muted">외 ${stats.statuses.length - 5}</span>` : ''}
+  </div>` : '<div class="selection-detail-empty">상태 정보가 없습니다.</div>';
+  const notices = [];
+  if (stats.completed) notices.push(`완료 상태 ${stats.completed}건은 일부 일괄 처리에서 제외될 수 있습니다.`);
+  if (stats.counterpartyCount > 1) notices.push(`거래처/공급처가 ${stats.counterpartyCount}곳이라 문서 생성 시 분리 처리될 수 있습니다.`);
+  if (stats.missingPrice) notices.push(`단가 또는 금액이 없는 항목 ${stats.missingPrice}건이 있습니다.`);
+  return `
+    <section class="selection-detail-section selection-detail-multi-summary">
+      <div class="selection-detail-section-title">선택 요약</div>
+      <div class="selection-detail-metric-grid">
+        <div class="selection-detail-metric-card">
+          <span>선택</span>
+          <b>${selectionDetailEsc(stats.count)}건</b>
+        </div>
+        <div class="selection-detail-metric-card">
+          <span>총 수량</span>
+          <b>${selectionDetailEsc(stats.qtyLabel)}</b>
+        </div>
+        <div class="selection-detail-metric-card">
+          <span>총 금액</span>
+          <b>${stats.amountCount ? selectionDetailEsc(selectionDetailMoney(stats.amount)) : '-'}</b>
+        </div>
+        <div class="selection-detail-metric-card">
+          <span>거래처/공급처</span>
+          <b>${selectionDetailEsc(counterpartyLabel)}</b>
+        </div>
+      </div>
+      <div class="selection-detail-section-subtitle">상태 분포</div>
+      ${statusChips}
+      ${notices.length ? `<div class="selection-detail-notice-list">${notices.map(text => `<div><i class="ti ti-alert-circle"></i><span>${selectionDetailEsc(text)}</span></div>`).join('')}</div>` : ''}
+    </section>`;
+}
+
+function selectionDetailMultiSelectedListHtml(context) {
+  if (!context || !context.items || context.items.length <= 1) return '';
+  return `
+    <section class="selection-detail-section">
+      <div class="selection-detail-section-title"><i class="ti ti-list-check"></i>선택 항목</div>
+      <div class="selection-detail-selected-list selection-detail-selected-list-rich">
+        ${context.items.slice(0, 10).map(item => {
+          const meta = selectionDetailItemMiniMeta(item);
+          return `<div class="selection-detail-selected-item selection-detail-selected-item-rich">
+            <div>
+              <b>${selectionDetailEsc(item.title)}</b>
+              <span>${selectionDetailEsc(meta.counterparty || item.sub || '-')}</span>
+            </div>
+            <div class="selection-detail-selected-meta">
+              <span>${selectionDetailEsc(meta.qty || '-')}</span>
+              <span>${selectionDetailEsc(meta.amount || '-')}</span>
+              <em class="${selectionDetailStatusClass(meta.status)}">${selectionDetailEsc(meta.status || '-')}</em>
+            </div>
+          </div>`;
+        }).join('')}
+        ${context.items.length > 10 ? `<div class="selection-detail-more">외 ${context.items.length - 10}건</div>` : ''}
+      </div>
+    </section>`;
+}
+
 function selectionDetailHeaderHtml(context, primary) {
+  if (context && context.count > 1) {
+    const stats = selectionDetailMultiStats(context);
+    return `
+      <div class="selection-detail-summary-card">
+        <div>
+          <strong>${selectionDetailEsc(`${context.count}건 선택됨`)}</strong>
+          <span>${selectionDetailEsc(selectionDetailMultiHeaderSub(stats))}</span>
+        </div>
+        ${selectionDetailStatusBadge('다중')}
+      </div>`;
+  }
   const ref = primary && primary.ref ? primary.ref : {};
   const record = primary && primary.record ? primary.record : {};
   const type = ref.entityType || '';
@@ -32532,7 +33134,7 @@ function selectionDetailHeaderHtml(context, primary) {
         <strong>${selectionDetailEsc(title)}</strong>
         <span>${selectionDetailEsc(sub || selectionDetailEntityLabel(type))}</span>
       </div>
-      ${selectionDetailStatusBadge(status)}
+      ${selectionDetailStatusBadge(status, context)}
     </div>`;
 }
 
@@ -32544,6 +33146,93 @@ function selectionDetailKeyValueRows(rows) {
       <span>${selectionDetailEsc(row.label)}</span>
       <b>${selectionDetailEsc(row.value)}</b>
     </div>`).join('')}</div>`;
+}
+
+function selectionDetailCleanHeaderLabel(text) {
+  return String(text || '')
+    .replace(/[↕▲▼△▽⇅]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function selectionDetailHeaderLabelForControl(row, control) {
+  const cell = control && control.closest ? control.closest('td') : null;
+  const table = row && row.closest ? row.closest('table') : null;
+  const head = table && table.tHead && table.tHead.rows[0];
+  const header = cell && head && head.cells[cell.cellIndex] ? head.cells[cell.cellIndex] : null;
+  const headerText = selectionDetailCleanHeaderLabel(header ? header.textContent : '');
+  if (headerText) return headerText;
+  const aria = control && (control.getAttribute('aria-label') || control.getAttribute('title'));
+  if (aria) return selectionDetailCleanHeaderLabel(aria);
+  const onchange = String(control && control.getAttribute('onchange') || '');
+  if (/Status|status/i.test(onchange) || (control && control.classList && control.classList.contains('stat-sel'))) return '상태';
+  if (/Done|done/i.test(onchange)) return '실적량';
+  if (/Defect|defect/i.test(onchange)) return '불량';
+  return '값';
+}
+
+function selectionDetailEditableControls(context) {
+  if (!context || context.count !== 1) return [];
+  const item = context.items && context.items[0];
+  const row = (item && item.row) || (context.rows && context.rows[0]);
+  if (!row || !row.querySelectorAll) return [];
+  const table = row.closest ? row.closest('table') : null;
+  const actionIndex = table ? findManagedActionIndex(table) : -1;
+  const controls = [];
+  row.querySelectorAll('select,input').forEach(control => {
+    const type = String(control.type || '').toLowerCase();
+    if (['checkbox','radio','hidden','button','submit','reset','file'].includes(type)) return;
+    if (control.closest('.table-row-select-td')) return;
+    const cell = control.closest('td');
+    if (cell && actionIndex >= 0 && cell.cellIndex === actionIndex) return;
+    const canChange = control.matches('select,.stat-sel') || control.getAttribute('onchange') || control.onchange;
+    if (!canChange) return;
+    controls.push({
+      control,
+      label: selectionDetailHeaderLabelForControl(row, control),
+      tag: control.tagName.toLowerCase(),
+      type: type || (control.tagName.toLowerCase() === 'select' ? 'select' : 'text'),
+      value: control.value || '',
+      min: control.getAttribute('min') || '',
+      max: control.getAttribute('max') || '',
+      step: control.getAttribute('step') || '',
+      placeholder: control.getAttribute('placeholder') || ''
+    });
+  });
+  return controls;
+}
+
+function selectionDetailEditableControlHtml(entry, index) {
+  const label = selectionDetailEsc(entry.label || '값');
+  if (entry.tag === 'select') {
+    const options = Array.from(entry.control.options || []).map(option => {
+      const value = option.value || option.textContent || '';
+      const text = option.textContent || value;
+      return `<option value="${selectionDetailEsc(value)}"${option.selected ? ' selected' : ''}${option.disabled ? ' disabled' : ''}>${selectionDetailEsc(text)}</option>`;
+    }).join('');
+    return `<label class="selection-detail-edit-row">
+      <span>${label}</span>
+      <select class="selection-detail-edit-control" onchange="runSelectionDetailInlineControl(${index}, this.value)">${options}</select>
+    </label>`;
+  }
+  const inputType = ['number','date','text'].includes(entry.type) ? entry.type : 'text';
+  const attr = (name, value) => value != null && value !== '' ? ` ${name}="${selectionDetailEsc(value)}"` : '';
+  return `<label class="selection-detail-edit-row">
+    <span>${label}</span>
+    <input class="selection-detail-edit-control" type="${selectionDetailEsc(inputType)}" value="${selectionDetailEsc(entry.value)}"${attr('min', entry.min)}${attr('max', entry.max)}${attr('step', entry.step)}${attr('placeholder', entry.placeholder)} onchange="runSelectionDetailInlineControl(${index}, this.value)">
+  </label>`;
+}
+
+function selectionDetailInlineEditHtml(context) {
+  const controls = selectionDetailEditableControls(context).filter(entry => !selectionDetailIsStatusControlEntry(entry));
+  if (!controls.length) return '';
+  return `
+    <section class="selection-detail-section selection-detail-edit-section">
+      <div class="selection-detail-section-title">빠른 변경</div>
+      <div class="selection-detail-edit-grid">
+        ${controls.map((entry, index) => selectionDetailEditableControlHtml(entry, index)).join('')}
+      </div>
+    </section>`;
 }
 
 function selectionDetailClientName(record) {
@@ -32894,6 +33583,160 @@ function selectionDetailManagedActionHtml(context) {
   ).join('');
 }
 
+function selectionDetailFindRowForRef(ref) {
+  if (!ref || !ref.entityId) return null;
+  const entityType = String(ref.entityType || '');
+  const entityId = String(ref.entityId || '');
+  const scopes = Array.from(document.querySelectorAll('.content.active table, #po-table table, #mat-table table'));
+  for (const table of scopes) {
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    for (const row of rows) {
+      const rowRef = inferRowAuditRef(row, table);
+      if (!rowRef) continue;
+      if (String(rowRef.entityId || '') !== entityId) continue;
+      if (entityType && String(rowRef.entityType || '') !== entityType) continue;
+      return row;
+    }
+  }
+  return null;
+}
+
+function refreshSelectionDetailAfterInlineChange(ref) {
+  const current = selectionDetailContext;
+  if (!current || !ref) return;
+  window.setTimeout(() => {
+    if (!selectionDetailContext) return;
+    const freshRecord = selectionDetailRecordForRef(ref) || (selectionDetailContext.items && selectionDetailContext.items[0] && selectionDetailContext.items[0].record) || null;
+    const freshRow = selectionDetailFindRowForRef(ref) || (selectionDetailContext.items && selectionDetailContext.items[0] && selectionDetailContext.items[0].row) || null;
+    if (freshRow) {
+      const check = rowSelectionCheckbox(freshRow);
+      if (check) {
+        check.checked = true;
+        syncManagedTableRow(freshRow);
+      }
+    }
+    const next = Object.assign({}, selectionDetailContext, {
+      rows: freshRow ? [freshRow] : (selectionDetailContext.rows || []),
+      items: [selectionDetailItem(ref, freshRow, freshRecord)],
+      count: 1
+    });
+    selectionDetailContext = next;
+    renderSelectionDetailPanel(next);
+    requestAnimationFrame(() => ensureSelectionDetailPanel().classList.add('open'));
+  }, 60);
+}
+
+function runSelectionDetailInlineControl(index, value) {
+  const context = selectionDetailContext;
+  if (!context || context.count !== 1) return;
+  const primary = context.items && context.items[0];
+  const ref = primary && primary.ref;
+  const controls = selectionDetailEditableControls(context).filter(entry => !selectionDetailIsStatusControlEntry(entry));
+  const entry = controls[index];
+  const control = entry && entry.control;
+  if (!control) {
+    if (typeof showToast === 'function') showToast('변경할 항목을 찾지 못했습니다.', 'error');
+    return;
+  }
+  try {
+    control.value = value;
+    control.dispatchEvent(new Event('change', { bubbles:true }));
+    refreshSelectionDetailAfterInlineChange(ref);
+  } catch(e) {
+    if (typeof showToast === 'function') showToast('상태 변경 중 오류가 발생했습니다.', 'error');
+  }
+}
+
+function closeSelectionDetailStatusMenus(except) {
+  document.querySelectorAll('.selection-detail-status-menu-wrap.open').forEach(wrap => {
+    if (wrap !== except) wrap.classList.remove('open');
+  });
+}
+
+function toggleSelectionDetailStatusMenu(button, event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+  }
+  const wrap = button && button.closest ? button.closest('.selection-detail-status-menu-wrap') : null;
+  if (!wrap) return;
+  const nextOpen = !wrap.classList.contains('open');
+  closeSelectionDetailStatusMenus(wrap);
+  wrap.classList.toggle('open', nextOpen);
+}
+
+function handleSelectionDetailStatusMenuClick(target, event) {
+  if (!target || !target.closest) return false;
+  const option = target.closest('[data-selection-status-option]');
+  if (option) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+    }
+    if (!option.disabled) runSelectionDetailStatusControl(option.dataset.value || '');
+    return true;
+  }
+  const toggle = target.closest('[data-selection-status-toggle]');
+  if (toggle) {
+    toggleSelectionDetailStatusMenu(toggle, event);
+    return true;
+  }
+  if (target.closest('[data-selection-status-menu]')) {
+    if (event) {
+      event.stopPropagation();
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+    }
+    return true;
+  }
+  return false;
+}
+
+function bindSelectionDetailStatusMenu(panel) {
+  if (!panel || !panel.querySelectorAll) return;
+  panel.querySelectorAll('[data-selection-status-toggle]').forEach(button => {
+    button.addEventListener('click', event => {
+      toggleSelectionDetailStatusMenu(button, event);
+    });
+  });
+  panel.querySelectorAll('[data-selection-status-option]').forEach(option => {
+    option.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+      if (!option.disabled) runSelectionDetailStatusControl(option.dataset.value || '');
+    });
+  });
+  panel.querySelectorAll('[data-selection-status-menu]').forEach(menu => {
+    menu.addEventListener('click', event => {
+      event.stopPropagation();
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+    });
+  });
+}
+
+function runSelectionDetailStatusControl(value) {
+  closeSelectionDetailStatusMenus();
+  const context = selectionDetailContext;
+  if (!context || context.count !== 1) return;
+  const primary = context.items && context.items[0];
+  const ref = primary && primary.ref;
+  const entry = selectionDetailStatusControlEntry(context);
+  const control = entry && entry.control;
+  if (!control) {
+    if (typeof showToast === 'function') showToast('상태를 변경할 항목을 찾지 못했습니다.', 'error');
+    return;
+  }
+  try {
+    control.value = value;
+    control.dispatchEvent(new Event('change', { bubbles:true }));
+    refreshSelectionDetailAfterInlineChange(ref);
+  } catch(e) {
+    if (typeof showToast === 'function') showToast('상태 변경 중 오류가 발생했습니다.', 'error');
+  }
+}
+
 function selectionDetailActionsHtml(context) {
   const auditBtn = `<button class="btn btn-sm" type="button" onclick="openSelectionDetailAudit()"><i class="ti ti-history"></i>세부 이력</button>`;
   const clearBtn = `<button class="btn btn-sm" type="button" onclick="clearSelectionDetailSelection()"><i class="ti ti-x"></i>선택 해제</button>`;
@@ -33007,19 +33850,15 @@ function renderSelectionDetailPanel(context) {
   const panel = ensureSelectionDetailPanel();
   const primary = context.items[0];
   const refs = context.items.map(item => item.ref).filter(Boolean);
-  const listHtml = context.items.length > 1 ? `
-    <section class="selection-detail-section">
-      <div class="selection-detail-section-title"><i class="ti ti-list-check"></i>선택 항목</div>
-      <div class="selection-detail-selected-list">
-        ${context.items.slice(0, 8).map(item => `
-          <div class="selection-detail-selected-item">
-            <b>${selectionDetailEsc(item.title)}</b>
-            <span>${selectionDetailEsc(item.sub)}</span>
-          </div>`).join('')}
-        ${context.items.length > 8 ? `<div class="selection-detail-more">외 ${context.items.length - 8}건</div>` : ''}
-      </div>
-    </section>` : '';
-  const infoRows = selectionDetailBasicRows(primary).concat(selectionDetailScheduleRows(primary));
+  const isMulti = context.items.length > 1;
+  const listHtml = isMulti ? selectionDetailMultiSelectedListHtml(context) : '';
+  const infoRows = isMulti ? [] : selectionDetailBasicRows(primary).concat(selectionDetailScheduleRows(primary));
+  const infoHtml = isMulti ? selectionDetailMultiSummaryHtml(context) : `
+      <section class="selection-detail-section">
+        <div class="selection-detail-section-title">기본 정보 / 금액</div>
+        ${selectionDetailKeyValueRows(infoRows)}
+      </section>`;
+  const editHtml = selectionDetailInlineEditHtml(context);
   panel.innerHTML = `
     <div class="selection-detail-resizer" onpointerdown="startSelectionDetailResize(event)" title="폭 조절"></div>
     <div class="selection-detail-hd">
@@ -33035,10 +33874,8 @@ function renderSelectionDetailPanel(context) {
         <div class="selection-detail-section-title">선택 작업</div>
         <div class="selection-detail-work-actions">${selectionDetailWorkActionsHtml(context)}</div>
       </section>
-      <section class="selection-detail-section">
-        <div class="selection-detail-section-title">기본 정보 / 금액</div>
-        ${selectionDetailKeyValueRows(infoRows)}
-      </section>
+      ${editHtml}
+      ${infoHtml}
       ${listHtml}
       <section class="selection-detail-section">
         <div class="selection-detail-section-title">최근 이력</div>
@@ -33057,6 +33894,28 @@ function renderSelectionDetailPanel(context) {
       if (wrap) wrap.style.display = visibleActions ? '' : 'none';
     });
   }
+  bindSelectionDetailStatusMenu(panel);
+}
+
+function selectionDetailHasActiveSelection(context) {
+  if (!context) return false;
+  if (context.source === 'bulk') {
+    return typeof bulkSel !== 'undefined' && bulkSel[context.key] && bulkSel[context.key].size > 0;
+  }
+  if (context.source === 'po') {
+    return typeof poCheckedIds === 'function' && poCheckedIds().length > 0;
+  }
+  if (context.source === 'managed') {
+    const table = context.table || MANAGED_TABLES.get(context.token);
+    return !!(table && selectedManagedRows(table).length);
+  }
+  return true;
+}
+
+function syncSelectionDetailPanelVisibility() {
+  if (selectionDetailContext && !selectionDetailHasActiveSelection(selectionDetailContext)) {
+    closeSelectionDetailPanel(false);
+  }
 }
 
 function showSelectionDetailPanel(context) {
@@ -33074,6 +33933,11 @@ function showSelectionDetailPanel(context) {
   }
   const signature = selectionDetailSignature(context);
   if (selectionDetailManuallyClosed && selectionDetailLastSignature === signature) return;
+  const panel = document.getElementById('selection-detail-panel');
+  if (!selectionDetailManuallyClosed && selectionDetailLastSignature === signature && panel && panel.classList.contains('open')) {
+    selectionDetailContext = context;
+    return;
+  }
   selectionDetailContext = context;
   selectionDetailLastSignature = signature;
   selectionDetailManuallyClosed = false;
@@ -33085,7 +33949,7 @@ function updateSelectionDetailPanelFromManagedTable(table) {
   if (!table || table.closest('.overlay') || tableBulkKey(table)) return;
   const rows = selectedManagedRows(table);
   if (!rows.length) {
-    if (selectionDetailContext && selectionDetailContext.source === 'managed' && selectionDetailContext.table === table) closeSelectionDetailPanel(false);
+    if (selectionDetailContext && selectionDetailContext.source === 'managed') closeSelectionDetailPanel(false);
     return;
   }
   const token = managedTableToken(table);
@@ -33100,7 +33964,7 @@ function updateSelectionDetailPanelFromBulk(key) {
   if (typeof bulkSel === 'undefined' || typeof bulkRecordById !== 'function') return;
   const ids = [...(bulkSel[key] || [])];
   if (!ids.length) {
-    if (selectionDetailContext && selectionDetailContext.source === 'bulk' && selectionDetailContext.key === key) closeSelectionDetailPanel(false);
+    if (selectionDetailContext && selectionDetailContext.source === 'bulk') closeSelectionDetailPanel(false);
     return;
   }
   const c = typeof BULK_CFG !== 'undefined' ? BULK_CFG[key] : null;
@@ -33258,11 +34122,15 @@ Object.assign(window, {
   updateSelectionDetailPanelFromManagedTable,
   updateSelectionDetailPanelFromBulk,
   updateSelectionDetailPanelFromPo,
+  syncSelectionDetailPanelVisibility,
   runManagedDetailAction,
   openSelectionDetailAudit,
   clearSelectionDetailSelection,
   runSelectionDetailPanelAction,
   runSelectionDetailDeleteAction,
+  runSelectionDetailInlineControl,
+  toggleSelectionDetailStatusMenu,
+  runSelectionDetailStatusControl,
   runSelectionDetailPrimaryAction,
   runSelectionDetailHoldAction
 });
@@ -33319,10 +34187,39 @@ function syncManagedTableRow(row) {
 
 function syncManagedTableRows(table) {
   if (!table) return;
+  syncReadonlyStatusDisplays(table);
   table.querySelectorAll('tbody tr').forEach(syncManagedTableRow);
   updateManagedTableCheckAll(table);
   updateManagedSelectionBar(table);
   updateSelectionDetailPanelFromManagedTable(table);
+}
+
+function syncManagedTableRowsAndDetail(table) {
+  syncManagedTableRows(table);
+  if (!selectedManagedRows(table).length) closeSelectionDetailPanel(false);
+  else syncSelectionDetailPanelVisibility();
+}
+
+function syncReadonlyStatusDisplays(table) {
+  if (!table || table.closest('.overlay')) return;
+  table.querySelectorAll('tbody select.stat-sel').forEach(select => {
+    const cell = select.closest('td');
+    if (!cell) return;
+    select.classList.add('readonly-status-source');
+    select.setAttribute('aria-hidden', 'true');
+    select.tabIndex = -1;
+    let pill = Array.from(cell.children).find(child => child.classList && child.classList.contains('readonly-status-pill'));
+    if (!pill) {
+      pill = document.createElement('span');
+      pill.className = 'readonly-status-pill';
+      cell.insertBefore(pill, select);
+    }
+    const text = (select.selectedOptions && select.selectedOptions[0] ? select.selectedOptions[0].textContent : '') || select.value || '-';
+    const cls = `readonly-status-pill ${selectionDetailStatusClass(text)}`;
+    if (pill.textContent !== text) pill.textContent = text;
+    if (pill.className !== cls) pill.className = cls;
+    if (pill.title !== '상태') pill.title = '상태';
+  });
 }
 
 function rowSelectionCheckbox(row) {
@@ -33441,7 +34338,8 @@ function bindManagedTableRows(table) {
     } else if (target.matches && target.matches('tbody input[type="checkbox"]')) {
       syncManagedTableRow(target.closest('tr'));
     }
-    setTimeout(() => syncManagedTableRows(table), 0);
+    setTimeout(() => syncManagedTableRowsAndDetail(table), 0);
+    setTimeout(() => syncManagedTableRowsAndDetail(table), 80);
   });
   table.addEventListener('click', event => {
     const row = event.target.closest('tbody tr');
@@ -33451,7 +34349,8 @@ function bindManagedTableRows(table) {
     const check = rowSelectionCheckbox(row);
     if (!check) return;
     check.click();
-    setTimeout(() => syncManagedTableRows(table), 0);
+    setTimeout(() => syncManagedTableRowsAndDetail(table), 0);
+    setTimeout(() => syncManagedTableRowsAndDetail(table), 80);
   });
 }
 
@@ -33520,17 +34419,37 @@ function initManagedTableEnhancer() {
   updateSelectionDetailPanelTop();
   initSelectionDetailPanelWidth();
   enhanceManagedTables(document);
+  window.__selectionDetailReady = true;
+  if (typeof BULK_CFG !== 'undefined') {
+    Object.keys(BULK_CFG).forEach(key => {
+      if (typeof bulkSel !== 'undefined' && bulkSel[key] && bulkSel[key].size) updateSelectionDetailPanelFromBulk(key);
+    });
+  }
   document.addEventListener('change', event => {
     const target = event.target;
-    if (target && target.matches && target.matches('.po-check,#po-check-all,tbody input[type="checkbox"][data-bid],thead input[type="checkbox"]')) {
+    if (target && target.matches && target.matches('input[type="checkbox"]')) {
       releaseSelectionDetailNavigationSuppress();
+      setTimeout(() => {
+        const table = target.closest && target.closest('table');
+        if (table && table.dataset && table.dataset.managedToken) syncManagedTableRowsAndDetail(table);
+        syncSelectionDetailPanelVisibility();
+      }, 0);
+      setTimeout(syncSelectionDetailPanelVisibility, 80);
     }
   }, true);
   document.addEventListener('click', event => {
-    if (event.target && event.target.closest && event.target.closest('.content.active tbody tr')) {
+    const target = event.target;
+    if (target && target.closest && !target.closest('.selection-detail-status-menu-wrap')) {
+      closeSelectionDetailStatusMenus();
+    }
+    if (target && target.closest && target.closest('.content.active tbody tr')) {
       releaseSelectionDetailNavigationSuppress();
+      setTimeout(syncSelectionDetailPanelVisibility, 0);
     }
   }, true);
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeSelectionDetailStatusMenus();
+  });
   const main = document.querySelector('.main') || document.body;
   const observer = new MutationObserver(mutations => {
     if (mutations.some(m => m.addedNodes.length)) {
