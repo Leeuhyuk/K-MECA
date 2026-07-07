@@ -4432,6 +4432,39 @@ body.selection-detail-resizing {
   color: var(--tx-t) !important;
   box-shadow: none !important;
 }
+.po-payment-td {
+  min-width: 126px;
+  white-space: nowrap;
+}
+.po-payment-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  min-width: 0;
+  white-space: nowrap;
+}
+.po-payment-badge {
+  max-width: 74px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.po-payment-date {
+  color: var(--tx-t);
+  font-size: 10px;
+  font-weight: 700;
+}
+.po-payment-action {
+  height: 24px !important;
+  min-height: 24px !important;
+  padding: 0 7px !important;
+  gap: 3px !important;
+  font-size: 11px !important;
+}
+.po-payment-action i {
+  font-size: 13px;
+}
 
 .al { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-radius: var(--rl); margin-bottom: 10px; border: 1px solid; box-shadow: var(--shadow); }
 .al-err { background: var(--bg-d); border-color: var(--br-d); }
@@ -9465,6 +9498,19 @@ function closeSelectionDetailOnNavigation() {
   document.getElementById('selection-detail-panel')?.classList.remove('open');
 }
 
+function closeFloatingEditorsOnNavigation() {
+  closeSelectionDetailOnNavigation();
+  document.querySelectorAll('.add-panel.open').forEach(panel => panel.classList.remove('open'));
+  document.querySelectorAll('.overlay.open').forEach(modal => {
+    if (modal.id === 'confirmDlg') return;
+    modal.classList.remove('open');
+  });
+  document.querySelectorAll('.bulk-doc-menu-wrap.open, .selection-detail-status-menu-wrap.open').forEach(menu => {
+    menu.classList.remove('open');
+  });
+  if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+}
+
 /* 미니 레일 → 전체 모드로 복귀 (숨김 해제 포함) */
 function expandSidebar() {
   _sidebarHiddenForSession = false;
@@ -9611,7 +9657,7 @@ function updateTopbarBackButton() {
 
 function go(id, el) {
   if (id === currentPage) {                // 같은 페이지 재클릭: 드로어/오버레이만 닫기
-    closeSelectionDetailOnNavigation();
+    closeFloatingEditorsOnNavigation();
     const sb = document.querySelector('.sidebar');
     if (sb && sb.classList.contains('mobile-open')) { sb.classList.remove('mobile-open'); document.getElementById('sidebar-backdrop')?.classList.remove('active'); }
     closeSbOverlay();
@@ -9640,7 +9686,7 @@ function _goTo(id, el) {
     if (currentPage !== id) return;
     return;
   }
-  closeSelectionDetailOnNavigation();
+  closeFloatingEditorsOnNavigation();
   document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
   document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
   const page = inp('pg-' + id);
@@ -9706,7 +9752,7 @@ let invCategory = '완제품';
 function goInventory(key, el) {
   const meta = INV_CATS[key] || INV_CATS.finished;
   if (currentPage === 'inventory' && invCategory === meta.cat) {
-    closeSelectionDetailOnNavigation();
+    closeFloatingEditorsOnNavigation();
     closeSbOverlay();
     return;
   }
@@ -9716,7 +9762,7 @@ function goInventory(key, el) {
 
 function _showInventoryPage(key, meta, el) {
   invCategory = meta.cat;
-  closeSelectionDetailOnNavigation();
+  closeFloatingEditorsOnNavigation();
   document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
   document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
   inp('pg-inventory').classList.add('active');
@@ -19092,12 +19138,12 @@ async function permToggleRolePage(role, pageId, on){
    각 표의 행 삭제 버튼 onclick에서 id를 추출하므로 렌더 함수 수정 불필요. */
 const BULK_CFG = {
   rfq:        {sel:'#rfq-table',        del:'deleteRfq',       edit:'openRfqEdit',    clone:'cloneRfq', pdf:'openRfqPrint', csv:'exportRfqXLS', email:'openEmailModal', drive:true, toPo:true},
-  materials:  {sel:'#mat-table',        del:'deleteMat',       edit:'openMatEdit',    clone:'cloneMat'},
+  materials:  {sel:'#mat-table',        del:'deleteMat',       edit:'openMatEdit',    clone:'cloneMat', complete:'입고완료'},
   inventory:  {sel:'#inventory-table',  del:'deleteInventory', edit:'openInvEdit'},
-  orders:     {sel:'#orders-table',     del:'deleteOrder',     edit:'openOrderEdit',  clone:'cloneOrder'},
-  defects:    {sel:'#defect-table',     del:'deleteDefect',    edit:'openDefectEdit'},
+  orders:     {sel:'#orders-table',     del:'deleteOrder',     edit:'openOrderEdit',  clone:'cloneOrder', complete:'완료'},
+  defects:    {sel:'#defect-table',     del:'deleteDefect',    edit:'openDefectEdit', complete:'완료'},
   checks:     {sel:'#check-table',      del:'deleteCheck',     edit:'openCheckEdit'},
-  claims:     {sel:'#claims-table-full',del:'deleteClaim',     edit:'openClaimEdit'},
+  claims:     {sel:'#claims-table-full',del:'deleteClaim',     edit:'openClaimEdit', complete:'완료'},
   deliveries: {sel:'#dlv-table',        del:'deleteDelivery',  edit:null},
   workers:    {sel:'#workers-table',    del:'deleteWorker',    edit:'openWorkerEdit'},
   as:         {sel:'#as-body',          del:'deleteAS',        edit:'openAsEdit'},
@@ -19105,7 +19151,7 @@ const BULK_CFG = {
   statement:  {sel:'#st-table', type:'statement', del:'deleteSalesDoc', edit:'openSalesDocEdit', clone:'cloneSalesDoc', pdf:'openSalesDocPrint', email:'openEmailModal', drive:true},
   tax:        {sel:'#tx-table', type:'tax',       del:'deleteSalesDoc', edit:'openSalesDocEdit', clone:'cloneSalesDoc', pdf:'openSalesDocPrint', email:'openEmailModal', drive:true},
   quote:      {sel:'#qt-table', type:'quote',     del:'deleteSODoc',    edit:'openSODocEdit',    clone:'cloneSODoc', pdf:'openSODocPrint', email:'openEmailModal', drive:true},
-  order:      {sel:'#so-table', type:'order',     del:'deleteSODoc',    edit:'openSODocEdit',    clone:'cloneSODoc', pdf:'openSODocPrint', email:'openEmailModal', drive:true},
+  order:      {sel:'#so-table', type:'order',     del:'deleteSODoc',    edit:'openSODocEdit',    clone:'cloneSODoc', pdf:'openSODocPrint', email:'openEmailModal', drive:true, complete:'완료'},
   products:   {sel:'#client-list',       del:'deleteProduct',   edit:'openProdEdit',   clone:'cloneProduct'},
   bom:        {sel:'#bom-body',          del:'deleteBom',       edit:'openBomEdit',    clone:'cloneBom'}
 };
@@ -19225,7 +19271,7 @@ function bulkDocumentMenuHtml(key, c, canPdf, canCsv) {
   ).join('');
   return `<span class="bulk-doc-menu-wrap" data-bulk-doc-wrap><button class="btn btn-sm bulk-doc-menu-trigger" type="button" data-bulk-doc-trigger onclick="bulkToggleDocMenu(event,this)"><i class="ti ti-folder-cog"></i>문서 처리<i class="ti ti-chevron-down bulk-doc-menu-caret"></i></button><span class="bulk-doc-menu" data-bulk-doc-menu role="menu">${items}</span></span>`;
 }
-function bulkActionButtons(key) {
+function bulkActionButtons(key, options = {}) {
   registerBulkDocMenuListeners();
   const c = BULK_CFG[key];
   if (!c) return '';
@@ -19238,9 +19284,53 @@ function bulkActionButtons(key) {
   if(c.edit && canEdit) btns+=`<button class="btn btn-sm" data-edit onclick="bulkRun('${key}','edit')"><i class="ti ti-edit"></i>수정</button>`;
   if(c.clone && canCreate) btns+=`<button class="btn btn-sm" data-clone onclick="bulkRun('${key}','clone')"><i class="ti ti-copy"></i>복제</button>`;
   if(c.toPo && canCreate) btns+=`<button class="btn btn-sm" data-act onclick="bulkRun('${key}','toPo')"><i class="ti ti-file-invoice"></i>발주서 생성</button>`;
+  if(c.complete && canEdit && !options.hideComplete) btns+=`<button class="btn btn-sm btn-primary" data-act onclick="bulkRun('${key}','complete')"><i class="ti ti-circle-check"></i>${bulkCompleteButtonLabel(key)}</button>`;
   btns += bulkDocumentMenuHtml(key, c, canPdf, canCsv);
   if(canDelete) btns+=`<button class="btn btn-sm btn-danger" data-act onclick="bulkRun('${key}','delete')"><i class="ti ti-trash"></i>삭제</button>`;
   return btns;
+}
+
+function bulkCompleteButtonLabel(key) {
+  const c = BULK_CFG[key];
+  return c && c.complete === '입고완료' ? '입고완료' : '완료처리';
+}
+
+function bulkApplyComplete(key, id) {
+  const c = BULK_CFG[key];
+  const target = c && c.complete;
+  if (!target) return false;
+  if (key === 'materials' && typeof changeMatStatus === 'function') { changeMatStatus(id, target); return true; }
+  if (key === 'orders' && typeof qStatus === 'function') { qStatus(id, target); return true; }
+  if (key === 'defects' && typeof changeDefectStatus === 'function') { changeDefectStatus(id, target); return true; }
+  if (key === 'claims' && typeof changeClaimStatus === 'function') { changeClaimStatus(id, target); return true; }
+  if (key === 'order' && typeof changeSODocStatus === 'function') { changeSODocStatus('order', id, target); return true; }
+  return false;
+}
+
+function bulkCompleteSelected(key, ids) {
+  const c = BULK_CFG[key];
+  const target = c && c.complete;
+  if (!target) return;
+  const allowed = bulkIdsForAction(key, ids, 'edit');
+  const targets = allowed.filter(id => {
+    const record = bulkRecordById(key, id);
+    return record && record.status !== target;
+  });
+  if (!targets.length) {
+    if (typeof showToast === 'function') showToast(`선택 항목은 이미 ${target} 상태입니다.`, 'info');
+    return;
+  }
+  if (!confirm(`선택한 ${targets.length}건을 ${target} 처리하시겠습니까?`)) return;
+  let done = 0;
+  targets.forEach(id => {
+    try { if (bulkApplyComplete(key, id)) done++; }
+    catch(e) { console.warn('일괄 완료 처리 실패:', key, id, e); }
+  });
+  bulkSel[key] = new Set();
+  updateBulkBar(key);
+  if (typeof syncBulkSelectionDetailPanel === 'function') syncBulkSelectionDetailPanel(key);
+  if (typeof closeSelectionDetailPanel === 'function') closeSelectionDetailPanel(false);
+  if (typeof showToast === 'function') showToast(`${done}건 ${target} 처리되었습니다.`, done ? 'success' : 'error');
 }
 function bulkSelectionBarHtml(key, count) {
   const auditBtn = (typeof managedAuditButtonHtml === 'function')
@@ -19451,6 +19541,8 @@ function bulkRun(key, action){
     updateBulkBar(key);
     if(failed) showToast(`${ids.length-failed}건 삭제 완료, ${failed}건 실패 (콘솔 확인)`, 'error');
     else showToast(`${ids.length}건이 삭제되었습니다.`);
+  } else if(action==='complete' && c.complete){
+    bulkCompleteSelected(key, ids);
   } else if(action==='pdf' && c.pdf){
     if (typeof requirePdfAction === 'function' && !requirePdfAction('일괄 PDF 출력')) return;
     ids = bulkIdsForAction(key, ids, 'view');
@@ -20532,6 +20624,33 @@ function _docLines(docs, type) {
   });
 }
 
+function _nextDocCodeForBatch(prefix, list, pending, preferredId) {
+  const all = (list || []).concat(pending || []);
+  const used = new Set(all.map(x => x && x.id).filter(Boolean));
+  if (preferredId && !used.has(preferredId)) return preferredId;
+  return nextDocCode(prefix, all);
+}
+
+function _singleItemDoc(base, item, type) {
+  const clean = _docItemClean(item, { unit:base?.unit || 'EA', price:type === 'rfq' ? base?.targetPrice : base?.unitPrice });
+  const next = {
+    ...base,
+    itemName: clean.itemName,
+    spec: clean.spec || '',
+    qty: Number(clean.qty) || 1,
+    unit: clean.unit || base?.unit || 'EA',
+    items: [clean]
+  };
+  if (type === 'rfq') {
+    next.targetPrice = Number(clean.price) || 0;
+    next.note = clean.note || '';
+  } else {
+    next.unitPrice = Number(clean.price) || 0;
+    next.note = next.commonNote || clean.note || '';
+  }
+  return next;
+}
+
 function _syncDocItemLegacy(prefix) {
   const cfg = DOC_ITEM_TABLES[prefix];
   if (!cfg) return;
@@ -20921,14 +21040,19 @@ function saveRfqForm() {
     delete modal.dataset.editId;
   } else {
     if (typeof requireCreateAction === 'function' && !requireCreateAction('rfq', '견적요청서 등록')) return;
-    const next = stampRecordCreate(buildRfqObj(v('rq-id')), 'rfq');
-    rfqList.unshift(next);
-    writeAuditLog('rfq', next.id, 'create', null, next, { summary:'견적요청서 등록' });
+    const created = [];
+    items.forEach((item, index) => {
+      const id = _nextDocCodeForBatch('Q', rfqList, created, index === 0 ? v('rq-id') : '');
+      const next = stampRecordCreate(buildRfqObjForItem(id, item), 'rfq');
+      created.push(next);
+      writeAuditLog('rfq', next.id, 'create', null, next, { summary:items.length > 1 ? `견적요청서 개별 등록 (${index + 1}/${items.length})` : '견적요청서 등록' });
+    });
+    rfqList.unshift(...created);
   }
   saveStorage('rfqList', rfqList);
   closeModal('rfq-modal');
   renderRfq();
-  showToast(editId ? '견적요청서가 수정되었습니다.' : '견적요청서가 등록되었습니다.');
+  showToast(editId ? '견적요청서가 수정되었습니다.' : (items.length > 1 ? `견적요청서 ${items.length}건이 개별 등록되었습니다.` : '견적요청서가 등록되었습니다.'));
 }
 
 function buildRfqObj(id) {
@@ -20944,6 +21068,10 @@ function buildRfqObj(id) {
     status: v('rq-status')||'요청전', note: first.note || '',
     items
   };
+}
+
+function buildRfqObjForItem(id, item) {
+  return _singleItemDoc(buildRfqObj(id), item, 'rfq');
 }
 
 function openRfqEdit(id) {
@@ -21270,7 +21398,7 @@ function renderPo() {
         <td><span class="po-money">${amount ? '₩'+amount.toLocaleString('ko-KR') : '—'}</span></td>
         <td><span class="bd bd-neu">${esc(p.payMethod || '현금')}</span></td>
         <td><span class="bd bd-info">${esc(p.dlvMethod || '직납')}</span></td>
-        <td style="min-width:94px;">${typeof poPaymentCell === 'function' ? poPaymentCell(p) : '<span class="bd bd-neu">미요청</span>'}</td>
+        <td class="po-payment-td">${typeof poPaymentCell === 'function' ? poPaymentCell(p) : '<span class="bd bd-neu">미요청</span>'}</td>
         <td><span class="readonly-status-pill ${poStatusPillClass(p.status)}" title="상태">${esc(p.status || '작성중')}</span><select class="stat-sel readonly-status-source" aria-hidden="true" tabindex="-1" onchange="changePoStatus('${p.id}',this.value)" style="color:${poStatusColor(p.status)}">
           ${['작성중','발송완료','확인완료','입고완료'].map(s=>`<option${s===p.status?' selected':''}>${s}</option>`).join('')}
         </select></td>
@@ -21323,6 +21451,7 @@ function poSelectionBarHtml(count){
       </span>
     </span>
     <button class="btn btn-sm" data-payreq onclick="poBulkPaymentRequest()"><i class="ti ti-send"></i>결제요청</button>
+    <button class="btn btn-sm btn-primary" onclick="poBulkComplete()"><i class="ti ti-circle-check"></i>입고완료</button>
     <button class="btn btn-sm btn-danger" onclick="poBulkDelete()"><i class="ti ti-trash"></i>삭제</button>
     <button class="btn btn-sm date-view-clear-selection" onclick="poToggleAll(false)"><i class="ti ti-x"></i>해제</button>`;
 }
@@ -21365,6 +21494,17 @@ function poBulkExport(){ if (typeof requireCsvAction === 'function' && !requireC
 function poBulkDrive(){ const ids=poCheckedIds(); if(!ids.length) return; saveDocumentBundleToGoogleDrive('po', ids); }
 function poBulkEmail(){ const ids=poCheckedIds(); if(ids.length!==1){ showToast('이메일은 한 건만 선택해 발송하세요.','info'); return; } const rows=typeof visiblePurchaseOrderList==='function'?visiblePurchaseOrderList():poList; openEmailModal(rows.find(x=>x.id===ids[0]),'po'); }
 function poBulkPaymentRequest(){ const ids=poCheckedIds(); if(ids.length===1 && typeof openPaymentRequestFromPo === 'function') openPaymentRequestFromPo(ids[0]); }
+function poBulkComplete(){
+  const ids = poCheckedIds();
+  if(!ids.length) return;
+  const targets = ids.map(id => poList.find(p => p.id === id)).filter(p => p && p.status !== '입고완료');
+  if(!targets.length){ showToast('선택 항목은 이미 입고완료 상태입니다.', 'info'); return; }
+  if(!confirm(`선택한 ${targets.length}건을 입고완료 처리하시겠습니까?`)) return;
+  targets.forEach(p => changePoStatus(p.id, '입고완료'));
+  if(typeof closeSelectionDetailPanel === 'function') closeSelectionDetailPanel(false);
+  poToggleAll(false);
+  showToast(`${targets.length}건 입고완료 처리되었습니다.`, 'success');
+}
 function poBulkDelete(){
   const ids=poCheckedIds(); if(!ids.length) return;
   if(!checkAdminAction()) return;
@@ -21458,12 +21598,17 @@ function savePoForm() {
     if (typeof requireCreateAction === 'function' && !requireCreateAction('po', '구매발주서 등록')) return;
     const draft = buildPoObj(v('po-id'));
     if (typeof guardFinanceMonth === 'function' && !guardFinanceMonth(draft.date || today())) return;
-    const next = stampRecordCreate(draft, 'po');
-    poList.unshift(next);
-    writeAuditLog('po', next.id, 'create', null, next, { summary:'구매발주서 등록' });
+    const created = [];
+    items.forEach((item, index) => {
+      const id = _nextDocCodeForBatch('P', poList, created, index === 0 ? v('po-id') : '');
+      const next = stampRecordCreate(buildPoObjForItem(id, item), 'po');
+      created.push(next);
+      writeAuditLog('po', next.id, 'create', null, next, { summary:items.length > 1 ? `구매발주서 개별 등록 (${index + 1}/${items.length})` : '구매발주서 등록' });
+    });
+    poList.unshift(...created);
   }
   saveStorage('poList', poList); closeModal('po-modal'); renderPo();
-  showToast(editId ? '구매발주서가 수정되었습니다.' : '구매발주서가 등록되었습니다.');
+  showToast(editId ? '구매발주서가 수정되었습니다.' : (items.length > 1 ? `구매발주서 ${items.length}건이 개별 등록되었습니다.` : '구매발주서가 등록되었습니다.'));
 }
 
 function buildPoObj(id) {
@@ -21481,6 +21626,10 @@ function buildPoObj(id) {
     commonNote: v('po-note-common') || '',
     items
   };
+}
+
+function buildPoObjForItem(id, item) {
+  return _singleItemDoc(buildPoObj(id), item, 'po');
 }
 
 function openPoEdit(id) {
@@ -26520,12 +26669,44 @@ function poPaymentCell(p) {
   const total = finPoAmount(p);
   const pay = finPaymentRecord('ap', p.id, total);
   const req = finPaymentRequestForPo(p.id);
-  if (pay.done) return `${finPaymentStatusBadge('ap', pay)}<div style="margin-top:4px;font-size:10px;color:var(--tx-t);">${esc(pay.date || '')}</div>`;
-  const badge = req
-    ? `${finPaymentRequestApprovalBadge(req)}${payreqIsApproved(req) ? `<div style="margin-top:3px;">${finPaymentRequestStatusBadge(req.status)}</div>` : ''}`
-    : '<span class="bd bd-neu">미요청</span>';
-  const label = !req ? '결제요청' : (payreqIsApprovalEditable(req) ? '요청수정' : '요청보기');
-  return `${badge}<div style="margin-top:5px;"><button class="btn btn-sm" onclick="event.stopPropagation();openPaymentRequestFromPo('${esc(p.id)}')"><i class="ti ti-send"></i>${label}</button></div>`;
+  if (pay.done) {
+    const fullDate = pay.date || '';
+    const shortDate = fullDate.length >= 10 ? fullDate.slice(5).replace('-', '.') : fullDate;
+    const title = fullDate ? `지급완료 · ${fullDate}` : '지급완료';
+    return `<div class="po-payment-cell po-payment-cell-paid" title="${esc(title)}">
+      <span class="bd bd-ok po-payment-badge">지급완료</span>
+      ${shortDate ? `<span class="po-payment-date">${esc(shortDate)}</span>` : ''}
+    </div>`;
+  }
+  let label = '미요청';
+  let cls = 'bd-neu';
+  let title = '결제 요청 없음';
+  if (req) {
+    const approval = payreqApprovalStatus(req);
+    const approvalLabel = payreqApprovalLabel(req);
+    const requestStatus = req.status || '요청';
+    const statusCls = { '요청':'bd-warn', '확인':'bd-info', '지급예정':'bd-info', '지급완료':'bd-ok', '반려':'bd-err' }[requestStatus] || 'bd-neu';
+    if (requestStatus === '반려' || approval === 'rejected') {
+      label = '반려';
+      cls = 'bd-err';
+    } else if (approval === 'approved' && requestStatus !== '요청') {
+      label = requestStatus;
+      cls = statusCls;
+    } else if (approval === 'approved') {
+      label = '승인';
+      cls = 'bd-ok';
+    } else {
+      label = approvalLabel;
+      cls = { draft:'bd-neu', pending:'bd-warn', rejected:'bd-err' }[approval] || 'bd-neu';
+    }
+    title = `결재 ${approvalLabel} · 지급 ${requestStatus}`;
+  }
+  const actionLabel = !req ? '요청' : (payreqIsApprovalEditable(req) ? '수정' : '보기');
+  const actionTitle = !req ? '결제요청' : (payreqIsApprovalEditable(req) ? '요청수정' : '요청보기');
+  return `<div class="po-payment-cell" title="${esc(title)}">
+    <span class="bd ${cls} po-payment-badge">${esc(label)}</span>
+    <button class="btn btn-sm po-payment-action" onclick="event.stopPropagation();openPaymentRequestFromPo('${esc(p.id)}')" title="${esc(actionTitle)}"><i class="ti ti-send"></i>${actionLabel}</button>
+  </div>`;
 }
 function finPoAmount(p) { return typeof _docAmount === 'function' ? _docAmount(p, 'po') : (p.unitPrice||0)*(p.qty||0); }
 function finPoItemSummary(p) { return typeof _docItemSummary === 'function' ? _docItemSummary(p) : (p.itemName || ''); }
@@ -33443,28 +33624,64 @@ function selectionDetailWorkActionsHtml(context) {
   const isBulk = context.source === 'bulk';
   const key = context.key || '';
   if (context.source === 'po') {
+    const docMenu = selectionDetailPoDocumentMenuHtml();
     return `
       <button class="selection-detail-work-btn" onclick="runSelectionDetailPanelAction('edit')">수정</button>
       <button class="selection-detail-work-btn" onclick="runSelectionDetailPanelAction('clone')">복제</button>
-      <button class="selection-detail-work-btn" onclick="runSelectionDetailPanelAction('print')">PDF</button>
-      <button class="selection-detail-work-btn" onclick="runSelectionDetailPanelAction('drive')">Drive</button>
-      <button class="selection-detail-work-btn is-primary" onclick="runSelectionDetailPanelAction('email')">이메일</button>
+      ${docMenu}
       <button class="selection-detail-work-btn" onclick="runSelectionDetailPanelAction('payment')">결제요청</button>
       <button class="selection-detail-work-btn is-danger" onclick="runSelectionDetailPanelAction('delete')">삭제</button>`;
   }
   if (isBulk) {
-    if (key !== 'materials' && key !== 'rfq') {
-      const actions = typeof bulkActionButtons === 'function' ? bulkActionButtons(key) : '';
-      return actions || `<button class="selection-detail-work-btn" onclick="openSelectionDetailAudit()">세부 이력</button>`;
-    }
-    const poLabel = key === 'rfq' ? '발주서' : '발주서';
-    return `
-      <button class="selection-detail-work-btn" onclick="runSelectionDetailPanelAction('edit')">수정</button>
-      <button class="selection-detail-work-btn" onclick="runSelectionDetailPanelAction('clone')">복제</button>
-      <button class="selection-detail-work-btn is-primary" onclick="runSelectionDetailPanelAction('po')">${poLabel}</button>
-      <button class="selection-detail-work-btn is-danger" onclick="runSelectionDetailPanelAction('delete')">삭제</button>`;
+    const actions = typeof bulkActionButtons === 'function' ? bulkActionButtons(key, { hideComplete:true }) : '';
+    return actions || `<button class="selection-detail-work-btn" onclick="openSelectionDetailAudit()">세부 이력</button>`;
   }
   return selectionDetailManagedActionHtml(context) || `<button class="selection-detail-work-btn" onclick="openSelectionDetailAudit()">세부 이력</button>`;
+}
+
+function selectionDetailPoDocumentMenuHtml() {
+  if (typeof registerBulkDocMenuListeners === 'function') registerBulkDocMenuListeners();
+  const canPdf = typeof roleFeatureAllowed !== 'function' || roleFeatureAllowed('pdf');
+  const canCsv = typeof roleFeatureAllowed !== 'function' || roleFeatureAllowed('csv');
+  const actions = [];
+  if (canPdf) actions.push({ action:'print', icon:'ti ti-printer', label:'PDF 출력' });
+  if (canCsv) actions.push({ action:'export', icon:'ti ti-file-spreadsheet', label:'엑셀' });
+  if (canPdf && canCsv) actions.push({ action:'drive', icon:'ti ti-cloud-upload', label:'Drive 저장', cls:'drive-save-btn' });
+  actions.push({ action:'email', icon:'ti ti-mail', label:'이메일' });
+  if (!actions.length) return '';
+  const items = actions.map(item =>
+    `<button class="btn btn-sm ${item.cls || ''}" type="button" data-doc-action="${item.action}" ${item.action === 'email' ? 'data-email' : ''} role="menuitem" onclick="runSelectionDetailDocMenuAction(event,'${item.action}')"><i class="${item.icon}"></i>${item.label}</button>`
+  ).join('');
+  return `<span class="bulk-doc-menu-wrap" data-bulk-doc-wrap>
+    <button class="btn btn-sm bulk-doc-menu-trigger" type="button" data-bulk-doc-trigger onclick="bulkToggleDocMenu(event,this)"><i class="ti ti-folder-cog"></i>문서 처리<i class="ti ti-chevron-down bulk-doc-menu-caret"></i></button>
+    <span class="bulk-doc-menu" data-bulk-doc-menu role="menu">${items}</span>
+  </span>`;
+}
+
+function selectionDetailCompletionSpec(ref) {
+  const type = ref && ref.entityType;
+  if (type === 'material' || type === 'po') return { status:'입고완료', label:'입고 완료 처리' };
+  if (['workOrder','defect','claim','order'].includes(type)) return { status:'완료', label:'완료 처리' };
+  return null;
+}
+
+function selectionDetailCompletionTargets(context) {
+  const items = context && Array.isArray(context.items) ? context.items : [];
+  return items.map(item => {
+    const spec = selectionDetailCompletionSpec(item.ref);
+    if (!spec || !item.ref || !item.ref.entityId) return null;
+    const currentStatus = item.record && item.record.status;
+    if (currentStatus === spec.status) return null;
+    return { item, spec };
+  }).filter(Boolean);
+}
+
+function selectionDetailCompletionLabel(context) {
+  const targets = selectionDetailCompletionTargets(context);
+  if (!targets.length) return '';
+  const labels = [...new Set(targets.map(target => target.spec.label))];
+  const label = labels.length === 1 ? labels[0] : '완료 처리';
+  return (context && context.count > 1 ? '일괄 ' : '') + label;
 }
 
 function selectionDetailTimelineHtml(refs) {
@@ -33488,6 +33705,15 @@ function selectionDetailBottomActionsHtml(context) {
   const ref = primary && primary.ref;
   const record = primary && primary.record;
   if (context && context.count > 1) {
+    const completeLabel = selectionDetailCompletionLabel(context);
+    if (completeLabel) {
+      return `
+      <button class="selection-detail-primary-action" type="button" onclick="runSelectionDetailPrimaryAction()">${selectionDetailEsc(completeLabel)}</button>
+      <div class="selection-detail-bottom-row">
+        <button class="selection-detail-secondary-action" type="button" onclick="clearSelectionDetailSelection()">선택 해제</button>
+        <button class="selection-detail-secondary-action" type="button" onclick="closeSelectionDetailPanel(true)">닫기</button>
+      </div>`;
+    }
     return `<div class="selection-detail-bottom-row">
       <button class="selection-detail-secondary-action" type="button" onclick="clearSelectionDetailSelection()">선택 해제</button>
       <button class="selection-detail-secondary-action" type="button" onclick="closeSelectionDetailPanel(true)">닫기</button>
@@ -34029,6 +34255,15 @@ function clearSelectionDetailSelection() {
   closeSelectionDetailPanel(false);
 }
 
+function runSelectionDetailDocMenuAction(event, action) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  if (typeof bulkCloseDocMenus === 'function') bulkCloseDocMenus();
+  runSelectionDetailPanelAction(action);
+}
+
 function runSelectionDetailPanelAction(action) {
   const context = selectionDetailContext;
   if (!context || context.count !== 1) return;
@@ -34098,14 +34333,30 @@ function runSelectionDetailDeleteAction() {
 }
 
 function runSelectionDetailPrimaryAction() {
-  const primary = selectionDetailContext && selectionDetailContext.items && selectionDetailContext.items[0];
-  if (!primary || !primary.ref) return;
-  if (primary.ref.entityType === 'material' && typeof changeMatStatus === 'function') {
-    changeMatStatus(primary.ref.entityId, '입고완료');
+  const context = selectionDetailContext;
+  const targets = selectionDetailCompletionTargets(context);
+  if (!targets.length) {
+    if (typeof showToast === 'function') showToast('완료 처리할 선택 항목이 없습니다.', 'info');
+    return;
   }
-  if (primary.ref.entityType === 'po' && typeof changePoStatus === 'function') {
-    changePoStatus(primary.ref.entityId, '입고완료');
-  }
+  if (targets.length > 1 && !confirm(`선택한 ${targets.length}건을 완료 처리하시겠습니까?`)) return;
+  let done = 0;
+  targets.forEach(target => {
+    const ref = target.item.ref;
+    const id = ref.entityId;
+    try {
+      if (ref.entityType === 'material' && typeof changeMatStatus === 'function') { changeMatStatus(id, '입고완료'); done++; }
+      else if (ref.entityType === 'po' && typeof changePoStatus === 'function') { changePoStatus(id, '입고완료'); done++; }
+      else if (ref.entityType === 'workOrder' && typeof qStatus === 'function') { qStatus(id, '완료'); done++; }
+      else if (ref.entityType === 'defect' && typeof changeDefectStatus === 'function') { changeDefectStatus(id, '완료'); done++; }
+      else if (ref.entityType === 'claim' && typeof changeClaimStatus === 'function') { changeClaimStatus(id, '완료'); done++; }
+      else if (ref.entityType === 'order' && typeof changeSODocStatus === 'function') { changeSODocStatus('order', id, '완료'); done++; }
+    } catch(e) {
+      console.warn('선택 상세 완료 처리 실패:', ref.entityType, id, e);
+    }
+  });
+  if (context && context.count > 1) clearSelectionDetailSelection();
+  if (typeof showToast === 'function') showToast(`${done}건 완료 처리되었습니다.`, done ? 'success' : 'error');
 }
 
 function runSelectionDetailHoldAction() {
