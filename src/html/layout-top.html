@@ -1,0 +1,268 @@
+
+<!-- ══ 클라우드 로그인 게이트 ══ -->
+<div id="cloud-login" style="display:none;position:fixed;inset:0;z-index:99999;background:#0b1020;align-items:center;justify-content:center;">
+  <div style="width:340px;max-width:92%;background:var(--bg-s,#161b2e);border:1px solid var(--br,#2a3350);border-radius:14px;padding:28px 26px;box-shadow:0 12px 40px rgba(0,0,0,.5);">
+    <div style="text-align:center;margin-bottom:18px;">
+      <i class="ti ti-cloud-lock" style="font-size:34px;color:#4dabf7;"></i>
+      <div style="font-size:17px;font-weight:800;margin-top:6px;color:#e9ecf5;"><span data-app-brand-title>MES Pro</span> 클라우드 로그인</div>
+      <div style="font-size:11.5px;color:#8a93ad;margin-top:3px;">팀이 같은 데이터를 공유합니다</div>
+    </div>
+    <input id="cl-name" type="text" placeholder="이름 (신규 가입 시 입력)" autocomplete="name" style="width:100%;height:40px;margin-bottom:8px;padding:0 12px;border-radius:8px;border:1px solid var(--br,#2a3350);background:#0e1426;color:#e9ecf5;">
+    <input id="cl-email" type="email" placeholder="이메일" autocomplete="username" style="width:100%;height:40px;margin-bottom:8px;padding:0 12px;border-radius:8px;border:1px solid var(--br,#2a3350);background:#0e1426;color:#e9ecf5;">
+    <input id="cl-pw" type="password" placeholder="비밀번호" autocomplete="current-password" onkeydown="if(event.key==='Enter')cloudLogin()" style="width:100%;height:40px;margin-bottom:14px;padding:0 12px;border-radius:8px;border:1px solid var(--br,#2a3350);background:#0e1426;color:#e9ecf5;">
+    <button onclick="cloudLogin()" style="width:100%;height:42px;border:none;border-radius:8px;background:#1971c2;color:#fff;font-weight:700;font-size:14px;cursor:pointer;">로그인</button>
+    <button onclick="cloudSignup()" style="width:100%;height:36px;margin-top:8px;border:1px solid var(--br,#2a3350);border-radius:8px;background:transparent;color:#8a93ad;font-size:12px;cursor:pointer;">신규 계정 만들기</button>
+    <div id="cl-msg" style="font-size:11.5px;color:#ff8787;margin-top:10px;min-height:16px;text-align:center;"></div>
+  </div>
+</div>
+
+<!-- ══ 클라우드 상태 칩 ══ -->
+<div id="cloud-chip" style="display:none;position:fixed;right:12px;bottom:12px;z-index:9000;align-items:center;gap:8px;background:var(--bg-s,#161b2e);border:1px solid var(--br,#2a3350);border-radius:20px;padding:5px 12px;font-size:11px;box-shadow:0 4px 14px rgba(0,0,0,.3);">
+  <i id="cloud-chip-icon" class="ti ti-cloud-check" style="color:#37b24d;"></i>
+  <span id="cloud-chip-txt" style="color:var(--tx-s,#aeb6cc);">클라우드 연결됨</span>
+</div>
+
+<!-- 모바일 사이드바 백드롭 -->
+<div id="sidebar-backdrop" class="sidebar-backdrop" onclick="toggleMobileSidebar()"></div>
+
+<!-- 토스트 알림 영역 -->
+<div id="toast-container"></div>
+
+<!-- ══ 모바일 전용 홈 화면 (≤680px에서만 표시) ══ -->
+<div id="mobile-home"></div>
+
+<!-- ══ 모바일 전용 하단 탭바 (≤680px에서만 표시) ══ -->
+<div id="mobile-tabbar">
+  <button class="mtab" data-tab="home" onclick="mobileTab('home')"><i class="ti ti-home-2"></i>홈</button>
+  <button class="mtab" data-tab="clients" onclick="mobileTab('clients')"><i class="ti ti-building-community"></i>수주</button>
+  <button class="mtab" data-tab="materials" onclick="mobileTab('materials')"><i class="ti ti-truck-loading"></i>자재</button>
+  <button class="mtab" data-tab="alerts" onclick="mobileTab('alerts')"><i class="ti ti-bell"></i>알림<span class="mtab-badge" id="mtab-alert-badge" style="display:none;">0</span></button>
+  <button class="mtab" data-tab="more" onclick="mobileTab('more')"><i class="ti ti-menu-2"></i>더보기</button>
+</div>
+
+<!-- 공용 삭제/일반 알림 확인 모달 -->
+<div class="overlay" id="confirmDlg">
+  <div class="dlg">
+    <div class="dlg-title" id="dlgTitleContainer" style="color:var(--tx-d);"><i class="ti ti-alert-triangle"></i><span id="dlgTitle"></span></div>
+    <div class="dlg-msg" id="dlgMsg"></div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeDlg()">취소</button>
+      <button class="btn btn-danger" id="dlgOkBtn"><i class="ti ti-trash"></i>실행</button>
+    </div>
+  </div>
+</div>
+
+<!-- 공정 단계 변경 모달 (단계 단일화 - 상태 자동 파생) -->
+<div class="overlay" id="kanbanEditModal">
+  <div class="dlg custom-modal">
+    <div class="dlg-title" style="color:var(--tx-i);"><i class="ti ti-layout-kanban"></i><span>공정 단계 변경</span></div>
+    <div style="margin-top:12px;">
+      <div class="ff" style="margin-bottom:10px;">
+        <label>대상 제품</label>
+        <input type="text" id="km-prod-name" readonly="" style="width:100%; background:var(--bg-s); color:var(--tx-s);">
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+        <div class="ff">
+          <label>공정 단계 <span style="color:var(--tx-i); font-weight:700;">*</span></label>
+          <select id="km-stage" style="width:100%;" onchange="onKmStageChange()"></select>
+        </div>
+        <div class="ff">
+          <label>자동 파생 상태</label>
+          <div id="km-status-preview" style="height:32px; display:flex; align-items:center; padding:0 10px; background:var(--bg-s); border:1px solid var(--br); border-radius:var(--rm); font-size:12px; font-weight:600;"></div>
+        </div>
+      </div>
+      <div id="km-context-row" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; font-size:11px;"></div>
+      <div class="ff">
+        <label>공정 메모</label>
+        <textarea id="km-memo" rows="3" placeholder="작업 특이사항이나 진행 상태 기록" style="width:100%;"></textarea>
+      </div>
+    </div>
+    <div class="dlg-actions" style="margin-top:14px;">
+      <button class="btn" onclick="closeKanbanModal()">취소</button>
+      <button class="btn btn-primary" id="kmSaveBtn"><i class="ti ti-device-floppy"></i>저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 관리자 비밀번호 인증/변경 모달 제거됨 — 클라우드 로그인(추후 구글 로그인 연동)이 인증 담당 -->
+
+<!-- 왼쪽 사이드바 네비게이션 -->
+<div class="sidebar">
+  <div class="logo">
+    <div class="logo-text">
+      <div class="logo-title"><span class="logo-mark" id="app-brand-mark"><i class="ti ti-building-factory-2"></i></span><span id="app-brand-title">MES Pro</span></div>
+    </div>
+    <button class="theme-btn" id="sb-toggle-btn" onclick="toggleSidebar()" title="사이드바 숨기기" aria-label="사이드바 숨기기"><i class="ti ti-layout-sidebar"></i></button>
+  </div>
+
+  <div class="nav-g">
+    <div class="nav-lbl">메인 대시보드</div>
+    <div class="ni active" onclick="go('dashboard',this)"><i class="ti ti-layout-dashboard"></i>종합 대시보드</div>
+    <div class="ni" onclick="go('clients',this)"><i class="ti ti-building-community"></i>수주 정보 관리</div>
+    <div class="ni" onclick="go('materials',this)"><i class="ti ti-truck-loading"></i>자재 수급/발주</div>
+    <div class="ni" onclick="go('deliveries',this)"><i class="ti ti-truck-delivery"></i>납품 현황<span class="nbadge" id="dlvBadge" style="background:#2b8a3e;">0</span></div>
+    <div class="ni" onclick="go('calendar',this)"><i class="ti ti-calendar-event"></i>납기 캘린더</div>
+  </div>
+  <div class="nav-g">
+    <div class="nav-lbl">공정 관리</div>
+    <div class="ni" onclick="go('orders',this)"><i class="ti ti-clipboard-list"></i>생산 지시 등록</div>
+    <div class="ni" onclick="go('quality',this)"><i class="ti ti-shield-check"></i>품질 및 검사</div>
+    <div class="ni" onclick="go('claims',this)"><i class="ti ti-message-report"></i>고객 클레임</div>
+    <div class="ni" onclick="go('as',this)"><i class="ti ti-tool"></i>고객 A/S<span class="nbadge" id="asBadge" style="display:none;background:#e8590c;">0</span></div>
+  </div>
+  <div class="nav-g">
+    <div class="nav-lbl">재고 관리</div>
+    <div class="ni" onclick="goInventory('finished',this)"><i class="ti ti-building-factory"></i>완제품 재고</div>
+    <div class="ni" onclick="goInventory('parts',this)"><i class="ti ti-tools"></i>생산부품 재고</div>
+    <div class="ni" onclick="goInventory('office',this)"><i class="ti ti-printer"></i>사무비품 재고</div>
+  </div>
+  <div class="nav-g">
+    <div class="nav-lbl">문서 관리</div>
+    <div class="ni" onclick="go('notes',this)"><i class="ti ti-notes"></i>메모·할 일<span class="nbadge" id="todoBadge" style="display:none;background:#e8590c;">0</span></div>
+    <div class="ni" onclick="go('rfq',this)"><i class="ti ti-file-description"></i>견적요청서<span class="nbadge" id="rfqBadge" style="display:none;background:#868e96;">0</span></div>
+    <div class="ni" onclick="go('po',this)"><i class="ti ti-file-invoice"></i>구매발주서<span class="nbadge" id="poBadge" style="display:none;background:#868e96;">0</span></div>
+  </div>
+  <div class="nav-g">
+    <div class="nav-lbl">경영 관리</div>
+    <div class="ni" onclick="go('salesdoc',this)"><i class="ti ti-file-text"></i>견적/수주</div>
+    <div class="ni" onclick="go('statement',this)"><i class="ti ti-receipt"></i>거래명세표</div>
+    <div class="ni" onclick="go('taxinvoice',this)"><i class="ti ti-file-dollar"></i>세금계산서</div>
+    <div class="ni" onclick="go('partners',this)"><i class="ti ti-address-book"></i>거래처 관리</div>
+    <div class="ni" onclick="go('bom',this)"><i class="ti ti-sitemap"></i>BOM · 자재명세</div>
+    <div class="ni" onclick="go('finance',this)"><i class="ti ti-coin"></i>재무 관리</div>
+    <div class="ni" onclick="go('workers',this)"><i class="ti ti-id-badge-2"></i>인사 관리</div>
+  </div>
+  <div class="nav-g">
+    <div class="nav-lbl">외부 연동</div>
+    <div class="ni" onclick="go('popbill',this)"><i class="ti ti-plug-connected"></i>Popbill API<span class="nbadge" style="background:#868e96;">준비</span></div>
+  </div>
+  <div class="nav-g">
+    <div class="nav-lbl">시스템 관리</div>
+    <div class="ni" onclick="go('system',this)"><i class="ti ti-settings"></i>시스템 관리<span class="nbadge" id="alertBadge">0</span><span class="nbadge" id="trashBadge" style="display:none;background:#868e96;">0</span></div>
+  </div>
+</div>
+<div id="sb-overlay" class="sb-overlay" onclick="closeSbOverlay()"></div>
+
+<!-- 실시간 검색 결과 드롭다운 — 사이드바가 숨겨져도(모바일 홈 등) 보이도록 body 레벨에 배치.
+     데스크톱은 JS(positionGlobalSearchResults)가 입력창 기준 fixed 배치, 모바일은 responsive.css 규칙 적용 -->
+<div id="global-search-results" style="position: fixed; top: 110px; left: 12px; width: min(440px, calc(100vw - 24px)); background: var(--bg-p); border: 1px solid var(--br-s); border-radius: var(--rl); box-shadow: var(--shadow); z-index: 9999; max-height: 480px; overflow-y: auto; display: none; backdrop-filter: blur(20px);">
+</div>
+
+<!-- 우측 메인 컨텐츠 영역 -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="theme-btn" id="menu-toggle-btn" onclick="togglePrimaryMenu()" title="사이드바 또는 전체 메뉴 열기" aria-label="사이드바 또는 전체 메뉴 열기" aria-haspopup="true" aria-expanded="false">
+        <i class="ti ti-menu-2"></i>
+      </button>
+      <button class="topnav-back" id="topnav-back-btn" type="button" onclick="goBack()" title="이전 페이지" aria-label="이전 페이지" disabled>
+        <i class="ti ti-arrow-left"></i>
+      </button>
+      <button class="topnav-home" type="button" onclick="openTopNavItem('dashboard')" title="메인 화면" aria-label="메인 화면">
+        <i class="ti ti-home"></i>
+      </button>
+      <div class="tb-title" id="ptitle">종합 대시보드</div>
+      <nav class="topnav mega-menu" id="topnav" aria-label="전체 업무 메뉴">
+        <div class="mega-menu-head">
+          <div>
+            <strong><i class="ti ti-apps"></i> 전체 메뉴</strong>
+            <span>업무 항목을 선택하면 해당 화면으로 이동합니다.</span>
+          </div>
+          <button type="button" class="mega-menu-close" onclick="closeMegaMenu()" aria-label="메뉴 닫기"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="topnav-group" data-top-group="main">
+          <button class="topnav-category" type="button" onclick="toggleTopNavGroup(this.parentElement,event)">메인 <i class="ti ti-chevron-down"></i></button>
+          <div class="topnav-menu">
+            <button type="button" data-top-page="dashboard" onclick="openTopNavItem('dashboard')"><i class="ti ti-layout-dashboard"></i>종합 대시보드</button>
+            <button type="button" data-top-page="clients" onclick="openTopNavItem('clients')"><i class="ti ti-building-community"></i>수주 정보 관리</button>
+            <button type="button" data-top-page="materials" onclick="openTopNavItem('materials')"><i class="ti ti-truck-loading"></i>자재 수급/발주</button>
+            <button type="button" data-top-page="deliveries" onclick="openTopNavItem('deliveries')"><i class="ti ti-truck-delivery"></i>납품 현황</button>
+            <button type="button" data-top-page="calendar" onclick="openTopNavItem('calendar')"><i class="ti ti-calendar-event"></i>납기 캘린더</button>
+          </div>
+        </div>
+        <div class="topnav-group" data-top-group="process">
+          <button class="topnav-category" type="button" onclick="toggleTopNavGroup(this.parentElement,event)">공정 관리 <i class="ti ti-chevron-down"></i></button>
+          <div class="topnav-menu">
+            <button type="button" data-top-page="orders" onclick="openTopNavItem('orders')"><i class="ti ti-clipboard-list"></i>생산 지시 등록</button>
+            <button type="button" data-top-page="quality" onclick="openTopNavItem('quality')"><i class="ti ti-shield-check"></i>품질 및 검사</button>
+            <button type="button" data-top-page="claims" onclick="openTopNavItem('claims')"><i class="ti ti-message-report"></i>고객 클레임</button>
+            <button type="button" data-top-page="as" onclick="openTopNavItem('as')"><i class="ti ti-tool"></i>고객 A/S</button>
+          </div>
+        </div>
+        <div class="topnav-group" data-top-group="inventory">
+          <button class="topnav-category" type="button" onclick="toggleTopNavGroup(this.parentElement,event)">재고 관리 <i class="ti ti-chevron-down"></i></button>
+          <div class="topnav-menu">
+            <button type="button" data-top-page="inventory" data-inventory-key="finished" onclick="openTopNavItem('inventory','finished')"><i class="ti ti-building-factory"></i>완제품 재고</button>
+            <button type="button" data-top-page="inventory" data-inventory-key="parts" onclick="openTopNavItem('inventory','parts')"><i class="ti ti-tools"></i>생산부품 재고</button>
+            <button type="button" data-top-page="inventory" data-inventory-key="office" onclick="openTopNavItem('inventory','office')"><i class="ti ti-printer"></i>사무비품 재고</button>
+          </div>
+        </div>
+        <div class="topnav-group" data-top-group="documents">
+          <button class="topnav-category" type="button" onclick="toggleTopNavGroup(this.parentElement,event)">문서 관리 <i class="ti ti-chevron-down"></i></button>
+          <div class="topnav-menu">
+            <button type="button" data-top-page="notes" onclick="openTopNavItem('notes')"><i class="ti ti-notes"></i>메모·할 일</button>
+            <button type="button" data-top-page="rfq" onclick="openTopNavItem('rfq')"><i class="ti ti-file-description"></i>견적요청서</button>
+            <button type="button" data-top-page="po" onclick="openTopNavItem('po')"><i class="ti ti-file-invoice"></i>구매발주서</button>
+          </div>
+        </div>
+        <div class="topnav-group" data-top-group="business">
+          <button class="topnav-category" type="button" onclick="toggleTopNavGroup(this.parentElement,event)">경영 관리 <i class="ti ti-chevron-down"></i></button>
+          <div class="topnav-menu topnav-menu-wide">
+            <button type="button" data-top-page="salesdoc" onclick="openTopNavItem('salesdoc')"><i class="ti ti-file-text"></i>견적/수주</button>
+            <button type="button" data-top-page="statement" onclick="openTopNavItem('statement')"><i class="ti ti-receipt"></i>거래명세표</button>
+            <button type="button" data-top-page="taxinvoice" onclick="openTopNavItem('taxinvoice')"><i class="ti ti-file-dollar"></i>세금계산서</button>
+            <button type="button" data-top-page="partners" onclick="openTopNavItem('partners')"><i class="ti ti-address-book"></i>거래처 관리</button>
+            <button type="button" data-top-page="bom" onclick="openTopNavItem('bom')"><i class="ti ti-sitemap"></i>BOM·자재명세</button>
+            <button type="button" data-top-page="finance" onclick="openTopNavItem('finance')"><i class="ti ti-coin"></i>재무 관리</button>
+            <button type="button" data-top-page="workers" onclick="openTopNavItem('workers')"><i class="ti ti-id-badge-2"></i>인사 관리</button>
+          </div>
+        </div>
+        <div class="topnav-group" data-top-group="external">
+          <button class="topnav-category" type="button" onclick="toggleTopNavGroup(this.parentElement,event)">외부 연동 <i class="ti ti-chevron-down"></i></button>
+          <div class="topnav-menu">
+            <button type="button" data-top-page="popbill" onclick="openTopNavItem('popbill')"><i class="ti ti-plug-connected"></i>Popbill API</button>
+          </div>
+        </div>
+        <div class="topnav-group" data-top-group="system">
+          <button class="topnav-category" type="button" onclick="toggleTopNavGroup(this.parentElement,event)">시스템 관리 <i class="ti ti-chevron-down"></i></button>
+          <div class="topnav-menu topnav-menu-right">
+            <button type="button" data-top-page="system" onclick="openTopNavItem('system')"><i class="ti ti-settings"></i>시스템 관리</button>
+          </div>
+        </div>
+      </nav>
+    </div>
+
+    <div class="tb-right">
+      <div class="global-search-wrapper topbar-search-compact">
+        <input type="text" id="global-search-input" placeholder="통합 검색 (제품, 고객사, 자재, 직원, 메모, 할 일...)" oninput="onGlobalSearch(this.value)" onfocus="onGlobalSearchFocus()" onkeydown="onGlobalSearchKeyDown(event)">
+        <button type="button" id="global-search-clear" onclick="clearGlobalSearch()" title="검색어 지우기" aria-label="검색어 지우기"><i class="ti ti-x"></i></button>
+        <button type="button" class="global-search-btn" onclick="toggleGlobalSearchBox()" title="통합 검색" aria-label="통합 검색"><i class="ti ti-search"></i></button>
+      </div>
+      <div class="topbar-alert" id="topbar-alert">
+        <button class="theme-btn topbar-alert-btn" id="topbar-alert-btn" onclick="toggleTopbarAlerts()" title="알림 보기" aria-label="알림 보기" aria-haspopup="true" aria-expanded="false">
+          <i class="ti ti-bell"></i>
+          <span class="topbar-alert-badge" id="topbar-alert-badge" style="display:none;">0</span>
+        </button>
+        <div class="topbar-alert-popup" id="topbar-alert-popup" role="dialog" aria-label="알림 목록">
+          <div class="topbar-alert-head">
+            <strong><i class="ti ti-bell"></i> 알림</strong>
+            <span id="topbar-alert-count">0건</span>
+          </div>
+          <div class="topbar-alert-list" id="topbar-alert-list"></div>
+        </div>
+      </div>
+      <div class="topbar-more" id="topbar-more">
+        <button class="theme-btn topbar-more-btn" id="topbar-more-btn" onclick="toggleTopbarMoreMenu()" title="사용자 메뉴" aria-label="사용자 메뉴" aria-haspopup="true" aria-expanded="false">
+          <i class="ti ti-dots-vertical"></i>
+        </button>
+        <div class="topbar-more-menu" id="topbar-more-menu" role="menu">
+          <button type="button" role="menuitem" onclick="toggleTheme();closeTopbarMoreMenu()">
+            <i class="ti ti-sun" id="themeIcon"></i><span>밝기 전환</span>
+          </button>
+          <button type="button" role="menuitem" id="topbar-logout-item" class="topbar-logout-item" onclick="closeTopbarMoreMenu();cloudLogout()">
+            <i class="ti ti-logout"></i><span>로그아웃</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>

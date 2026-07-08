@@ -1,0 +1,22 @@
+  <!-- ══════ 견적요청서 ══════ -->
+  <div class="content list-page" id="pg-rfq">
+    <div class="metrics" id="rfq-kpi">
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-file-description"></i>전체 견적요청</div><div class="mc-val" id="rfq-kpi-total">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('rfq-fs','요청중','renderRfq')"><div class="mc-lbl"><i class="ti ti-send" style="color:var(--tx-i);"></i>요청중</div><div class="mc-val" id="rfq-kpi-pending" style="color:var(--tx-i);">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('rfq-fs','회신완료','renderRfq')"><div class="mc-lbl"><i class="ti ti-mail-opened" style="color:var(--tx-ok);"></i>회신 완료</div><div class="mc-val" id="rfq-kpi-replied" style="color:var(--tx-ok);">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('rfq-fs','채택','renderRfq')"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-w);"></i>채택</div><div class="mc-val" id="rfq-kpi-adopted" style="color:var(--tx-w);">0건</div></div>
+    </div>
+    <div class="toolbar">
+      <select id="rfq-fc" onchange="renderRfq()" style="min-width:140px;"><option value="">전체 고객사</option></select>
+      <select id="rfq-fs" onchange="renderRfq()">
+        <option value="">전체 상태</option>
+        <option>요청전</option><option>요청중</option><option>회신완료</option><option>채택</option><option>미채택</option>
+      </select>
+      <input type="text" id="rfq-q" placeholder="품목명·공급처 검색..." style="min-width:180px;" oninput="renderRfq()">
+      <button class="btn btn-primary btn-icon" onclick="openRfqAdd()" title="견적요청서 등록"><i class="ti ti-plus"></i></button>
+      <button class="btn btn-icon" onclick="importRfqXLS()" title="엑셀 가져오기"><i class="ti ti-file-import"></i></button>
+    </div>
+    <div class="card narrow-table-card">
+      <div id="rfq-table" style="overflow-x:auto;"><div class="empty"><i class="ti ti-inbox"></i>등록된 견적요청서가 없습니다.</div></div>
+    </div>
+  </div>

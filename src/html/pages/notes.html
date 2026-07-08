@@ -1,0 +1,140 @@
+<!-- ══════ 메모·할 일 ══════ -->
+<div class="content list-page" id="pg-notes">
+  <style>
+    .memo-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+    .memo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+    .memo-card{border:1px solid var(--br);border-radius:var(--rl);background:var(--bg-p);padding:12px;min-width:0;cursor:pointer;transition:border-color .15s,background .15s}
+    .memo-card.memo-selected{background:var(--bg-i);border-color:var(--br-i)}
+    .memo-card-head{display:flex;align-items:center;gap:8px}
+    .memo-select{width:14px;height:14px;accent-color:var(--tx-i);cursor:pointer;flex:0 0 auto}
+    .memo-card-title{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .memo-star{width:28px;height:28px;border:0;background:transparent;color:var(--tx-t);display:inline-flex;align-items:center;justify-content:center;border-radius:var(--rm);cursor:pointer;flex:0 0 auto}
+    .memo-star:hover{background:var(--bg-s);color:var(--tx-w)}
+    .memo-star.active{color:var(--tx-w)}
+    .memo-card-body{font-size:12px;line-height:1.65;color:var(--tx-s);white-space:pre-wrap;margin:10px 0;max-height:115px;overflow:hidden}
+    .memo-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:10.5px;color:var(--tx-t)}
+    .memo-tag{padding:2px 7px;border-radius:999px;background:var(--bg-s);border:1px solid var(--br)}
+    #memo-bulkbar{display:none;align-items:center;gap:5px;margin:0 0 5px;padding:4px 8px;background:var(--bg-i);border:1px solid var(--br-i);border-radius:8px;flex-wrap:wrap;color:var(--tx-i)}
+    #memo-bulkbar>span{font-weight:700;font-size:12.5px}
+    .todo-board{display:grid;grid-template-columns:repeat(3,minmax(250px,1fr));gap:12px;overflow-x:auto}
+    .todo-col{background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rl);padding:10px;min-height:250px}
+    .todo-item{background:var(--bg-p);border:1px solid var(--br);border-radius:var(--rm);padding:11px;margin-top:8px}
+    #todo-bulkbar{background:var(--bg-i)!important;border:1px solid var(--br-i)!important;color:var(--tx-i)!important}
+    #todo-bulkbar>span{color:var(--tx-i)!important}
+    #todo-bulkbar .btn-danger{background:#681010;border-color:#a62a2a;color:#ff9b9b}
+    #todo-bulkbar .btn-danger:hover{background:#821717}
+    .todo-row-selected td{background:var(--bg-i)!important;color:var(--tx)!important;border-top:1px solid var(--br-i);border-bottom:1px solid var(--br-i)}
+    .todo-row-selected:hover td{background:var(--bg-i)!important}
+    .todo-row-selected select{background:var(--bg-p);color:var(--tx);border-color:var(--br-i)}
+    .todo-select,#todo-check-all{accent-color:var(--tx-i);cursor:pointer}
+    @media(max-width:780px){.todo-board{grid-template-columns:1fr}.memo-grid{grid-template-columns:1fr}}
+  </style>
+
+  <div class="metrics" id="memo-kpi"></div>
+  <div class="memo-tabs">
+    <button class="btn btn-primary" data-memotab="memos" onclick="switchMemoTab('memos')"><i class="ti ti-notes"></i>전체 메모</button>
+    <button class="btn" data-memotab="todos" onclick="switchMemoTab('todos')"><i class="ti ti-list-check"></i>할 일</button>
+    <button class="btn" data-memotab="board" onclick="switchMemoTab('board')"><i class="ti ti-layout-kanban"></i>칸반</button>
+    <button class="btn" data-memotab="report" onclick="switchMemoTab('report')"><i class="ti ti-report-analytics"></i>AI 주간 보고</button>
+  </div>
+
+  <div class="toolbar">
+    <input id="memo-search" placeholder="제목·내용·태그·담당자 검색..." style="min-width:240px;" oninput="renderNotes()">
+    <select id="memo-filter" onchange="renderNotes()">
+      <option value="">전체 상태</option>
+      <option value="important">중요 항목</option>
+      <option value="overdue">기한 초과</option>
+      <option value="today">오늘 할 일</option>
+    </select>
+    <button class="btn btn-primary btn-icon" onclick="openMemoEditor()" title="새 메모"><i class="ti ti-plus"></i></button>
+    <button class="btn btn-icon" onclick="openTodoEditor()" title="새 할 일"><i class="ti ti-list-check"></i></button>
+  </div>
+  <div id="memo-content"></div>
+</div>
+
+<div class="overlay" id="memo-editor">
+  <div class="dlg" style="width:min(760px,96vw);max-width:760px;">
+    <div class="dlg-title"><i class="ti ti-notes"></i><span id="memo-editor-title">메모 작성</span></div>
+    <input type="hidden" id="memo-id">
+    <div style="display:grid;gap:12px;">
+      <div class="ff"><label>제목 <span style="font-weight:400;color:var(--tx-t);">(선택 · 비워두면 내용에서 자동 생성)</span></label><input id="memo-title" maxlength="120" placeholder="선택 입력"></div>
+      <div class="ff"><label>내용</label><textarea id="memo-content-input" rows="9" placeholder="업무 내용, 회의 기록, 확인 사항을 입력하세요."></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 160px;gap:10px;">
+        <div class="ff"><label>태그</label><input id="memo-tags" placeholder="납기, 구매, 고객 (쉼표 구분)"></div>
+        <div class="ff"><label>연결 항목</label>
+          <select id="memo-entity" onchange="fillMemoEntityOptions()"><option value="">일반 메모</option><option value="product">제품</option><option value="material">자재</option><option value="order">생산지시</option><option value="claim">클레임</option><option value="as">고객 A/S</option></select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 140px;gap:10px;">
+        <div class="ff"><label>연결 번호</label><input id="memo-entity-id" list="memo-entity-options" placeholder="예: PR-001, MT-001"><datalist id="memo-entity-options"></datalist></div>
+        <label style="display:flex;align-items:end;gap:8px;padding-bottom:8px;font-size:12px;font-weight:700;"><input type="checkbox" id="memo-important"> 중요 메모</label>
+      </div>
+      <div class="ff">
+        <label>첨부파일 <span style="font-weight:400;color:var(--tx-t);">(파일당 1MB, 최대 5개)</span></label>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-sm" type="button" onclick="inp('memo-attachment-input').click()"><i class="ti ti-paperclip"></i>파일 추가</button>
+          <button class="btn btn-sm drive-save-btn" id="memo-drive-upload-btn" type="button" onclick="uploadMemoAttachmentsToGoogleDrive()"><i class="ti ti-cloud-upload"></i>첨부파일 Drive 저장</button>
+          <input id="memo-attachment-input" type="file" multiple style="display:none;" onchange="addMemoAttachments(this)">
+          <div id="memo-attachment-list" class="memo-meta"></div>
+        </div>
+      </div>
+      <details id="memo-history-wrap" style="display:none;border:1px solid var(--br);border-radius:var(--rm);padding:10px;">
+        <summary style="cursor:pointer;font-size:12px;font-weight:700;"><i class="ti ti-history"></i> 수정 이력</summary>
+        <div id="memo-history-list" style="margin-top:8px;"></div>
+      </details>
+      <div id="memo-ai-result" style="display:none;border:1px solid var(--br-i);background:var(--bg-i);border-radius:var(--rm);padding:12px;font-size:12px;"></div>
+    </div>
+    <div class="dlg-actions" style="margin-top:16px;flex-wrap:wrap;">
+      <button class="btn" onclick="runMemoAiSummary(event)"><i class="ti ti-sparkles"></i>Gemini 요약</button>
+      <button class="btn" id="memo-ai-todo-btn" style="display:none;" onclick="addAiTodos()"><i class="ti ti-list-check"></i>추출한 할 일 등록</button>
+      <span style="flex:1"></span>
+      <button class="btn" onclick="closeModal('memo-editor')">취소</button>
+      <button class="btn btn-primary" onclick="saveMemo()"><i class="ti ti-device-floppy"></i>저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="todo-editor">
+  <div class="dlg" style="width:min(560px,96vw);max-width:560px;">
+    <div class="dlg-title"><i class="ti ti-list-check"></i><span id="todo-editor-title">할 일 등록</span></div>
+    <input type="hidden" id="todo-id">
+    <div style="display:grid;gap:12px;">
+      <div class="ff"><label>할 일</label><input id="todo-title" maxlength="160" placeholder="처리할 업무"></div>
+      <div class="ff"><label>상세 내용</label><textarea id="todo-content" rows="4"></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="ff"><label>담당자</label><input id="todo-owner" placeholder="담당자 이름"></div>
+        <div class="ff"><label>마감일</label><input id="todo-due" type="date"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="ff"><label>시작일</label><input id="todo-start" type="date"></div>
+        <div class="ff"><label>알림일</label><input id="todo-reminder" type="date"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="ff"><label>상태</label><select id="todo-status"><option>대기</option><option>진행중</option><option>완료</option></select></div>
+        <div class="ff"><label>우선순위</label><select id="todo-priority"><option>보통</option><option>높음</option><option>긴급</option></select></div>
+      </div>
+      <div class="ff"><label>반복</label><select id="todo-repeat"><option value="">반복 없음</option><option value="daily">매일</option><option value="weekly">매주</option><option value="monthly">매월</option></select></div>
+      <div class="ff">
+        <label>체크리스트</label>
+        <div style="display:flex;gap:6px;"><input id="todo-check-new" placeholder="하위 할 일 입력" onkeydown="if(event.key==='Enter'){event.preventDefault();addTodoChecklistItem();}"><button type="button" class="btn btn-sm" onclick="addTodoChecklistItem()"><i class="ti ti-plus"></i></button></div>
+        <div id="todo-checklist" style="display:grid;gap:6px;margin-top:8px;"></div>
+      </div>
+      <div class="ff"><label>연결 메모</label><select id="todo-memo-id"><option value="">연결 안 함</option></select></div>
+    </div>
+    <div class="dlg-actions" style="margin-top:16px;">
+      <button class="btn" onclick="closeModal('todo-editor')">취소</button>
+      <button class="btn btn-primary" onclick="saveTodo()"><i class="ti ti-device-floppy"></i>저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="memo-report-modal">
+  <div class="dlg" style="width:min(760px,96vw);max-width:760px;">
+    <div class="dlg-title"><i class="ti ti-report-analytics"></i>AI 주간 업무 보고</div>
+    <div id="memo-report-result" style="white-space:pre-wrap;line-height:1.7;font-size:12px;max-height:65vh;overflow:auto;"></div>
+    <div class="dlg-actions" style="margin-top:16px;">
+      <button class="btn btn-primary" id="memo-report-save-btn" onclick="saveWeeklyReportAsMemo()"><i class="ti ti-notes"></i>전체 메모에 저장</button>
+      <button class="btn" onclick="closeModal('memo-report-modal')">닫기</button>
+    </div>
+  </div>
+</div>

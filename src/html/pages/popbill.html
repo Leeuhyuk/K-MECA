@@ -1,0 +1,28 @@
+  <!-- ══════ Popbill API (외부 연동 · 준비 단계) ══════ -->
+  <!-- 주의: 실제 API 호출/비밀값 없음. 백엔드(Functions+Secret Manager) 연동 전 화면 골격만 제공. -->
+  <div class="content" id="pg-popbill">
+    <div class="card" style="border-left:3px solid var(--tx-i);">
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <i class="ti ti-plug-connected" style="font-size:20px;color:var(--tx-i);margin-top:2px;"></i>
+        <div>
+          <div style="font-weight:600;margin-bottom:2px;">Popbill 외부 연동 (준비 단계)</div>
+          <div style="font-size:12px;color:var(--tx-s);line-height:1.6;">
+            이 화면은 아직 실제 API와 연결되지 않은 <b>독립 테스트 영역</b>입니다. 비밀값(LinkID·SecretKey 등)은
+            프론트에 저장하지 않으며, 실제 호출은 Firebase Cloud Functions + Google Secret Manager 백엔드 연동 후 활성화됩니다.
+            자세한 내용은 <code>docs/popbill-api-addition-review-checklist.md</code> 참고.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toolbar" id="popbill-tabs">
+      <button class="btn btn-primary" data-pbtab="overview" onclick="switchPopbillTab('overview')"><i class="ti ti-layout-grid"></i>개요</button>
+      <button class="btn" data-pbtab="bizcheck" onclick="switchPopbillTab('bizcheck')"><i class="ti ti-building-community"></i>사업자/기업조회</button>
+      <button class="btn" data-pbtab="account" onclick="switchPopbillTab('account')"><i class="ti ti-credit-card"></i>계좌검증</button>
+      <button class="btn" data-pbtab="hometax" onclick="switchPopbillTab('hometax')"><i class="ti ti-file-search"></i>홈택스수집</button>
+      <button class="btn" data-pbtab="document" onclick="switchPopbillTab('document')"><i class="ti ti-file-dollar"></i>문서발행</button>
+      <button class="btn" data-pbtab="messaging" onclick="switchPopbillTab('messaging')"><i class="ti ti-message-2"></i>메시징</button>
+      <button class="btn" data-pbtab="logs" onclick="switchPopbillTab('logs')"><i class="ti ti-list-details"></i>로그</button>
+    </div>
+    <div id="popbill-body"></div>
+  </div>

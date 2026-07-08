@@ -1,0 +1,42 @@
+  <!-- ══════ 9. 휴지통 ══════ -->
+  <div class="content" id="pg-trash">
+    <div class="metrics">
+      <div class="mc">
+        <div class="mc-lbl"><i class="ti ti-trash"></i>휴지통 보관 항목</div>
+        <div class="mc-val" id="trash-total">0건</div>
+        <div class="mc-sub">실수로 삭제된 모든 제조 데이터를 즉각 복구합니다.</div>
+      </div>
+      <div class="mc">
+        <div class="mc-lbl"><i class="ti ti-alert-triangle" style="color:var(--tx-w);"></i>데이터 보존 기준</div>
+        <div class="mc-val">영구 보존</div>
+        <div class="mc-sub">브라우저 로컬 저장소 용량 내에서 유지</div>
+      </div>
+    </div>
+    
+    <div class="toolbar">
+      <select id="trash-filter-type" onchange="renderTrash()" style="min-width:140px;">
+        <option value="">전체 데이터 분류</option>
+        <option value="client">고객사</option>
+        <option value="product">완제품</option>
+        <option value="material">발주자재</option>
+        <option value="inventory">재고품목</option>
+        <option value="order">생산지시</option>
+        <option value="defect">불량기록</option>
+        <option value="claim">고객클레임</option>
+        <option value="check">검사기록</option>
+        <option value="worker">작업원</option>
+      </select>
+      <input type="text" id="trash-q" placeholder="항목명 또는 식별 코드 검색..." style="min-width:220px;" oninput="renderTrash()">
+      <button class="btn btn-danger" onclick="emptyTrash()"><i class="ti ti-trash-x"></i>휴지통 비우기 (영구 삭제)</button>
+    </div>
+    <div class="selection-action-bar trash-selection-bar" id="trash-selection-bar" style="display:none;">
+      <span class="date-view-selection-count"><i class="ti ti-checkbox"></i> <span class="trash-selected-count">0</span>건 선택됨</span>
+      <button class="btn btn-sm" onclick="trashRestoreSelected()"><i class="ti ti-rotate-clockwise"></i>선택 복구</button>
+      <button class="btn btn-sm btn-danger" onclick="trashDeleteSelected()"><i class="ti ti-trash"></i>영구 삭제</button>
+      <button class="btn btn-sm date-view-clear-selection" onclick="trashClearSelection()"><i class="ti ti-x"></i>해제</button>
+    </div>
+
+    <div class="card trash-table-card">
+      <div id="trash-table" class="trash-table-scroll" style="overflow-x:auto;"><div class="empty"><i class="ti ti-inbox"></i>휴지통에 삭제 및 대기 상태인 데이터가 존재하지 않습니다.</div></div>
+    </div>
+  </div>
