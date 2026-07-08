@@ -5625,7 +5625,7 @@ th.col-drop-target { box-shadow: inset 3px 0 0 var(--tx-i); }
     <div class="toolbar">
       <button class="btn" id="btn-show-closed" onclick="toggleClosedView()" style="border-color: var(--br);"><i class="ti ti-archive"></i>종료 프로젝트 (0)</button>
       <input type="text" id="clients-q" placeholder="업체명 또는 담당자 검색..." style="min-width:200px;" oninput="renderClients()">
-      <button class="btn btn-primary btn-icon" onclick="openClientAdd()" title="수주 정보 등록"><i class="ti ti-plus"></i></button>
+      <button class="btn btn-primary btn-icon" onclick="openClientAdd()" title="고객사 등록"><i class="ti ti-plus"></i></button>
     </div>
     <!-- 고객사 추가 패널 -->
     <div id="client-list">
@@ -12151,7 +12151,7 @@ function openClientRegisterPicker() {
   openClientPicker(function(c){
     setClientRegisterSelection(c.id);
     hideClientRegisterMatches();
-  });
+  }, { mode:'client-register', initialQuery:v('ca-name') });
 }
 function setClientRegisterSelection(clientId) {
   const modal = inp('ca-modal');
@@ -12183,7 +12183,7 @@ function openClientAdd() {
   const modal = inp('ca-modal');
   modal.dataset.editId = '';
   delete modal.dataset.existingId;
-  inp('ca-modal-ttl').innerHTML = '<i class="ti ti-building-plus" style="color:var(--tx-i);"></i>수주 정보 등록';
+  inp('ca-modal-ttl').innerHTML = '<i class="ti ti-building-plus" style="color:var(--tx-i);"></i>신규 고객사 등록';
   const searchBtn = inp('ca-client-search-btn'); if (searchBtn) searchBtn.style.display = '';
   setClientRegisterSelection('');
   modal.classList.add('open');
@@ -24282,6 +24282,7 @@ function openPartnerFieldPicker(inputId, resultsId, emailId) {
 /* ── 고객사 피커 (거래명세표·세금계산서 등 고객사 선택용) ── */
 let _clientPickerCb = null;
 let _clientPickerCreatePending = false;
+let _clientPickerContext = null;
 function setClientSelectValue(selectId, c) {
   const sel = inp(selectId);
   if (!sel || !c) return;
@@ -24290,22 +24291,42 @@ function setClientSelectValue(selectId, c) {
   }
   sel.value = c.id;
 }
-function openClientPicker(callback){
+function openClientPicker(callback, context){
   _clientPickerCb = callback;
   _clientPickerCreatePending = false;
-  if(inp('cp-q')) inp('cp-q').value = '';
+  _clientPickerContext = context || null;
+  if(inp('cp-q')) inp('cp-q').value = (_clientPickerContext && _clientPickerContext.initialQuery) || '';
   renderClientPickerList();
   inp('client-picker-modal').classList.add('open');
 }
 function openClientAddFromPicker() {
+  const ctx = _clientPickerContext || {};
+  const caModal = inp('ca-modal');
+  if (ctx.mode === 'client-register' && caModal && caModal.classList.contains('open')) {
+    const selectedId = caModal.dataset.existingId;
+    const draftName = String(v('cp-q') || (!selectedId ? v('ca-name') : '') || '').trim();
+    _clientPickerCreatePending = false;
+    closeModal('client-picker-modal');
+    if (typeof setClientRegisterSelection === 'function') setClientRegisterSelection('');
+    if (draftName) sv('ca-name', draftName);
+    if (typeof hideClientRegisterMatches === 'function') hideClientRegisterMatches();
+    setTimeout(function(){
+      const nameInput = inp('ca-name');
+      if (nameInput) nameInput.focus();
+    }, 0);
+    if (typeof showToast === 'function') showToast('신규 고객사 정보를 입력한 뒤 저장하세요.');
+    return;
+  }
   _clientPickerCreatePending = true;
   closeModal('client-picker-modal');
   openClientAdd();
 }
 function consumeClientPickerCreatedClient(c) {
   if (!_clientPickerCreatePending || typeof _clientPickerCb !== 'function') return false;
+  const callback = _clientPickerCb;
   _clientPickerCreatePending = false;
-  _clientPickerCb(c);
+  _clientPickerContext = null;
+  callback(c);
   return true;
 }
 function renderClientPickerList(){
@@ -24326,7 +24347,10 @@ function renderClientPickerList(){
 function selectClientPick(id){
   const c = ensureClientFromAnyPartner(id);
   if (!c || !_clientPickerCb) return;
-  _clientPickerCb(c);
+  const callback = _clientPickerCb;
+  _clientPickerCreatePending = false;
+  _clientPickerContext = null;
+  callback(c);
   closeModal('client-picker-modal');
 }
 
@@ -24470,7 +24494,7 @@ function onClientFieldSearchKey(e, selectId, inputId, resultsId, changeFnName, e
 function openClientFieldPicker(selectId, inputId, resultsId, changeFnName, emailId) {
   openClientPicker(function(c){
     selectClientField(selectId, inputId, resultsId, c.id, changeFnName, emailId);
-  });
+  }, { mode:'client-field', selectId, inputId, resultsId, changeFnName, emailId, initialQuery:v(inputId) });
 }
 
 function _productFieldText(p) {
@@ -35323,10 +35347,10 @@ window.addEventListener('resize', () => {
 </div>
 
 
-<!-- ══ 수주 정보 등록 모달 ══ -->
+<!-- ══ 고객사 등록 모달 ══ -->
 <div class="overlay" id="ca-modal">
   <div class="dlg" style="max-width:600px;width:96%;">
-    <div class="dlg-title" id="ca-modal-ttl"><i class="ti ti-building-plus" style="color:var(--tx-i);"></i>수주 정보 등록</div>
+    <div class="dlg-title" id="ca-modal-ttl"><i class="ti ti-building-plus" style="color:var(--tx-i);"></i>신규 고객사 등록</div>
     <div class="fg fg4" style="gap:10px;margin-bottom:14px;">
       <div class="ff"><label>거래처 고객사 코드</label><input id="ca-id" readonly></div>
       <div class="ff" id="ca-name-wrap" style="grid-column:span 2;"><label>고객사명 *</label>
