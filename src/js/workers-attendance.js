@@ -12,7 +12,12 @@ function repairWorkerTimeValues() {
   return changed;
 }
 
+function visibleWorkersList() {
+  return typeof visibleRecords === 'function' ? visibleRecords(workers, 'worker') : workers;
+}
+
 function renderWorkers() {
+  const workers = visibleWorkersList();
   ensureDateView('workersHire', 'workers-table', workers.map(w => w.hireDate), renderWorkers);
   const att = workers.filter(w => w.status !== '결근' && w.status !== '휴가').length;
   inp('w-total').textContent = workers.length + '명';
@@ -65,7 +70,7 @@ function renderWorkers() {
     ? empty('등록된 직원이 아직 없습니다.')
     : (!filteredWorkers.length)
       ? empty('검색 조건에 맞는 직원이 없습니다.')
-      : `<table>
+      : `<table class="narrow-compact-table workers-compact-table">
       <thead>
         <tr>
           ${['id:사번','name:이름','dept:부서','position:직급','empType:고용형태','hireDate:입사일'].map(s=>{const[k,l]=s.split(':');return`<th onclick="toggleSort('workers','${k}')" style="cursor:pointer;user-select:none;">${l} ${sortIcon('workers',k)}</th>`;}).join('')}
@@ -113,7 +118,7 @@ function renderWorkers() {
       <div class="card" style="margin-top:16px;">
         <div class="card-hd"><span class="card-ttl"><i class="ti ti-user-question" style="color:var(--tx-w);"></i>미등록 로그인 계정 (직원 명부에 없음)</span>
           <span style="font-size:11px;color:var(--tx-t);">이메일이 명부와 매칭되지 않은 가입 계정 · 직원으로 등록하면 연결됩니다</span></div>
-        <div style="overflow-x:auto;"><table>
+        <div style="overflow-x:auto;"><table class="narrow-compact-table workers-compact-table">
           <thead><tr><th>이름</th><th>이메일</th><th>역할</th><th style="text-align:center;">승인</th><th style="text-align:center;">명부 등록</th></tr></thead>
           <tbody>${orphans.map(u=>{
             const isOwner=BOOTSTRAP_ADMIN_EMAILS.includes((u.email||'').toLowerCase()); const act=u.active!==false;
@@ -142,13 +147,18 @@ function enrollWorkerFromUser(uid){
 function changeWorkerStatus(id, val) {
   const w = workers.find(x => x.id === id);
   if (w) {
+    if (!roleFeatureAllowed('status') || !requireRecordPermission('edit', w, 'worker')) return;
+    const before = _safeJsonClone(w);
     w.status = val;
+    stampRecordUpdate(w, before, 'worker');
+    writeAuditLog('worker', id, 'statusChange', before, w, { summary:'작업원 상태 변경' });
     saveStorage('workers', workers);
     renderWorkers();
   }
 }
 
 function openWorkerAdd() {
+  if (typeof requireCreateAction === 'function' && !requireCreateAction('workers', '직원 등록')) return;
   const modal = inp('worker-modal');
   delete modal.dataset.editId;
   inp('worker-modal-ttl').innerHTML = '<i class="ti ti-user-plus" style="color:var(--tx-i);"></i>직원 등록';
@@ -168,6 +178,7 @@ function openWorkerEdit(id) {
   if (!checkAdminAction()) return;
   const w = workers.find(x => x.id === id);
   if (!w) return;
+  if (!requireRecordPermission('edit', w, 'worker')) return;
   const modal = inp('worker-modal');
   modal.dataset.editId = id;
   inp('worker-modal-ttl').innerHTML = '<i class="ti ti-edit" style="color:var(--tx-w);"></i>직원 정보 수정';
@@ -218,11 +229,20 @@ function saveWorkerForm() {
   };
   if (editId) {
     const w = workers.find(x => x.id === editId);
-    if (w) Object.assign(w, data);
+    if (w) {
+      if (!requireRecordPermission('edit', w, 'worker')) return;
+      const before = _safeJsonClone(w);
+      Object.assign(w, data);
+      stampRecordUpdate(w, before, 'worker');
+      writeAuditLog('worker', editId, 'update', before, w, { summary:'작업원 정보 수정' });
+    }
     delete modal.dataset.editId;
     showToast('직원 정보가 수정되었습니다.');
   } else {
-    workers.push({ id: nextCode('E', workers), ...data });
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('workers', '직원 등록')) return;
+    const worker = stampRecordCreate({ id: nextCode('E', workers), ...data }, 'worker');
+    workers.push(worker);
+    writeAuditLog('worker', worker.id, 'create', null, worker, { summary:'작업원 등록' });
     showToast('신규 직원 정보가 등록되었습니다.');
   }
   saveStorage('workers', workers);
@@ -237,10 +257,12 @@ function deleteWorker(id) {
   if (!checkAdminAction()) return;
   const w = workers.find(x => x.id === id);
   if (!w) return;
+  if (!requireRecordPermission('delete', w, 'worker')) return;
   confirm_('현장 임직원 퇴사/방출', `현장 소속 <strong>[${w.name}]</strong> 사원의 인사정보 프로필을 시스템에서 파기하시겠습니까?`, () => {
     pushToTrash('worker', `${w.name} (작업원)`, id, w);
 
     workers = workers.filter(x => x.id !== id);
+    writeAuditLog('worker', id, 'delete', w, null, { summary:'작업원 삭제' });
     saveStorage('workers', workers);
     renderWorkers();
     showToast('사원 정보가 휴지통으로 이동했습니다.', 'info');
@@ -248,10 +270,11 @@ function deleteWorker(id) {
 }
 
 function exportWorkersCSV() {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('직원 현황 엑셀 내보내기')) return;
   if (typeof XLSX === 'undefined') { showToast('SheetJS 로딩 중...', 'error'); return; }
   const wb = XLSX.utils.book_new();
   const h = ['사번','성명','부서','직급','고용형태','입사일','연락처','담당','배정라인','월급여','고정수당','식대·비과세수당','출근시간','연장근무','상태'];
-  const rows = workers.map(w => [w.id, w.name, w.dept||'', w.position||'', w.empType||'정규직', w.hireDate||'', w.phone||'', w.role||'', w.line?`라인 ${w.line}`:'', Number(w.salary)||0, Number(w.fixedAllowance)||0, Number(w.mealAllowance)||0, w.tin||'', w.ot||'0h', w.status]);
+  const rows = visibleWorkersList().map(w => [w.id, w.name, w.dept||'', w.position||'', w.empType||'정규직', w.hireDate||'', w.phone||'', w.role||'', w.line?`라인 ${w.line}`:'', Number(w.salary)||0, Number(w.fixedAllowance)||0, Number(w.mealAllowance)||0, w.tin||'', w.ot||'0h', w.status]);
   const ws = XLSX.utils.aoa_to_sheet([h,...rows]);
   ws['!cols'] = h.map(c => ({ wch: Math.max(c.length+2, 12) }));
   XLSX.utils.book_append_sheet(wb, ws, '직원현황');

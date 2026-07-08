@@ -69,7 +69,10 @@ function renderCalendar() {
 
   var todayStr = today();
 
-  (products || []).filter(function(p) {
+  var calProducts = typeof visibleRecords === 'function' ? visibleRecords(products || [], 'processProduct') : (products || []);
+  var calMaterials = typeof visibleRecords === 'function' ? visibleRecords(materials || [], 'material') : (materials || []);
+
+  calProducts.filter(function(p) {
     return p.deliveryDate && p.status !== '완료' && p.status !== '납품';
   }).forEach(function(p) {
     var d = daysUntil(p.deliveryDate);
@@ -77,7 +80,7 @@ function renderCalendar() {
     addEvent(p.deliveryDate, '📦 ' + getClientName(p.clientId) + ' — ' + p.name, color);
   });
 
-  (materials || []).filter(function(m) {
+  calMaterials.filter(function(m) {
     return m.expectedDate && m.status !== '입고완료';
   }).forEach(function(m) {
     addEvent(m.expectedDate, '🔩 ' + m.name + ' (' + m.id + ')', '#40c057');
@@ -92,8 +95,8 @@ function renderCalendar() {
         var prefix = calYear + '-' + String(month + 1).padStart(2,'0');
         var dates = Object.keys(events).filter(function(d){ return d.slice(0,7) === prefix; });
         var count = dates.reduce(function(s,d){ return s + events[d].length; }, 0);
-        var productCount = (products||[]).filter(function(p){ return (p.deliveryDate||'').slice(0,7)===prefix && p.status!=='완료' && p.status!=='납품'; }).length;
-        var materialCount = (materials||[]).filter(function(m){ return (m.expectedDate||'').slice(0,7)===prefix && m.status!=='입고완료'; }).length;
+        var productCount = calProducts.filter(function(p){ return (p.deliveryDate||'').slice(0,7)===prefix && p.status!=='완료' && p.status!=='납품'; }).length;
+        var materialCount = calMaterials.filter(function(m){ return (m.expectedDate||'').slice(0,7)===prefix && m.status!=='입고완료'; }).length;
         return '<button onclick="calOpenMonth(' + month + ')" style="text-align:left;padding:16px;border:1px solid var(--br);border-radius:var(--rl);background:var(--bg-p);color:var(--tx);cursor:pointer;">' +
           '<div style="font-size:15px;font-weight:800;margin-bottom:10px;">' + name + '</div>' +
           '<div style="font-size:22px;font-weight:800;color:' + (count?'var(--tx-i)':'var(--tx-t)') + ';">' + count + '건</div>' +

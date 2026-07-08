@@ -26,14 +26,13 @@
       </select>
       <input type="text" id="inv-q" placeholder="재고명, 보관위치 검색..." style="min-width:200px;" oninput="renderInventory()">
       <button class="btn btn-primary btn-icon" onclick="openInvAdd()" title="신규 재고 품목 등록"><i class="ti ti-plus"></i></button>
-      <button class="btn btn-icon" onclick="exportInvCSV()" title="엑셀 내보내기"><i class="ti ti-download"></i></button>
     </div>
 
     <!-- 재고 추가/수정 패널 -->
 
-    <div class="card">
+    <div class="card inventory-table-card">
       <div id="inventory-table" style="overflow-x:auto;">
-    <table>
+    <table class="inventory-compact-table" style="min-width: 860px;">
       <thead>
         <tr>
           <th>재고 코드</th>

@@ -27,6 +27,11 @@ const POPBILL_CORP_NUM = defineString("POPBILL_CORP_NUM"); // 팝빌 회원(우�
 const POPBILL_IS_TEST = defineString("POPBILL_IS_TEST", { default: "true" });
 
 const REGION = "asia-northeast3"; // 서울 — 국내 지연 최소화
+const EMAIL_MAIL_COLLECTION = "mail";
+const BOOTSTRAP_ADMIN_EMAILS = ["lgs7942@naver.com", "lgs79422@gmail.com"];
+const MAX_EMAIL_TEXT = 12000;
+const MAX_EMAIL_HTML = 20000;
+const MAX_EMAIL_ATTACHMENT_BYTES = 650 * 1024;
 
 /* ── Popbill SDK 1회 설정 ───────────────────────────────────── */
 let _configured = false;
@@ -49,6 +54,133 @@ function requireAuth(request) {
     throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
   }
 }
+
+async function requireActiveUser(request) {
+  requireAuth(request);
+  const email = String((request.auth.token && request.auth.token.email) || "").toLowerCase();
+  if (BOOTSTRAP_ADMIN_EMAILS.includes(email)) return;
+  const userSnap = await db.collection("users").doc(request.auth.uid).get();
+  if (!userSnap.exists || userSnap.data().active === false) {
+    throw new HttpsError("permission-denied", "승인된 사용자만 사용할 수 있습니다.");
+  }
+}
+
+function clipString(value, max) {
+  return String(value || "").trim().slice(0, max);
+}
+
+function sanitizeEmail(value, label) {
+  const email = clipString(value, 254);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new HttpsError("invalid-argument", `${label || "이메일"} 형식이 올바르지 않습니다.`);
+  }
+  return email;
+}
+
+function sanitizeEmailList(value, label) {
+  const raw = Array.isArray(value) ? value : String(value || "").split(",");
+  const list = raw.map(v => String(v || "").trim()).filter(Boolean).map(v => sanitizeEmail(v, label));
+  if (!list.length) {
+    throw new HttpsError("invalid-argument", `${label || "수신 이메일"}을 입력하세요.`);
+  }
+  if (list.length > 5) {
+    throw new HttpsError("invalid-argument", "수신자는 최대 5명까지 가능합니다.");
+  }
+  return list;
+}
+
+function estimateBase64Bytes(content) {
+  const clean = String(content || "").replace(/\s/g, "");
+  if (!clean) return 0;
+  const padding = clean.endsWith("==") ? 2 : clean.endsWith("=") ? 1 : 0;
+  return Math.floor(clean.length * 3 / 4) - padding;
+}
+
+function sanitizeMailAttachment(att) {
+  const filename = clipString(att && att.filename, 120) || "document.pdf";
+  const content = String((att && (att.content || att.base64)) || "")
+    .replace(/^data:application\/pdf;base64,/i, "")
+    .replace(/\s/g, "");
+  if (!content) return null;
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(content)) {
+    throw new HttpsError("invalid-argument", "PDF 첨부파일 형식이 올바르지 않습니다.");
+  }
+  if (estimateBase64Bytes(content) > MAX_EMAIL_ATTACHMENT_BYTES) {
+    throw new HttpsError("invalid-argument", "PDF 첨부파일 용량이 너무 큽니다.");
+  }
+  return {
+    filename: filename.replace(/[\\/:*?"<>|]/g, "_"),
+    content,
+    encoding: "base64",
+    contentType: "application/pdf",
+  };
+}
+
+function textToHtml(text) {
+  return String(text || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\n/g, "<br>");
+}
+
+exports.queueDocumentEmail = onCall(
+  { region: REGION },
+  async (request) => {
+    await requireActiveUser(request);
+    const d = request.data || {};
+    const to = sanitizeEmailList(d.to, "수신 이메일");
+    const subject = clipString(d.subject, 180);
+    const text = clipString(d.text || d.message, MAX_EMAIL_TEXT);
+    const html = clipString(d.html, MAX_EMAIL_HTML);
+    if (!subject) {
+      throw new HttpsError("invalid-argument", "메일 제목을 입력하세요.");
+    }
+    if (!text && !html) {
+      throw new HttpsError("invalid-argument", "메일 본문을 입력하세요.");
+    }
+
+    const message = {
+      subject,
+      text: text || html.replace(/<[^>]+>/g, " "),
+      html: html || textToHtml(text),
+    };
+    if (d.replyTo) message.replyTo = sanitizeEmail(d.replyTo, "답장 이메일");
+
+    const attachments = Array.isArray(d.attachments)
+      ? d.attachments.map(sanitizeMailAttachment).filter(Boolean)
+      : [];
+    if (attachments.length > 1) {
+      throw new HttpsError("invalid-argument", "첨부파일은 1개만 발송할 수 있습니다.");
+    }
+    if (d.requireAttachment && !attachments.length) {
+      throw new HttpsError("invalid-argument", "PDF 첨부파일이 준비되지 않았습니다.");
+    }
+    if (attachments.length) message.attachments = attachments;
+
+    const ref = await db.collection(EMAIL_MAIL_COLLECTION).add({
+      to,
+      message,
+      source: {
+        docType: clipString(d.docType, 40),
+        docId: clipString(d.docId, 80),
+        attachmentCount: attachments.length,
+      },
+      createdBy: {
+        uid: request.auth.uid,
+        email: (request.auth.token && request.auth.token.email) || "",
+      },
+      createdAt: FieldValue.serverTimestamp(),
+      status: "queued",
+    });
+    logger.info("document email queued", {
+      uid: request.auth.uid,
+      docType: clipString(d.docType, 40),
+      hasAttachment: !!attachments.length,
+    });
+    return { id: ref.id };
+  }
+);
 
 // 사업자번호: 숫자만 추출 후 10자리 검증 (하이픈 허용 입력)
 function sanitizeCorpNum(raw) {

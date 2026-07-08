@@ -15,11 +15,8 @@
       <input type="text" id="rfq-q" placeholder="품목명·공급처 검색..." style="min-width:180px;" oninput="renderRfq()">
       <button class="btn btn-primary btn-icon" onclick="openRfqAdd()" title="견적요청서 등록"><i class="ti ti-plus"></i></button>
       <button class="btn btn-icon" onclick="importRfqXLS()" title="엑셀 가져오기"><i class="ti ti-file-import"></i></button>
-      <button class="btn btn-icon" onclick="exportRfqXLS()" title="엑셀 내보내기"><i class="ti ti-file-spreadsheet"></i></button>
-      <button class="btn btn-icon" onclick="openRfqPrint(null)" title="전체 PDF 출력"><i class="ti ti-printer"></i></button>
-      <button class="btn btn-icon" onclick="saveDocumentBundleToGoogleDrive('rfq',null)" title="PDF/XLSX Google Drive 저장"><i class="ti ti-brand-google-drive"></i></button>
     </div>
-    <div class="card">
+    <div class="card narrow-table-card">
       <div id="rfq-table" style="overflow-x:auto;"><div class="empty"><i class="ti ti-inbox"></i>등록된 견적요청서가 없습니다.</div></div>
     </div>
   </div>

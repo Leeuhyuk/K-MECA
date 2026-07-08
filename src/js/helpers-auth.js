@@ -82,6 +82,11 @@ function v(id) { return document.getElementById(id)?.value || ''; }
 function sv(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
 function inp(id) { return document.getElementById(id); }
 
+function setAuthShellLocked(locked) {
+  if (!document.body) return;
+  document.body.classList.toggle('auth-shell-locked', !!locked);
+}
+
 function nextCode(prefix, list, field='id') {
   const nums = list.map(x => parseInt((x[field] || '').split('-').pop()) || 0);
   let n = (nums.length ? Math.max(...nums) : 0) + 1;
@@ -111,7 +116,9 @@ function _kpiActive(selectId, map) {
     }
   });
 }
-function getClientName(id) { return clients.find(c => c.id === id)?.name || id; }
+function getClientName(id) {
+  return clients.find(c => c.id === id)?.name || partners.find(p => p.id === id)?.name || id;
+}
 function getProductById(id) { return products.find(p => p.id === id); }
 function getProductName(id) { return getProductById(id)?.name || id; }
 function getMatAmt(m) { return m.unitPrice * m.qty; }
@@ -181,7 +188,67 @@ function updateAdminUI() {
   refreshPage(currentPage);
 }
 
-function checkAdminAction(fn = null) {
+function actionDeniedMessage(label) {
+  return (label || '해당 기능') + ' 권한이 없습니다.';
+}
+
+function requireFeatureAction(key, label) {
+  if (!key) return true;
+  const allowed = typeof roleFeatureAllowed === 'function' ? roleFeatureAllowed(key) : true;
+  if (allowed) return true;
+  if (typeof showToast === 'function') showToast(actionDeniedMessage(label), 'error');
+  return false;
+}
+
+function requireAdminAction(label) {
+  if (typeof currentRole === 'undefined' || currentRole === 'admin') return true;
+  if (typeof showToast === 'function') showToast(actionDeniedMessage(label || '관리자 기능'), 'error');
+  return false;
+}
+
+function requireCreateAction(tableKeys = null, label = '등록') {
+  const keys = Array.isArray(tableKeys) ? tableKeys : (tableKeys ? [tableKeys] : []);
+  if (typeof registrationActionAllowed === 'function') {
+    if (registrationActionAllowed(keys)) return true;
+    if (typeof showToast === 'function') showToast(actionDeniedMessage(label), 'error');
+    return false;
+  }
+  return requireFeatureAction('create', label);
+}
+
+function requireCsvAction(label = '엑셀 내보내기') {
+  return requireFeatureAction('csv', label);
+}
+
+function requirePdfAction(label = 'PDF/인쇄 출력') {
+  return requireFeatureAction('pdf', label);
+}
+
+function pageDataAllowed(pageKey) {
+  if (!pageKey || pageKey === 'dashboard') return true;
+  if (typeof pageAllowed === 'function') return pageAllowed(pageKey);
+  return true;
+}
+
+function purchaseOrderDataAllowed() {
+  return pageDataAllowed('po');
+}
+
+function requirePurchaseOrderData(label = '구매발주서') {
+  if (purchaseOrderDataAllowed()) return true;
+  if (typeof showToast === 'function') showToast(actionDeniedMessage(label), 'error');
+  return false;
+}
+
+function visiblePurchaseOrderList(records = null) {
+  const source = records || (typeof poList !== 'undefined' && Array.isArray(poList) ? poList : []);
+  if (!purchaseOrderDataAllowed()) return [];
+  return source.filter(record => typeof canViewRecord !== 'function' || canViewRecord(record, 'po'));
+}
+
+function checkAdminAction(fn = null, options = null) {
+  if (options && options.adminOnly && !requireAdminAction(options.label)) return false;
+  if (options && options.feature && !requireFeatureAction(options.feature, options.label)) return false;
   if (fn) fn();
   return true;
 }

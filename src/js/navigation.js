@@ -150,11 +150,15 @@ function closeDlg() { inp('confirmDlg').classList.remove('open'); _cfn = null; }
 
 function fillClientSelect(elId, includeAll=false) {
   const el = inp(elId); if (!el) return;
-  el.innerHTML = (includeAll ? '<option value="">전체 의뢰 고객사</option>' : '') + clients.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+  const entityType = String(elId || '').indexOf('proc-') === 0 ? 'processClient' : 'clients';
+  const list = typeof visibleRecords === 'function' ? visibleRecords(clients, entityType) : clients;
+  el.innerHTML = (includeAll ? '<option value="">전체 의뢰 고객사</option>' : '') + list.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
 }
 function fillProductSelect(elId, clientId, selected='') {
   const el = inp(elId); if (!el) return;
-  const list = clientId ? products.filter(p => p.clientId === clientId) : products;
+  const entityType = String(elId || '').indexOf('proc-') === 0 ? 'processProduct' : 'products';
+  const source = typeof visibleRecords === 'function' ? visibleRecords(products, entityType) : products;
+  const list = clientId ? source.filter(p => p.clientId === clientId) : source;
   el.innerHTML = '<option value="">-- 품목 선택 --</option>' + list.map(p => `<option value="${esc(p.id)}"${p.id===selected?' selected':''}>${esc(p.name)}</option>`).join('');
 }
 function fillStageSelect(elId) {
@@ -186,10 +190,121 @@ function onPraStageChange(clientId) {
    숨김 상태는 화면 크기가 변해도 유지 (localStorage 보존)
    미니 레일은 마우스를 올려도 아이콘 상태를 유지하며, 메뉴 클릭 시 바로 이동 */
 const SB_AUTO_MINI_MAX = 1280;
+const SIDEBAR_GROUP_STATE_KEY = 'mes_sidebarGroupCollapsed';
 let _sidebarScrollTimer = null;
-const SB_WIDE_MIN = 1440;
+const SB_WIDE_MIN = 1180;
 let _sidebarModeFrame = 0;
 let _sidebarModeObserver = null;
+let _sidebarHiddenForSession = false;
+
+function readSidebarGroupState() {
+  try {
+    const raw = localStorage.getItem(SIDEBAR_GROUP_STATE_KEY);
+    return raw ? JSON.parse(raw) || {} : {};
+  } catch(e) {
+    return {};
+  }
+}
+
+function writeSidebarGroupState(state) {
+  try { localStorage.setItem(SIDEBAR_GROUP_STATE_KEY, JSON.stringify(state || {})); } catch(e) {}
+}
+
+function sidebarGroupKey(label, index) {
+  const text = String(label || '').trim().replace(/\s+/g, '-').replace(/[^\w가-힣-]/g, '');
+  return text || `group-${index + 1}`;
+}
+
+function sidebarGroupIconClass(label) {
+  const text = String(label || '');
+  if (text.includes('메인')) return 'ti-layout-dashboard';
+  if (text.includes('공정')) return 'ti-settings-cog';
+  if (text.includes('재고')) return 'ti-packages';
+  if (text.includes('문서')) return 'ti-files';
+  if (text.includes('경영')) return 'ti-briefcase';
+  if (text.includes('외부')) return 'ti-plug-connected';
+  if (text.includes('시스템')) return 'ti-settings';
+  return 'ti-folder';
+}
+
+function setSidebarGroupOpen(group, open, persist = true) {
+  if (!group) return;
+  group.classList.toggle('is-open', !!open);
+  group.classList.toggle('is-collapsed', !open);
+  const toggle = group.querySelector('.nav-group-toggle');
+  if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (!persist) return;
+  const key = group.dataset.sidebarGroupKey;
+  if (!key) return;
+  const state = readSidebarGroupState();
+  state[key] = !open;
+  writeSidebarGroupState(state);
+}
+
+function initSidebarExpandableGroups() {
+  const sidebar = document.querySelector('.sidebar');
+  if (!sidebar || sidebar.dataset.expandableReady === '1') return;
+  sidebar.dataset.expandableReady = '1';
+  const savedState = readSidebarGroupState();
+
+  Array.from(sidebar.querySelectorAll('.nav-g')).forEach((group, index) => {
+    const label = Array.from(group.children).find(el => el.classList?.contains('nav-lbl'));
+    const items = Array.from(group.children).filter(el => el.classList?.contains('ni'));
+    if (!label || !items.length) return;
+
+    const labelText = label.textContent.trim();
+    const key = sidebarGroupKey(labelText, index);
+    group.dataset.sidebarGroupKey = key;
+    group.classList.add('sidebar-expandable-group');
+    label.classList.add('nav-lbl-source');
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'nav-group-toggle';
+    toggle.setAttribute('aria-expanded', 'true');
+    toggle.setAttribute('aria-label', `${labelText} 메뉴 접기/펼치기`);
+
+    const icon = document.createElement('i');
+    icon.className = `ti ${sidebarGroupIconClass(labelText)} nav-group-icon`;
+
+    const title = document.createElement('span');
+    title.className = 'nav-group-title';
+    title.textContent = labelText;
+
+    const chevron = document.createElement('i');
+    chevron.className = 'ti ti-chevron-down nav-group-chevron';
+
+    toggle.append(icon, title, chevron);
+
+    const submenu = document.createElement('div');
+    submenu.className = 'nav-submenu';
+    items.forEach(item => submenu.appendChild(item));
+
+    label.insertAdjacentElement('afterend', toggle);
+    toggle.insertAdjacentElement('afterend', submenu);
+
+    toggle.addEventListener('click', () => {
+      setSidebarGroupOpen(group, group.classList.contains('is-collapsed'));
+    });
+
+    const hasActiveItem = !!submenu.querySelector('.ni.active');
+    setSidebarGroupOpen(group, hasActiveItem || !savedState[key], false);
+  });
+
+  syncSidebarExpandableGroups();
+}
+
+function syncSidebarExpandableGroups() {
+  const sidebar = document.querySelector('.sidebar');
+  if (!sidebar || sidebar.dataset.expandableReady !== '1') return;
+  sidebar.querySelectorAll('.nav-g.sidebar-expandable-group').forEach(group => {
+    const visibleItems = Array.from(group.querySelectorAll('.ni')).filter(item => item.style.display !== 'none');
+    const hasActiveItem = visibleItems.some(item => item.classList.contains('active'));
+    const toggle = group.querySelector('.nav-group-toggle');
+    if (toggle) toggle.disabled = visibleItems.length === 0;
+    if (hasActiveItem) setSidebarGroupOpen(group, true, false);
+  });
+}
 
 function initSidebarScrollIndicator() {
   const sidebar = document.querySelector('.sidebar');
@@ -206,19 +321,22 @@ function initSidebarScrollIndicator() {
 }
 
 function toggleSidebar() {
-  try { localStorage.setItem('mes_sbHidden', '1'); } catch(e){}
-  document.body.classList.remove('wide-sidebar');
+  if (window.innerWidth >= SB_WIDE_MIN) {
+    _sidebarHiddenForSession = true;
+    document.body.classList.remove('wide-sidebar');
+    closeMegaMenu();
+    return;
+  }
   closeMegaMenu();
 }
 
 function isSidebarHiddenByUser() {
-  try { return localStorage.getItem('mes_sbHidden') === '1'; }
-  catch(e) { return false; }
+  return _sidebarHiddenForSession === true;
 }
 
 function togglePrimaryMenu() {
   if (window.innerWidth >= SB_WIDE_MIN && isSidebarHiddenByUser()) {
-    try { localStorage.removeItem('mes_sbHidden'); } catch(e){}
+    _sidebarHiddenForSession = false;
     applySidebarMode();
     if (document.body.classList.contains('wide-sidebar')) return;
   }
@@ -256,11 +374,11 @@ function initAdaptiveSidebarObserver() {
 /* 현재 화면 폭·숨김 여부에 맞는 사이드바 모드 적용 (부팅·리사이즈·토글 시 호출) */
 function applySidebarMode() {
   const body = document.body;
+  try { localStorage.removeItem('mes_sbHidden'); } catch(e){}
   body.classList.remove('sb-mini', 'sb-expanded', 'sb-collapsed', 'wide-sidebar');
-  closeMegaMenu();
   if (window.innerWidth < SB_WIDE_MIN || isSidebarHiddenByUser()) return;
+  closeMegaMenu();
   body.classList.add('wide-sidebar');
-  if (activePageTableOverflows()) body.classList.remove('wide-sidebar');
 }
 window.addEventListener('resize', scheduleSidebarModeCheck);
 
@@ -269,10 +387,37 @@ function closeSbOverlay() {
   closeMegaMenu();
 }
 
+function closeSelectionDetailOnNavigation() {
+  window.__selectionDetailSuppressAutoOpen = true;
+  if (typeof clearSelectionDetailSelection === 'function') {
+    clearSelectionDetailSelection();
+    return;
+  }
+  if (typeof closeSelectionDetailPanel === 'function') {
+    closeSelectionDetailPanel(true);
+    return;
+  }
+  document.getElementById('selection-detail-panel')?.classList.remove('open');
+}
+
+function closeFloatingEditorsOnNavigation() {
+  closeSelectionDetailOnNavigation();
+  document.querySelectorAll('.add-panel.open').forEach(panel => panel.classList.remove('open'));
+  document.querySelectorAll('.overlay.open').forEach(modal => {
+    if (modal.id === 'confirmDlg') return;
+    modal.classList.remove('open');
+  });
+  document.querySelectorAll('.bulk-doc-menu-wrap.open, .selection-detail-status-menu-wrap.open').forEach(menu => {
+    menu.classList.remove('open');
+  });
+  if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+}
+
 /* 미니 레일 → 전체 모드로 복귀 (숨김 해제 포함) */
 function expandSidebar() {
+  _sidebarHiddenForSession = false;
   document.body.classList.remove('sb-mini', 'sb-expanded', 'sb-collapsed');
-  try { localStorage.setItem('mes_sbHidden', ''); } catch(e){}
+  try { localStorage.removeItem('mes_sbHidden'); } catch(e){}
 }
 
 /* 미니 레일 초기화: 각 메뉴에 표시용 라벨 정보 부여 */
@@ -414,6 +559,7 @@ function updateTopbarBackButton() {
 
 function go(id, el) {
   if (id === currentPage) {                // 같은 페이지 재클릭: 드로어/오버레이만 닫기
+    closeFloatingEditorsOnNavigation();
     const sb = document.querySelector('.sidebar');
     if (sb && sb.classList.contains('mobile-open')) { sb.classList.remove('mobile-open'); document.getElementById('sidebar-backdrop')?.classList.remove('active'); }
     closeSbOverlay();
@@ -442,6 +588,7 @@ function _goTo(id, el) {
     if (currentPage !== id) return;
     return;
   }
+  closeFloatingEditorsOnNavigation();
   document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
   document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
   const page = inp('pg-' + id);
@@ -483,9 +630,10 @@ function _goTo(id, el) {
     popbill: 'Popbill API'
   };
   inp('ptitle').textContent = PN[id] || id;
-  document.title = (PN[id] || id) + ' — MES Pro';
+  document.title = (PN[id] || id) + ' — ' + (typeof getAppBrandTitle === 'function' ? getAppBrandTitle() : 'MES Pro');
   currentPage = id;
   syncTopNavActive(id);
+  syncSidebarExpandableGroups();
   refreshPage(id);
   scheduleSidebarModeCheck();
   updateTopbarBackButton();
@@ -506,6 +654,7 @@ let invCategory = '완제품';
 function goInventory(key, el) {
   const meta = INV_CATS[key] || INV_CATS.finished;
   if (currentPage === 'inventory' && invCategory === meta.cat) {
+    closeFloatingEditorsOnNavigation();
     closeSbOverlay();
     return;
   }
@@ -515,6 +664,7 @@ function goInventory(key, el) {
 
 function _showInventoryPage(key, meta, el) {
   invCategory = meta.cat;
+  closeFloatingEditorsOnNavigation();
   document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
   document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
   inp('pg-inventory').classList.add('active');
@@ -523,9 +673,10 @@ function _showInventoryPage(key, meta, el) {
     if (item.getAttribute('onclick')?.includes(`goInventory('${key}'`)) item.classList.add('active');
   });
   inp('ptitle').textContent = meta.title;
-  document.title = meta.title + ' — MES Pro';
+  document.title = meta.title + ' — ' + (typeof getAppBrandTitle === 'function' ? getAppBrandTitle() : 'MES Pro');
   currentPage = 'inventory';
   syncTopNavActive('inventory', key);
+  syncSidebarExpandableGroups();
   renderInventory();
   scheduleSidebarModeCheck();
   updateTopbarBackButton();

@@ -9,7 +9,17 @@ let attQuickQuery = '';
 let attQuickDept = '';
 const attQuickSelected = new Set();
 
-function getWorkerName(id) { return workers.find(w => w.id === id)?.name || id; }
+function hrVisibleWorkers() {
+  if (typeof visibleWorkersList === 'function') return visibleWorkersList();
+  return typeof visibleRecords === 'function' ? visibleRecords(workers, 'worker') : workers;
+}
+function hrVisibleWorkerIds() {
+  return new Set(hrVisibleWorkers().map(w => w.id));
+}
+function visibleWorkerById(id) {
+  return hrVisibleWorkers().find(w => w.id === id);
+}
+function getWorkerName(id) { return visibleWorkerById(id)?.name || id; }
 
 /* 근무시간 계산 (분 단위) */
 function workMinutes(ci, co) {
@@ -66,7 +76,7 @@ function calendarGrid(ym, cellFn) {
           <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">${cells}</div>`;
 }
 function workerSelectOptions(sel) {
-  return workers.map(w => `<option value="${esc(w.id)}"${w.id===sel?' selected':''}>${esc(w.name)}${w.dept?' · '+esc(w.dept):''}${w.position?' '+esc(w.position):''}</option>`).join('');
+  return hrVisibleWorkers().map(w => `<option value="${esc(w.id)}"${w.id===sel?' selected':''}>${esc(w.name)}${w.dept?' · '+esc(w.dept):''}${w.position?' '+esc(w.position):''}</option>`).join('');
 }
 
 function switchEmpTab(tab) {
@@ -113,7 +123,7 @@ function setAttQuickFilter(type, value) {
 }
 // 선택 액션바(선택바 ↔ 필터바)만 만들어 반환 — 체크박스 토글 시 테이블 전체를 다시 그리지 않기 위함
 function attQuickControlsHtml() {
-  const depts = [...new Set(workers.map(worker => worker.dept).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko-KR'));
+  const depts = [...new Set(hrVisibleWorkers().map(worker => worker.dept).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko-KR'));
   return attQuickSelected.size ? `
       <div class="selection-action-bar att-quick-selectionbar" style="display:flex;">
         <span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${attQuickSelected.size}명 선택</span>
@@ -228,13 +238,14 @@ function attendanceDefaultFor(worker, date) {
   };
 }
 function quickAttendanceRow(workerId, date=attQuickDate) {
-  const worker = workers.find(item => item.id === workerId);
+  const worker = visibleWorkerById(workerId);
   if (!worker) return null;
   const saved = attendance.find(row => row.workerId === workerId && row.date === date);
   return saved ? { ...saved, source:'exception', extraMinutes:attendanceExtraMinutes(saved) } : attendanceDefaultFor(worker, date);
 }
 function quickAttendanceData(workerId, status) {
-  const worker = workers.find(item => item.id === workerId);
+  const worker = visibleWorkerById(workerId);
+  if (!worker) return null;
   const current = quickAttendanceRow(workerId);
   const baseIn = normalizeTimeValue(worker?.tin, '08:00');
   const data = {
@@ -258,11 +269,14 @@ function quickAttendanceData(workerId, status) {
   return data;
 }
 function upsertQuickAttendance(workerId, data) {
+  if (!data || !visibleWorkerById(workerId)) return false;
   const index = attendance.findIndex(row => row.workerId === workerId && row.date === attQuickDate);
   if (index >= 0) Object.assign(attendance[index], data);
   else attendance.push({ id:nextCode('ATT', attendance), ...data });
+  return true;
 }
 function restoreQuickAttendance(workerId, quiet=false) {
+  if (!visibleWorkerById(workerId)) return;
   attendance = attendance.filter(row => !(row.workerId === workerId && row.date === attQuickDate));
   saveStorage('attendance', attendance);
   if (!quiet) {
@@ -297,6 +311,7 @@ function changeQuickAttendanceField(workerId, field, value) {
   }
   const status = ['휴무'].includes(current.status) ? '정상' : current.status;
   const data = quickAttendanceData(workerId, status);
+  if (!data) return;
   if (field === 'extraMinutes') data.extraMinutes = Math.max(0, Math.round((Number(value) || 0) * 60));
   else if (field === 'checkIn' || field === 'checkOut') data[field] = normalizeTimeValue(value, '');
   else data[field] = value || '';
@@ -432,7 +447,7 @@ function openAttendanceLeaveDetail(workerId) {
 }
 function _attQuickEditor() {
   const query = attQuickQuery.trim().toLowerCase();
-  const list = workers.filter(worker => workerActiveOn(worker, attQuickDate)
+  const list = hrVisibleWorkers().filter(worker => workerActiveOn(worker, attQuickDate)
     && (!attQuickDept || worker.dept === attQuickDept)
     && (!query || [worker.name,worker.id,worker.dept,worker.position].join(' ').toLowerCase().includes(query)));
   const weekend = [0,6].includes(new Date(attQuickDate + 'T00:00:00').getDay());
@@ -477,7 +492,8 @@ function _attQuickEditor() {
 
 function _attList() {
   const [from, to] = attendanceDateRange();
-  const allRows = attendanceVirtualRows(from, to);
+  const visibleIds = hrVisibleWorkerIds();
+  const allRows = attendanceVirtualRows(from, to).filter(row => visibleIds.has(row.workerId));
   const recs = (attShowAll ? allRows : allRows.filter(row => row.source !== 'auto'))
     .sort((a,b) => b.date.localeCompare(a.date) || getWorkerName(a.workerId).localeCompare(getWorkerName(b.workerId)));
   const cnt = s => recs.filter(r => r.status === s).length;
@@ -495,7 +511,7 @@ function _attList() {
     <tr>
       <td>${esc(r.date)}</td>
       <td style="font-weight:700;">${esc(getWorkerName(r.workerId))}</td>
-      <td>${esc((workers.find(w=>w.id===r.workerId)||{}).dept) || '—'}</td>
+      <td>${esc((visibleWorkerById(r.workerId)||{}).dept) || '—'}</td>
       <td>${esc(r.checkIn) || '—'}</td>
       <td>${esc(r.checkOut) || '—'}</td>
       <td>${r.status === '연장근무' || r.status === '휴일근무' ? fmtHm(attendanceExtraMinutes(r)) : (calcWorkHours(r.checkIn, r.checkOut) || '—')}</td>
@@ -534,8 +550,9 @@ function _attList() {
 }
 
 function _attCalendar() {
+  const visibleIds = hrVisibleWorkerIds();
   const cal = calendarGrid(attMonth, ds => {
-    const day = attendanceVirtualRows(ds, ds);
+    const day = attendanceVirtualRows(ds, ds).filter(row => visibleIds.has(row.workerId));
     if (!day.length) return '';
     const cnt = s => day.filter(r => r.status === s).length;
     const parts = [];
@@ -550,7 +567,7 @@ function _attCalendar() {
 
   // 직원별 월 근무시간 요약
   const dhSummary = (typeof payrollSettings === 'function' && Number(payrollSettings().dailyHours)) || 8;
-  const summary = workers.map(w => {
+  const summary = hrVisibleWorkers().map(w => {
     const data = attendanceSummary(w.id, attMonth, dhSummary);
     const recs = data.rows;
     const days = data.workDays;
@@ -594,7 +611,8 @@ function _attCalendar() {
 }
 
 function openAttendanceAdd() {
-  if (!workers.length) { showToast('먼저 직원을 등록하세요.', 'error'); return; }
+  if (typeof requireCreateAction === 'function' && !requireCreateAction('workers', '근태 등록')) return;
+  if (!hrVisibleWorkers().length) { showToast('먼저 직원을 등록하세요.', 'error'); return; }
   const modal = inp('att-modal');
   delete modal.dataset.editId;
   inp('att-modal-ttl').innerHTML = '<i class="ti ti-clock-check" style="color:var(--tx-i);"></i>예외 근태 등록';
@@ -735,7 +753,8 @@ function leaveViewToggle() {
 /* 연차 현황 카드 (부여/사용/잔여) */
 function _annualStatusCard() {
   const year = new Date(today()).getFullYear();
-  const rows = workers.length ? workers.map(w => {
+  const workerRows = hrVisibleWorkers();
+  const rows = workerRows.length ? workerRows.map(w => {
     const grant = w.annualLeave != null ? Number(w.annualLeave) : 15;
     const used = annualUsed(w.id, year);
     const remain = grant - used;
@@ -770,14 +789,16 @@ function renderLeaves() {
   const cont = inp('emp-tab-leave'); if (!cont) return;
   cont.innerHTML = `<div class="hr-view-toolbar">${leaveViewToggle()}</div><div id="leave-view-body"></div>`;
   const body = inp('leave-view-body');
-  ensureDateView('employeeLeaves', 'leave-view-body', leaves.map(l => l.startDate), renderLeaves);
+  const visibleIds = hrVisibleWorkerIds();
+  const visibleLeaves = leaves.filter(l => visibleIds.has(l.workerId));
+  ensureDateView('employeeLeaves', 'leave-view-body', visibleLeaves.map(l => l.startDate), renderLeaves);
   const dateBar = inp('date-view-employeeLeaves');
   if (dateBar) dateBar.style.display = leaveView === 'list' ? 'flex' : 'none';
 
-  const filteredLeaves = leaves.filter(l => dateViewMatch('employeeLeaves', l.startDate));
+  const filteredLeaves = visibleLeaves.filter(l => dateViewMatch('employeeLeaves', l.startDate));
   const metricLeaves = leaveView === 'list'
     ? filteredLeaves
-    : leaves.filter(l => (l.startDate||'').slice(0,7) === leaveMonth);
+    : visibleLeaves.filter(l => (l.startDate||'').slice(0,7) === leaveMonth);
   const pending = metricLeaves.filter(l => l.status === '신청').length;
   const approved = metricLeaves.filter(l => l.status === '승인').length;
   const usedDays = metricLeaves.filter(l => l.status === '승인')
@@ -793,7 +814,7 @@ function renderLeaves() {
 
   if (leaveView === 'calendar') {
     const cal = calendarGrid(leaveMonth, ds => {
-      const day = leaves.filter(l => l.status !== '반려' && (l.startDate||'') <= ds && (l.endDate||l.startDate||'') >= ds);
+      const day = visibleLeaves.filter(l => l.status !== '반려' && (l.startDate||'') <= ds && (l.endDate||l.startDate||'') >= ds);
       if (!day.length) return '';
       return day.map(l => {
         const color = l.status === '승인' ? 'var(--tx-ok)' : 'var(--tx-w)';
@@ -852,7 +873,8 @@ function renderLeaves() {
 }
 
 function openLeaveAdd() {
-  if (!workers.length) { showToast('먼저 직원을 등록하세요.', 'error'); return; }
+  if (typeof requireCreateAction === 'function' && !requireCreateAction('workers', '휴가 등록')) return;
+  if (!hrVisibleWorkers().length) { showToast('먼저 직원을 등록하세요.', 'error'); return; }
   const modal = inp('leave-modal');
   delete modal.dataset.editId;
   inp('leave-modal-ttl').innerHTML = '<i class="ti ti-beach" style="color:var(--tx-i);"></i>휴가 신청 등록';

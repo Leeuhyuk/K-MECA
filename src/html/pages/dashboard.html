@@ -125,7 +125,6 @@
             </div>
             <select id="proc-fc" onchange="renderProcess()" style="font-size:11px; height:26px; min-width:110px;"><option value="">전체 의뢰 고객사</option></select>
             <button class="btn btn-sm" onclick="openProcStagePanel()"><i class="ti ti-settings"></i></button>
-            <button class="btn btn-sm" onclick="exportProcessCSV()"><i class="ti ti-download"></i></button>
           </div>
         </div>
         <div id="pipeline-view" class="pipeline">
@@ -209,7 +208,7 @@
           </div>
         </div>
         <div id="proc-detail-table" style="overflow-x:auto; display:none;">
-    <table style="min-width:860px;">
+    <table class="process-standard-table" style="min-width:1080px;">
       <thead>
         <tr>
           <th>고객사</th><th>제품명</th><th>공정 단계</th><th>납기</th><th>D-Day</th>

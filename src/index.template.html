@@ -51,6 +51,7 @@
 <!--#include js/state-search.js-->
 <!--#include js/helpers-auth.js-->
 <!--#include js/navigation.js-->
+<!--#include js/bulk-entry.js-->
 <!--#include js/dashboard.js-->
 <!--#include js/deliveries.js-->
 <!--#include js/calendar.js-->
@@ -68,6 +69,7 @@
 <!--#include js/shortcuts-theme-boot.js-->
 <!--#include js/rbac.js-->
 <!--#include js/cloud-sync.js-->
+<!--#include js/firebase-usage.js-->
 <!--#include js/utils-email.js-->
 <!--#include js/print-docs.js-->
 <!--#include js/partners.js-->
@@ -77,10 +79,12 @@
 <!--#include js/alimtalk.js-->
 <!--#include js/api-settings.js-->
 <!--#include js/google-drive.js-->
+<!--#include js/backup-export.js-->
 <!--#include js/notes.js-->
 <!--#include js/popbill.js-->
 <!--#include js/table-reorder.js-->
 <!--#include js/table-selection.js-->
+<!--#include js/side-entry-modals.js-->
 <!--#include js/mobile.js-->
 </script>
 
@@ -92,7 +96,7 @@
     <div class="fg fg2" style="gap:10px; margin-bottom:14px;">
       <div class="ff"><label>거래처명 *</label><input id="bp-name" placeholder="예: ㈜대한산업"></div>
       <div class="ff"><label>유형 *</label>
-        <select id="bp-type"><option>공급처</option><option>구매처</option><option>외주처</option><option>기타</option></select>
+        <select id="bp-type"><option>공급처</option><option>고객사</option><option>외주처</option><option>기타</option></select>
       </div>
       <div class="ff"><label>담당자</label><input id="bp-mgr" placeholder="홍길동"></div>
       <div class="ff"><label>전화번호</label><input id="bp-tel" placeholder="031-000-0000"></div>
@@ -119,7 +123,7 @@
     </div>
     <div id="cp-list" style="max-height:320px;overflow-y:auto;border:1px solid var(--br);border-radius:var(--rm);"></div>
     <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;">
-      <button class="btn btn-sm" onclick="closeModal('client-picker-modal'); openClientAdd();"><i class="ti ti-plus"></i>신규 고객사 등록</button>
+      <button class="btn btn-sm" onclick="openClientAddFromPicker()"><i class="ti ti-plus"></i>신규 고객사 등록</button>
       <button class="btn" onclick="closeModal('client-picker-modal')">닫기</button>
     </div>
   </div>
@@ -131,7 +135,7 @@
     <div style="display:flex;gap:8px;margin-bottom:12px;">
       <input id="pp-q" placeholder="거래처명·담당자·이메일 검색..." style="flex:1;" oninput="renderPickerList()">
       <select id="pp-ft" onchange="renderPickerList()" style="min-width:90px;">
-        <option value="">전체</option><option>공급처</option><option>구매처</option><option>외주처</option><option>기타</option>
+        <option value="">전체</option><option>공급처</option><option>고객사</option><option>외주처</option><option>기타</option>
       </select>
     </div>
     <div id="pp-list" style="max-height:320px;overflow-y:auto;border:1px solid var(--br);border-radius:var(--rm);"></div>
@@ -144,7 +148,7 @@
 
 <!-- ══ 견적요청서 등록/수정 팝업 모달 ══ -->
 <div class="overlay" id="rfq-modal">
-  <div class="dlg" style="max-width:680px; width:96%;">
+  <div class="dlg" style="max-width:960px; width:96%;">
     <div class="dlg-title" id="rfq-modal-ttl"><i class="ti ti-file-description" style="color:var(--tx-i);"></i>견적요청서 등록</div>
     <div class="fg fg4" style="gap:10px; margin-bottom:14px;">
       <div class="ff"><label>문서번호</label><input id="rq-id" readonly></div>
@@ -152,23 +156,38 @@
       <div class="ff"><label>상태</label>
         <select id="rq-status"><option>요청전</option><option>요청중</option><option>회신완료</option><option>채택</option><option>미채택</option></select>
       </div>
-      <div class="ff"><label>연결 고객사</label><select id="rq-client" onchange="onRfqClientChange()"><option value="">-- 선택 --</option></select></div>
-      <div class="ff"><label>연결 제품</label><select id="rq-product"><option value="">-- 선택 --</option></select></div>
-      <div class="ff" style="grid-column:span 2;"><label>공급처/협력사 *</label>
-        <div style="display:flex;gap:4px;">
-          <input id="rq-supplier" placeholder="공급처명" style="flex:1;">
-          <button type="button" class="btn btn-sm" onclick="openPartnerPicker(function(p){inp('rq-supplier').value=p.name;inp('rq-semail').value=p.email||'';})" style="white-space:nowrap;"><i class="ti ti-search"></i>찾기</button>
+      <div class="ff"><label>연결 고객사</label>
+        <div class="field-search">
+          <input id="rq-client-search" placeholder="고객사명 검색" autocomplete="off" oninput="onClientFieldSearchInput('rq-client','rq-client-search','rq-client-results','onRfqClientChange')" onfocus="renderClientFieldMatches('rq-client','rq-client-search','rq-client-results','onRfqClientChange')" onblur="setTimeout(function(){hideClientFieldMatches('rq-client-results');},160)" onkeydown="onClientFieldSearchKey(event,'rq-client','rq-client-search','rq-client-results','onRfqClientChange')">
+          <button type="button" class="field-search-btn" onclick="openClientFieldPicker('rq-client','rq-client-search','rq-client-results','onRfqClientChange')" title="고객사 찾기"><i class="ti ti-search"></i></button>
+          <select id="rq-client" class="linked-hidden-select" onchange="onRfqClientChange(); syncClientFieldDisplay('rq-client','rq-client-search');"><option value="">-- 선택 --</option></select>
         </div>
+        <div class="inline-search-results" id="rq-client-results"></div>
+      </div>
+      <div class="ff"><label>연결 제품</label>
+        <div class="field-search">
+          <input id="rq-product-search" placeholder="제품명 검색" autocomplete="off" oninput="onProductFieldSearchInput('rq-product','rq-product-search','rq-product-results','rq-client')" onfocus="renderProductFieldMatches('rq-product','rq-product-search','rq-product-results','rq-client')" onblur="setTimeout(function(){hideProductFieldMatches('rq-product-results');},160)" onkeydown="onProductFieldSearchKey(event,'rq-product','rq-product-search','rq-product-results','rq-client')">
+          <button type="button" class="field-search-btn" onclick="openProductFieldSearch('rq-product','rq-product-search','rq-product-results','rq-client')" title="제품 찾기"><i class="ti ti-search"></i></button>
+          <select id="rq-product" class="linked-hidden-select" onchange="syncProductFieldDisplay('rq-product','rq-product-search');"><option value="">-- 선택 --</option></select>
+        </div>
+        <div class="inline-search-results" id="rq-product-results"></div>
+      </div>
+      <div class="ff" style="grid-column:span 2;"><label>공급처/협력사 *</label>
+        <div class="field-search">
+          <input id="rq-supplier" placeholder="공급처명" autocomplete="off" oninput="onPartnerFieldSearchInput('rq-supplier','rq-supplier-results','rq-semail')" onfocus="renderPartnerFieldMatches('rq-supplier','rq-supplier-results','rq-semail')" onblur="setTimeout(function(){hidePartnerFieldMatches('rq-supplier-results');},160)" onkeydown="onPartnerFieldSearchKey(event,'rq-supplier','rq-supplier-results','rq-semail')">
+          <button type="button" class="field-search-btn" onclick="openPartnerFieldPicker('rq-supplier','rq-supplier-results','rq-semail')" title="공급처 찾기"><i class="ti ti-search"></i></button>
+        </div>
+        <div class="inline-search-results" id="rq-supplier-results"></div>
       </div>
       <div class="ff" style="grid-column:span 2;"><label>공급처 이메일</label><input id="rq-semail" type="email" placeholder="supplier@example.com"></div>
-      <div class="ff" style="grid-column:span 2;"><label>품목명 *</label><input id="rq-item" placeholder="예: 서보모터 200W"></div>
-      <div class="ff" style="grid-column:span 2;"><label>규격/사양</label><input id="rq-spec" placeholder="예: 220V, ISO규격 등"></div>
-      <div class="ff"><label>수량</label><input id="rq-qty" type="number" placeholder="1" min="0" value="1"></div>
-      <div class="ff"><label>단위</label>
-        <select id="rq-unit"><option>EA</option><option>대</option><option>SET</option><option>kg</option><option>M</option><option>L</option><option>BOX</option></select>
+      <div class="doc-item-grid">
+        <div class="doc-item-grid-label"><i class="ti ti-table"></i>품목 입력 *</div>
+        <table>
+          <thead><tr><th>품목명</th><th class="doc-item-spec">규격/사양</th><th class="doc-item-qty">수량</th><th class="doc-item-unit">단위</th><th class="doc-item-price">희망단가</th><th>비고</th><th class="doc-item-action"></th></tr></thead>
+          <tbody id="rq-items-body"></tbody>
+        </table>
       </div>
-      <div class="ff"><label>희망 단가 (원)</label><input id="rq-target" type="number" placeholder="0" min="0"></div>
-      <div class="ff"><label>비고</label><input id="rq-note" placeholder="특이사항, 도면 첨부 여부 등"></div>
+      <input id="rq-item" type="hidden"><input id="rq-spec" type="hidden"><input id="rq-qty" type="hidden" value="1"><input id="rq-unit" type="hidden" value="EA"><input id="rq-target" type="hidden"><input id="rq-note" type="hidden">
     </div>
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('rfq-modal')">취소</button>
@@ -179,7 +198,7 @@
 
 <!-- ══ 구매발주서 등록/수정 팝업 모달 ══ -->
 <div class="overlay" id="po-modal">
-  <div class="dlg" style="max-width:700px; width:96%;">
+  <div class="dlg" style="max-width:960px; width:96%;">
     <div class="dlg-title" id="po-modal-ttl"><i class="ti ti-file-invoice" style="color:var(--tx-i);"></i>구매발주서 등록</div>
     <div class="fg fg4" style="gap:10px; margin-bottom:14px;">
       <div class="ff"><label>발주번호</label><input id="po-id" readonly></div>
@@ -187,29 +206,45 @@
       <div class="ff"><label>발주 상태</label>
         <select id="po-status"><option>작성중</option><option>발송완료</option><option>확인완료</option><option>입고완료</option></select>
       </div>
-      <div class="ff"><label>연결 고객사</label><select id="po-client-sel" onchange="onPoClientChange()"><option value="">-- 선택 --</option></select></div>
-      <div class="ff"><label>연결 제품</label><select id="po-product-sel"><option value="">-- 선택 --</option></select></div>
-      <div class="ff" style="grid-column:span 2;"><label>공급처/협력사 *</label>
-        <div style="display:flex;gap:4px;">
-          <input id="po-supplier" placeholder="발주할 공급처명" style="flex:1;">
-          <button type="button" class="btn btn-sm" onclick="openPartnerPicker(function(p){inp('po-supplier').value=p.name;inp('po-semail').value=p.email||'';})" style="white-space:nowrap;"><i class="ti ti-search"></i>찾기</button>
+      <div class="ff"><label>연결 고객사</label>
+        <div class="field-search">
+          <input id="po-client-search" placeholder="고객사명 검색" autocomplete="off" oninput="onClientFieldSearchInput('po-client-sel','po-client-search','po-client-results','onPoClientChange')" onfocus="renderClientFieldMatches('po-client-sel','po-client-search','po-client-results','onPoClientChange')" onblur="setTimeout(function(){hideClientFieldMatches('po-client-results');},160)" onkeydown="onClientFieldSearchKey(event,'po-client-sel','po-client-search','po-client-results','onPoClientChange')">
+          <button type="button" class="field-search-btn" onclick="openClientFieldPicker('po-client-sel','po-client-search','po-client-results','onPoClientChange')" title="고객사 찾기"><i class="ti ti-search"></i></button>
+          <select id="po-client-sel" class="linked-hidden-select" onchange="onPoClientChange(); syncClientFieldDisplay('po-client-sel','po-client-search');"><option value="">-- 선택 --</option></select>
         </div>
+        <div class="inline-search-results" id="po-client-results"></div>
+      </div>
+      <div class="ff"><label>연결 제품</label>
+        <div class="field-search">
+          <input id="po-product-search" placeholder="제품명 검색" autocomplete="off" oninput="onProductFieldSearchInput('po-product-sel','po-product-search','po-product-results','po-client-sel')" onfocus="renderProductFieldMatches('po-product-sel','po-product-search','po-product-results','po-client-sel')" onblur="setTimeout(function(){hideProductFieldMatches('po-product-results');},160)" onkeydown="onProductFieldSearchKey(event,'po-product-sel','po-product-search','po-product-results','po-client-sel')">
+          <button type="button" class="field-search-btn" onclick="openProductFieldSearch('po-product-sel','po-product-search','po-product-results','po-client-sel')" title="제품 찾기"><i class="ti ti-search"></i></button>
+          <select id="po-product-sel" class="linked-hidden-select" onchange="syncProductFieldDisplay('po-product-sel','po-product-search');"><option value="">-- 선택 --</option></select>
+        </div>
+        <div class="inline-search-results" id="po-product-results"></div>
+      </div>
+      <div class="ff" style="grid-column:span 2;"><label>공급처/협력사 *</label>
+        <div class="field-search">
+          <input id="po-supplier" placeholder="발주할 공급처명" autocomplete="off" oninput="onPartnerFieldSearchInput('po-supplier','po-supplier-results','po-semail')" onfocus="renderPartnerFieldMatches('po-supplier','po-supplier-results','po-semail')" onblur="setTimeout(function(){hidePartnerFieldMatches('po-supplier-results');},160)" onkeydown="onPartnerFieldSearchKey(event,'po-supplier','po-supplier-results','po-semail')">
+          <button type="button" class="field-search-btn" onclick="openPartnerFieldPicker('po-supplier','po-supplier-results','po-semail')" title="공급처 찾기"><i class="ti ti-search"></i></button>
+        </div>
+        <div class="inline-search-results" id="po-supplier-results"></div>
       </div>
       <div class="ff" style="grid-column:span 2;"><label>공급처 이메일</label><input id="po-semail" type="email" placeholder="supplier@example.com"></div>
-      <div class="ff" style="grid-column:span 2;"><label>품목명 *</label><input id="po-item" placeholder="예: 볼스크류 SFU1605"></div>
-      <div class="ff" style="grid-column:span 2;"><label>규격/사양</label><input id="po-spec" placeholder="예: 치수, 재질 등"></div>
-      <div class="ff"><label>수량</label><input id="po-qty" type="number" placeholder="1" min="0" value="1"></div>
-      <div class="ff"><label>단위</label>
-        <select id="po-unit"><option>EA</option><option>대</option><option>SET</option><option>kg</option><option>M</option><option>L</option><option>BOX</option></select>
+      <div class="doc-item-grid">
+        <div class="doc-item-grid-label"><i class="ti ti-table"></i>품목 입력 *</div>
+        <table>
+          <thead><tr><th>품목명</th><th class="doc-item-spec">규격/사양</th><th class="doc-item-qty">수량</th><th class="doc-item-unit">단위</th><th class="doc-item-price">단가</th><th>비고</th><th class="doc-item-action"></th></tr></thead>
+          <tbody id="po-items-body"></tbody>
+        </table>
       </div>
-      <div class="ff"><label>단가 (원)</label><input id="po-price" type="number" placeholder="0" min="0"></div>
+      <input id="po-item" type="hidden"><input id="po-spec" type="hidden"><input id="po-qty" type="hidden" value="1"><input id="po-unit" type="hidden" value="EA"><input id="po-price" type="hidden"><input id="po-note" type="hidden">
       <div class="ff"><label>결제 조건</label>
         <select id="po-pay"><option>현금</option><option>T/T</option><option>어음</option><option>카드</option><option>외상</option></select>
       </div>
       <div class="ff"><label>납품 방법</label>
         <select id="po-dlv"><option>직납</option><option>택배</option><option>지입</option><option>화물</option><option>방문수령</option></select>
       </div>
-      <div class="ff"><label>비고</label><input id="po-note" placeholder="특이사항 등"></div>
+      <div class="ff" style="grid-column:span 2;"><label>공통 메모</label><input id="po-note-common" placeholder="문서 전체 특이사항"></div>
     </div>
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('po-modal')">취소</button>
@@ -220,28 +255,31 @@
 
 <!-- ══ 거래명세표 / 세금계산서 공용 모달 ══ -->
 <div class="overlay" id="salesdoc-modal">
-  <div class="dlg" style="max-width:700px; width:96%;">
+  <div class="dlg" style="max-width:960px; width:96%;">
     <div class="dlg-title" id="sd-modal-ttl"><i class="ti ti-receipt" style="color:var(--tx-i);"></i>문서 등록</div>
     <div class="fg fg4" style="gap:10px; margin-bottom:14px;">
       <div class="ff"><label>문서번호</label><input id="sd-id" readonly></div>
       <div class="ff"><label>발행일자 *</label><input id="sd-date" type="date"></div>
       <div class="ff"><label>상태</label><select id="sd-status"></select></div>
       <div class="ff"><label>공급받는 고객사 *</label>
-        <div style="display:flex;gap:4px;">
-          <select id="sd-client" onchange="onSalesDocClientChange()" style="flex:1;"><option value="">-- 선택 --</option></select>
-          <button type="button" class="btn btn-sm" onclick="openClientPicker(function(c){ inp('sd-client').value=c.id; onSalesDocClientChange(); if(c.email && !v('sd-email')) sv('sd-email', c.email); })" style="white-space:nowrap;"><i class="ti ti-search"></i>찾기</button>
+        <div class="field-search">
+          <input id="sd-client-search" placeholder="고객사명 검색 또는 신규 등록" autocomplete="off" oninput="onClientFieldSearchInput('sd-client','sd-client-search','sd-client-results','onSalesDocClientChange')" onfocus="renderClientFieldMatches('sd-client','sd-client-search','sd-client-results','onSalesDocClientChange','sd-email')" onblur="setTimeout(function(){hideClientFieldMatches('sd-client-results');},160)" onkeydown="onClientFieldSearchKey(event,'sd-client','sd-client-search','sd-client-results','onSalesDocClientChange','sd-email')">
+          <button type="button" class="field-search-btn" onclick="openClientFieldPicker('sd-client','sd-client-search','sd-client-results','onSalesDocClientChange','sd-email')" title="고객사 찾기"><i class="ti ti-search"></i></button>
+          <select id="sd-client" class="linked-hidden-select" onchange="onSalesDocClientChange(); syncClientFieldDisplay('sd-client','sd-client-search');"><option value="">-- 선택 --</option></select>
         </div>
+        <div class="inline-search-results" id="sd-client-results"></div>
       </div>
-      <div class="ff"><label>연결 제품</label><select id="sd-product"><option value="">-- 선택 --</option></select></div>
+      <div class="ff"><label>사업자번호</label><input id="sd-bizno" placeholder="123-45-67890"></div>
       <div class="ff" style="grid-column:span 3;"><label>고객 이메일</label><input id="sd-email" type="email" placeholder="client@example.com"></div>
-      <div class="ff" style="grid-column:span 2;"><label>품목명 *</label><input id="sd-item" placeholder="예: 내구성 시험기"></div>
-      <div class="ff" style="grid-column:span 2;"><label>규격/사양</label><input id="sd-spec" placeholder="예: AC 220V"></div>
-      <div class="ff"><label>수량</label><input id="sd-qty" type="number" min="0" value="1"></div>
-      <div class="ff"><label>단위</label>
-        <select id="sd-unit"><option>EA</option><option>대</option><option>SET</option><option>kg</option><option>M</option><option>L</option><option>BOX</option></select>
+      <div class="doc-item-grid">
+        <div class="doc-item-grid-label"><i class="ti ti-table"></i>품목 입력 *</div>
+        <table>
+          <thead><tr><th>품목명</th><th class="doc-item-spec">규격/사양</th><th class="doc-item-qty">수량</th><th class="doc-item-unit">단위</th><th class="doc-item-price">단가</th><th>비고</th><th class="doc-item-action"></th></tr></thead>
+          <tbody id="sd-items-body"></tbody>
+        </table>
       </div>
-      <div class="ff"><label>단가 (원)</label><input id="sd-price" type="number" min="0" placeholder="0"></div>
-      <div class="ff"><label>비고</label><input id="sd-note" placeholder="특이사항"></div>
+      <input id="sd-product" type="hidden"><input id="sd-item" type="hidden"><input id="sd-spec" type="hidden"><input id="sd-qty" type="hidden" value="1"><input id="sd-unit" type="hidden" value="EA"><input id="sd-price" type="hidden"><input id="sd-note" type="hidden">
+      <div class="ff" style="grid-column:span 4;"><label>공통 메모</label><input id="sd-note-common" placeholder="문서 전체 특이사항"></div>
     </div>
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('salesdoc-modal')">취소</button>
@@ -252,24 +290,32 @@
 
 <!-- ══ 견적서 / 수주 공용 모달 ══ -->
 <div class="overlay" id="sodoc-modal">
-  <div class="dlg" style="max-width:700px; width:96%;">
+  <div class="dlg" style="max-width:960px; width:96%;">
     <div class="dlg-title" id="so2-modal-ttl"><i class="ti ti-file-text" style="color:var(--tx-i);"></i>견적서 등록</div>
     <div class="fg fg4" style="gap:10px; margin-bottom:14px;">
       <div class="ff"><label>문서번호</label><input id="so2-id" readonly></div>
       <div class="ff"><label>발행일자 *</label><input id="so2-date" type="date"></div>
       <div class="ff"><label>상태</label><select id="so2-status"></select></div>
-      <div class="ff"><label>고객사 *</label><select id="so2-client" onchange="onSODocClientChange()"><option value="">-- 선택 --</option></select></div>
-      <div class="ff" style="grid-column:span 2;"><label>미등록 고객사 직접입력</label><input id="so2-client-text" placeholder="목록에 없으면 업체명 직접 입력"></div>
-      <div class="ff"><label>고객 이메일</label><input id="so2-email" type="email" placeholder="client@example.com"></div>
-      <div class="ff" style="grid-column:span 2;"><label>품목명 *</label><input id="so2-item" placeholder="예: 내구성 시험기"></div>
-      <div class="ff" style="grid-column:span 2;"><label>규격/사양</label><input id="so2-spec" placeholder="예: ISO 7173"></div>
-      <div class="ff"><label>수량</label><input id="so2-qty" type="number" min="0" value="1"></div>
-      <div class="ff"><label>단위</label>
-        <select id="so2-unit"><option>대</option><option>EA</option><option>SET</option><option>kg</option><option>M</option><option>L</option><option>BOX</option></select>
+      <div class="ff"><label>고객사 *</label>
+        <div class="field-search">
+          <input id="so2-client-search" placeholder="고객사명 검색 또는 신규 등록" autocomplete="off" oninput="onClientFieldSearchInput('so2-client','so2-client-search','so2-client-results','onSODocClientChange')" onfocus="renderClientFieldMatches('so2-client','so2-client-search','so2-client-results','onSODocClientChange','so2-email')" onblur="setTimeout(function(){hideClientFieldMatches('so2-client-results');},160)" onkeydown="onClientFieldSearchKey(event,'so2-client','so2-client-search','so2-client-results','onSODocClientChange','so2-email')">
+          <button type="button" class="field-search-btn" onclick="openClientFieldPicker('so2-client','so2-client-search','so2-client-results','onSODocClientChange','so2-email')" title="고객사 찾기"><i class="ti ti-search"></i></button>
+          <select id="so2-client" class="linked-hidden-select" onchange="onSODocClientChange(); syncClientFieldDisplay('so2-client','so2-client-search');"><option value="">-- 선택 --</option></select>
+        </div>
+        <div class="inline-search-results" id="so2-client-results"></div>
       </div>
-      <div class="ff"><label>단가 (원)</label><input id="so2-price" type="number" min="0" placeholder="0"></div>
+      <div class="ff"><label>고객 이메일</label><input id="so2-email" type="email" placeholder="client@example.com"></div>
+      <div class="ff"><label>사업자번호</label><input id="so2-bizno" placeholder="123-45-67890"></div>
+      <div class="doc-item-grid">
+        <div class="doc-item-grid-label"><i class="ti ti-table"></i>품목 입력 *</div>
+        <table>
+          <thead><tr><th>품목명</th><th class="doc-item-spec">규격/사양</th><th class="doc-item-qty">수량</th><th class="doc-item-unit">단위</th><th class="doc-item-price">단가</th><th>비고</th><th class="doc-item-action"></th></tr></thead>
+          <tbody id="so2-items-body"></tbody>
+        </table>
+      </div>
+      <input id="so2-item" type="hidden"><input id="so2-spec" type="hidden"><input id="so2-qty" type="hidden" value="1"><input id="so2-unit" type="hidden" value="대"><input id="so2-price" type="hidden"><input id="so2-note" type="hidden">
       <div class="ff"><label>납기 희망일</label><input id="so2-due" type="date"></div>
-      <div class="ff" style="grid-column:span 4;"><label>비고</label><input id="so2-note" placeholder="특이사항"></div>
+      <div class="ff" style="grid-column:span 4;"><label>공통 메모</label><input id="so2-note-common" placeholder="문서 전체 특이사항"></div>
     </div>
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('sodoc-modal')">취소</button>
@@ -279,16 +325,23 @@
 </div>
 
 
-<!-- ══ 수주처 등록 모달 ══ -->
+<!-- ══ 고객사 등록 모달 ══ -->
 <div class="overlay" id="ca-modal">
   <div class="dlg" style="max-width:600px;width:96%;">
-    <div class="dlg-title" id="ca-modal-ttl"><i class="ti ti-building-plus" style="color:var(--tx-i);"></i>신규 수주처 등록</div>
+    <div class="dlg-title" id="ca-modal-ttl"><i class="ti ti-building-plus" style="color:var(--tx-i);"></i>신규 고객사 등록</div>
     <div class="fg fg4" style="gap:10px;margin-bottom:14px;">
-      <div class="ff"><label>고객사 코드</label><input id="ca-id" readonly></div>
-      <div class="ff"><label>업체명 *</label><input id="ca-name" placeholder="예: ㈜우리제조"></div>
+      <div class="ff"><label>거래처 고객사 코드</label><input id="ca-id" readonly></div>
+      <div class="ff" id="ca-name-wrap" style="grid-column:span 2;"><label>고객사명 *</label>
+        <div class="field-search">
+          <input id="ca-name" placeholder="고객사명 검색 또는 신규 입력" autocomplete="off" oninput="onClientRegisterNameInput()" onfocus="renderClientRegisterMatches()" onblur="setTimeout(hideClientRegisterMatches,160)" onkeydown="onClientRegisterNameKey(event)">
+          <button type="button" class="field-search-btn" id="ca-client-search-btn" onclick="openClientRegisterPicker()" title="고객사 찾기"><i class="ti ti-search"></i></button>
+        </div>
+        <div class="inline-search-results" id="ca-client-results"></div>
+      </div>
       <div class="ff"><label>담당자명</label><input id="ca-mgr" placeholder="담당자 성함"></div>
       <div class="ff"><label>연락처</label><input id="ca-tel" placeholder="031-1234-5678"></div>
       <div class="ff"><label>이메일</label><input id="ca-email" placeholder="contact@company.com"></div>
+      <div class="ff"><label>사업자번호</label><input id="ca-bizno" placeholder="123-45-67890"></div>
       <div class="ff"><label>수주 계약일</label><input id="ca-date" type="date"></div>
       <div class="ff" style="grid-column:span 2;"><label>특이사항</label><input id="ca-note" placeholder="기타 참고사항"></div>
     </div>
@@ -341,7 +394,14 @@
     <div class="fg fg4" style="gap:10px;margin-bottom:14px;">
       <div class="ff"><label>접수번호</label><input id="asa-id" readonly></div>
       <div class="ff"><label>접수일</label><input id="asa-recv" type="date"></div>
-      <div class="ff"><label>고객사 *</label><select id="asa-client"></select></div>
+      <div class="ff"><label>고객사 *</label>
+        <div class="field-search">
+          <input id="asa-client-search" placeholder="고객사명 검색" autocomplete="off" oninput="onClientFieldSearchInput('asa-client','asa-client-search','asa-client-results')" onfocus="renderClientFieldMatches('asa-client','asa-client-search','asa-client-results')" onblur="setTimeout(function(){hideClientFieldMatches('asa-client-results');},160)" onkeydown="onClientFieldSearchKey(event,'asa-client','asa-client-search','asa-client-results')">
+          <button type="button" class="field-search-btn" onclick="openClientFieldPicker('asa-client','asa-client-search','asa-client-results')" title="고객사 찾기"><i class="ti ti-search"></i></button>
+          <select id="asa-client" class="linked-hidden-select" onchange="syncClientFieldDisplay('asa-client','asa-client-search');"></select>
+        </div>
+        <div class="inline-search-results" id="asa-client-results"></div>
+      </div>
       <div class="ff"><label>대상 제품</label><input id="asa-product" placeholder="예: 내구성 시험기"></div>
       <div class="ff" style="grid-column:span 4;"><label>증상 / 접수 내용 *</label><input id="asa-symptom" placeholder="고객이 접수한 고장/요청 내용"></div>
       <div class="ff"><label>보증 구분</label>
@@ -379,10 +439,11 @@
         <select id="bma-sub" onchange="onBmaSubChange()"></select>
       </div>
       <div class="ff" style="grid-column:span 4;"><label>공급처 (발주처)</label>
-        <div style="display:flex;gap:4px;">
-          <input id="bma-supplier" placeholder="발주할 공급처명 (발주서 자동생성에 사용)" style="flex:1;">
-          <button type="button" class="btn btn-sm" onclick="openPartnerPicker(function(p){inp('bma-supplier').value=p.name;})" style="white-space:nowrap;"><i class="ti ti-search"></i>찾기</button>
+        <div class="field-search">
+          <input id="bma-supplier" placeholder="발주할 공급처명 (발주서 자동생성에 사용)" autocomplete="off" oninput="onPartnerFieldSearchInput('bma-supplier','bma-supplier-results')" onfocus="renderPartnerFieldMatches('bma-supplier','bma-supplier-results')" onblur="setTimeout(function(){hidePartnerFieldMatches('bma-supplier-results');},160)" onkeydown="onPartnerFieldSearchKey(event,'bma-supplier','bma-supplier-results')">
+          <button type="button" class="field-search-btn" onclick="openPartnerFieldPicker('bma-supplier','bma-supplier-results')" title="공급처 찾기"><i class="ti ti-search"></i></button>
         </div>
+        <div class="inline-search-results" id="bma-supplier-results"></div>
       </div>
     </div>
     <div class="dlg-actions">
@@ -420,19 +481,47 @@
 </div>
 
 <!-- ══ 자재 발주 등록 모달 ══ -->
-<div class="overlay" id="mat-modal">
-  <div class="dlg" style="max-width:720px;width:96%;">
-    <div class="dlg-title" id="mat-modal-ttl"><i class="ti ti-package-import" style="color:var(--tx-i);"></i>자재 수급/발주 등록</div>
-    <div class="fg fg4" style="gap:10px;margin-bottom:14px;">
+<div class="overlay side-entry-overlay" id="mat-modal">
+  <div class="dlg bulk-entry-dialog mat-entry-dialog" style="max-width:1040px;width:96%;">
+    <div class="selection-detail-resizer" onpointerdown="startSelectionDetailResize(event)" title="폭 조절"></div>
+    <div class="mat-entry-head">
+      <div class="dlg-title" id="mat-modal-ttl"><i class="ti ti-package-import" style="color:var(--tx-i);"></i>자재 수급/발주 등록</div>
+      <button type="button" class="side-entry-close" onclick="closeModal('mat-modal')" title="닫기"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="mat-entry-body thin-scroll">
+    <div class="entry-mode-switch" id="mat-mode-switch">
+      <button type="button" id="mat-mode-single" onclick="setMaterialEntryMode('single')">단건 입력</button>
+      <button type="button" id="mat-mode-bulk" onclick="setMaterialEntryMode('bulk')">일괄 입력</button>
+    </div>
+    <div class="fg fg4" style="gap:10px;margin-bottom:10px;">
       <div class="ff"><label>자재 코드</label><input id="ma-id" readonly></div>
-      <div class="ff"><label>연결 고객사 *</label><select id="ma-client" onchange="onAddMatClientChange()"></select></div>
-      <div class="ff" style="grid-column:span 2;"><label>해당 품목 제품 *</label><select id="ma-product"></select></div>
-      <div class="ff" style="grid-column:span 2;"><label>자재명 *</label><input id="ma-name" placeholder="예: 서보모터용 하우징"></div>
-      <div class="ff" style="grid-column:span 2;"><label>구매 공급처 *</label>
-        <div style="display:flex;gap:4px;">
-          <input id="ma-supplier" placeholder="공급 협력사명" style="flex:1;">
-          <button type="button" class="btn btn-sm" onclick="openPartnerPicker(function(p){inp('ma-supplier').value=p.name;})" style="white-space:nowrap;"><i class="ti ti-search"></i>찾기</button>
+      <div class="ff"><label>연결 고객사 *</label>
+        <div class="field-search">
+          <input id="ma-client-search" placeholder="고객사명 검색" autocomplete="off" oninput="onClientFieldSearchInput('ma-client','ma-client-search','ma-client-results','onAddMatClientChange')" onfocus="renderClientFieldMatches('ma-client','ma-client-search','ma-client-results','onAddMatClientChange')" onblur="setTimeout(function(){hideClientFieldMatches('ma-client-results');},160)" onkeydown="onClientFieldSearchKey(event,'ma-client','ma-client-search','ma-client-results','onAddMatClientChange')">
+          <button type="button" class="field-search-btn" onclick="openClientFieldPicker('ma-client','ma-client-search','ma-client-results','onAddMatClientChange')" title="고객사 찾기"><i class="ti ti-search"></i></button>
+          <select id="ma-client" class="linked-hidden-select" onchange="onAddMatClientChange(); syncClientFieldDisplay('ma-client','ma-client-search');"></select>
         </div>
+        <div class="inline-search-results" id="ma-client-results"></div>
+      </div>
+      <div class="ff" style="grid-column:span 2;"><label>해당 품목 제품 *</label>
+        <div class="field-search">
+          <input id="ma-product-search" placeholder="제품명 검색" autocomplete="off" oninput="onProductFieldSearchInput('ma-product','ma-product-search','ma-product-results','ma-client')" onfocus="renderProductFieldMatches('ma-product','ma-product-search','ma-product-results','ma-client')" onblur="setTimeout(function(){hideProductFieldMatches('ma-product-results');},160)" onkeydown="onProductFieldSearchKey(event,'ma-product','ma-product-search','ma-product-results','ma-client')">
+          <button type="button" class="field-search-btn" onclick="openProductFieldSearch('ma-product','ma-product-search','ma-product-results','ma-client')" title="제품 찾기"><i class="ti ti-search"></i></button>
+          <select id="ma-product" class="linked-hidden-select" onchange="syncProductFieldDisplay('ma-product','ma-product-search');"></select>
+        </div>
+        <div class="inline-search-results" id="ma-product-results"></div>
+      </div>
+      <div class="ff"><label>발주 일자</label><input id="ma-odate" type="date"></div>
+    </div>
+    <div class="fg fg4" id="mat-single-fields" style="gap:10px;margin-bottom:14px;">
+      <div class="ff" style="grid-column:span 2;"><label>자재명 *</label><input id="ma-name" placeholder="예: 서보모터용 하우징"></div>
+      <div class="ff"><label>규격</label><input id="ma-spec" placeholder="예: SFU1605"></div>
+      <div class="ff" style="grid-column:span 2;"><label>구매 공급처 *</label>
+        <div class="field-search">
+          <input id="ma-supplier" placeholder="공급 협력사명" autocomplete="off" oninput="onPartnerFieldSearchInput('ma-supplier','ma-supplier-results')" onfocus="renderPartnerFieldMatches('ma-supplier','ma-supplier-results')" onblur="setTimeout(function(){hidePartnerFieldMatches('ma-supplier-results');},160)" onkeydown="onPartnerFieldSearchKey(event,'ma-supplier','ma-supplier-results')">
+          <button type="button" class="field-search-btn" onclick="openPartnerFieldPicker('ma-supplier','ma-supplier-results')" title="공급처 찾기"><i class="ti ti-search"></i></button>
+        </div>
+        <div class="inline-search-results" id="ma-supplier-results"></div>
       </div>
       <div class="ff"><label>매입 단가 (원)</label><input id="ma-price" type="number" placeholder="0" min="0"></div>
       <div class="ff"><label>수량</label><input id="ma-qty" type="number" placeholder="0" min="0"></div>
@@ -442,11 +531,21 @@
       <div class="ff"><label>입고 상황</label>
         <select id="ma-status"><option>발주전</option><option>발주중</option><option>입고완료</option><option>지연</option></select>
       </div>
-      <div class="ff"><label>발주 일자</label><input id="ma-odate" type="date"></div>
       <div class="ff"><label>입고 예정일</label><input id="ma-edate" type="date"></div>
       <div class="ff" style="grid-column:span 2;"><label>참고사항</label><input id="ma-note" placeholder="가공 도면 유무 등"></div>
     </div>
-    <div class="dlg-actions">
+    <div class="batch-entry-grid batch-entry-shared-grid" id="mat-bulk-panel" style="display:none;">
+      <div class="batch-entry-label">
+        <span><i class="ti ti-table"></i>자재 발주 일괄 입력</span>
+        <small>좌측 라벨 고정 · 항목은 우측으로 추가</small>
+      </div>
+      <table>
+        <thead id="mat-bulk-head"></thead>
+        <tbody id="mat-bulk-body" data-bulk-key="mat"></tbody>
+      </table>
+    </div>
+    </div>
+    <div class="dlg-actions mat-entry-actions">
       <button class="btn" onclick="closeModal('mat-modal')">취소</button>
       <button class="btn btn-primary" id="mat-save-btn" onclick="saveMaterialForm()"><i class="ti ti-check"></i>등록</button>
     </div>
@@ -455,9 +554,13 @@
 
 <!-- ══ 재고 등록 모달 ══ -->
 <div class="overlay" id="inv-modal">
-  <div class="dlg" style="max-width:580px;width:96%;">
+  <div class="dlg bulk-entry-dialog" style="max-width:1040px;width:96%;">
     <div class="dlg-title" id="inv-modal-ttl"><i class="ti ti-package" style="color:var(--tx-i);"></i>재고 품목 등록</div>
-    <div class="fg fg4" style="gap:10px;margin-bottom:14px;">
+    <div class="entry-mode-switch" id="inv-mode-switch">
+      <button type="button" id="inv-mode-single" onclick="setInventoryEntryMode('single')">단건 입력</button>
+      <button type="button" id="inv-mode-bulk" onclick="setInventoryEntryMode('bulk')">일괄 입력</button>
+    </div>
+    <div class="fg fg4" id="inv-single-fields" style="gap:10px;margin-bottom:14px;">
       <div class="ff"><label>재고 코드</label><input id="inva-id" readonly></div>
       <div class="ff" style="grid-column:span 3;"><label>품목명 *</label><input id="inva-name" placeholder="예: LM 가이드 레일"></div>
       <div class="ff"><label>재고 구분 *</label>
@@ -474,6 +577,13 @@
       <div class="ff" style="grid-column:span 2;"><label>보관 위치</label><input id="inva-location" placeholder="예: A-4 선반"></div>
       <div class="ff" style="grid-column:span 2;"><label>참고사항</label><input id="inva-note" placeholder="기타 메모"></div>
     </div>
+    <div class="batch-entry-grid" id="inv-bulk-panel" style="display:none;">
+      <div class="batch-entry-label"><i class="ti ti-table"></i>재고 품목 일괄 입력</div>
+      <table>
+        <thead><tr><th>품목명 *</th><th>재고 구분</th><th>세부 유형</th><th>현재고 *</th><th>단위</th><th>안전재고</th><th>보관 위치</th><th>참고</th><th></th></tr></thead>
+        <tbody id="inv-bulk-body" data-bulk-key="inv"></tbody>
+      </table>
+    </div>
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('inv-modal')">취소</button>
       <button class="btn btn-primary" id="inv-save-btn" onclick="saveInventoryForm()"><i class="ti ti-check"></i>저장</button>
@@ -483,12 +593,32 @@
 
 <!-- ══ 생산 지시 등록 모달 ══ -->
 <div class="overlay" id="order-modal">
-  <div class="dlg" style="max-width:680px;width:96%;">
+  <div class="dlg bulk-entry-dialog" style="max-width:1040px;width:96%;">
     <div class="dlg-title" id="order-modal-ttl"><i class="ti ti-clipboard-plus" style="color:var(--tx-i);"></i>생산 지시 등록</div>
-    <div class="fg fg4" style="gap:10px;margin-bottom:14px;">
+    <div class="entry-mode-switch" id="order-mode-switch">
+      <button type="button" id="order-mode-single" onclick="setOrderEntryMode('single')">단건 입력</button>
+      <button type="button" id="order-mode-bulk" onclick="setOrderEntryMode('bulk')">일괄 입력</button>
+    </div>
+    <div class="fg fg4" style="gap:10px;margin-bottom:10px;">
       <div class="ff"><label>지시 번호</label><input id="oa-id" readonly></div>
-      <div class="ff"><label>연결 고객사</label><select id="oa-client" onchange="onAddOrderClientChange()"></select></div>
-      <div class="ff" style="grid-column:span 2;"><label>생산 대상 제품</label><select id="oa-product"></select></div>
+      <div class="ff"><label>연결 고객사</label>
+        <div class="field-search">
+          <input id="oa-client-search" placeholder="고객사명 검색" autocomplete="off" oninput="onClientFieldSearchInput('oa-client','oa-client-search','oa-client-results','onAddOrderClientChange')" onfocus="renderClientFieldMatches('oa-client','oa-client-search','oa-client-results','onAddOrderClientChange')" onblur="setTimeout(function(){hideClientFieldMatches('oa-client-results');},160)" onkeydown="onClientFieldSearchKey(event,'oa-client','oa-client-search','oa-client-results','onAddOrderClientChange')">
+          <button type="button" class="field-search-btn" onclick="openClientFieldPicker('oa-client','oa-client-search','oa-client-results','onAddOrderClientChange')" title="고객사 찾기"><i class="ti ti-search"></i></button>
+          <select id="oa-client" class="linked-hidden-select" onchange="onAddOrderClientChange(); syncClientFieldDisplay('oa-client','oa-client-search');"></select>
+        </div>
+        <div class="inline-search-results" id="oa-client-results"></div>
+      </div>
+    </div>
+    <div class="fg fg4" id="order-single-fields" style="gap:10px;margin-bottom:14px;">
+      <div class="ff" style="grid-column:span 2;"><label>생산 대상 제품</label>
+        <div class="field-search">
+          <input id="oa-product-search" placeholder="제품명 검색" autocomplete="off" oninput="onProductFieldSearchInput('oa-product','oa-product-search','oa-product-results','oa-client')" onfocus="renderProductFieldMatches('oa-product','oa-product-search','oa-product-results','oa-client')" onblur="setTimeout(function(){hideProductFieldMatches('oa-product-results');},160)" onkeydown="onProductFieldSearchKey(event,'oa-product','oa-product-search','oa-product-results','oa-client')">
+          <button type="button" class="field-search-btn" onclick="openProductFieldSearch('oa-product','oa-product-search','oa-product-results','oa-client')" title="제품 찾기"><i class="ti ti-search"></i></button>
+          <select id="oa-product" class="linked-hidden-select" onchange="syncProductFieldDisplay('oa-product','oa-product-search');"></select>
+        </div>
+        <div class="inline-search-results" id="oa-product-results"></div>
+      </div>
       <div class="ff"><label>투입 설비 라인</label>
         <select id="oa-line"><option>라인 A</option><option>라인 B</option><option>라인 C</option></select>
       </div>
@@ -502,7 +632,15 @@
       <div class="ff"><label>담당 감독자</label><select id="oa-mgr"></select></div>
       <div class="ff" style="grid-column:span 2;"><label>지시 메모</label><input id="oa-note" placeholder="작업 지시 사항"></div>
     </div>
+    <div class="batch-entry-grid" id="order-bulk-panel" style="display:none;">
+      <div class="batch-entry-label"><i class="ti ti-table"></i>생산 지시 일괄 입력</div>
+      <table>
+        <thead><tr><th>제품 *</th><th>라인</th><th>목표량 *</th><th>개시일</th><th>납기일</th><th>상태</th><th>담당자</th><th>메모</th><th></th></tr></thead>
+        <tbody id="order-bulk-body" data-bulk-key="order"></tbody>
+      </table>
+    </div>
     <div class="dlg-actions">
+      <button class="btn" id="order-delete-btn" style="display:none;color:var(--tx-d);border-color:var(--br-d);" onclick="deleteCurrentOrder()"><i class="ti ti-trash"></i>삭제</button>
       <button class="btn" onclick="closeModal('order-modal')">취소</button>
       <button class="btn btn-primary" id="order-save-btn" onclick="saveOrderForm()"><i class="ti ti-check"></i>지시 등록</button>
     </div>
@@ -511,13 +649,33 @@
 
 <!-- ══ 불량 등록 모달 ══ -->
 <div class="overlay" id="defect-modal">
-  <div class="dlg" style="max-width:640px;width:96%;">
+  <div class="dlg bulk-entry-dialog" style="max-width:1040px;width:96%;">
     <div class="dlg-title" id="defect-modal-ttl"><i class="ti ti-alert-triangle" style="color:var(--tx-d);"></i>불량 리포트 등록</div>
-    <div class="fg fg3" style="gap:10px;margin-bottom:14px;">
+    <div class="entry-mode-switch" id="df-mode-switch">
+      <button type="button" id="df-mode-single" onclick="setDefectEntryMode('single')">단건 입력</button>
+      <button type="button" id="df-mode-bulk" onclick="setDefectEntryMode('bulk')">일괄 입력</button>
+    </div>
+    <div class="fg fg3" style="gap:10px;margin-bottom:10px;">
       <div class="ff"><label>식별 코드</label><input id="df-id" readonly></div>
       <div class="ff"><label>발생일자</label><input id="df-date" type="date"></div>
-      <div class="ff"><label>고객사</label><select id="df-client" onchange="onQcClientChange()"></select></div>
-      <div class="ff"><label>발생 제품</label><select id="df-product"></select></div>
+      <div class="ff"><label>고객사</label>
+        <div class="field-search">
+          <input id="df-client-search" placeholder="고객사명 검색" autocomplete="off" oninput="onClientFieldSearchInput('df-client','df-client-search','df-client-results','onQcClientChange')" onfocus="renderClientFieldMatches('df-client','df-client-search','df-client-results','onQcClientChange')" onblur="setTimeout(function(){hideClientFieldMatches('df-client-results');},160)" onkeydown="onClientFieldSearchKey(event,'df-client','df-client-search','df-client-results','onQcClientChange')">
+          <button type="button" class="field-search-btn" onclick="openClientFieldPicker('df-client','df-client-search','df-client-results','onQcClientChange')" title="고객사 찾기"><i class="ti ti-search"></i></button>
+          <select id="df-client" class="linked-hidden-select" onchange="onQcClientChange(); syncClientFieldDisplay('df-client','df-client-search');"></select>
+        </div>
+        <div class="inline-search-results" id="df-client-results"></div>
+      </div>
+    </div>
+    <div class="fg fg3" id="df-single-fields" style="gap:10px;margin-bottom:14px;">
+      <div class="ff"><label>발생 제품</label>
+        <div class="field-search">
+          <input id="df-product-search" placeholder="제품명 검색" autocomplete="off" oninput="onProductFieldSearchInput('df-product','df-product-search','df-product-results','df-client')" onfocus="renderProductFieldMatches('df-product','df-product-search','df-product-results','df-client')" onblur="setTimeout(function(){hideProductFieldMatches('df-product-results');},160)" onkeydown="onProductFieldSearchKey(event,'df-product','df-product-search','df-product-results','df-client')">
+          <button type="button" class="field-search-btn" onclick="openProductFieldSearch('df-product','df-product-search','df-product-results','df-client')" title="제품 찾기"><i class="ti ti-search"></i></button>
+          <select id="df-product" class="linked-hidden-select" onchange="syncProductFieldDisplay('df-product','df-product-search');"></select>
+        </div>
+        <div class="inline-search-results" id="df-product-results"></div>
+      </div>
       <div class="ff"><label>발생 공정</label><select id="df-stage"></select></div>
       <div class="ff"><label>불량 유형 *</label><input id="df-type" placeholder="예: 조립 결합 유격"></div>
       <div class="ff"><label>부적합 수량 *</label><input id="df-qty" type="number" placeholder="1" min="1"></div>
@@ -528,6 +686,13 @@
       </div>
       <div class="ff" style="grid-column:span 2;"><label>비고</label><input id="df-note" placeholder="추가 메모"></div>
     </div>
+    <div class="batch-entry-grid" id="df-bulk-panel" style="display:none;">
+      <div class="batch-entry-label"><i class="ti ti-table"></i>불량 리포트 일괄 입력</div>
+      <table>
+        <thead><tr><th>제품 *</th><th>공정</th><th>불량 유형 *</th><th>수량 *</th><th>귀책 원인</th><th>처리 방안</th><th>상태</th><th>비고</th><th></th></tr></thead>
+        <tbody id="df-bulk-body" data-bulk-key="df"></tbody>
+      </table>
+    </div>
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('defect-modal')">취소</button>
       <button class="btn btn-primary" id="df-save-btn" onclick="addDefect()"><i class="ti ti-check"></i>저장</button>
@@ -537,24 +702,40 @@
 
 <!-- ══ 클레임 등록 모달 ══ -->
 <div class="overlay" id="claim-modal">
-  <div class="dlg" style="max-width:580px;width:96%;">
+  <div class="dlg" style="max-width:680px;width:96%;">
     <div class="dlg-title" id="claim-modal-ttl"><i class="ti ti-message-report" style="color:var(--tx-w);"></i>고객 클레임 등록</div>
-    <div class="fg fg3" style="gap:10px;margin-bottom:14px;">
+    <div class="fg fg4" style="gap:10px;margin-bottom:10px;">
       <div class="ff"><label>클레임 코드</label><input id="cl-id" readonly></div>
       <div class="ff"><label>접수일</label><input id="cl-date" type="date"></div>
+      <div class="ff"><label>고객사 *</label>
+        <div class="field-search">
+          <input id="cl-client-search" placeholder="고객사명 검색 또는 직접 입력" autocomplete="off" oninput="onClientFieldSearchInput('cl-client','cl-client-search','cl-client-results','onClaimClientChange')" onfocus="renderClientFieldMatches('cl-client','cl-client-search','cl-client-results','onClaimClientChange')" onblur="setTimeout(function(){hideClientFieldMatches('cl-client-results');},160)" onkeydown="onClientFieldSearchKey(event,'cl-client','cl-client-search','cl-client-results','onClaimClientChange')">
+          <button type="button" class="field-search-btn" onclick="openClientFieldPicker('cl-client','cl-client-search','cl-client-results','onClaimClientChange')" title="고객사 찾기"><i class="ti ti-search"></i></button>
+          <select id="cl-client" class="linked-hidden-select" onchange="onClaimClientChange(); syncClientFieldDisplay('cl-client','cl-client-search');"></select>
+        </div>
+        <div class="inline-search-results" id="cl-client-results"></div>
+      </div>
+      <div class="ff"><label>대상 제품</label>
+        <div class="field-search">
+          <input id="cl-product-search" placeholder="제품명 검색 또는 직접 입력" autocomplete="off" oninput="onProductFieldSearchInput('cl-product','cl-product-search','cl-product-results','cl-client')" onfocus="renderProductFieldMatches('cl-product','cl-product-search','cl-product-results','cl-client')" onblur="setTimeout(function(){hideProductFieldMatches('cl-product-results');},160)" onkeydown="onProductFieldSearchKey(event,'cl-product','cl-product-search','cl-product-results','cl-client')">
+          <button type="button" class="field-search-btn" onclick="openProductFieldSearch('cl-product','cl-product-search','cl-product-results','cl-client')" title="제품 찾기"><i class="ti ti-search"></i></button>
+          <select id="cl-product" class="linked-hidden-select" onchange="syncProductFieldDisplay('cl-product','cl-product-search');"></select>
+        </div>
+        <div class="inline-search-results" id="cl-product-results"></div>
+      </div>
+      <input id="cl-client-text" type="hidden">
+      <input id="cl-product-text" type="hidden">
+    </div>
+    <div class="fg fg4" id="cl-single-fields" style="gap:10px;margin-bottom:14px;">
       <div class="ff"><label>유형</label>
         <select id="cl-kind"><option>클레임</option><option>AS</option><option>기타</option></select>
       </div>
-      <div class="ff"><label>제기처(고객사)</label><select id="cl-client" onchange="fillProductSelect('cl-product', this.value)"></select></div>
-      <div class="ff" style="grid-column:span 2;"><label>미등록 고객사 직접입력</label><input id="cl-client-text" placeholder="목록에 없으면 업체명 직접 입력"></div>
-      <div class="ff"><label>대상 제품</label><select id="cl-product"></select></div>
-      <div class="ff" style="grid-column:span 2;"><label>미등록 제품 직접입력</label><input id="cl-product-text" placeholder="목록에 없으면 제품·품목명 직접 입력"></div>
       <div class="ff"><label>처리 상태</label>
         <select id="cl-status"><option>접수</option><option>처리중</option><option>완료</option></select>
       </div>
       <div class="ff" style="grid-column:span 2;"><label>클레임 사양</label><input id="cl-spec" placeholder="예: AC 220V 모터 유격 또는 상세 사양 기재"></div>
-      <div class="ff" style="grid-column:span 3;"><label>불만/요청 내용 *</label><textarea id="cl-content" rows="4" placeholder="클레임/AS 요청 내용을 구체적으로 기재" style="width:100%; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx); padding:8px; font-size:12px; font-family:inherit; resize:vertical;"></textarea></div>
-      <div class="ff" style="grid-column:span 3;"><label>조치 방안</label><textarea id="cl-response" rows="4" placeholder="검토 조치 피드백" style="width:100%; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx); padding:8px; font-size:12px; font-family:inherit; resize:vertical;"></textarea></div>
+      <div class="ff" style="grid-column:span 4;"><label>불만/요청 내용 *</label><textarea id="cl-content" rows="4" placeholder="클레임/AS 요청 내용을 구체적으로 기재" style="width:100%; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx); padding:8px; font-size:12px; font-family:inherit; resize:vertical;"></textarea></div>
+      <div class="ff" style="grid-column:span 4;"><label>조치 방안</label><textarea id="cl-response" rows="4" placeholder="검토 조치 피드백" style="width:100%; border:1px solid var(--br); border-radius:var(--rm); background:var(--bg-p); color:var(--tx); padding:8px; font-size:12px; font-family:inherit; resize:vertical;"></textarea></div>
     </div>
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('claim-modal')">취소</button>
@@ -577,14 +758,34 @@
 
 <!-- ══ 검사 기록 모달 ══ -->
 <div class="overlay" id="check-modal">
-  <div class="dlg" style="max-width:580px;width:96%;">
+  <div class="dlg bulk-entry-dialog" style="max-width:1040px;width:96%;">
     <div class="dlg-title" id="check-modal-ttl"><i class="ti ti-clipboard-check" style="color:var(--tx-ok);"></i>납품 검사 기록</div>
-    <div class="fg fg3" style="gap:10px;margin-bottom:14px;">
+    <div class="entry-mode-switch" id="ck-mode-switch">
+      <button type="button" id="ck-mode-single" onclick="setCheckEntryMode('single')">단건 입력</button>
+      <button type="button" id="ck-mode-bulk" onclick="setCheckEntryMode('bulk')">일괄 입력</button>
+    </div>
+    <div class="fg fg3" style="gap:10px;margin-bottom:10px;">
       <div class="ff"><label>검사 코드</label><input id="ck-id" readonly></div>
       <div class="ff"><label>검사 일자</label><input id="ck-date" type="date"></div>
-      <div class="ff"><label>고객사</label><select id="ck-client" onchange="fillProductSelect('ck-product', this.value)"></select></div>
-      <div class="ff" style="grid-column:span 2;"><label>검사 제품</label><select id="ck-product"></select></div>
+      <div class="ff"><label>고객사</label>
+        <div class="field-search">
+          <input id="ck-client-search" placeholder="고객사명 검색" autocomplete="off" oninput="onClientFieldSearchInput('ck-client','ck-client-search','ck-client-results','onCheckClientChange')" onfocus="renderClientFieldMatches('ck-client','ck-client-search','ck-client-results','onCheckClientChange')" onblur="setTimeout(function(){hideClientFieldMatches('ck-client-results');},160)" onkeydown="onClientFieldSearchKey(event,'ck-client','ck-client-search','ck-client-results','onCheckClientChange')">
+          <button type="button" class="field-search-btn" onclick="openClientFieldPicker('ck-client','ck-client-search','ck-client-results','onCheckClientChange')" title="고객사 찾기"><i class="ti ti-search"></i></button>
+          <select id="ck-client" class="linked-hidden-select" onchange="onCheckClientChange(); syncClientFieldDisplay('ck-client','ck-client-search');"></select>
+        </div>
+        <div class="inline-search-results" id="ck-client-results"></div>
+      </div>
       <div class="ff"><label>검사원 *</label><input id="ck-inspector" placeholder="검사 담당자"></div>
+    </div>
+    <div class="fg fg3" id="ck-single-fields" style="gap:10px;margin-bottom:14px;">
+      <div class="ff" style="grid-column:span 2;"><label>검사 제품</label>
+        <div class="field-search">
+          <input id="ck-product-search" placeholder="제품명 검색" autocomplete="off" oninput="onProductFieldSearchInput('ck-product','ck-product-search','ck-product-results','ck-client')" onfocus="renderProductFieldMatches('ck-product','ck-product-search','ck-product-results','ck-client')" onblur="setTimeout(function(){hideProductFieldMatches('ck-product-results');},160)" onkeydown="onProductFieldSearchKey(event,'ck-product','ck-product-search','ck-product-results','ck-client')">
+          <button type="button" class="field-search-btn" onclick="openProductFieldSearch('ck-product','ck-product-search','ck-product-results','ck-client')" title="제품 찾기"><i class="ti ti-search"></i></button>
+          <select id="ck-product" class="linked-hidden-select" onchange="syncProductFieldDisplay('ck-product','ck-product-search');"></select>
+        </div>
+        <div class="inline-search-results" id="ck-product-results"></div>
+      </div>
       <div class="ff"><label>외관 검사</label>
         <select id="ck-visual"><option>합격</option><option>불합격</option><option>조건부합격</option></select>
       </div>
@@ -598,6 +799,13 @@
         <select id="ck-result"><option>합격</option><option>불합격</option><option>조건부합격</option></select>
       </div>
       <div class="ff" style="grid-column:span 2;"><label>검사 비고</label><input id="ck-note" placeholder="특이 사항"></div>
+    </div>
+    <div class="batch-entry-grid" id="ck-bulk-panel" style="display:none;">
+      <div class="batch-entry-label"><i class="ti ti-table"></i>검사 기록 일괄 입력</div>
+      <table>
+        <thead><tr><th>제품 *</th><th>외관</th><th>치수</th><th>기능</th><th>판정</th><th>비고</th><th></th></tr></thead>
+        <tbody id="ck-bulk-body" data-bulk-key="ck"></tbody>
+      </table>
     </div>
     <div class="dlg-actions">
       <button class="btn" onclick="closeModal('check-modal')">취소</button>
@@ -713,6 +921,28 @@
   </div>
 </div>
 
+<!-- ══ 월 고정비 항목 등록/수정 모달 ══ -->
+<div class="overlay" id="fixed-cost-modal">
+  <div class="dlg bulk-entry-dialog" style="width:96%;">
+    <div class="dlg-title" id="fixed-cost-modal-ttl"><i class="ti ti-repeat" style="color:var(--tx-i);"></i>고정비 항목 등록</div>
+    <div class="batch-entry-grid fixed-cost-entry-grid">
+      <div class="batch-entry-label"><i class="ti ti-table"></i>고정비 일괄 입력</div>
+      <table>
+        <thead><tr><th>항목명 *</th><th>분류</th><th>지급처</th><th>기본 금액 *</th><th>납부일</th><th>결제방법</th><th>사용</th><th>비고</th><th></th></tr></thead>
+        <tbody id="fc-items-body" onpaste="fixedCostPasteFromExcel(event)"></tbody>
+      </table>
+    </div>
+    <datalist id="fixed-cost-category-list">
+      <option value="임대료"></option><option value="공과금"></option><option value="렌탈비"></option><option value="통신비"></option>
+      <option value="보험료"></option><option value="구독료"></option><option value="관리비"></option><option value="기타"></option>
+    </datalist>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('fixed-cost-modal')">취소</button>
+      <button class="btn btn-primary" onclick="saveFixedCostItem()"><i class="ti ti-check"></i>저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ 수금/지급 처리 모달 ══ -->
 <div class="overlay" id="payment-modal">
   <div class="dlg" style="max-width:560px;width:96%;">
@@ -732,6 +962,34 @@
       <button class="btn" id="payment-clear-btn" onclick="clearFinancePayment()"><i class="ti ti-rotate-clockwise"></i>미처리로 되돌리기</button>
       <button class="btn" onclick="closeModal('payment-modal')">취소</button>
       <button class="btn btn-primary" onclick="saveFinancePayment()"><i class="ti ti-check"></i>저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 구매발주 결제 요청 모달 ══ -->
+<div class="overlay" id="payreq-modal">
+  <div class="dlg payreq-dialog" style="width:96%;">
+    <div class="dlg-title"><i class="ti ti-cash-banknote" style="color:var(--tx-i);"></i>결제 요청</div>
+    <input type="hidden" id="payreq-id">
+    <input type="hidden" id="payreq-po-id">
+    <div id="payreq-source-summary" class="payreq-report-summary"></div>
+    <div id="payreq-approval-summary" class="card" style="padding:10px 12px;margin-bottom:14px;background:var(--bg-p);display:none;"></div>
+    <div class="payreq-form-grid" style="margin-bottom:14px;">
+      <div class="ff"><label>요청일 *</label><input id="payreq-date" type="date"></div>
+      <div class="ff"><label>희망 지급일</label><input id="payreq-due" type="date"></div>
+      <div class="ff"><label>요청 금액 *</label><input id="payreq-amount" type="number" min="0" step="10" inputmode="numeric"></div>
+      <div class="ff"><label>결제 담당자</label><input id="payreq-assignee" list="payreq-assignee-list" placeholder="담당자명 입력"></div>
+      <div class="ff"><label>요청자</label><input id="payreq-requester" placeholder="요청자명"></div>
+      <div class="ff"><label>세금계산서</label>
+        <select id="payreq-tax"><option>미확인</option><option>수취완료</option><option>수취예정</option><option>해당없음</option></select>
+      </div>
+      <div class="ff"><label>요청 메모</label><input id="payreq-note" maxlength="200" placeholder="지급 계좌, 긴급 여부, 확인 사항 등"></div>
+    </div>
+    <datalist id="payreq-assignee-list"></datalist>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('payreq-modal')">취소</button>
+      <button class="btn" id="payreq-draft-btn" onclick="savePaymentRequest('draft')"><i class="ti ti-device-floppy"></i>작성중 저장</button>
+      <button class="btn btn-primary" id="payreq-submit-btn" onclick="savePaymentRequest('pending')"><i class="ti ti-send"></i>결재 요청</button>
     </div>
   </div>
 </div>

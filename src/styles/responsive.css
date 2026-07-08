@@ -61,7 +61,7 @@
     min-width: 240px;
     box-shadow: 4px 0 20px rgba(0,0,0,0.3);
     animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    background: var(--bg-p);
+    background: linear-gradient(180deg, var(--sidebar-bg, var(--bg-p)) 0%, var(--sidebar-bg, var(--bg-p)) 44%, var(--sidebar-bg-bottom, var(--bg-p)) 100%);
   }
   .sidebar.mobile-open {
     display: flex;
@@ -76,9 +76,12 @@
     z-index: 9999 !important;   /* 백드롭(9998) 위로 올려 흐릿함·클릭 차단 해결 (base의 z-index:1500 덮어쓰기) */
   }
   body.sb-mini .sidebar .logo { padding: 18px 20px !important; text-align: left !important; }
-  body.sb-mini .sidebar .logo-title { justify-content: flex-start !important; font-size: 15px !important; gap: 8px !important; }
-  body.sb-mini .sidebar .logo-sub { display: block !important; }
+  body.sb-mini .sidebar .logo-title { justify-content: flex-start !important; font-size: var(--app-brand-title-size) !important; gap: 8px !important; }
   body.sb-mini .sidebar .nav-lbl { display: block !important; }
+  body.sb-mini .sidebar .nav-lbl.nav-lbl-source { display: none !important; }
+  body.sb-mini .sidebar .nav-group-toggle { display: flex !important; }
+  body.sb-mini .sidebar .nav-submenu { max-height: 900px; opacity: 1; overflow: hidden; }
+  body.sb-mini .sidebar .nav-g.is-collapsed .nav-submenu { max-height: 0 !important; opacity: 0 !important; pointer-events: none; }
   body.sb-mini .sidebar .ni {
     flex-direction: row !important;
     padding: 9px 20px !important;
@@ -358,14 +361,15 @@
     left: 8px;
     right: auto;
     bottom: auto;
-    width: min(380px, calc(100vw - 16px));
-    max-height: 52vh;
+    width: min(var(--mega-menu-width), calc(100vw - 16px));
+    max-height: calc(100vh - 72px - var(--mobile-tabbar-base-height));
+    max-height: calc(100dvh - 72px - var(--mobile-tabbar-base-height));
     padding: 9px 11px 11px;
     grid-template-columns: 1fr;
   }
   .topnav.mega-menu.mega-open { display: grid !important; }
   .topnav.mega-menu .topnav-menu,
-  .topnav.mega-menu .topnav-menu-wide { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .topnav.mega-menu .topnav-menu-wide { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media screen and (max-width: 560px) {
   #menu-toggle-btn { width:38px; height:38px; flex-basis:38px; font-size:23px !important; }
@@ -396,16 +400,17 @@
     left: 10px;
     right: auto;
     bottom: auto;
-    width: min(360px, calc(100vw - 20px));
-    max-height: 52vh;
+    width: min(var(--mega-menu-width), calc(100vw - 20px));
+    max-height: calc(100vh - 70px - var(--mobile-tabbar-base-height));
+    max-height: calc(100dvh - 70px - var(--mobile-tabbar-base-height));
     grid-template-columns: 1fr;
     border-radius: 12px;
   }
   .topnav.mega-menu::before { left: 22px; }
   .topnav.mega-menu .topnav-menu,
-  .topnav.mega-menu .topnav-menu-wide { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .topnav.mega-menu .topnav-menu button { min-height: 62px; font-size: 8.5px; gap:3px; }
-  .topnav.mega-menu .topnav-menu button i { width: 42px; height: 42px; flex-basis: 42px; font-size: 27px; border-radius:13px; }
+  .topnav.mega-menu .topnav-menu-wide { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .topnav.mega-menu .topnav-menu button { min-height: calc(var(--mega-menu-icon-size) + 20px); font-size: 8.5px; gap:3px; }
+  .topnav.mega-menu .topnav-menu button i { width: var(--mega-menu-icon-size); height: var(--mega-menu-icon-size); flex-basis: var(--mega-menu-icon-size); font-size: var(--mega-menu-icon-font-size); border-radius:13px; }
   .mega-menu-head { position: sticky; top: -12px; z-index: 2; padding: 10px 0; background: var(--bg-p); }
   .topbar-search-compact.search-open {
     top: 8px;
@@ -423,6 +428,8 @@
 @media screen and (max-width: 900px) {
   .system-shell { grid-template-columns: 1fr; gap: 12px; }
   .system-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ui-brand-settings { grid-template-columns: 1fr; }
+  .ui-brand-preview { min-height: 104px; }
   .system-kpi-row { grid-template-columns: 1fr; }
   .system-check-head, .system-check-row { grid-template-columns: 90px 160px minmax(260px, 1fr); min-width: 560px; }
   .table-display-layout { grid-template-columns: 1fr; }

@@ -25,6 +25,66 @@ function statusToStage(status, currentStage) {
 }
 
 let procStageFilter = null; // 파이프라인 클릭 필터
+function processVisibleProducts() {
+  return (products || []).filter(p => typeof canViewRecord !== 'function' || canViewRecord(p, 'processProduct'));
+}
+function processVisibleMaterials() {
+  return (materials || []).filter(m => typeof canViewRecord !== 'function' || canViewRecord(m, 'processMaterial'));
+}
+function processVisibleOrders() {
+  return (workOrders || []).filter(o => typeof canViewRecord !== 'function' || canViewRecord(o, 'workOrder'));
+}
+
+function deliveryRecordForProduct(productId) {
+  return (deliveries || []).find(d => d.productId === productId || d.sourceProductId === productId) || null;
+}
+
+function productDeliveryPayload(product, existing) {
+  return {
+    id: existing?.id || nextCode('DLV', deliveries || []),
+    productId: product.id,
+    sourceProductId: product.id,
+    sourceType: 'product',
+    clientId: product.clientId,
+    productName: product.name || '',
+    spec: product.spec || '',
+    qty: Number(product.qty) || 1,
+    unit: product.unit || 'EA',
+    price: Number(product.price) || 0,
+    deliveredAt: existing?.deliveredAt || today(),
+    note: product.note || product.processMemo || '',
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function onStageComplete(product) {
+  if (!product) return true;
+  if (typeof syncWorkOrdersOnProductComplete === 'function') {
+    syncWorkOrdersOnProductComplete(product.id || product);
+  }
+  return true;
+}
+
+function onStageDelivered(product) {
+  if (!product) return false;
+  const existing = deliveryRecordForProduct(product.id);
+  const next = productDeliveryPayload(product, existing);
+  if (typeof guardFinanceMonth === 'function' && !guardFinanceMonth(next.deliveredAt)) return false;
+  onStageComplete(product);
+  if (existing) {
+    const before = _safeJsonClone(existing);
+    Object.assign(existing, next);
+    stampRecordUpdate(existing, before, 'delivery');
+    writeAuditLog('delivery', existing.id, 'update', before, existing, { summary:'납품 기록 자동 갱신', detail:`${product.name || product.id} · ${fmtW((Number(existing.price)||0)*(Number(existing.qty)||0))}` });
+  } else {
+    const created = stampRecordCreate(next, 'delivery', { visibility:'company' });
+    deliveries.unshift(created);
+    writeAuditLog('delivery', created.id, 'create', null, created, { summary:'제품 납품 단계 전환으로 자동 등록', detail:`${product.name || product.id} · ${fmtW((Number(created.price)||0)*(Number(created.qty)||0))}` });
+  }
+  saveStorage('deliveries', deliveries);
+  if (typeof updateDlvBadge === 'function') updateDlvBadge();
+  return true;
+}
 
 function renderProcess() {
   const fc = v('proc-fc');
@@ -33,12 +93,14 @@ function renderProcess() {
   setTimeout(() => { sv('proc-fc', fc); }, 0);
   inp('stage-input').value = processStages.join(', ');
 
-  const all = products.filter(p => !fc || p.clientId === fc);
+  const visibleProducts = processVisibleProducts();
+  const visibleMaterials = processVisibleMaterials();
+  const all = visibleProducts.filter(p => !fc || p.clientId === fc);
   const total    = all.length;
   const inProg   = all.filter(p => !['완료','납품','설계/도면'].includes(p.processStage)).length;
   const done     = all.filter(p => ['완료','납품'].includes(p.processStage)).length;
   const nearDue  = all.filter(p => p.deliveryDate && daysUntil(p.deliveryDate) <= 14 && !['완료','납품'].includes(p.processStage)).length;
-  const matWait  = materials.filter(m => m.status === '발주전' && all.some(p => p.id === m.productId)).length;
+  const matWait  = visibleMaterials.filter(m => m.status === '발주전' && all.some(p => p.id === m.productId)).length;
 
   inp('proc-kpi').innerHTML = `
     <div class="mc"><div class="mc-lbl"><i class="ti ti-box"></i>전체 제품</div>
@@ -116,7 +178,7 @@ function togglePipeFilter(stage) {
 function renderKanban() {
   const fc = v('proc-fc');
   const closedClientIds = new Set(clients.filter(c => c.closed).map(c => c.id));
-  let allProd = products.filter(p => p.processStage !== '납품' && !closedClientIds.has(p.clientId) && (!fc || p.clientId === fc));
+  let allProd = processVisibleProducts().filter(p => p.processStage !== '납품' && !closedClientIds.has(p.clientId) && (!fc || p.clientId === fc));
   if (procStageFilter) allProd = allProd.filter(p => p.processStage === procStageFilter);
 
   const unmatched = allProd.filter(p => !processStages.includes(p.processStage));
@@ -140,11 +202,11 @@ function renderKanban() {
     const prioText = d < 0 ? 'High' : d <= 14 ? 'Med' : 'Low';
     const prioColor = d < 0 ? '#f03e3e' : d <= 14 ? '#ff7b00' : '#10b981';
     
-    const pMats = materials.filter(m => m.productId === p.id);
+    const pMats = processVisibleMaterials().filter(m => m.productId === p.id);
     const matDone = pMats.filter(m => m.status === '입고완료').length;
     const matPct  = pMats.length ? Math.round(matDone / pMats.length * 100) : 100;
     
-    const wo = workOrders.find(o => o.productId === p.id && o.status !== '완료');
+    const wo = processVisibleOrders().find(o => o.productId === p.id && o.status !== '완료');
     const workerName = wo?.manager || '미배정';
     const progressPercent = wo && wo.qty > 0 ? Math.round(wo.done / wo.qty * 100) : (['완료','납품'].includes(p.processStage) ? 100 : 0);
     const progressColor = progressPercent === 100 ? '#10b981' : neon.color;
@@ -276,8 +338,8 @@ function openKanbanEditModal(productId) {
   inp('km-memo').value = p.processMemo || '';
 
   // 연관 정보 컨텍스트
-  const pMats = materials.filter(m => m.productId === p.id);
-  const wo    = workOrders.find(o => o.productId === p.id);
+  const pMats = processVisibleMaterials().filter(m => m.productId === p.id);
+  const wo    = processVisibleOrders().find(o => o.productId === p.id);
   const d     = daysUntil(p.deliveryDate);
   inp('km-context-row').innerHTML = `
     <div style="background:var(--bg-s); border:1px solid var(--br); border-radius:var(--rm); padding:8px 10px;">
@@ -314,11 +376,16 @@ function saveKanbanChanges() {
   const p = getProductById(currentSelectedKanbanProductId);
   if (p) {
     const prevStage = p.processStage;
-    p.processStage  = v('km-stage');
+    const nextStage = v('km-stage');
+    if (nextStage === '납품' && prevStage !== '납품' && typeof guardFinanceMonth === 'function') {
+      const deliveryDate = deliveryRecordForProduct(p.id)?.deliveredAt || today();
+      if (!guardFinanceMonth(deliveryDate)) return;
+    }
+    p.processStage  = nextStage;
     p.status        = stageToStatus(p.processStage);
     p.processMemo   = inp('km-memo').value.trim();
     if (p.processStage === '완료' && prevStage !== '완료') onStageComplete(p);
-    if (p.processStage === '납품' && prevStage !== '납품') onStageDelivered(p);
+    if (p.processStage === '납품' && prevStage !== '납품' && !onStageDelivered(p)) return;
     
     saveStorage('products', products);
     renderProcess();
@@ -332,7 +399,7 @@ function renderProcDetail() {
   const q  = (inp('proc-q')?.value || '').toLowerCase();
   // 납품 완료 제품은 공정 현황표에서 제외
   const closedIds = new Set(clients.filter(c => c.closed).map(c => c.id));
-  let allProd = products.filter(p =>
+  let allProd = processVisibleProducts().filter(p =>
     p.processStage !== '납품' &&
     !closedIds.has(p.clientId) &&
     (!fc || p.clientId === fc) &&
@@ -352,16 +419,16 @@ function renderProcDetail() {
         va = a.deliveryDate ? daysUntil(a.deliveryDate) : 999999;
         vb = b.deliveryDate ? daysUntil(b.deliveryDate) : 999999;
       } else if (k === 'matPct') {
-        const aMats = materials.filter(m => m.productId === a.id);
+        const aMats = processVisibleMaterials().filter(m => m.productId === a.id);
         const aDone = aMats.filter(m => m.status==='입고완료').length;
         va = aMats.length ? aDone/aMats.length : 1;
-        const bMats = materials.filter(m => m.productId === b.id);
+        const bMats = processVisibleMaterials().filter(m => m.productId === b.id);
         const bDone = bMats.filter(m => m.status==='입고완료').length;
         vb = bMats.length ? bDone/bMats.length : 1;
       } else if (k === 'woPct') {
-        const aWo = workOrders.find(o => o.productId === a.id);
+        const aWo = processVisibleOrders().find(o => o.productId === a.id);
         va = aWo && aWo.qty > 0 ? aWo.done/aWo.qty : (['완료','납품'].includes(a.processStage)?1:0);
-        const bWo = workOrders.find(o => o.productId === b.id);
+        const bWo = processVisibleOrders().find(o => o.productId === b.id);
         vb = bWo && bWo.qty > 0 ? bWo.done/bWo.qty : (['완료','납품'].includes(b.processStage)?1:0);
       } else {
         va = a[k] == null ? '' : a[k];
@@ -382,7 +449,7 @@ function renderProcDetail() {
       <button class="btn btn-sm" onclick="togglePipeFilter('${procStageFilter}')"><i class="ti ti-x"></i>필터 해제</button>
     </div>` : '';
   inp('proc-detail-table').innerHTML = filterBanner + (allProd.length ? `
-    <table style="min-width:860px;">
+    <table class="process-standard-table" style="min-width:1080px;">
       <thead>
         <tr>
           <th onclick="toggleSort('process', 'client')" style="cursor:pointer; user-select:none;">고객사 ${sortIcon('process', 'client')}</th>
@@ -398,10 +465,10 @@ function renderProcDetail() {
       </thead>
       <tbody>
         ${allProd.map(p => {
-          const pMats   = materials.filter(m => m.productId === p.id);
+          const pMats   = processVisibleMaterials().filter(m => m.productId === p.id);
           const matDone = pMats.filter(m => m.status==='입고완료').length;
           const matPct  = pMats.length ? Math.round(matDone/pMats.length*100) : 100;
-          const wo      = workOrders.find(o => o.productId === p.id);
+          const wo      = processVisibleOrders().find(o => o.productId === p.id);
           const woPct   = wo && wo.qty > 0 ? Math.round(wo.done/wo.qty*100) : (['완료','납품'].includes(p.processStage)?100:0);
           const d       = daysUntil(p.deliveryDate);
           const rowBg   = p.deliveryDate && d < 0 ? 'background:rgba(240,62,62,.04);' : '';
@@ -465,11 +532,12 @@ function saveStages() {
 }
 
 function exportProcessCSV() {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('공정 현황 엑셀 내보내기')) return;
   if (typeof XLSX === 'undefined') { showToast('SheetJS 로딩 중...', 'error'); return; }
   const wb = XLSX.utils.book_new();
   const h = ['고객사','제품명','납기','D-Day','공정단계','상태','메모'];
   const fc = v('proc-fc');
-  const rows = products.filter(p => !clients.find(c=>c.id===p.clientId)?.closed && p.processStage !== '납품' && (!fc || p.clientId === fc))
+  const rows = processVisibleProducts().filter(p => !clients.find(c=>c.id===p.clientId)?.closed && p.processStage !== '납품' && (!fc || p.clientId === fc))
     .map(p => [getClientName(p.clientId), p.name, p.deliveryDate||'—', p.deliveryDate?`D-${daysUntil(p.deliveryDate)}`:'—', p.processStage, p.status, p.processMemo||'']);
   const ws = XLSX.utils.aoa_to_sheet([h,...rows]);
   ws['!cols'] = h.map(c => ({ wch: Math.max(c.length+2, 14) }));

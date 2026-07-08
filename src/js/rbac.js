@@ -18,8 +18,43 @@ const DEFAULT_ROLE_PAGES = {
   staff:   ['dashboard','orders','quality','inventory','deliveries','calendar','notes']
 };
 const ROLE_LABEL = { admin:'관리자', manager:'중간관리자', staff:'평사원' };
+const DATA_SCOPE_DEFS = [
+  { id:'clients', label:'수주/제품', desc:'고객사와 수주 제품 정보', defaultScope:'own' },
+  { id:'materials', label:'자재 수급/발주', desc:'자재 발주와 공급처 내용', defaultScope:'own' },
+  { id:'inventory', label:'재고 관리', desc:'완제품·부품 재고와 입출고', defaultScope:'shared' },
+  { id:'process', label:'공정 관리', desc:'공정 단계, 생산 지시, 공정 메모', defaultScope:'shared' },
+  { id:'notes', label:'메모/할 일', desc:'업무 메모와 체크리스트', defaultScope:'shared' },
+  { id:'quality', label:'품질/검사', desc:'불량 기록과 출하 검사', defaultScope:'own' },
+  { id:'claims', label:'고객 클레임', desc:'클레임 접수와 처리 내용', defaultScope:'own' },
+  { id:'as', label:'고객 A/S', desc:'A/S 접수와 처리 이력', defaultScope:'own' },
+  { id:'rfq', label:'견적요청서', desc:'견적 요청 문서', defaultScope:'own' },
+  { id:'po', label:'구매발주서', desc:'구매 발주 문서와 품목 내용', defaultScope:'own' },
+  { id:'salesdoc', label:'견적/수주/거래 문서', desc:'견적서, 수주서, 거래명세표, 세금계산서', defaultScope:'own' },
+  { id:'deliveries', label:'납품 현황', desc:'납품 기록과 금액', defaultScope:'own' },
+  { id:'partners', label:'거래처 관리', desc:'공급처와 거래처 정보', defaultScope:'own' },
+  { id:'finance', label:'재무 관리', desc:'지출, 지급 요청, 원가/정산 자료', defaultScope:'own' },
+  { id:'bom', label:'BOM/원가', desc:'자재명세와 원가 정보', defaultScope:'own' },
+  { id:'workers', label:'인사 관리', desc:'직원 명부와 근태/급여 자료', defaultScope:'own' },
+  { id:'trash', label:'휴지통', desc:'삭제된 데이터', defaultScope:'own' }
+];
 
 function rolePagesConfig(){ return loadStorage('rolePages', DEFAULT_ROLE_PAGES); }
+function defaultRoleDataScopeConfig(){
+  const cfg = { manager:{}, staff:{} };
+  DATA_SCOPE_DEFS.forEach(def => {
+    cfg.manager[def.id] = def.defaultScope;
+    cfg.staff[def.id] = def.defaultScope;
+  });
+  return cfg;
+}
+function roleDataScopeConfig(){
+  const defaults = defaultRoleDataScopeConfig();
+  const saved = loadStorage('roleDataScope', {});
+  ['manager','staff'].forEach(role => {
+    saved[role] = Object.assign({}, defaults[role], saved && saved[role] ? saved[role] : {});
+  });
+  return saved;
+}
 function roleAllowedSet(role){
   if (role==='admin') return null;                       // 전체 허용
   const cfg = rolePagesConfig();
@@ -54,31 +89,46 @@ function applyRoleGating(){
     const items = [...group.querySelectorAll('[data-top-page]')];
     group.style.display = items.some(item => item.style.display !== 'none') ? '' : 'none';
   });
+  if (typeof syncSidebarExpandableGroups === 'function') syncSidebarExpandableGroups();
 }
 /* ════════ 열(컬럼) 단위 권한 ════════
-   각 표의 컬럼을 역할별로 숨길 수 있음. nth-child CSS 주입 방식이라 재렌더에도 자동 적용. */
+   각 표의 컬럼을 역할별로 숨길 수 있음. 표시 설정과 같은 컬럼 표식 방식이라 재렌더에도 자동 적용. */
 const ADD_KEY='＋등록버튼';   // 컬럼 외 '등록 버튼' 토글용 특수 키
 const COLUMN_TABLES = {
   clients:    { sel:'#client-list',       label:'수주 정보 관리(제품표)', addBtn:'openProdAdd,openClientAdd', cols:['코드','제품/규격명','납기기한','수량','수주 단가','수주 합계','공정 단계 → 상태','관리 작업'] },
-  orders:     { sel:'#orders-table',      label:'생산 지시',        addBtn:'openOrderAdd', cols:['지시번호','고객사','생산제품','라인','목표량','실적량','불량','개시일','납기일','진행률','상태','담당자','메모','조작'] },
+  orders:     { sel:'#orders-table',      label:'생산 지시',        addBtn:'openOrderAdd', cols:['지시번호','고객사','생산제품','라인','목표량','실적량','불량','개시일','납기일','진행률','상태','담당자','메모'] },
   defects:    { sel:'#defect-table',      label:'불량 기록(품질)',   addBtn:'openDefectAdd', cols:['코드','일자','제품','발생공정','하자유형','수량','상태','비고','관리 작업'] },
   checks:     { sel:'#check-table',       label:'출하 검사(품질)',   addBtn:'openCheckAdd',  cols:['검사일','의뢰처','완료제품','검사원','외관','치수','테스트','종합판정','관리 작업'] },
   claims:     { sel:'#claims-table-full', label:'고객 클레임',       addBtn:'openClaimAdd',  cols:['인입일','유형','의뢰 고객사','해당 제품','클레임 사양','내용','조치 방안','상태','관리'] },
   as:         { sel:'#as-body',           label:'고객 A/S',         addBtn:'openAsAdd',     cols:['접수번호','접수일','고객사','제품','증상','보증','상태','담당자','수리비','관리'] },
   materials:  { sel:'#mat-table',         label:'자재 수급/발주',    addBtn:'openMatAdd',    cols:['자재코드','고객사','매칭제품','자재명','공급처','구매단가','수량','매입총액','주문일자','입고예정일','진행상황','참고','관리'] },
   rfq:        { sel:'#rfq-table',         label:'견적요청서',        addBtn:'openRfqAdd',    cols:['문서번호','요청일','고객사','연결제품','공급처','품목명','규격','수량','희망단가','상태','비고','관리'] },
-  po:         { sel:'#po-table',          label:'구매발주서',        addBtn:'openPoAdd',     cols:['발주번호','발행일','고객사','연결제품','공급처','품목명','규격','수량','단가','금액','결제조건','납품방법','상태','비고'] },
+  po:         { sel:'#po-table',          label:'구매발주서',        addBtn:'openPoAdd',     cols:['발주번호','발행일','고객사','연결제품','공급처','품목명','규격','수량','단가','금액','결제조건','납품방법','결제','상태','비고'] },
   quote:      { sel:'#qt-table',          label:'견적/수주-견적서',   addBtn:'openSODocAdd',  cols:['견적번호','일자','고객사','품목명','규격','수량','단가','공급가액','납기','상태','관리'] },
-  order:      { sel:'#so-table',          label:'견적/수주-수주서',   addBtn:'openSODocAdd',  cols:['수주번호','일자','고객사','품목명','규격','수량','단가','공급가액','연결 제품(공정)','상태','관리'] },
-  statement:  { sel:'#st-table',          label:'거래명세표',        addBtn:'openSalesDocAdd', cols:['문서번호','발행일','공급받는 고객사','연결제품','품목명','규격','수량','단가','공급가액','부가세','합계','상태','관리'] },
-  tax:        { sel:'#tx-table',          label:'세금계산서',        addBtn:'openSalesDocAdd', cols:['문서번호','발행일','공급받는 고객사','연결제품','품목명','규격','수량','단가','공급가액','부가세','합계','상태','관리'] },
+  order:      { sel:'#so-table',          label:'견적/수주-수주서',   addBtn:'openSODocAdd',  cols:['수주번호','일자','고객사','품목명','규격','수량','단가','공급가액','사업자번호','상태','관리'] },
+  statement:  { sel:'#st-table',          label:'거래명세표',        addBtn:'openSalesDocAdd', cols:['문서번호','발행일','공급받는 고객사','사업자번호','품목명','규격','수량','단가','공급가액','부가세','합계','상태','관리'] },
+  tax:        { sel:'#tx-table',          label:'세금계산서',        addBtn:'openSalesDocAdd', cols:['문서번호','발행일','공급받는 고객사','사업자번호','품목명','규격','수량','단가','공급가액','부가세','합계','상태','관리'] },
   partners:   { sel:'#bp-table',          label:'거래처 관리',       addBtn:'openPartnerModal', cols:['코드','거래처명','유형','담당자','전화번호','이메일','사업자번호','비고','납기이행률','거래금액','관리'] },
   deliveries: { sel:'#dlv-table',         label:'납품 현황',        cols:['납품번호','납품일자','고객사','제품명','규격','수량','단가','납품금액','비고','삭제'] },
   inventory:  { sel:'#inventory-table',   label:'재고',             addBtn:'openInvAdd',    cols:['재고코드','품목명','분류','현재고','안전재고','보관위치','참고','관리'] }
 };
 function roleColumnsConfig(){ return loadStorage('roleColumns', {}); }   // { 역할:{ 테이블:[숨길컬럼...] } }
-/* 현재 역할의 숨김 컬럼을 nth-child CSS로 주입 (admin은 전체 표시) */
+function tableActionAllowed(tableKey, action = 'create') {
+  if (!tableKey) return true;
+  if (currentRole === 'admin') return true;
+  if (action === 'create' && typeof canUseFeature === 'function' && !canUseFeature('create')) return false;
+  const hidden = ((roleColumnsConfig()[currentRole] || {})[tableKey]) || [];
+  if (action === 'create' && hidden.includes(ADD_KEY)) return false;
+  return true;
+}
+function registrationActionAllowed(tableKeys) {
+  if (typeof roleFeatureAllowed === 'function' && !roleFeatureAllowed('create')) return false;
+  const keys = Array.isArray(tableKeys) ? tableKeys.filter(Boolean) : (tableKeys ? [tableKeys] : []);
+  return !keys.length || keys.some(key => tableActionAllowed(key, 'create'));
+}
+/* 현재 역할의 숨김 컬럼을 표시 설정과 같은 컬럼 표식으로 숨김 (admin은 전체 표시) */
 function applyColumnGating(){
+  if (typeof applyTableDisplaySettings === 'function') applyTableDisplaySettings();
   let css='';
   if (currentRole!=='admin'){
     const cfg = roleColumnsConfig()[currentRole] || {};
@@ -87,8 +137,7 @@ function applyColumnGating(){
       hidden.forEach(col=>{
         if (col===ADD_KEY){ if(t.addBtn) t.addBtn.split(',').forEach(fn=>{ css += `[onclick^="${fn.trim()}"]{display:none!important;}\n`; }); return; }  // 등록 버튼 숨김(콤마로 여러 개 지원)
         const idx=t.cols.indexOf(col); if(idx<0) return;
-        const n=idx+1;
-        css += `${t.sel} th:nth-child(${n}),${t.sel} td:nth-child(${n}){display:none!important;}\n`;
+        css += `${t.sel} [data-table-display-col="${tk}-${idx}"]{display:none!important;visibility:collapse!important;}\n`;
       });
     });
   }
@@ -99,14 +148,32 @@ function applyColumnGating(){
 
 /* ════════ 기능 권한 (엑셀 CSV 내보내기 / PDF·인쇄 출력) ════════ */
 const PDF_BTN_SEL = '[onclick^="openRfqPrint"],[onclick^="openPoPrint"],[onclick^="openSalesDocPrint"],[onclick^="openSODocPrint"],[onclick^="printPayslip"],[onclick^="poBulkPrint"]';
-const FEATURE_DEFS = [ {key:'csv', label:'엑셀 CSV 내보내기', icon:'ti-file-spreadsheet'}, {key:'pdf', label:'PDF·인쇄 출력', icon:'ti-printer'} ];
+const FEATURE_DEFS = [
+  {key:'create', label:'등록', icon:'ti-plus'},
+  {key:'edit', label:'수정', icon:'ti-edit'},
+  {key:'delete', label:'삭제', icon:'ti-trash'},
+  {key:'restore', label:'복구', icon:'ti-restore'},
+  {key:'approve', label:'승인', icon:'ti-check'},
+  {key:'status', label:'상태 변경', icon:'ti-arrows-exchange'},
+  {key:'csv', label:'엑셀 CSV 내보내기', icon:'ti-file-spreadsheet'},
+  {key:'pdf', label:'PDF·인쇄 출력', icon:'ti-printer'},
+  {key:'audit', label:'감사 로그 조회', icon:'ti-history'}
+];
 function roleFeaturesConfig(){ return loadStorage('roleFeatures', {}); }   // { 역할:{ csv:bool, pdf:bool } } (true=허용, 기본 허용)
+function canUseFeature(key){
+  if (currentRole === 'admin') return true;
+  const f = roleFeaturesConfig()[currentRole] || {};
+  return f[key] !== false;
+}
+function canEditFeature(){ return canUseFeature('edit'); }
 function applyFeatureGating(){
   let css='';
   if (currentRole!=='admin'){
     const f = roleFeaturesConfig()[currentRole] || {};
     if (f.csv===false) css += `[onclick^="export"],[onclick^="poBulkExport"]{display:none!important;}\n`;   // 모든 내보내기 버튼
     if (f.pdf===false) css += `${PDF_BTN_SEL}{display:none!important;}\n`;            // 모든 PDF/인쇄 버튼
+    if (f.csv===false || f.pdf===false) css += `[onclick^="saveDocumentBundleToGoogleDrive"],[onclick^="poBulkDrive"],[onclick^="bulkSavePayrollDrive"],[onclick*="bulkRun"][onclick*="drive"]{display:none!important;}\n`;
+    if (f.delete===false) css += `.del-btn,[onclick^="delete"],[onclick*="bulkRun"][onclick*="delete"]{display:none!important;}\n`;
   }
   let st=document.getElementById('feat-gating');
   if(!st){ st=document.createElement('style'); st.id='feat-gating'; document.head.appendChild(st); }
@@ -114,8 +181,17 @@ function applyFeatureGating(){
 }
 
 /* 부팅 시 localStorage의 역할로 권한 상태 초기화 */
+function activateLocalAdminAccess(){
+  currentRole = 'admin';
+  allowedPages = null;
+  localStorage.setItem('mes_myActive', 'true');
+  if (typeof _hideLogin === 'function') _hideLogin();
+  applyRoleGating();
+  applyColumnGating();
+  applyFeatureGating();
+}
 function initRole(){
-  if (!cloudConfigured()){ currentRole='admin'; allowedPages=null; applyRoleGating(); applyColumnGating(); applyFeatureGating(); return; }  // 로컬 = 전체
+  if (!cloudConfigured() || typeof firebase === 'undefined'){ activateLocalAdminAccess(); return; }  // 로컬/오프라인 = 전체
   currentRole = localStorage.getItem('mes_myRole') || 'staff';
   allowedPages = roleAllowedSet(currentRole);
   applyRoleGating();
@@ -152,20 +228,31 @@ async function cloudLoadRole(){
   try { const csnap=await _fbDb.collection('roles').doc('columns').get(); if(csnap.exists) roleColumns=csnap.data(); } catch(e){}
   let roleFeatures = {};
   try { const fsnap=await _fbDb.collection('roles').doc('features').get(); if(fsnap.exists) roleFeatures=fsnap.data(); } catch(e){}
+  let roleDataScope = defaultRoleDataScopeConfig();
+  try { const dsnap=await _fbDb.collection('roles').doc('dataScope').get(); if(dsnap.exists) roleDataScope=dsnap.data(); } catch(e){}
   localStorage.setItem('mes_myRole', role);
   localStorage.setItem('mes_myActive', active ? 'true':'false');
   saveStorageLocalOnly('rolePages', rolePages);
   saveStorageLocalOnly('roleColumns', roleColumns);
   saveStorageLocalOnly('roleFeatures', roleFeatures);
+  saveStorageLocalOnly('roleDataScope', roleDataScope);
 }
 /* 클라우드 동기화 없이 localStorage에만 저장(권한맵 캐시용) */
 function saveStorageLocalOnly(key,data){ localStorage.setItem('mes_'+key, JSON.stringify(data)); }
 
-function cloudConfigured(){ return !!(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId); }
+function isLocalRuntime(){
+  const host = (location && location.hostname) || '';
+  return location.protocol === 'file:' || host === 'localhost' || host === '127.0.0.1' || host === '::1';
+}
+
+function cloudConfigured(){
+  if (isLocalRuntime() && localStorage.getItem('mes_enableCloudOnLocal') !== 'true') return false;
+  return !!(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId);
+}
 
 function cloudBootstrap(){
-  if (!cloudConfigured()){ _cloudChip('local'); return; }              // 미설정 → 로컬 전용
-  if (typeof firebase === 'undefined'){ console.warn('Firebase SDK 미로드(오프라인?) — 로컬 전용'); _cloudChip('local'); return; }
+  if (!cloudConfigured()){ activateLocalAdminAccess(); _cloudChip('local'); return; }              // 미설정 → 로컬 전용
+  if (typeof firebase === 'undefined'){ console.warn('Firebase SDK 미로드(오프라인?) — 로컬 전용'); activateLocalAdminAccess(); _cloudChip('local'); return; }
   try {
     firebase.initializeApp(FIREBASE_CONFIG);
     _fbAuth = firebase.auth(); _fbDb = firebase.firestore();
@@ -184,14 +271,13 @@ function cloudBootstrap(){
           _fbAuth.signOut(); return;
         }
         _cloudActive = true; _hideLogin(); _cloudChip('online');
+        if (typeof queueScreenSettingsCloudSave === 'function') queueScreenSettingsCloudSave();
+        if (typeof flushClientMasterMigrationSync === 'function') flushClientMasterMigrationSync();
         updateAdminUI(); applyRoleGating(); applyColumnGating(); applyFeatureGating(); cloudSubscribe();   // 역할 UI/컬럼/기능 반영 + 실시간 동기화 시작
         if (currentPage !== 'dashboard' && !pageAllowed(currentPage)) {
           showToast('이 페이지에 접근할 권한이 없습니다.', 'error');
           if (typeof writeAppRoute === 'function') writeAppRoute('dashboard', '', 'replace');
           if (typeof _goTo === 'function') _goTo('dashboard', null);
-        }
-        if (typeof autoConnectGoogleDriveAfterLogin === 'function') {
-          setTimeout(autoConnectGoogleDriveAfterLogin, 300);
         }
       } else {
         _cloudUser=null; _cloudActive=false;
@@ -199,11 +285,15 @@ function cloudBootstrap(){
         _showLogin();
       }
     });
-  } catch(e){ console.error('Firebase 초기화 오류', e); _cloudChip('error'); }
+  } catch(e){ console.error('Firebase 초기화 오류', e); activateLocalAdminAccess(); _cloudChip('error'); }
 }
 
 function cloudV2MapKeys(){
-  return ['financeData', 'companyInfo', 'docXlsxTemplates'];
+  return [
+    'financeData', 'companyInfo', 'docXlsxTemplates', 'driveOAuthSettings', 'googleDriveConfig',
+    'tableDisplayConfig', 'uiBrandSettings', 'uiScale', 'uiFontScale', 'menuIconSize',
+    'tableGridLines', 'uiColors', 'theme'
+  ];
 }
 function cloudV2StripMeta(value){
   if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
@@ -211,8 +301,161 @@ function cloudV2StripMeta(value){
   delete out._mes;
   return out;
 }
+function cloudMergeProtectedMapValue(key, remoteValue){
+  if (key !== 'googleDriveConfig' && key !== 'driveOAuthSettings') return remoteValue;
+  const remote = remoteValue && typeof remoteValue === 'object' && !Array.isArray(remoteValue) ? Object.assign({}, remoteValue) : {};
+  let local = {};
+  try {
+    const raw = localStorage.getItem('mes_' + key);
+    local = raw ? JSON.parse(raw) : {};
+  } catch(e) {
+    local = {};
+  }
+  if (!local || typeof local !== 'object' || Array.isArray(local)) local = {};
+  const keepText = field => {
+    if (!String(remote[field] || '').trim() && String(local[field] || '').trim()) remote[field] = local[field];
+  };
+  keepText('clientId');
+  if (key === 'googleDriveConfig') {
+    keepText('folderId');
+    keepText('folderUrl');
+    keepText('connectedEmail');
+    keepText('lastBackupAt');
+    if (typeof remote.autoConnectEnabled !== 'boolean' && typeof local.autoConnectEnabled === 'boolean') remote.autoConnectEnabled = local.autoConnectEnabled;
+    if (typeof remote.autoBackupEnabled !== 'boolean' && typeof local.autoBackupEnabled === 'boolean') remote.autoBackupEnabled = local.autoBackupEnabled;
+    if (!Number.isFinite(Number(remote.autoBackupHours)) && Number.isFinite(Number(local.autoBackupHours))) remote.autoBackupHours = local.autoBackupHours;
+  }
+  return remote;
+}
 const _cloudKeyApplied = {};   // key -> 마지막으로 로컬에 반영한 sourceUpdatedAt(ms). 비순차 원격 읽기 거부용
+const _cloudSavingKeys = new Set(); // 저장 중인 키는 이전 원격 스냅샷으로 덮지 않음
+const CLOUD_DELETE_TOMBSTONES_KEY = 'cloudDeleteTombstones';
+const CLOUD_DELETE_TOMBSTONE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const CLOUD_ARRAY_ID_FIELDS = ['id','code','no','number','docNo','quoteNo','orderNo','poNo','rfqNo','statementNo','taxNo'];
+
+function cloudReadDeleteTombstones(){
+  try {
+    const raw = localStorage.getItem('mes_' + CLOUD_DELETE_TOMBSTONES_KEY);
+    const data = raw ? JSON.parse(raw) : {};
+    return data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+  } catch(e){
+    return {};
+  }
+}
+function cloudWriteDeleteTombstones(data){
+  try { localStorage.setItem('mes_' + CLOUD_DELETE_TOMBSTONES_KEY, JSON.stringify(data || {})); }
+  catch(e){ console.warn('cloud delete tombstone save failed:', e); }
+}
+function cloudPruneDeleteTombstones(data){
+  const now = Date.now();
+  let changed = false;
+  Object.keys(data || {}).forEach(key => {
+    const bucket = data[key];
+    if (!bucket || typeof bucket !== 'object') { delete data[key]; changed = true; return; }
+    Object.keys(bucket).forEach(id => {
+      if (!bucket[id] || now - Number(bucket[id]) > CLOUD_DELETE_TOMBSTONE_TTL_MS) {
+        delete bucket[id];
+        changed = true;
+      }
+    });
+    if (!Object.keys(bucket).length) { delete data[key]; changed = true; }
+  });
+  return changed;
+}
+function cloudArrayRecordDocIds(record, docId){
+  const ids = new Set();
+  const add = value => {
+    const id = cloudV2SafeDocId(value);
+    if (id) ids.add(id);
+  };
+  add(docId);
+  if (record && typeof record === 'object' && !Array.isArray(record)) {
+    CLOUD_ARRAY_ID_FIELDS.forEach(field => add(record[field]));
+    add(cloudV2StableRecordId(record, 0));
+  }
+  return Array.from(ids);
+}
+function cloudRememberDeletedArrayRecord(key, record, docId){
+  if (!key) return;
+  const data = cloudReadDeleteTombstones();
+  cloudPruneDeleteTombstones(data);
+  const bucket = data[key] && typeof data[key] === 'object' ? data[key] : {};
+  cloudArrayRecordDocIds(record, docId).forEach(id => { bucket[id] = Date.now(); });
+  data[key] = bucket;
+  cloudWriteDeleteTombstones(data);
+}
+function cloudClearDeletedArrayRecord(key, record, docId){
+  const data = cloudReadDeleteTombstones();
+  const bucket = data[key];
+  if (!bucket || typeof bucket !== 'object') return;
+  let changed = false;
+  cloudArrayRecordDocIds(record, docId).forEach(id => {
+    if (bucket[id]) { delete bucket[id]; changed = true; }
+  });
+  if (!Object.keys(bucket).length) { delete data[key]; changed = true; }
+  if (changed) cloudWriteDeleteTombstones(data);
+}
+function cloudShouldSkipDeletedArrayRecord(key, docId, record){
+  const data = cloudReadDeleteTombstones();
+  const changed = cloudPruneDeleteTombstones(data);
+  const bucket = data[key];
+  if (changed) cloudWriteDeleteTombstones(data);
+  if (!bucket || typeof bucket !== 'object') return false;
+  return cloudArrayRecordDocIds(record, docId).some(id => !!bucket[id]);
+}
+function cloudRecordIdentityMatches(a, b){
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+  return CLOUD_ARRAY_ID_FIELDS.some(field => {
+    const av = a[field], bv = b[field];
+    return av != null && bv != null && String(av).trim() && String(av).trim() === String(bv).trim();
+  });
+}
+async function cloudDeleteArrayRecordNow(key, record, docId){
+  cloudRememberDeletedArrayRecord(key, record, docId);
+  if (!_fbDb || !_cloudActive || !CLOUD_KEYS.includes(key)) return false;
+  const entityRef = _fbDb.collection('mes_v2').doc(key);
+  const ids = new Set(cloudArrayRecordDocIds(record, docId));
+  const writeMap = new Map();
+  ids.forEach(id => writeMap.set(id, { ref: entityRef.collection('items').doc(id), delete: true }));
+  try {
+    const snap = await entityRef.collection('items').get();
+    snap.forEach(doc => {
+      const data = cloudV2StripMeta(doc.data() || {});
+      if (ids.has(doc.id) || cloudRecordIdentityMatches(data, record)) {
+        writeMap.set(doc.id, { ref: doc.ref, delete: true });
+      }
+    });
+  } catch(e){
+    console.warn('cloud delete lookup failed:', key, e);
+  }
+  const writes = Array.from(writeMap.values());
+  writes.push({
+    ref: entityRef,
+    data: {
+      key,
+      sourceCollection: 'mes_v2',
+      sourceDocId: key,
+      sourceExists: true,
+      sourceType: 'array',
+      sourceUpdatedAt: cloudV2ServerTimestamp(),
+      schemaVersion: 1,
+      mode: 'v2'
+    }
+  });
+  await cloudV2CommitWrites(writes);
+  if (typeof cloudRememberVersion === 'function') cloudRememberVersion(key, Date.now());
+  return true;
+}
+function cloudFlushSoon(){
+  try {
+    if (typeof cloudFlush !== 'function') return;
+    clearTimeout(_cloudTimer);
+    _cloudTimer = setTimeout(() => { cloudFlush().catch(e => console.warn('cloud flush failed:', e)); }, 0);
+  } catch(e){}
+}
 async function cloudLoadV2Key(key){
+  if (typeof _cloudQueue !== 'undefined' && _cloudQueue && _cloudQueue.has(key)) return false;
+  if (_cloudSavingKeys.has(key)) return false;
   const entityRef = _fbDb.collection('mes_v2').doc(key);
   const metaSnap = await entityRef.get();
   if (!metaSnap.exists) return false;
@@ -222,21 +465,31 @@ async function cloudLoadV2Key(key){
   // (비동기 .get()이 스냅샷 발생 순서와 다르게 완료돼 최신 데이터를 되돌리는 것을 방지)
   const ver = (meta.sourceUpdatedAt && typeof meta.sourceUpdatedAt.toMillis === 'function') ? meta.sourceUpdatedAt.toMillis() : 0;
   if (ver && _cloudKeyApplied[key] && ver < _cloudKeyApplied[key]) return false;
+  if ((key === 'googleDriveConfig' || key === 'driveOAuthSettings') && meta.sourceType === 'array') return false;
   if (meta.sourceType === 'array' || !cloudV2MapKeys().includes(key)) {
     const itemsSnap = await entityRef.collection('items').get();
-    const rows = itemsSnap.docs.map(doc => {
+    const remoteRows = itemsSnap.docs.map(doc => {
       const data = doc.data() || {};
       const idx = data._mes && Number.isFinite(data._mes.sourceIndex) ? data._mes.sourceIndex : Number.MAX_SAFE_INTEGER;
       return { idx, id: doc.id, value: cloudV2StripMeta(data) };
     }).sort((a, b) => (a.idx - b.idx) || a.id.localeCompare(b.id));
+    const rows = remoteRows.filter(row => !cloudShouldSkipDeletedArrayRecord(key, row.id, row.value));
     localStorage.setItem('mes_' + key, JSON.stringify(rows.map(row => row.value)));
-    if (ver) _cloudKeyApplied[key] = ver;
+    if (rows.length !== remoteRows.length && typeof cloudQueueSave === 'function') cloudQueueSave(key);
+    if (ver) {
+      _cloudKeyApplied[key] = ver;
+      if (typeof cloudRememberVersion === 'function') cloudRememberVersion(key, ver);
+    }
     return true;
   }
   const stateSnap = await entityRef.collection('state').doc('current').get();
   if (!stateSnap.exists) return false;
-  localStorage.setItem('mes_' + key, JSON.stringify(cloudV2StripMeta(stateSnap.data() || {})));
-  if (ver) _cloudKeyApplied[key] = ver;
+  const remoteState = cloudMergeProtectedMapValue(key, cloudV2StripMeta(stateSnap.data() || {}));
+  localStorage.setItem('mes_' + key, JSON.stringify(remoteState));
+  if (ver) {
+    _cloudKeyApplied[key] = ver;
+    if (typeof cloudRememberVersion === 'function') cloudRememberVersion(key, ver);
+  }
   return true;
 }
 async function cloudLoadAll(){
@@ -348,12 +601,15 @@ async function cloudMirrorV2Key(key){
       used[id] = (used[id] || 0) + 1;
       if (used[id] > 1) id += '_' + used[id];
       nextIds.add(id);
+      cloudClearDeletedArrayRecord(key, item, id);
       writes.push({ ref: entityRef.collection('items').doc(id), data: cloudV2ItemPayload(item, key, index) });
     });
-    const existing = await entityRef.collection('items').get();
-    existing.forEach(doc => {
-      if (!nextIds.has(doc.id)) writes.push({ ref: doc.ref, delete: true });
-    });
+    if (key !== 'trash') {
+      const existing = await entityRef.collection('items').get();
+      existing.forEach(doc => {
+        if (!nextIds.has(doc.id)) writes.push({ ref: doc.ref, delete: true });
+      });
+    }
   } else if (value && typeof value === 'object') {
     writes.push({
       ref: entityRef.collection('state').doc('current'),
@@ -386,11 +642,26 @@ async function cloudMirrorV2Keys(keys){
 async function cloudFlush(){
   if (!_cloudActive || !_cloudQueue.size) return;
   const keys=[..._cloudQueue]; _cloudQueue.clear();
+  keys.forEach(k=>_cloudSavingKeys.add(k));
   _cloudChip('saving');
   const failed = await cloudMirrorV2Keys(keys);
+  const failedSet = new Set(failed);
+  keys.filter(k=>!failedSet.has(k)).forEach(k=>{
+    setTimeout(()=>{
+      _cloudSavingKeys.delete(k);
+      if (k === 'trash' && typeof cloudLoadV2Key === 'function') {
+        cloudLoadV2Key(k).then(loaded => {
+          if (!loaded) return;
+          if (typeof cloudResyncGlobals === 'function') cloudResyncGlobals();
+          if (typeof renderTrash === 'function' && typeof currentPage !== 'undefined' && (currentPage === 'trash' || (currentPage === 'system' && typeof systemTab !== 'undefined' && systemTab === 'trash'))) renderTrash();
+          if (typeof updateTrashBadge === 'function') updateTrashBadge();
+        }).catch(e => console.warn('휴지통 동기화 재확인 실패:', e));
+      }
+    }, 2000);
+  });
   if (!failed.length) { _cloudChip('online'); return; }
   _cloudChip('error');
-  failed.forEach(k=>_cloudQueue.add(k));                       // 실제 실패한 키만 재큐잉 후 재시도
+  failed.forEach(k=>{ _cloudSavingKeys.delete(k); _cloudQueue.add(k); });                       // 실제 실패한 키만 재큐잉 후 재시도
   clearTimeout(_cloudTimer); _cloudTimer=setTimeout(cloudFlush, 5000);
   showToast('일부 항목 클라우드 저장에 실패했습니다. 잠시 후 자동 재시도합니다.', 'error');
 }

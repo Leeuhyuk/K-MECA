@@ -68,16 +68,22 @@ function registerDateViewSelectionClearer(key, handler) {
 function _dateViewSelectionActive(key) {
   return !!(dateViewSelectionState[key] && dateViewSelectionState[key].html);
 }
+function selectionActionBarsMobileVisible() {
+  return window.matchMedia ? window.matchMedia('(max-width: 760px)').matches : (window.innerWidth || 0) <= 760;
+}
 function setDateViewSelectionBar(key, html, active) {
   if (!key) return false;
-  if (active && html) dateViewSelectionState[key] = { html };
+  const nextHtml = active && html ? html : '';
+  const prevHtml = dateViewSelectionState[key] && dateViewSelectionState[key].html || '';
+  if (nextHtml) dateViewSelectionState[key] = { html:nextHtml };
   else delete dateViewSelectionState[key];
   const bar = inp('date-view-' + key);
-  if (bar) {
+  const renderedInDateView = !!(bar && nextHtml && selectionActionBarsMobileVisible());
+  const modeChanged = bar && bar.classList.contains('date-view-selected-mode') !== renderedInDateView;
+  if (bar && (prevHtml !== nextHtml || modeChanged)) {
     _renderDateViewBar(key, bar);
-    return true;
   }
-  return false;
+  return renderedInDateView;
 }
 function clearDateViewSelection(key) {
   if (!key) return;
@@ -93,7 +99,7 @@ function _dateViewBeforeChange(key) {
 function _renderDateViewBar(key, bar) {
   if (!bar) return;
   const selected = dateViewSelectionState[key];
-  if (selected && selected.html) {
+  if (selected && selected.html && selectionActionBarsMobileVisible()) {
     bar.classList.add('date-view-selected-mode');
     bar.innerHTML = selected.html;
     return;
@@ -104,7 +110,7 @@ function _renderDateViewBar(key, bar) {
   const disabled = state.mode === 'all' || state.mode === 'range';
   const range = state.mode === 'range';
   bar.innerHTML = `
-    <select onchange="dateViewModeChange('${key}',this.value)" style="height:28px;min-width:96px;font-size:11px;">
+    <select class="date-view-mode-select" onchange="dateViewModeChange('${key}',this.value)" style="min-width:96px;">
       <option value="all"${state.mode==='all'?' selected':''}>전체</option>
       <option value="year"${state.mode==='year'?' selected':''}>연</option>
       <option value="month"${state.mode==='month'?' selected':''}>월</option>
@@ -125,8 +131,14 @@ function _renderDateViewBar(key, bar) {
       <button class="btn btn-sm" onclick="dateViewQuickRange('${key}','month')">이번 달</button>
       <button class="btn btn-sm" onclick="dateViewQuickRange('${key}','prevMonth')">지난달</button>
     </div>
-    <button class="btn btn-sm" style="height:28px;padding:0 9px;" onclick="dateViewReset('${key}')" title="전체 보기"><i class="ti ti-x"></i></button>`;
+    <button class="btn btn-sm date-view-reset" onclick="dateViewReset('${key}')" title="전체 보기"><i class="ti ti-x"></i></button>`;
 }
+window.addEventListener('resize', () => {
+  Object.keys(dateViewSelectionState).forEach(key => {
+    const bar = inp('date-view-' + key);
+    if (bar) _renderDateViewBar(key, bar);
+  });
+}, { passive: true });
 function ensureDateView(key, containerId, dates, renderer) {
   const container = inp(containerId); if (!container || !container.parentNode) return;
   dateViewRenderers[key] = renderer;
@@ -135,7 +147,7 @@ function ensureDateView(key, containerId, dates, renderer) {
     bar = document.createElement('div');
     bar.id = 'date-view-' + key;
     bar.className = 'date-view-bar';
-    bar.style.cssText = 'display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:0 0 8px;padding:4px 8px;background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rm);';
+    bar.style.cssText = 'display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin:0 0 5px;padding:3px 6px;background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rm);';
     container.parentNode.insertBefore(bar, container);
   }
   _renderDateViewBar(key, bar);
@@ -312,9 +324,19 @@ function onGlobalSearch(q) {
   
   let html = '';
   let matchCount = 0;
+  const searchClients = typeof visibleRecords === 'function' ? visibleRecords(clients, 'clients') : clients;
+  const searchProducts = typeof visibleRecords === 'function' ? visibleRecords(products, 'products') : products;
+  const searchMaterials = typeof visibleRecords === 'function' ? visibleRecords(materials, 'material') : materials;
+  const searchOrders = typeof visibleRecords === 'function' ? visibleRecords(workOrders, 'workOrder') : workOrders;
+  const searchInventory = typeof visibleRecords === 'function' ? visibleRecords(inventory, 'inventory') : inventory;
+  const searchDefects = typeof visibleRecords === 'function' ? visibleRecords(defects, 'defect') : defects;
+  const searchClaims = typeof visibleRecords === 'function' ? visibleRecords(claims, 'claim') : claims;
+  const searchWorkers = typeof visibleRecords === 'function' ? visibleRecords(workers, 'worker') : workers;
+  const searchMemos = typeof visibleRecords === 'function' ? visibleRecords((typeof memoList !== 'undefined' ? memoList : []), 'memo') : (typeof memoList !== 'undefined' ? memoList : []);
+  const searchTodos = typeof visibleRecords === 'function' ? visibleRecords((typeof todoList !== 'undefined' ? todoList : []), 'todo') : (typeof todoList !== 'undefined' ? todoList : []);
   
   // 1. 고객사
-  const matchingClients = clients.filter(c => 
+  const matchingClients = searchClients.filter(c => 
     c.name.toLowerCase().includes(q) || 
     (c.manager || '').toLowerCase().includes(q) ||
     (c.tel || '').toLowerCase().includes(q)
@@ -331,7 +353,7 @@ function onGlobalSearch(q) {
   }
   
   // 2. 수주 제품
-  const matchingProducts = products.filter(p => 
+  const matchingProducts = searchProducts.filter(p => 
     p.name.toLowerCase().includes(q) || 
     (p.spec || '').toLowerCase().includes(q) ||
     p.id.toLowerCase().includes(q)
@@ -349,7 +371,7 @@ function onGlobalSearch(q) {
   }
   
   // 3. 자재 발주
-  const matchingMaterials = materials.filter(m => 
+  const matchingMaterials = searchMaterials.filter(m => 
     m.name.toLowerCase().includes(q) || 
     (m.supplier || '').toLowerCase().includes(q) ||
     m.id.toLowerCase().includes(q)
@@ -367,7 +389,7 @@ function onGlobalSearch(q) {
   }
   
   // 4. 생산 지시
-  const matchingOrders = workOrders.filter(o => 
+  const matchingOrders = searchOrders.filter(o => 
     o.id.toLowerCase().includes(q) || 
     (o.manager || '').toLowerCase().includes(q) ||
     getProductName(o.productId).toLowerCase().includes(q)
@@ -385,7 +407,7 @@ function onGlobalSearch(q) {
   }
   
   // 5. 실시간 재고
-  const matchingInv = inventory.filter(i => 
+  const matchingInv = searchInventory.filter(i => 
     i.name.toLowerCase().includes(q) || 
     (i.location || '').toLowerCase().includes(q) ||
     i.id.toLowerCase().includes(q)
@@ -402,12 +424,12 @@ function onGlobalSearch(q) {
   }
   
   // 6. 품질 및 클레임
-  const matchingDefects = defects.filter(d => 
+  const matchingDefects = searchDefects.filter(d => 
     d.type.toLowerCase().includes(q) || 
     (d.cause || '').toLowerCase().includes(q) ||
     d.id.toLowerCase().includes(q)
   );
-  const matchingClaims = claims.filter(c => 
+  const matchingClaims = searchClaims.filter(c => 
     c.content.toLowerCase().includes(q) || 
     (c.response || '').toLowerCase().includes(q) ||
     c.id.toLowerCase().includes(q)
@@ -431,7 +453,7 @@ function onGlobalSearch(q) {
   }
   
   // 7. 직원
-  const matchingWorkers = workers.filter(w =>
+  const matchingWorkers = searchWorkers.filter(w =>
     (w.name || '').toLowerCase().includes(q) ||
     (w.id || '').toLowerCase().includes(q) ||
     (w.dept || '').toLowerCase().includes(q) ||
@@ -451,7 +473,7 @@ function onGlobalSearch(q) {
   }
 
   // 8. 메모
-  const matchingMemos = (typeof memoList !== 'undefined' ? memoList : []).filter(m => {
+  const matchingMemos = searchMemos.filter(m => {
     const attachments = (m.attachments || []).map(file => file.name || '').join(' ');
     return [m.title, m.content, m.summary, m.author, m.owner, (m.tags || []).join(' '), attachments]
       .join(' ').toLowerCase().includes(q);
@@ -473,7 +495,7 @@ function onGlobalSearch(q) {
   }
 
   // 9. 할 일
-  const matchingTodos = (typeof todoList !== 'undefined' ? todoList : []).filter(t => {
+  const matchingTodos = searchTodos.filter(t => {
     const checklist = (t.checklist || []).map(entry =>
       typeof entry === 'string' ? entry : (entry.text || entry.title || '')
     ).join(' ');
@@ -675,12 +697,12 @@ document.addEventListener('click', function(e) {
 let editClientId = null, editProductId = null, editMatId = null, editOrderId = null, editInvId = null;
 let editDefectId = null, editClaimId = null, editCheckId = null;
 let currentSelectedKanbanProductId = null;
-let expandedClients = new Set(['CL-001']);
+let expandedClients = new Set();
 let showClosedProjects = false;
 let currentPage = 'dashboard';
-let currentRole = 'admin';      // 권한 역할 (로컬/미인증 시 전체 권한). 클라우드 로그인 시 실제 역할로 설정됨
-let allowedPages = null;        // null = 전체 허용. Set이면 해당 페이지만 허용
-let _cloudActive = false;       // 클라우드(Firebase) 로그인 활성 여부 (부팅 초기 참조 대비 조기 선언)
+var currentRole = 'admin';      // 권한 역할 (로컬/미인증 시 전체 권한). 클라우드 로그인 시 실제 역할로 설정됨
+var allowedPages = null;        // null = 전체 허용. Set이면 해당 페이지만 허용
+var _cloudActive = false;       // 클라우드(Firebase) 로그인 활성 여부 (부팅 초기 참조 대비 조기 선언)
 let cloudUsers = loadStorage('cloudUsers_cache', []);   // Firestore users 캐시(인사 명부 ↔ 로그인 계정 조인용)
 function userByEmail(email){ if(!email) return null; const e=email.trim().toLowerCase(); return cloudUsers.find(u=>(u.email||'').toLowerCase()===e)||null; }
 let currentAlertFilter = 'all';

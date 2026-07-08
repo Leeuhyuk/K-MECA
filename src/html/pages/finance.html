@@ -3,6 +3,8 @@
     <div class="toolbar" id="finance-tabs">
       <button class="btn btn-primary" data-fintab="dashboard" onclick="switchFinTab('dashboard')"><i class="ti ti-chart-pie"></i>요약</button>
       <button class="btn" data-fintab="ar" onclick="switchFinTab('ar')"><i class="ti ti-receipt"></i>수금/지급</button>
+      <button class="btn" data-fintab="payreq" onclick="switchFinTab('payreq')"><i class="ti ti-cash-banknote"></i>결제요청 <span id="payreqBadge" class="badge" style="display:none;">0</span></button>
+      <button class="btn" data-fintab="fixed" onclick="switchFinTab('fixed')"><i class="ti ti-repeat"></i>고정비</button>
       <button class="btn" data-fintab="revenue" onclick="switchFinTab('revenue')"><i class="ti ti-trending-up"></i>매출</button>
       <button class="btn" data-fintab="purchase" onclick="switchFinTab('purchase')"><i class="ti ti-trending-down"></i>매입</button>
       <button class="btn" data-fintab="labor" onclick="switchFinTab('labor')"><i class="ti ti-cash"></i>급여</button>
@@ -39,7 +41,9 @@
           <button type="button" data-systab="columns" onclick="switchSystemTab('columns')"><i class="ti ti-table-options"></i>표시 설정</button>
           <button type="button" data-systab="display" onclick="switchSystemTab('display')"><i class="ti ti-palette"></i>화면 설정</button>
           <button type="button" data-systab="templates" onclick="switchSystemTab('templates')"><i class="ti ti-template"></i>양식 내보내기</button>
+          <button type="button" data-systab="backup" onclick="switchSystemTab('backup')"><i class="ti ti-database-export"></i>백업/내보내기</button>
           <button type="button" data-systab="api" onclick="switchSystemTab('api')"><i class="ti ti-key"></i>API 관리</button>
+          <button type="button" data-systab="storage" onclick="switchSystemTab('storage')"><i class="ti ti-database-dollar"></i>스토리지/요금</button>
           <button type="button" class="drive-save-btn" data-systab="drive" onclick="switchSystemTab('drive')"><i class="ti ti-cloud"></i>Google Drive 저장</button>
           <button type="button" data-systab="alimtalk" onclick="switchSystemTab('alimtalk')"><i class="ti ti-brand-kakao"></i>알림톡 설정</button>
           <button type="button" data-systab="alerts" onclick="switchSystemTab('alerts')"><i class="ti ti-bell"></i>알림 관리</button>
@@ -75,6 +79,56 @@
     <div class="system-panel" id="system-panel-display" style="display:none;">
       <div class="card">
         <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-id-badge"></i>앱 로고·명칭</span>
+          <span style="font-size:11px;color:var(--tx-t);">클라우드 로그인 시 다른 PC에도 적용됩니다.</span>
+        </div>
+        <div class="ui-brand-settings">
+          <div class="ui-brand-form">
+            <div class="ff">
+              <label>명칭</label>
+              <input id="ui-brand-title" maxlength="28" placeholder="MES Pro">
+            </div>
+            <div class="ui-brand-size-control">
+              <div class="ui-scale-current">
+                <span>로고 크기</span>
+                <strong id="ui-brand-logo-size-value">20px</strong>
+              </div>
+              <input id="ui-brand-logo-size" class="ui-scale-range" type="range" min="16" max="100" step="1" value="20"
+                oninput="previewBrandLogoSize(this.value)" onchange="saveBrandLogoSize(this.value)">
+              <div class="ui-brand-size-presets ui-scale-presets">
+                <button class="btn btn-sm" type="button" onclick="setBrandLogoSize(20)">기본</button>
+                <button class="btn btn-sm" type="button" onclick="setBrandLogoSize(32)">크게</button>
+                <button class="btn btn-sm" type="button" onclick="setBrandLogoSize(56)">대형</button>
+                <button class="btn btn-sm" type="button" onclick="setBrandLogoSize(100)">최대</button>
+              </div>
+            </div>
+            <div class="ui-brand-size-control">
+              <div class="ui-scale-current">
+                <span>명칭 크기</span>
+                <strong id="ui-brand-title-size-value">15px</strong>
+              </div>
+              <input id="ui-brand-title-size" class="ui-scale-range" type="range" min="12" max="100" step="1" value="15"
+                oninput="previewBrandTitleSize(this.value)" onchange="saveBrandTitleSize(this.value)">
+              <div class="ui-brand-size-presets ui-scale-presets">
+                <button class="btn btn-sm" type="button" onclick="setBrandTitleSize(15)">기본</button>
+                <button class="btn btn-sm" type="button" onclick="setBrandTitleSize(24)">크게</button>
+                <button class="btn btn-sm" type="button" onclick="setBrandTitleSize(40)">대형</button>
+                <button class="btn btn-sm" type="button" onclick="setBrandTitleSize(100)">최대</button>
+              </div>
+            </div>
+            <div class="ui-brand-actions">
+              <button class="btn btn-primary" type="button" onclick="saveBrandTextSettings()"><i class="ti ti-device-floppy"></i>저장</button>
+              <button class="btn" type="button" onclick="inp('ui-brand-logo-file').click()"><i class="ti ti-photo-up"></i>로고 이미지</button>
+              <button class="btn" type="button" onclick="clearBrandLogo()"><i class="ti ti-building-factory-2"></i>기본 아이콘</button>
+              <button class="btn" type="button" onclick="resetBrandSettings()"><i class="ti ti-restore"></i>전체 기본값</button>
+              <input id="ui-brand-logo-file" type="file" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="handleBrandLogoFile(this)">
+            </div>
+          </div>
+          <div class="ui-brand-preview" id="ui-brand-preview" aria-live="polite"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
           <span class="card-ttl"><i class="ti ti-arrows-maximize"></i>화면 밀도</span>
           <span style="font-size:11px;color:var(--tx-t);">화면 폭이 좁아져도 글자 크기는 유지하고 여백만 조절</span>
         </div>
@@ -108,6 +162,32 @@
       </div>
       <div class="card">
         <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-apps"></i>메뉴 아이콘 크기</span>
+          <span style="font-size:11px;color:var(--tx-t);">전체 메뉴 팝업의 아이콘 크기를 조절</span>
+        </div>
+        <div class="ui-menu-icon-settings">
+          <div class="ui-scale-current">
+            <span>아이콘 설정</span>
+            <strong id="ui-menu-icon-value">46px</strong>
+          </div>
+          <input id="ui-menu-icon-range" class="ui-scale-range" type="range" min="36" max="84" step="1" value="46"
+            oninput="previewMenuIconSize(this.value)" onchange="saveMenuIconSize(this.value)">
+          <div class="ui-menu-icon-presets ui-scale-presets">
+            <button class="btn btn-sm" type="button" data-size="38" onclick="setMenuIconSize(38)">작게</button>
+            <button class="btn btn-sm" type="button" data-size="46" onclick="setMenuIconSize(46)">기본</button>
+            <button class="btn btn-sm" type="button" data-size="62" onclick="setMenuIconSize(62)">크게</button>
+            <button class="btn btn-sm" type="button" data-size="76" onclick="setMenuIconSize(76)">아주 크게</button>
+            <button class="btn btn-sm" type="button" onclick="resetMenuIconSize()"><i class="ti ti-restore"></i>기본값 복원</button>
+          </div>
+          <div class="ui-menu-icon-preview" aria-hidden="true">
+            <button type="button"><i class="ti ti-layout-dashboard"></i><span>대시보드</span></button>
+            <button type="button"><i class="ti ti-clipboard-list"></i><span>생산 지시</span></button>
+            <button type="button"><i class="ti ti-file-description"></i><span>견적요청</span></button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
           <span class="card-ttl"><i class="ti ti-text-size"></i>글자 크기</span>
           <span style="font-size:11px;color:var(--tx-t);">표·입력창·버튼의 기본 글자 크기 조절</span>
         </div>
@@ -129,6 +209,38 @@
             <strong>표 본문 예시</strong>
             <span>수주 제품, 자재 발주, 재고 관리 화면의 글자 크기에 함께 적용됩니다.</span>
           </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-table"></i>테이블 선 표시</span>
+          <span style="font-size:11px;color:var(--tx-t);">목록 표의 가로줄과 세로줄을 화면에서 켜고 끕니다.</span>
+        </div>
+        <div class="ui-table-grid-settings">
+          <label class="ui-table-grid-option">
+            <input id="table-grid-horizontal" type="checkbox" onchange="toggleTableGridLine('horizontal',this.checked)">
+            <span>
+              <strong>가로줄 표시</strong>
+              <small>행 사이 구분선을 표시합니다.</small>
+            </span>
+          </label>
+          <label class="ui-table-grid-option">
+            <input id="table-grid-vertical" type="checkbox" onchange="toggleTableGridLine('vertical',this.checked)">
+            <span>
+              <strong>세로줄 표시</strong>
+              <small>열 사이 구분선을 표시합니다.</small>
+            </span>
+          </label>
+          <div class="ui-table-grid-preview">
+            <table>
+              <thead><tr><th>문서번호</th><th>거래처</th><th>상태</th></tr></thead>
+              <tbody>
+                <tr><td>Q-0001</td><td>현대리바트</td><td>요청중</td></tr>
+                <tr><td>P-0001</td><td>모티브</td><td>입고완료</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <button class="btn btn-sm" type="button" onclick="resetTableGridLineSettings()"><i class="ti ti-restore"></i>기본값 복원</button>
         </div>
       </div>
       <div class="card">
@@ -159,7 +271,7 @@
           <span id="template-package-status" style="font-size:11px;color:var(--tx-t);">다른 MESPro 또는 외부 프로그램에서 사용할 수 있는 ZIP 패키지</span>
         </div>
         <div style="font-size:11.5px;color:var(--tx-s);line-height:1.75;margin-bottom:12px;">
-          현재 등록된 XLSX 양식, PDF 인쇄 CSS, 데이터 변수 규격과 사용 안내를 하나의 ZIP 파일로 내보냅니다.
+          현재 등록된 XLSX 기반 PDF/엑셀 인쇄 양식, 데이터 변수 규격과 사용 안내를 하나의 ZIP 파일로 내보냅니다.
           가져오기 전 형식과 버전을 검사하며 기존 사용자 양식은 자동 백업됩니다.
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;">
@@ -231,8 +343,8 @@
       </div>
       <div class="card" style="margin-top:16px;background:var(--bg-s);">
         <div style="font-size:12px;color:var(--tx-s);line-height:1.8;">
-          기본 양식을 내보내 Excel에서 수정한 뒤 다시 등록하면, 등록한 양식으로 문서가 출력됩니다.
-          기존 PDF 출력과 일반 데이터 엑셀 내보내기는 각 문서 화면에서 계속 사용할 수 있습니다.
+          기본 양식을 내보내 Excel에서 수정한 뒤 다시 등록하면, PDF 출력·메일 첨부 PDF·Google Drive PDF·등록 양식 출력에 같은 양식이 적용됩니다.
+          일반 데이터 엑셀 내보내기는 각 문서 화면에서 계속 사용할 수 있습니다.
         </div>
         <div style="margin-top:10px;">
           <button class="btn btn-sm btn-danger" onclick="resetAllDocXlsxTemplates()"><i class="ti ti-restore"></i>모든 양식 기본값 복원</button>
@@ -240,8 +352,16 @@
       </div>
     </div>
 
+    <div class="system-panel" id="system-panel-backup" style="display:none;">
+      <div id="backup-export-body"></div>
+    </div>
+
     <div class="system-panel" id="system-panel-api" style="display:none;">
       <div id="api-settings-body"></div>
+    </div>
+
+    <div class="system-panel" id="system-panel-storage" style="display:none;">
+      <div id="firebase-storage-usage-body"></div>
     </div>
 
     <div class="system-panel" id="system-panel-drive" style="display:none;">
@@ -301,6 +421,12 @@
         </select>
         <input type="text" id="trash-q" placeholder="항목명 또는 식별 코드 검색..." style="min-width:220px;" oninput="renderTrash()">
         <button class="btn btn-danger" onclick="emptyTrash()"><i class="ti ti-trash-x"></i>휴지통 비우기</button>
+      </div>
+      <div class="selection-action-bar trash-selection-bar" id="trash-selection-bar" style="display:none;">
+        <span class="date-view-selection-count"><i class="ti ti-checkbox"></i> <span class="trash-selected-count">0</span>건 선택됨</span>
+        <button class="btn btn-sm" onclick="trashRestoreSelected()"><i class="ti ti-rotate-clockwise"></i>선택 복구</button>
+        <button class="btn btn-sm btn-danger" onclick="trashDeleteSelected()"><i class="ti ti-trash"></i>영구 삭제</button>
+        <button class="btn btn-sm date-view-clear-selection" onclick="trashClearSelection()"><i class="ti ti-x"></i>해제</button>
       </div>
       <div class="card trash-table-card"><div id="trash-table" class="trash-table-scroll" style="overflow-x:auto;"></div></div>
     </div>

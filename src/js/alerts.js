@@ -88,35 +88,40 @@ function generateAlert(type, title, sub, category = 'auto') {
 /* 전체 데이터를 스캔하여 자동 알림 생성/갱신 */
 function scanAndGenerateAlerts() {
   _currentScannedTitles = []; // 스캔 시작 시 비움
+  const visibleMaterials = typeof visibleRecords === 'function' ? visibleRecords(materials, 'material') : materials;
+  const visibleProducts = typeof visibleRecords === 'function' ? visibleRecords(products, 'products') : products;
+  const visibleInventory = typeof visibleRecords === 'function' ? visibleRecords(inventory, 'inventory') : inventory;
+  const visibleDefects = typeof visibleRecords === 'function' ? visibleRecords(defects, 'defect') : defects;
+  const visibleWorkOrders = typeof visibleRecords === 'function' ? visibleRecords(workOrders, 'workOrder') : workOrders;
 
   // 발주전 자재
-  materials.filter(m => m.status === '발주전').forEach(m => {
+  visibleMaterials.filter(m => m.status === '발주전').forEach(m => {
     const p = getProductById(m.productId);
     generateAlert('err', `[자재발주 미처리] ${m.name} — ${p?.name || ''}`, `공급처: ${m.supplier||'미지정'} · 입고예정: ${m.expectedDate||'미설정'}`, 'mat_pending');
   });
   // 입고 지연 임박 (7일 이내)
-  materials.filter(m => m.status==='발주중' && m.expectedDate && daysUntil(m.expectedDate)<=7 && daysUntil(m.expectedDate)>=0).forEach(m => {
+  visibleMaterials.filter(m => m.status==='발주중' && m.expectedDate && daysUntil(m.expectedDate)<=7 && daysUntil(m.expectedDate)>=0).forEach(m => {
     generateAlert('warn', `[입고임박] ${m.name} (D-${daysUntil(m.expectedDate)})`, `${m.supplier} 공급 · 예정일 ${m.expectedDate}`, 'mat_delay');
   });
   // 납기 임박 제품 (14일 이내)
-  products.filter(p => p.deliveryDate && daysUntil(p.deliveryDate)<=14 && p.status!=='완료').forEach(p => {
+  visibleProducts.filter(p => p.deliveryDate && daysUntil(p.deliveryDate)<=14 && p.status!=='완료').forEach(p => {
     generateAlert('err', `[납기 위험] ${p.name} D-${daysUntil(p.deliveryDate)}`, `고객사: ${getClientName(p.clientId)} · 납기: ${p.deliveryDate}`, 'prod_delivery');
   });
   if (typeof sendAlimtalkDeliveryDue === 'function') {
-    (products || []).filter(function(p) {
+    (visibleProducts || []).filter(function(p) {
       return p.deliveryDate && daysUntil(p.deliveryDate) <= 7 && daysUntil(p.deliveryDate) >= 0 && p.status !== '완료' && p.status !== '납품';
     }).forEach(function(p) { sendAlimtalkDeliveryDue(p); });
   }
   // 안전재고 미달
-  inventory.filter(i => i.qty <= i.minQty && i.minQty > 0).forEach(i => {
+  visibleInventory.filter(i => i.qty <= i.minQty && i.minQty > 0).forEach(i => {
     generateAlert('warn', `[안전재고 미달] ${i.name}`, `현재 ${i.qty}${i.unit} / 기준 ${i.minQty}${i.unit} · ${i.location||'위치 미지정'}`, 'inv_low');
   });
   // 미처리 불량
-  defects.filter(d => d.status === '조치중').forEach(d => {
+  visibleDefects.filter(d => d.status === '조치중').forEach(d => {
     generateAlert('warn', `[불량 미조치] ${d.type} — ${getProductName(d.productId)}`, `공정: ${d.stage} · 수량: ${d.qty}개 · 발생: ${d.date}`, 'defect_open');
   });
   // 지연 생산지시
-  workOrders.filter(o => o.status==='지연').forEach(o => {
+  visibleWorkOrders.filter(o => o.status==='지연').forEach(o => {
     generateAlert('err', `[생산지시 지연] ${o.id} — ${getProductName(o.productId)}`, `라인: ${o.line} · 담당: ${o.manager} · 납기: ${o.due}`, 'wo_delayed');
   });
 

@@ -291,8 +291,64 @@ async function pbHtSearch() {
   _pbLoading('pb-ht-result');
   try {
     const res = await _pbCallable('popbillHometaxSearch')({ jobID: pbHtJobID, page: 1, perPage: 50 });
+    const list = res.data && Array.isArray(res.data.list) ? res.data.list : [];
+    if (list.length) pbSaveHometaxFinanceSnapshot(v('pb-ht-type'), list);
     _pbResultBox('pb-ht-result', _pbRenderHtList(res.data));
   } catch (e) { _pbError('pb-ht-result', _pbErrMsg(e)); }
+}
+
+function pbDateText(value) {
+  const raw = String(value || '').replace(/[^0-9]/g, '');
+  if (raw.length === 8) return `${raw.slice(0,4)}-${raw.slice(4,6)}-${raw.slice(6,8)}`;
+  return String(value || '').slice(0,10);
+}
+
+function pbNumber(value) {
+  return Number(String(value ?? '').replace(/[^0-9.-]/g, '')) || 0;
+}
+
+function pbRowFirst(row, keys) {
+  for (const key of keys) {
+    if (row && row[key] != null && row[key] !== '') return row[key];
+  }
+  return '';
+}
+
+function pbNormalizeHometaxInvoice(queryType, row) {
+  const type = queryType === 'BUY' ? '매입' : (queryType === 'SELL' ? '매출' : '위수탁');
+  const confirmNo = pbRowFirst(row, ['ntsconfirmNum','ntsConfirmNum','confirmNum','invoiceID','mgtKey']);
+  const writeDate = pbDateText(pbRowFirst(row, ['writeDate','issueDate','regDT','sendDate']));
+  const supplier = pbRowFirst(row, ['invoicerCorpName','supplierCorpName','corpName','sellerCorpName']);
+  const buyer = pbRowFirst(row, ['invoiceeCorpName','buyerCorpName','customerCorpName']);
+  const amount = pbNumber(pbRowFirst(row, ['totalAmount','supplyCostTotal','supplyCost','totalAmt','chargeTotal']));
+  return {
+    id: `HT-${queryType || 'ETC'}-${confirmNo || writeDate || Date.now()}-${Math.random().toString(36).slice(2,6)}`,
+    queryType: queryType || '',
+    type,
+    confirmNo: String(confirmNo || ''),
+    writeDate,
+    supplier: String(supplier || ''),
+    buyer: String(buyer || ''),
+    amount,
+    collectedAt: new Date().toISOString(),
+    raw: row
+  };
+}
+
+function pbSaveHometaxFinanceSnapshot(queryType, rows) {
+  if (typeof financeData !== 'object' || !financeData) return;
+  if (!Array.isArray(financeData.hometaxInvoices)) financeData.hometaxInvoices = [];
+  const normalized = rows.map(row => pbNormalizeHometaxInvoice(queryType, row));
+  const keyOf = row => [row.queryType, row.confirmNo, row.writeDate, row.supplier, row.buyer, row.amount].join('|');
+  const existing = new Map(financeData.hometaxInvoices.map(row => [keyOf(row), row]));
+  normalized.forEach(row => existing.set(keyOf(row), Object.assign(existing.get(keyOf(row)) || {}, row)));
+  financeData.hometaxInvoices = Array.from(existing.values())
+    .sort((a,b) => String(b.writeDate || b.collectedAt || '').localeCompare(String(a.writeDate || a.collectedAt || '')))
+    .slice(0, 500);
+  if (typeof writeAuditLog === 'function') {
+    writeAuditLog('finance', 'hometaxInvoices', 'update', null, null, { summary:'홈택스 세금계산서 수집 저장', detail:`${queryType || '전체'} · ${normalized.length}건` });
+  }
+  saveStorage('financeData', financeData);
 }
 
 function _pbRenderHtList(data) {

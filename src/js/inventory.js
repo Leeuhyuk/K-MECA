@@ -7,9 +7,30 @@ function switchInvTab(tab) {
   if (ledger) ledger.style.display = (tab === 'ledger') ? 'block' : 'none';
   if (tab === 'ledger') renderInventoryLedger();
 }
+registerBulkEntryTable('inv', {
+  layout: 'sharedLabels',
+  body: 'inv-bulk-body',
+  minRows: 1,
+  fields: [
+    { name: 'name', label: '품목명', type: 'text', placeholder: '품목명', required: true },
+    { name: 'category', label: '재고 구분', type: 'select', default: () => invCategory || '생산부품', options: ['완제품','생산부품','사무비품'] },
+    { name: 'type', label: '세부 유형', type: 'select', default: () => invCategory === '완제품' ? '완제품' : invCategory === '사무비품' ? '소모품' : '자재', options: ['자재','반제품','완제품','비품','소모품','기타'] },
+    { name: 'qty', label: '현재고', type: 'number', min: 0, step: 1, default: '0', required: true },
+    { name: 'unit', label: '단위', type: 'select', default: 'EA', options: ['EA','대','SET','kg','M','L','BOX','ton'] },
+    { name: 'minQty', label: '안전재고', type: 'number', min: 0, step: 1, default: '10' },
+    { name: 'location', label: '보관 위치', type: 'text', placeholder: '예: A-4 선반' },
+    { name: 'note', label: '참고', type: 'text', placeholder: '비고' }
+  ]
+});
+function setInventoryEntryMode(mode) {
+  const bulk = mode === 'bulk';
+  setBulkEntryMode('inv', bulk);
+  const saveBtn = inp('inv-save-btn');
+  if (saveBtn && !editInvId) saveBtn.innerHTML = bulk ? '<i class="ti ti-check"></i>일괄 등록' : '<i class="ti ti-check"></i>저장';
+}
 function renderInventory() {
   // 현재 분류 한정 집합
-  const catItems = inventory.filter(i => (i.category || '생산부품') === invCategory);
+  const catItems = inventory.filter(i => canViewRecord(i, 'inventory') && (i.category || '생산부품') === invCategory);
   const total = catItems.length;
   const below = catItems.filter(i => i.qty < (i.minQty||0)).length;
   const totalQty = catItems.reduce((s,i) => s + (Number(i.qty)||0), 0);
@@ -63,7 +84,7 @@ function renderInventory() {
   if (!cont) return;
   if (!rows.length) { cont.innerHTML = empty(`${invCategory} 분류에 등록된 재고가 없습니다. [신규 재고 품목 등록] 버튼으로 추가하세요.`); }
   const tColor = {자재:'bd-info',완제품:'bd-ok',반제품:'bd-warn',소모품:'bd-neu',비품:'bd-neu'};
-  if (rows.length) cont.innerHTML = '<table style="min-width:900px;"><thead><tr>' +
+  if (rows.length) cont.innerHTML = '<table class="inventory-compact-table" style="min-width:860px;"><thead><tr>' +
     '<th onclick="toggleSort(\'inventory\', \'id\')" style="cursor:pointer; user-select:none;">재고코드 ' + sortIcon('inventory', 'id') + '</th>' +
     '<th onclick="toggleSort(\'inventory\', \'name\')" style="cursor:pointer; user-select:none;">품목명 ' + sortIcon('inventory', 'name') + '</th>' +
     '<th onclick="toggleSort(\'inventory\', \'type\')" style="cursor:pointer; user-select:none;">분류 ' + sortIcon('inventory', 'type') + '</th>' +
@@ -96,42 +117,84 @@ function renderInventory() {
   if (invLedgerSel) {
     const curVal = invLedgerSel.value;
     invLedgerSel.innerHTML = '<option value="">전체 품목</option>' +
-      inventory.map(function(i) {
+      (typeof visibleRecords === 'function' ? visibleRecords(inventory, 'inventory') : inventory).map(function(i) {
         return '<option value="' + esc(i.id) + '"' + (i.id === curVal ? ' selected' : '') + '>' + esc(i.name) + '</option>';
       }).join('');
   }
-  renderInventoryLedger();
+  const ledgerPanel = document.getElementById('inv-tab-ledger');
+  if (ledgerPanel && ledgerPanel.style.display !== 'none') renderInventoryLedger();
 }
 function adjustStock(id, delta) {
   const i = inventory.find(x=>x.id===id); if (!i) return;
-  i.qty = Math.max(0, (i.qty||0) + delta);
-  logInventoryMove(id, delta > 0 ? '입고' : '출고', Math.abs(delta), '수동 조정');
+  if (!requireRecordPermission('edit', i, 'inventory')) return;
+  const before = _safeJsonClone(i);
+  const beforeQty = Number(i.qty) || 0;
+  i.qty = Math.max(0, beforeQty + delta);
+  stampRecordUpdate(i, before, 'inventory');
+  logInventoryMove(id, delta > 0 ? '입고' : '출고', Math.abs(delta), '수동 조정', '', { beforeQty, afterQty:i.qty });
+  writeAuditLog('inventory', id, 'update', before, i, { summary:'재고 수량 조정', reason:'수동 조정' });
   saveStorage('inventory', inventory);
   renderInventory();
 }
 function openInvAdd() {
+  if (typeof requireCreateAction === 'function' && !requireCreateAction('inventory', '재고 등록')) return;
   editInvId = null;
   inp('inv-modal-ttl').innerHTML = '<i class="ti ti-package" style="color:var(--tx-i);"></i>재고 품목 등록';
+  const saveBtn = inp('inv-save-btn'); if (saveBtn) saveBtn.innerHTML = '<i class="ti ti-check"></i>저장';
   sv('inva-id', nextCode('INV', inventory));
   sv('inva-name','');
   sv('inva-category', invCategory);
   sv('inva-type', invCategory==='완제품' ? '완제품' : invCategory==='사무비품' ? '소모품' : '자재');
   sv('inva-unit','EA');
   sv('inva-qty','0'); sv('inva-minQty','10'); sv('inva-location',''); sv('inva-note','');
+  initBulkEntryTable('inv');
+  setInventoryEntryMode('bulk');
+  const mode = inp('inv-mode-switch'); if (mode) mode.style.display = '';
   inp('inv-modal').classList.add('open');
 }
 function openInvEdit(id) {
   const i = inventory.find(x=>x.id===id); if (!i) return;
+  if (!requireRecordPermission('edit', i, 'inventory')) return;
   editInvId = id;
   inp('inv-modal-ttl').innerHTML = '<i class="ti ti-edit" style="color:var(--tx-w);"></i>재고 수정';
+  const saveBtn = inp('inv-save-btn'); if (saveBtn) saveBtn.innerHTML = '<i class="ti ti-device-floppy"></i>수정';
   sv('inva-id', i.id); sv('inva-name', i.name);
   sv('inva-category', i.category || '생산부품'); sv('inva-type', i.type);
   sv('inva-unit', i.unit||'EA'); sv('inva-qty', i.qty||0); sv('inva-minQty', i.minQty||0);
   sv('inva-location', i.location||''); sv('inva-note', i.note||'');
+  setInventoryEntryMode('single');
+  const mode = inp('inv-mode-switch'); if (mode) mode.style.display = 'none';
   inp('inv-modal').classList.add('open');
 }
 function saveInventoryForm() {
   if (!checkAdminAction()) return;
+  if (!editInvId && isBulkEntryMode('inv')) {
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('inventory', '재고 등록')) return;
+    const rows = readBulkEntryTable('inv');
+    if (!rows.length) { showToast('등록할 재고 행을 입력해주세요.', 'error'); return; }
+    const invalid = rows.find(r => !r.name.trim() || (parseInt(r.qty) || 0) < 0 || (parseInt(r.minQty) || 0) < 0);
+    if (invalid) { showToast('품목명과 수량을 확인해주세요.', 'error'); return; }
+    rows.slice().reverse().forEach(r => {
+      const item = stampRecordCreate({
+        id: nextCode('INV', inventory),
+        name: r.name.trim(),
+        category: r.category || '생산부품',
+        type: r.type || '자재',
+        unit: r.unit || 'EA',
+        qty: parseInt(r.qty) || 0,
+        minQty: parseInt(r.minQty) || 0,
+        location: r.location,
+        note: r.note
+      }, 'inventory');
+      inventory.unshift(item);
+      writeAuditLog('inventory', item.id, 'create', null, item, { summary:'재고 품목 일괄 등록', source:'bulkAction' });
+    });
+    saveStorage('inventory', inventory);
+    closeModal('inv-modal');
+    renderInventory();
+    showToast(`재고 품목 ${rows.length}건이 등록되었습니다.`);
+    return;
+  }
   const name = v('inva-name').trim();
   if (!name) { showToast('품목명은 필수입니다.', 'error'); return; }
   const obj = {
@@ -140,8 +203,21 @@ function saveInventoryForm() {
     qty: parseInt(v('inva-qty'))||0, minQty: parseInt(v('inva-minQty'))||0,
     location: v('inva-location'), note: v('inva-note')
   };
-  if (editInvId) { const i = inventory.findIndex(x=>x.id===editInvId); if (i>=0) inventory[i] = obj; }
-  else inventory.unshift(obj);
+  if (editInvId) {
+    const i = inventory.findIndex(x=>x.id===editInvId);
+    if (i>=0) {
+      const before = _safeJsonClone(inventory[i]);
+      if (!requireRecordPermission('edit', before, 'inventory')) return;
+      inventory[i] = stampRecordUpdate(Object.assign({}, inventory[i], obj), before, 'inventory');
+      writeAuditLog('inventory', editInvId, 'update', before, inventory[i], { summary:'재고 품목 수정' });
+    }
+  }
+  else {
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('inventory', '재고 등록')) return;
+    const item = stampRecordCreate(obj, 'inventory');
+    inventory.unshift(item);
+    writeAuditLog('inventory', item.id, 'create', null, item, { summary:'재고 품목 등록' });
+  }
   saveStorage('inventory', inventory);
   closeModal('inv-modal');
   renderInventory();
@@ -150,18 +226,22 @@ function saveInventoryForm() {
 function deleteInventory(id) {
   if (!checkAdminAction()) return;
   const i = inventory.find(x=>x.id===id); if (!i) return;
+  if (!requireRecordPermission('delete', i, 'inventory')) return;
   if (!confirm('이 재고 품목을 삭제하시겠습니까?')) return;
   pushToTrash('inventory', i);
   inventory = inventory.filter(x=>x.id!==id);
+  writeAuditLog('inventory', id, 'delete', i, null, { summary:'재고 품목 삭제' });
   saveStorage('inventory', inventory);
   renderInventory();
   showToast('재고가 휴지통으로 이동되었습니다.');
 }
 function exportInvCSV() {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('재고 엑셀 내보내기')) return;
   if (typeof XLSX === 'undefined') { showToast('SheetJS 로딩 중...', 'error'); return; }
   const wb = XLSX.utils.book_new();
   const h = ['재고코드','품목명','재고구분','세부유형','현재고','단위','안전재고','보관위치','비고'];
-  const target = inventory.filter(i => (i.category||'생산부품') === invCategory);
+  const source = typeof visibleRecords === 'function' ? visibleRecords(inventory, 'inventory') : inventory;
+  const target = source.filter(i => (i.category||'생산부품') === invCategory);
   const rows = target.map(i=>[i.id,i.name,i.category||'',i.type,i.qty,i.unit,i.minQty||0,i.location||'',i.note||'']);
   const ws = XLSX.utils.aoa_to_sheet([h,...rows]);
   XLSX.utils.book_append_sheet(wb, ws, invCategory);

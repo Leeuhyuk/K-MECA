@@ -13,7 +13,10 @@ function switchDlvTab(tab, el) {
 }
 
 function renderClosedProjects() {
-  const closedC = clients.filter(c => c.closed);
+  const visibleClients = typeof visibleRecords === 'function' ? visibleRecords(clients, 'clients') : clients;
+  const visibleProducts = typeof visibleRecords === 'function' ? visibleRecords(products, 'products') : products;
+  const visibleDeliveries = typeof visibleRecords === 'function' ? visibleRecords(deliveries, 'delivery') : deliveries;
+  const closedC = visibleClients.filter(c => c.closed);
   const badge = inp('dlv-closed-badge');
   if (badge) badge.textContent = closedC.length;
   const el = inp('dlv-closed-projects'); if (!el) return;
@@ -25,8 +28,8 @@ function renderClosedProjects() {
     return;
   }
   el.innerHTML = closedC.map(c => {
-    const prods = products.filter(p => p.clientId === c.id);
-    const cDlvs = deliveries.filter(d => d.clientId === c.id);
+    const prods = visibleProducts.filter(p => p.clientId === c.id);
+    const cDlvs = visibleDeliveries.filter(d => d.clientId === c.id);
     const cAmt  = cDlvs.reduce((s, d) => s + d.price * d.qty, 0);
     return `
       <div style="border:1px solid var(--br); border-radius:var(--rl); margin-bottom:12px; overflow:hidden;">
@@ -76,15 +79,17 @@ function renderClosedProjects() {
 
 function renderDeliveries() {
   ensureDateView('deliveries', 'dlv-table', deliveries.map(d=>d.deliveredAt), renderDeliveries);
+  const visibleDeliveries = typeof visibleRecords === 'function' ? visibleRecords(deliveries, 'delivery') : deliveries;
+  const visibleClients = typeof visibleRecords === 'function' ? visibleRecords(clients, 'clients') : clients;
   const fc = inp('dlv-filter-client');
   if (fc) {
     const cur = fc.value;
     fc.innerHTML = '<option value="">전체 고객사</option>' +
-      clients.map(c=>`<option value="${esc(c.id)}"${c.id===cur?' selected':''}>${esc(c.name)}</option>`).join('');
+      visibleClients.map(c=>`<option value="${esc(c.id)}"${c.id===cur?' selected':''}>${esc(c.name)}</option>`).join('');
   }
   const fcVal = v('dlv-filter-client');
   const q = (v('dlv-q')||'').toLowerCase();
-  let fil = deliveries.filter(d=>
+  let fil = visibleDeliveries.filter(d=>
     dateViewMatch('deliveries', d.deliveredAt) &&
     (!fcVal || d.clientId===fcVal) &&
     (!q || [d.productName,getClientName(d.clientId),d.id].join(' ').toLowerCase().includes(q))
@@ -112,10 +117,10 @@ function renderDeliveries() {
     });
   }
 
-  const totalCnt = deliveries.length;
-  const totalAmt = deliveries.reduce((s,d)=>s+d.price*d.qty,0);
-  const thisMonth = deliveries.filter(d=>d.deliveredAt?.slice(0,7)===today().slice(0,7)).length;
-  const clientCnt = new Set(deliveries.map(d=>d.clientId)).size;
+  const totalCnt = visibleDeliveries.length;
+  const totalAmt = visibleDeliveries.reduce((s,d)=>s+d.price*d.qty,0);
+  const thisMonth = visibleDeliveries.filter(d=>d.deliveredAt?.slice(0,7)===today().slice(0,7)).length;
+  const clientCnt = new Set(visibleDeliveries.map(d=>d.clientId)).size;
   const kpi = inp('dlv-kpi');
   if (kpi) kpi.innerHTML = `
     <div class="mc"><div class="mc-lbl"><i class="ti ti-package-export"></i>전체 납품</div><div class="mc-val">${totalCnt}건</div><div class="mc-sub">전체 납품 기록</div></div>
@@ -125,7 +130,10 @@ function renderDeliveries() {
 
   // 종료 프로젝트 뱃지 업데이트
   const closedBadge = inp('dlv-closed-badge');
-  if (closedBadge) closedBadge.textContent = clients.filter(c=>c.closed).length;
+  if (closedBadge) {
+    const visibleClients = typeof visibleRecords === 'function' ? visibleRecords(clients, 'clients') : clients;
+    closedBadge.textContent = visibleClients.filter(c=>c.closed).length;
+  }
   const el = inp('dlv-table'); if (!el) return;
   if (!fil.length) { el.innerHTML = empty('납품 기록이 없습니다. 공정관리에서 [납품] 단계로 변경하면 자동 등록됩니다.'); return; }
   el.innerHTML = `
@@ -172,9 +180,15 @@ function updateDlvBadge() {
 
 function deleteDelivery(id) {
   if (!checkAdminAction()) return;
+  const target = deliveries.find(x=>x.id===id);
+  if (!target || (typeof requireRecordPermission === 'function' && !requireRecordPermission('delete', target, 'delivery'))) return;
+  if (typeof guardFinanceMonth === 'function' && !guardFinanceMonth(target.deliveredAt || today())) return;
   confirm_('납품 기록 삭제', '이 납품 기록을 삭제하시겠습니까?<br><span style="font-size:11px;color:var(--tx-t);">제품 공정 정보는 유지됩니다.</span>', () => {
     deliveries = deliveries.filter(x=>x.id!==id);
+    if (financeData && financeData.paidReceivable) delete financeData.paidReceivable[id];
+    if (target) writeAuditLog('delivery', id, 'delete', target, null, { summary:'납품 기록 삭제' });
     saveStorage('deliveries', deliveries);
+    if (financeData) saveStorage('financeData', financeData);
     updateDlvBadge();
     if (currentPage === 'deliveries') renderDeliveries();
     else renderDashboard();
@@ -183,10 +197,12 @@ function deleteDelivery(id) {
 }
 
 function exportDeliveriesCSV() {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('납품 현황 엑셀 내보내기')) return;
   if (typeof XLSX === 'undefined') { showToast('SheetJS 로딩 중...', 'error'); return; }
   const wb = XLSX.utils.book_new();
   const h = ['납품번호','납품일자','고객사','제품명','규격','수량','단위','단가','납품금액','비고'];
-  const rows = deliveries.map(d => [d.id, d.deliveredAt, getClientName(d.clientId), d.productName, d.spec||'', d.qty, d.unit, d.price, d.price*d.qty, d.note||'']);
+  const source = typeof visibleRecords === 'function' ? visibleRecords(deliveries, 'delivery') : deliveries;
+  const rows = source.map(d => [d.id, d.deliveredAt, getClientName(d.clientId), d.productName, d.spec||'', d.qty, d.unit, d.price, d.price*d.qty, d.note||'']);
   const ws = XLSX.utils.aoa_to_sheet([h, ...rows]);
   ws['!cols'] = h.map(c => ({ wch: Math.max(c.length+2, 12) }));
   XLSX.utils.book_append_sheet(wb, ws, '납품현황');

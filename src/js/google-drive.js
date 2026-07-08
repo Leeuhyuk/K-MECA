@@ -8,6 +8,29 @@ let _driveTokenExpiresAt = 0;
 let _driveBackups = [];
 let _driveAutoBackupTimer = null;
 let _driveAutoConnectAttempted = false;
+let _driveConfigCloudSyncQueued = false;
+
+function driveConfigHasMeaningfulValue(config) {
+  if (!config || typeof config !== 'object') return false;
+  return !!(
+    config.clientId ||
+    config.folderId ||
+    config.folderUrl ||
+    config.connectedEmail ||
+    config.lastBackupAt ||
+    config.autoConnectEnabled ||
+    config.autoBackupEnabled
+  );
+}
+
+function queueExistingDriveConfigCloudSync(config) {
+  if (_driveConfigCloudSyncQueued) return;
+  if (!driveConfigHasMeaningfulValue(config)) return;
+  if (typeof cloudQueueSave !== 'function') return;
+  if (typeof _cloudActive === 'undefined' || !_cloudActive) return;
+  _driveConfigCloudSyncQueued = true;
+  cloudQueueSave('googleDriveConfig');
+}
 
 function getDriveConfig() {
   const defaults = {
@@ -16,21 +39,25 @@ function getDriveConfig() {
     folderUrl: '',
     connectedEmail: '',
     lastBackupAt: '',
-    autoConnectEnabled: true,
+    autoConnectEnabled: false,
     autoBackupEnabled: false,
     autoBackupHours: 24
   };
+  const hasLocalConfig = localStorage.getItem('mes_googleDriveConfig') != null;
   const localConfig = loadStorage('googleDriveConfig', defaults) || {};
   const sharedOAuth = loadStorage(DRIVE_OAUTH_SETTINGS_KEY, {}) || {};
-  return Object.assign({}, defaults, localConfig, {
+  const merged = Object.assign({}, defaults, localConfig, {
     clientId: localConfig.clientId || sharedOAuth.clientId || ''
   });
+  if (hasLocalConfig) queueExistingDriveConfigCloudSync(merged);
+  return merged;
 }
 
 function saveDriveConfig(config) {
   const nextConfig = config || {};
   try {
-    localStorage.setItem('mes_googleDriveConfig', JSON.stringify(nextConfig));
+    if (typeof saveStorage === 'function') saveStorage('googleDriveConfig', nextConfig);
+    else localStorage.setItem('mes_googleDriveConfig', JSON.stringify(nextConfig));
   } catch(e) {
     if (typeof showToast === 'function') showToast('Google Drive 설정을 저장하지 못했습니다. 브라우저 저장 공간을 확인하세요.', 'error');
     console.error('Google Drive 설정 저장 실패:', e);
@@ -214,7 +241,7 @@ async function connectGoogleDrive() {
     await requestDriveAccessToken(promptMode);
     await ensureDriveBackupFolder();
     const connectedConfig = getDriveConfig();
-    connectedConfig.autoConnectEnabled = true;
+    connectedConfig.autoConnectEnabled = false;
     saveDriveConfig(connectedConfig);
     try {
       const about = await driveApi('/drive/v3/about?fields=user(displayName,emailAddress)');
@@ -233,18 +260,11 @@ async function connectGoogleDrive() {
 }
 
 async function autoConnectGoogleDriveAfterLogin() {
-  if (_driveAutoConnectAttempted || _driveAccessToken) return;
-  const config = getDriveConfig();
-  if (!config.autoConnectEnabled || !config.clientId || !_driveHostedOriginAvailable()) return;
-  saveDriveOAuthSettings(config);
+  if (_driveAutoConnectAttempted) return;
   _driveAutoConnectAttempted = true;
-  try {
-    await requestDriveAccessToken('');
-    await ensureDriveBackupFolder();
+  if (isDriveTokenActive(0)) {
     scheduleGoogleDriveAutoBackup();
     if (currentPage === 'system' && systemTab === 'drive') renderGoogleDriveSettings();
-  } catch (error) {
-    console.info('Google Drive 자동 연결 대기:', error && error.message ? error.message : error);
   }
 }
 
@@ -270,7 +290,7 @@ function disconnectGoogleDrive() {
 function saveGoogleDriveSettings() {
   const config = getDriveConfig();
   config.clientId = v('drive-client-id').trim();
-  config.autoConnectEnabled = !!(inp('drive-auto-connect') && inp('drive-auto-connect').checked);
+  config.autoConnectEnabled = false;
   config.autoBackupEnabled = !!(inp('drive-auto-enabled') && inp('drive-auto-enabled').checked);
   config.autoBackupHours = Math.max(1, Number(v('drive-auto-hours')) || 24);
   saveDriveConfig(config);
@@ -279,9 +299,6 @@ function saveGoogleDriveSettings() {
   scheduleGoogleDriveAutoBackup();
   showToast('Google Drive OAuth 설정을 저장했습니다.', 'success');
   renderGoogleDriveSettings();
-  if (config.autoConnectEnabled && !_driveAccessToken) {
-    setTimeout(autoConnectGoogleDriveAfterLogin, 200);
-  }
 }
 
 function _driveBackupName() {
@@ -299,6 +316,7 @@ function _driveBackupName() {
 }
 
 async function backupDataToGoogleDrive() {
+  if (typeof requireAdminAction === 'function' && !requireAdminAction('Google Drive 전체 백업')) return;
   const button = inp('drive-backup-btn');
   if (button) { button.disabled = true; button.innerHTML = '<i class="ti ti-loader animate-spin"></i>백업 중'; }
   try {
@@ -375,6 +393,28 @@ function _driveDocumentConfig(type) {
     payslip:{label:'급여명세서',print:id=>printPayslip(id),xlsx:id=>exportPayslipXLS(id)}
   };
   return map[type];
+}
+
+function _driveVisibleDocuments(type) {
+  if (type === 'rfq') return typeof visibleRfqList === 'function' ? visibleRfqList() : (typeof visibleRecords === 'function' ? visibleRecords(rfqList, 'rfq') : rfqList);
+  if (type === 'po') return typeof visiblePurchaseOrderList === 'function' ? visiblePurchaseOrderList() : (typeof visibleRecords === 'function' ? visibleRecords(poList, 'po') : poList);
+  if (type === 'statement' || type === 'tax') return typeof visibleSalesList === 'function' ? visibleSalesList(type) : (typeof visibleRecords === 'function' ? visibleRecords(type === 'statement' ? statementList : taxList, type) : (type === 'statement' ? statementList : taxList));
+  if (type === 'quote' || type === 'order') return typeof visibleSODocList === 'function' ? visibleSODocList(type) : (typeof visibleRecords === 'function' ? visibleRecords(type === 'quote' ? quoteList : orderList, type) : (type === 'quote' ? quoteList : orderList));
+  if (type === 'payslip') return typeof visibleWorkersList === 'function' ? visibleWorkersList() : (typeof visibleRecords === 'function' ? visibleRecords(workers, 'worker') : workers);
+  return [];
+}
+
+function _driveDocumentAllowed(type, id) {
+  if (!id) return true;
+  const ids = Array.isArray(id) ? id : [id];
+  const visible = _driveVisibleDocuments(type);
+  const visibleIds = new Set(visible.map(item => item && item.id).filter(Boolean));
+  const ok = ids.every(value => {
+    const key = type === 'payslip' ? String(value || '').split('__')[0] : value;
+    return visibleIds.has(key);
+  });
+  if (!ok && typeof showToast === 'function') showToast('접근 권한이 없는 문서는 Drive 저장을 할 수 없습니다.', 'error');
+  return ok;
 }
 
 function captureDocumentPrintHtml(callback) {
@@ -610,6 +650,12 @@ function buildDocumentPdfPreviewHtml(html, title, options = {}) {
 async function documentPdfBlob(type, id) {
   const config = _driveDocumentConfig(type);
   if (!config) throw new Error('지원하지 않는 문서 형식입니다.');
+  if (typeof _docTemplateHasCustom === 'function' &&
+      typeof buildDocTemplatePdfHtml === 'function' &&
+      _docTemplateHasCustom(type)) {
+    const result = await buildDocTemplatePdfHtml(type, id, { individual:Array.isArray(id) });
+    return createDocumentPdfBlobFromHtml(result.html);
+  }
   const html = captureDocumentPrintHtml(()=>config.print(id));
   return createDocumentPdfBlobFromHtml(html);
 }
@@ -647,6 +693,8 @@ function captureDocumentXlsxBlob(callback) {
 }
 
 async function saveDocumentToGoogleDrive(type, id, format) {
+  if (format === 'pdf' && typeof requirePdfAction === 'function' && !requirePdfAction('Google Drive PDF 저장')) return;
+  if (format !== 'pdf' && typeof requireCsvAction === 'function' && !requireCsvAction('Google Drive 엑셀 저장')) return;
   const config = _driveDocumentConfig(type);
   if (!config) { showToast('지원하지 않는 문서입니다.', 'error'); return; }
   try {
@@ -678,8 +726,11 @@ async function _uploadDocumentBundleToGoogleDrive(type, id) {
 }
 
 async function saveDocumentBundleToGoogleDrive(type, id) {
+  if (typeof requirePdfAction === 'function' && !requirePdfAction('Google Drive PDF 저장')) return;
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('Google Drive 엑셀 저장')) return;
   const config = _driveDocumentConfig(type);
   if (!config) { showToast('지원하지 않는 문서입니다.', 'error'); return; }
+  if (!_driveDocumentAllowed(type, id)) return;
   try {
     await requestDriveAccessToken('');
     if (Array.isArray(id) && type !== 'po') {
@@ -823,11 +874,13 @@ function renderDriveBackupList() {
 }
 
 function restoreGoogleDriveBackupByIndex(index) {
+  if (typeof requireAdminAction === 'function' && !requireAdminAction('Google Drive 백업 복원')) return;
   const file = _driveBackups[index];
   if (file) restoreGoogleDriveBackup(file.id, file.name);
 }
 
 async function restoreGoogleDriveBackup(fileId, fileName) {
+  if (typeof requireAdminAction === 'function' && !requireAdminAction('Google Drive 백업 복원')) return;
   confirm_('Google Drive 백업 복원',
     '<strong>' + _driveEsc(fileName) + '</strong> 파일로 현재 데이터를 교체합니다.<br>' +
     '<span style="color:var(--tx-d);font-size:12px;">복원 전에 현재 데이터를 Drive에 백업하는 것을 권장합니다.</span>',
@@ -857,7 +910,7 @@ async function renderGoogleDriveSettings() {
   const currentOrigin = getDriveCurrentOrigin();
   const connected = isDriveTokenActive(0);
   const configured = !!(config.clientId && (config.folderId || config.folderUrl || config.connectedEmail));
-  const statusText = connected ? '연결됨' : (configured ? '자동 연결 대기' : '연결 필요');
+  const statusText = connected ? '연결됨' : '연결 필요';
   body.innerHTML =
     '<div class="card" style="margin-bottom:16px;">' +
       '<div class="card-hd"><span class="card-ttl"><i class="ti ti-brand-google-drive"></i>Google Drive 데이터 백업</span>' +
@@ -872,9 +925,7 @@ async function renderGoogleDriveSettings() {
         '<div class="form-row"><label class="form-lbl">OAuth 웹 클라이언트 ID</label>' +
           '<input class="form-inp" id="drive-client-id" value="' + _driveEsc(config.clientId) + '" placeholder="xxxxxxxx.apps.googleusercontent.com"></div>' +
         '<div style="font-size:11px;color:var(--tx-t);line-height:1.7;">Google Cloud Console에서 Drive API를 활성화하고 OAuth 웹 클라이언트를 만든 뒤 현재 HTTPS 주소를 승인된 JavaScript 원본에 등록하세요. 권한은 앱이 만든 파일만 접근하는 drive.file을 사용합니다.</div>' +
-        '<label style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;">' +
-          '<input type="checkbox" id="drive-auto-connect" ' + (config.autoConnectEnabled !== false ? 'checked' : '') + '>시스템 로그인 후 Google Drive 자동 연결</label>' +
-        '<div style="font-size:10px;color:var(--tx-t);line-height:1.6;">최초 1회 Drive 연결과 권한 승인이 필요합니다. 이후에는 시스템 로그인 후 자동 연결을 시도하며, Google 로그인 세션 또는 브라우저 정책에 따라 연결 버튼을 다시 눌러야 할 수 있습니다.</div>' +
+        '<div style="font-size:10px;color:var(--tx-t);line-height:1.6;">새로고침 후에는 Google Drive를 자동 연결하지 않습니다. Drive 연결, 백업, 문서 저장처럼 사용자가 직접 실행한 작업에서만 Google OAuth 창이 열립니다.</div>' +
         '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px;border:1px solid var(--br);border-radius:var(--rm);">' +
           '<label style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;"><input type="checkbox" id="drive-auto-enabled" ' + (config.autoBackupEnabled ? 'checked' : '') + '>자동 백업</label>' +
           '<label style="font-size:11px;color:var(--tx-s);">주기 <input id="drive-auto-hours" type="number" min="1" value="' + (Number(config.autoBackupHours)||24) + '" style="width:70px;height:30px;text-align:right;"> 시간</label>' +

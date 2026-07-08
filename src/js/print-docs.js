@@ -46,13 +46,375 @@ function _docPrintStyle() {
   </style>`;
 }
 
+/* 문서 품목 테이블(엑셀형 입력) 공통 */
+const DOC_ITEM_TABLES = {
+  rq:  { body:'rq-items-body',  item:'rq-item',  spec:'rq-spec',  qty:'rq-qty',  unit:'rq-unit',  price:'rq-target', note:'rq-note',  defaultUnit:'EA', minRows:1 },
+  po:  { body:'po-items-body',  item:'po-item',  spec:'po-spec',  qty:'po-qty',  unit:'po-unit',  price:'po-price',  note:'po-note',  defaultUnit:'EA', minRows:1 },
+  sd:  { body:'sd-items-body',  item:'sd-item',  spec:'sd-spec',  qty:'sd-qty',  unit:'sd-unit',  price:'sd-price',  note:'sd-note',  defaultUnit:'EA', minRows:1 },
+  so2: { body:'so2-items-body', item:'so2-item', spec:'so2-spec', qty:'so2-qty', unit:'so2-unit', price:'so2-price', note:'so2-note', defaultUnit:'대', minRows:1 }
+};
+const DOC_ITEM_FIELDS = [
+  { name:'itemName', label:'품목명', required:true, placeholder:'품목명' },
+  { name:'spec', label:'규격', placeholder:'규격/사양' },
+  { name:'qty', label:'수량', required:true, type:'number', placeholder:'1' },
+  { name:'unit', label:'단위', placeholder:'EA' },
+  { name:'price', label:'단가', type:'number', placeholder:'0' },
+  { name:'note', label:'비고', placeholder:'비고' }
+];
+
+function _docNumOrNull(value) {
+  const text = String(value ?? '').replace(/[,₩\s원]/g, '').trim();
+  if (!text) return null;
+  const n = Number(text);
+  return Number.isFinite(n) ? n : null;
+}
+
+function _docItemClean(row, defaults = {}) {
+  return {
+    itemName: String(row?.itemName ?? row?.name ?? '').trim(),
+    spec: String(row?.spec ?? defaults.spec ?? '').trim(),
+    qty: Number(row?.qty) || 1,
+    unit: String(row?.unit ?? defaults.unit ?? '').trim(),
+    price: _docNumOrNull(row?.price ?? row?.targetPrice ?? row?.unitPrice ?? defaults.price),
+    note: String(row?.note ?? '').trim()
+  };
+}
+
+function _docItemInitialRows(cfg) {
+  const raw = Number(cfg?.initialRows == null ? 1 : cfg.initialRows);
+  return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 1;
+}
+
+function _docItems(doc) {
+  const defaults = {
+    spec: doc?.spec || '',
+    unit: doc?.unit || '',
+    price: _docNumOrNull(doc?.targetPrice ?? doc?.unitPrice)
+  };
+  const fromRows = Array.isArray(doc?.items) ? doc.items.map(row => _docItemClean(row, defaults)).filter(x => x.itemName) : [];
+  if (fromRows.length) return fromRows;
+  const fallback = _docItemClean({ itemName: doc?.itemName, qty: doc?.qty, note: doc?.note }, defaults);
+  return fallback.itemName ? [fallback] : [];
+}
+
+function _docItemSummary(doc) {
+  const items = _docItems(doc);
+  if (!items.length) return '—';
+  return items.length > 1 ? `${items[0].itemName} 외 ${items.length - 1}건` : items[0].itemName;
+}
+
+function _docItemsSearchText(doc) {
+  return _docItems(doc).map(x => `${x.itemName} ${x.spec} ${x.unit} ${x.note}`).join(' ').toLowerCase();
+}
+
+function _docQtySummary(doc) {
+  const items = _docItems(doc);
+  if (!items.length) return '—';
+  if (items.length === 1) return `${items[0].qty} ${items[0].unit || doc?.unit || ''}`.trim();
+  const units = [...new Set(items.map(item => item.unit || doc?.unit || '').filter(Boolean))];
+  if (units.length > 1) return `${items.length}개 품목`;
+  const unit = units[0] || '';
+  const totalQty = items.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+  return `총 ${totalQty} ${unit}`.trim();
+}
+
+function _docLinePrice(type, doc) {
+  return Number(type === 'rfq' ? doc?.targetPrice : doc?.unitPrice) || 0;
+}
+
+function _docAmount(doc, type) {
+  return _docLines(doc, type).reduce((sum, line) => sum + line.amount, 0);
+}
+
+function _docLines(docs, type) {
+  return (Array.isArray(docs) ? docs : [docs]).flatMap(doc => {
+    return _docItems(doc).map((item, index) => ({
+      ...item,
+      spec: item.spec || doc?.spec || '',
+      unit: item.unit || doc?.unit || (type === 'quote' || type === 'order' ? '대' : 'EA'),
+      price: item.price ?? _docLinePrice(type, doc),
+      amount: (item.price ?? _docLinePrice(type, doc)) * (Number(item.qty) || 0),
+      doc,
+      docId: doc?.id || '',
+      rowNote: item.note || (!doc?.commonNote && index === 0 ? doc?.note || '' : '')
+    }));
+  });
+}
+
+function _nextDocCodeForBatch(prefix, list, pending, preferredId) {
+  const all = (list || []).concat(pending || []);
+  const used = new Set(all.map(x => x && x.id).filter(Boolean));
+  if (preferredId && !used.has(preferredId)) return preferredId;
+  return nextDocCode(prefix, all);
+}
+
+function _singleItemDoc(base, item, type) {
+  const clean = _docItemClean(item, { unit:base?.unit || 'EA', price:type === 'rfq' ? base?.targetPrice : base?.unitPrice });
+  const next = {
+    ...base,
+    itemName: clean.itemName,
+    spec: clean.spec || '',
+    qty: Number(clean.qty) || 1,
+    unit: clean.unit || base?.unit || 'EA',
+    items: [clean]
+  };
+  if (type === 'rfq') {
+    next.targetPrice = Number(clean.price) || 0;
+    next.note = clean.note || '';
+  } else {
+    next.unitPrice = Number(clean.price) || 0;
+    next.note = next.commonNote || clean.note || '';
+  }
+  return next;
+}
+
+function _syncDocItemLegacy(prefix) {
+  const cfg = DOC_ITEM_TABLES[prefix];
+  if (!cfg) return;
+  const rows = _readDocItemTable(prefix);
+  const first = rows[0] || { itemName:'', spec:'', qty:1, unit:cfg.defaultUnit || '', price:null, note:'' };
+  sv(cfg.item, first.itemName);
+  sv(cfg.spec, first.spec || '');
+  sv(cfg.qty, first.qty || 1);
+  sv(cfg.unit, first.unit || cfg.defaultUnit || '');
+  sv(cfg.price, first.price ?? '');
+  sv(cfg.note, first.note || '');
+}
+
+function _docItemTableElements(prefix) {
+  const cfg = DOC_ITEM_TABLES[prefix], body = cfg && inp(cfg.body);
+  const table = body && body.closest('table');
+  const head = table && table.querySelector('thead');
+  return { cfg, body, table, head };
+}
+
+function _docItemFieldClass(fieldName) {
+  return 'batch-entry-field-' + String(fieldName || '').replace(/[^a-zA-Z0-9_-]/g, '-');
+}
+
+function _docItemFieldLabel(prefix, field) {
+  return field.name === 'price' && prefix === 'rq' ? '희망단가' : field.label;
+}
+
+function _prepareDocItemSharedTable(prefix) {
+  const { body, table } = _docItemTableElements(prefix);
+  if (!body || !table) return;
+  const grid = table.closest('.doc-item-grid');
+  if (grid) {
+    grid.classList.add('batch-entry-shared-grid', 'doc-item-shared-grid');
+    const label = grid.querySelector(':scope > .doc-item-grid-label');
+    if (label && !label.querySelector('small')) {
+      const current = label.innerHTML.trim();
+      label.innerHTML = `<span>${current}</span><small>좌측 라벨 고정 · 항목은 우측으로 추가</small>`;
+    }
+  }
+  table.classList.add('batch-entry-shared-label-table', 'doc-item-shared-label-table');
+}
+
+function _docItemSharedHeaderHtml(prefix, index) {
+  return `<th class="batch-entry-shared-item-head doc-item-shared-head" data-doc-item-index="${index}">
+    <div class="batch-entry-shared-item-head-inner">
+      <span>${esc(`항목 ${index + 1}`)}</span>
+      <span class="batch-entry-shared-item-actions">
+        <button type="button" title="항목 복제" onclick="_duplicateDocItemColumn('${esc(prefix)}',${index})"><i class="ti ti-copy"></i></button>
+        <button type="button" title="항목 삭제" onclick="_removeDocItemColumn('${esc(prefix)}',${index})"><i class="ti ti-trash"></i></button>
+      </span>
+    </div>
+  </th>`;
+}
+
+function _docItemInputHtml(prefix, field, row, index) {
+  const cfg = DOC_ITEM_TABLES[prefix] || {};
+  const value = field.name === 'unit'
+    ? (row.unit || cfg.defaultUnit || '')
+    : field.name === 'price'
+      ? (row.price ?? '')
+      : (row[field.name] ?? '');
+  const attrs = [
+    `data-doc-item-field="${esc(field.name)}"`,
+    `data-doc-item-index="${index}"`,
+    field.placeholder ? `placeholder="${esc(field.placeholder)}"` : '',
+    field.type === 'number' ? 'type="number" step="any"' : 'type="text"',
+    field.name === 'qty' ? 'min="0"' : ''
+  ].filter(Boolean).join(' ');
+  return `<input ${attrs} value="${esc(value)}">`;
+}
+
+function _renderDocItemTable(prefix, rows) {
+  const { cfg, body, head } = _docItemTableElements(prefix);
+  if (!cfg || !body || !head) return;
+  const seed = Array.isArray(rows) && rows.length
+    ? rows.map(row => _docItemClean(row, { unit:cfg.defaultUnit || '' }))
+    : Array.from({ length: _docItemInitialRows(cfg) }, () => _docItemClean({}, { unit:cfg.defaultUnit || '' }));
+  _prepareDocItemSharedTable(prefix);
+  head.innerHTML = `<tr>
+    <th class="batch-entry-shared-label-col">항목</th>
+    ${seed.map((_, index) => _docItemSharedHeaderHtml(prefix, index)).join('')}
+    <th class="batch-entry-shared-add-col"><button type="button" class="doc-add-row" title="항목 추가" onclick="_addDocItemRow('${esc(prefix)}')"><i class="ti ti-plus"></i></button></th>
+  </tr>`;
+  body.innerHTML = DOC_ITEM_FIELDS.map(field => `<tr data-doc-item-row="${esc(field.name)}">
+    <th class="batch-entry-shared-label-cell">${esc(_docItemFieldLabel(prefix, field))}${field.required ? ' <span>*</span>' : ''}</th>
+    ${seed.map((row, index) => `<td class="batch-entry-shared-value ${esc(_docItemFieldClass(field.name))}" data-doc-item-index="${index}">${_docItemInputHtml(prefix, field, row, index)}</td>`).join('')}
+    <td class="batch-entry-shared-add-spacer"></td>
+  </tr>`).join('');
+  body.querySelectorAll('input').forEach(input => {
+    input.addEventListener('keydown', e => _docItemKeydown(prefix, e));
+    input.addEventListener('input', () => _syncDocItemLegacy(prefix));
+    input.addEventListener('paste', e => _docItemPaste(prefix, e));
+  });
+  _syncDocItemLegacy(prefix);
+}
+
+function _docItemIndexFromNode(node) {
+  if (!node) return -1;
+  if (node.dataset && node.dataset.docItemIndex != null) return parseInt(node.dataset.docItemIndex, 10);
+  const carrier = node.closest && node.closest('[data-doc-item-index]');
+  return carrier ? parseInt(carrier.dataset.docItemIndex, 10) : -1;
+}
+
+function _focusDocItem(prefix, index, field = 'itemName') {
+  const { body } = _docItemTableElements(prefix);
+  if (!body) return;
+  setTimeout(() => body.querySelector(`[data-doc-item-field="${field}"][data-doc-item-index="${index}"]`)?.focus(), 0);
+}
+
+function _addDocItemRow(prefix, data = {}, afterRow = null, focusField = 'itemName') {
+  const { cfg, body } = _docItemTableElements(prefix);
+  if (!cfg || !body) return null;
+  const rows = _readDocItemTable(prefix, { keepEmpty:true });
+  const row = _docItemClean(data, { unit:cfg.defaultUnit || '' });
+  const afterIndex = _docItemIndexFromNode(afterRow);
+  const insertIndex = Number.isFinite(afterIndex) && afterIndex >= 0 ? afterIndex + 1 : rows.length;
+  rows.splice(insertIndex, 0, row);
+  _renderDocItemTable(prefix, rows);
+  if (focusField) _focusDocItem(prefix, insertIndex, focusField);
+  return body;
+}
+
+function _insertDocItemRowAfter(prefix, btn) {
+  _addDocItemRow(prefix, {}, btn, 'itemName');
+}
+
+function _duplicateDocItemColumn(prefix, index) {
+  const rows = _readDocItemTable(prefix, { keepEmpty:true });
+  const copy = Object.assign({}, rows[index] || {});
+  rows.splice(index + 1, 0, copy);
+  _renderDocItemTable(prefix, rows);
+  _focusDocItem(prefix, index + 1, 'itemName');
+}
+
+function _removeDocItemColumn(prefix, index) {
+  const { cfg } = _docItemTableElements(prefix);
+  const rows = _readDocItemTable(prefix, { keepEmpty:true });
+  if (rows.length <= 1) rows[0] = _docItemClean({}, { unit:cfg?.defaultUnit || '' });
+  else rows.splice(index, 1);
+  _renderDocItemTable(prefix, rows);
+}
+
+function _initDocItemTable(prefix, items = []) {
+  const { cfg, body } = _docItemTableElements(prefix);
+  if (!cfg || !body) return;
+  const rows = (items || []).map(row => _docItemClean(row, { unit:cfg.defaultUnit || '' })).filter(x => x.itemName);
+  const minRows = Math.max(_docItemInitialRows(cfg), rows.length || 0);
+  while (rows.length < minRows) rows.push(_docItemClean({}, { unit:cfg.defaultUnit || '' }));
+  _renderDocItemTable(prefix, rows);
+}
+
+function _readDocItemTable(prefix, options = {}) {
+  const cfg = DOC_ITEM_TABLES[prefix], body = cfg && inp(cfg.body);
+  if (!body) return [];
+  const table = body.closest('table');
+  if (table?.classList.contains('batch-entry-shared-label-table')) {
+    const indexes = Array.from(body.querySelectorAll('[data-doc-item-index]'))
+      .map(el => parseInt(el.dataset.docItemIndex, 10))
+      .filter(n => Number.isFinite(n));
+    const count = indexes.length ? Math.max(...indexes) + 1 : 0;
+    const rows = Array.from({ length: count }, (_, index) => {
+      const get = field => body.querySelector(`[data-doc-item-field="${field}"][data-doc-item-index="${index}"]`)?.value || '';
+      return _docItemClean({ itemName:get('itemName'), spec:get('spec'), qty:get('qty'), unit:get('unit'), price:get('price'), note:get('note') }, { unit:cfg.defaultUnit || '' });
+    });
+    return options.keepEmpty ? rows : rows.filter(item => item.itemName);
+  }
+  const rows = [...body.querySelectorAll('tr')].map(tr => {
+    const get = field => tr.querySelector(`[data-doc-item-field="${field}"]`)?.value || '';
+    return _docItemClean({ itemName:get('itemName'), spec:get('spec'), qty:get('qty'), unit:get('unit'), price:get('price'), note:get('note') }, { unit:cfg.defaultUnit || '' });
+  });
+  return options.keepEmpty ? rows : rows.filter(item => item.itemName);
+}
+
+function _docItemKeydown(prefix, event) {
+  if (event.key !== 'Enter') return;
+  event.preventDefault();
+  const input = event.target;
+  const row = input.closest('tr[data-doc-item-row]');
+  const body = row?.parentNode;
+  const field = input.dataset.docItemField;
+  const order = DOC_ITEM_FIELDS.map(x => x.name);
+  const nextField = order[order.indexOf(field) + 1];
+  const itemIndex = parseInt(input.dataset.docItemIndex || '0', 10) || 0;
+  if (nextField) {
+    body?.querySelector(`[data-doc-item-field="${nextField}"][data-doc-item-index="${itemIndex}"]`)?.focus();
+    return;
+  }
+  const count = _readDocItemTable(prefix, { keepEmpty:true }).length;
+  if (itemIndex >= count - 1) _addDocItemRow(prefix, {}, input, 'itemName');
+  else _focusDocItem(prefix, itemIndex + 1, 'itemName');
+}
+
+function _docItemPaste(prefix, event) {
+  const text = event.clipboardData?.getData('text/plain') || '';
+  if (!text.includes('\t') && !text.includes('\n')) return;
+  event.preventDefault();
+  const startRow = event.target.closest('tr[data-doc-item-row]');
+  const body = startRow?.parentNode;
+  if (!body) return;
+  const fieldRows = Array.from(body.querySelectorAll('tr[data-doc-item-row]'));
+  const startField = fieldRows.indexOf(startRow);
+  const startItem = parseInt(event.target.dataset.docItemIndex || '0', 10) || 0;
+  if (startField < 0) return;
+  const rows = _readDocItemTable(prefix, { keepEmpty:true });
+  const pasted = text.replace(/\r/g, '').split('\n').filter(line => line.length).map(line => line.split('\t'));
+  pasted.forEach((cells, rIdx) => {
+    const field = DOC_ITEM_FIELDS[startField + rIdx];
+    if (!field) return;
+    const expectedLabel = _docItemFieldLabel(prefix, field).replace(/\s*\*$/, '').trim();
+    let values = cells.map(cell => String(cell || '').trim());
+    if (values.length > 1 && values[0].replace(/\s*\*$/, '').trim() === expectedLabel) values = values.slice(1);
+    values.forEach((value, cIdx) => {
+      const itemIndex = startItem + cIdx;
+      while (rows.length <= itemIndex) rows.push(_docItemClean({}, { unit:DOC_ITEM_TABLES[prefix]?.defaultUnit || '' }));
+      rows[itemIndex][field.name] = value;
+    });
+  });
+  _renderDocItemTable(prefix, rows);
+  _focusDocItem(prefix, startItem, DOC_ITEM_FIELDS[startField]?.name || 'itemName');
+}
+
+function _docItemRowsHtml(lines, type, includeSpec = true) {
+  return lines.map((line, i) => `<tr>
+    <td class="ctr">${i + 1}</td><td><strong>${esc(line.itemName)}</strong></td>
+    ${includeSpec ? `<td class="ctr">${line.spec ? esc(line.spec) : '—'}</td>` : ''}
+    <td class="ctr">${line.qty}</td><td class="ctr">${esc(line.unit || '')}</td>
+    <td class="num">${line.price ? Number(line.price).toLocaleString('ko-KR') : '—'}</td>
+    <td class="num">${line.price ? Number(line.amount).toLocaleString('ko-KR') : '—'}</td>
+    <td style="font-size:10px;">${esc(line.rowNote || line.note || '')}</td>
+  </tr>`).join('');
+}
+
 /* ╦╦╦╦╦╦╦╦ 견적요청서 (RFQ) ╦╦╦╦╦╦╦╦ */
+function visibleDocClients() {
+  return typeof visibleRecords === 'function' ? visibleRecords(clients, 'clients') : clients;
+}
+function visibleRfqList() {
+  return typeof visibleRecords === 'function' ? visibleRecords(rfqList, 'rfq') : rfqList;
+}
 function renderRfq() {
-  ensureDateView('rfq', 'rfq-table', rfqList.map(r=>r.date), renderRfq);
-  const total   = rfqList.length;
-  const pending = rfqList.filter(r => r.status === '요청중').length;
-  const replied = rfqList.filter(r => r.status === '회신완료').length;
-  const adopted = rfqList.filter(r => r.status === '채택').length;
+  const sourceRows = visibleRfqList();
+  ensureDateView('rfq', 'rfq-table', sourceRows.map(r=>r.date), renderRfq);
+  const total   = sourceRows.length;
+  const pending = sourceRows.filter(r => r.status === '요청중').length;
+  const replied = sourceRows.filter(r => r.status === '회신완료').length;
+  const adopted = sourceRows.filter(r => r.status === '채택').length;
   inp('rfq-kpi-total').textContent   = total   + '건';
   inp('rfq-kpi-pending').textContent = pending + '건';
   inp('rfq-kpi-replied').textContent = replied + '건';
@@ -66,15 +428,15 @@ function renderRfq() {
   if (fcSel) {
     const cur = fcSel.value;
     fcSel.innerHTML = '<option value="">전체 고객사</option>' +
-      clients.map(c => `<option value="${c.id}"${c.id===cur?' selected':''}>${c.name}</option>`).join('');
+      visibleDocClients().map(c => `<option value="${c.id}"${c.id===cur?' selected':''}>${c.name}</option>`).join('');
   }
 
   const fc = v('rfq-fc'), fs = v('rfq-fs'), q = v('rfq-q').toLowerCase();
-  const rows = rfqList.filter(r => {
+  const rows = sourceRows.filter(r => {
     if (!dateViewMatch('rfq', r.date)) return false;
     if (fc && r.clientId !== fc) return false;
     if (fs && r.status !== fs)   return false;
-    if (q && !r.itemName.toLowerCase().includes(q) && !r.supplier.toLowerCase().includes(q)) return false;
+    if (q && !_docItemsSearchText(r).includes(q) && !r.supplier.toLowerCase().includes(q)) return false;
     return true;
   });
 
@@ -84,6 +446,8 @@ function renderRfq() {
       let va, vb;
       if (k === 'client') { va = getClientName(a.clientId); vb = getClientName(b.clientId); }
       else if (k === 'product') { va = getProductName(a.productId); vb = getProductName(b.productId); }
+      else if (k === 'itemName') { va = _docItemSummary(a); vb = _docItemSummary(b); }
+      else if (k === 'qty') { va = _docItems(a).reduce((s, x) => s + (Number(x.qty) || 0), 0); vb = _docItems(b).reduce((s, x) => s + (Number(x.qty) || 0), 0); }
       else { va = a[k] == null ? '' : a[k]; vb = b[k] == null ? '' : b[k]; }
       if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * asc;
       return String(va).localeCompare(String(vb), 'ko-KR') * asc;
@@ -96,7 +460,7 @@ function renderRfq() {
     return;
   }
   const _rfqth = (k, l) => `<th onclick="toggleSort('rfq','${k}')" style="cursor:pointer;user-select:none;">${l} ${sortIcon('rfq',k)}</th>`;
-  cont.innerHTML = `<table style="min-width:980px;">
+  cont.innerHTML = `<table class="narrow-compact-table rfq-compact-table" style="min-width:980px;">
     <thead><tr>
       ${_rfqth('id','문서번호')}${_rfqth('date','요청일')}${_rfqth('client','고객사')}${_rfqth('product','연결제품')}
       ${_rfqth('supplier','공급처')}${_rfqth('itemName','품목명')}<th>규격</th>${_rfqth('qty','수량')}
@@ -108,10 +472,10 @@ function renderRfq() {
         <td>${r.date}</td>
         <td>${getClientName(r.clientId)||'—'}</td>
         <td style="font-size:11px;">${r.productId?getProductName(r.productId):'—'}</td>
-        <td style="font-weight:600;">${r.supplier}${r.supplierEmail?`<br><span style="font-size:10px;color:var(--tx-t);">${r.supplierEmail}</span>`:''}</td>
-        <td style="font-weight:700;">${r.itemName}</td>
+        <td style="font-weight:600;">${r.supplier}${r.supplierEmail?`<br><span style="font-size:10px;color:var(--tx-t);">${r.supplierEmail}</span>`:''}${typeof emailSendSummaryHtml === 'function' ? emailSendSummaryHtml('rfq', r.id) : ''}</td>
+        <td style="font-weight:700;">${esc(_docItemSummary(r))}</td>
         <td style="font-size:11px;color:var(--tx-t);">${r.spec||'—'}</td>
-        <td>${r.qty} ${r.unit}</td>
+        <td>${_docQtySummary(r)}</td>
         <td>${r.targetPrice?'₩'+Number(r.targetPrice).toLocaleString('ko-KR'):'—'}</td>
         <td><select class="stat-sel" onchange="changeRfqStatus('${r.id}',this.value)" style="color:${rfqStatusColor(r.status)}">
           ${['요청전','요청중','회신완료','채택','미채택'].map(s=>`<option${s===r.status?' selected':''}>${s}</option>`).join('')}
@@ -122,7 +486,7 @@ function renderRfq() {
           <button class="btn btn-sm" style="margin-left:3px;" onclick="openRfqPrint('${r.id}')" title="PDF 출력"><i class="ti ti-printer"></i></button>
           <button class="btn btn-sm" style="margin-left:3px;border-color:var(--br-ok);color:var(--tx-ok);" onclick="exportRfqXLS('${r.id}')" title="엑셀 다운로드"><i class="ti ti-file-spreadsheet"></i></button>
           <button class="btn btn-sm drive-save-btn" style="margin-left:3px;" onclick="saveDocumentBundleToGoogleDrive('rfq','${r.id}')" title="PDF/XLSX Google Drive 저장"><i class="ti ti-cloud-upload"></i>Drive</button>
-          <button class="btn btn-sm" style="margin-left:3px;border-color:var(--br-i);color:var(--tx-i);" onclick="openEmailModal(rfqList.find(x=>x.id==='${r.id}'),'rfq')" title="이메일 발송"><i class="ti ti-mail"></i></button>
+          <button class="btn btn-sm" style="margin-left:3px;border-color:var(--br-i);color:var(--tx-i);" onclick="openEmailModal(visibleRfqList().find(x=>x.id==='${r.id}'),'rfq')" title="이메일 발송"><i class="ti ti-mail"></i></button>
           <button class="del-btn" style="margin-left:3px;" onclick="deleteRfq('${r.id}')"><i class="ti ti-trash"></i></button>
         </td>
       </tr>`).join('')}
@@ -136,6 +500,7 @@ function rfqStatusColor(s) {
 }
 
 function openRfqAdd() {
+  if (typeof requireCreateAction === 'function' && !requireCreateAction('rfq', '견적요청서 등록')) return;
   try {
     const modal = inp('rfq-modal');
       delete modal.dataset.editId;
@@ -145,8 +510,9 @@ function openRfqAdd() {
       inp('rq-status').value = '요청전';
       _syncRfqClientDropdown('');
       inp('rq-product').innerHTML = '<option value="">-- 선택 --</option>';
-      ['rq-supplier','rq-semail','rq-item','rq-spec','rq-note'].forEach(id => { if(inp(id)) inp(id).value = ''; });
-      inp('rq-qty').value = '1'; inp('rq-unit').value = 'EA';
+      ['rq-supplier','rq-semail','rq-spec'].forEach(id => { if(inp(id)) inp(id).value = ''; });
+      _initDocItemTable('rq');
+      inp('rq-unit').value = 'EA';
       if(inp('rq-target')) inp('rq-target').value = '';
       inp('rfq-save-btn').onclick = saveRfqForm;
       modal.classList.add('open');
@@ -157,51 +523,78 @@ function openRfqAdd() {
 }
 
 function _syncRfqClientDropdown(selId) {
+  const visibleClients = typeof visibleRecords === 'function' ? visibleRecords(clients, 'clients') : clients;
   inp('rq-client').innerHTML = '<option value="">-- 선택 --</option>' +
-    clients.map(c => `<option value="${c.id}"${c.id===selId?' selected':''}>${c.name}</option>`).join('');
+    visibleClients.map(c => `<option value="${c.id}"${c.id===selId?' selected':''}>${c.name}</option>`).join('');
   onRfqClientChange();
 }
 
 function onRfqClientChange() {
   const cid = v('rq-client');
+  const visibleProducts = typeof visibleRecords === 'function' ? visibleRecords(products, 'products') : products;
   inp('rq-product').innerHTML = '<option value="">-- 선택 --</option>' +
-    products.filter(p => !cid || p.clientId === cid).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    visibleProducts.filter(p => !cid || p.clientId === cid).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('rq-client', 'rq-client-search');
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('rq-product', 'rq-product-search');
 }
 
 function saveRfqForm() {
   if (!checkAdminAction()) return;
   const modal = inp('rfq-modal');
   const editId = modal.dataset.editId;
+  const items = _readDocItemTable('rq');
   if (!v('rq-supplier')) { showToast('공급처를 입력하세요.', 'error'); return; }
-  if (!v('rq-item'))     { showToast('품목명을 입력하세요.', 'error'); return; }
+  if (!items.length)     { showToast('품목명을 입력하세요.', 'error'); return; }
   if (editId) {
     const idx = rfqList.findIndex(r => r.id === editId);
-    if (idx !== -1) rfqList[idx] = { ...rfqList[idx], ...buildRfqObj(editId) };
+    if (idx !== -1) {
+      const before = _safeJsonClone(rfqList[idx]);
+      if (!requireRecordPermission('edit', before, 'rfq')) return;
+      const next = stampRecordUpdate({ ...rfqList[idx], ...buildRfqObj(editId) }, before, 'rfq');
+      rfqList[idx] = next;
+      writeAuditLog('rfq', editId, 'update', before, next, { summary:'견적요청서 수정' });
+    }
     delete modal.dataset.editId;
   } else {
-    rfqList.unshift(buildRfqObj(v('rq-id')));
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('rfq', '견적요청서 등록')) return;
+    const created = [];
+    items.forEach((item, index) => {
+      const id = _nextDocCodeForBatch('Q', rfqList, created, index === 0 ? v('rq-id') : '');
+      const next = stampRecordCreate(buildRfqObjForItem(id, item), 'rfq');
+      created.push(next);
+      writeAuditLog('rfq', next.id, 'create', null, next, { summary:items.length > 1 ? `견적요청서 개별 등록 (${index + 1}/${items.length})` : '견적요청서 등록' });
+    });
+    rfqList.unshift(...created);
   }
   saveStorage('rfqList', rfqList);
   closeModal('rfq-modal');
   renderRfq();
-  showToast(editId ? '견적요청서가 수정되었습니다.' : '견적요청서가 등록되었습니다.');
+  showToast(editId ? '견적요청서가 수정되었습니다.' : (items.length > 1 ? `견적요청서 ${items.length}건이 개별 등록되었습니다.` : '견적요청서가 등록되었습니다.'));
 }
 
 function buildRfqObj(id) {
+  const items = _readDocItemTable('rq');
+  const first = items[0] || { itemName:'', spec:'', qty:1, unit:'EA', price:null, note:'' };
   return {
     id, date: v('rq-date')||today(),
     clientId: v('rq-client'), productId: v('rq-product'),
     supplier: v('rq-supplier'), supplierEmail: v('rq-semail')||'',
-    itemName: v('rq-item'), spec: v('rq-spec'),
-    qty: Number(v('rq-qty'))||1, unit: v('rq-unit')||'EA',
-    targetPrice: Number(v('rq-target'))||0,
-    status: v('rq-status')||'요청전', note: v('rq-note')
+    itemName: first.itemName, spec: first.spec || '',
+    qty: Number(first.qty)||1, unit: first.unit || 'EA',
+    targetPrice: Number(first.price)||0,
+    status: v('rq-status')||'요청전', note: first.note || '',
+    items
   };
+}
+
+function buildRfqObjForItem(id, item) {
+  return _singleItemDoc(buildRfqObj(id), item, 'rfq');
 }
 
 function openRfqEdit(id) {
   const r = rfqList.find(x => x.id === id);
   if (!r) return;
+  if (!requireRecordPermission('edit', r, 'rfq')) return;
   const modal = inp('rfq-modal');
   modal.dataset.editId = id;
   inp('rfq-modal-ttl').innerHTML = '<i class="ti ti-edit" style="color:var(--tx-w);"></i>견적요청서 수정';
@@ -210,17 +603,19 @@ function openRfqEdit(id) {
   _syncRfqClientDropdown(r.clientId);
   inp('rq-client').value = r.clientId; onRfqClientChange();
   inp('rq-product').value = r.productId||'';
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('rq-product', 'rq-product-search');
   inp('rq-supplier').value = r.supplier; inp('rq-semail').value = r.supplierEmail||'';
-  inp('rq-item').value = r.itemName; inp('rq-spec').value = r.spec||'';
-  inp('rq-qty').value = r.qty; inp('rq-unit').value = r.unit;
+  _initDocItemTable('rq', _docItems(r));
+  inp('rq-spec').value = r.spec||'';
+  inp('rq-unit').value = r.unit;
   if(inp('rq-target')) inp('rq-target').value = r.targetPrice||'';
-  inp('rq-note').value = r.note||'';
   modal.classList.add('open');
 }
 
 function cloneRfq(id) {
   if (!checkAdminAction()) return;
-  const r = rfqList.find(x => x.id === id); if (!r) return;
+  if (typeof requireCreateAction === 'function' && !requireCreateAction('rfq', '견적요청서 등록')) return;
+  const r = visibleRfqList().find(x => x.id === id); if (!r) return;
   const modal = inp('rfq-modal');
   delete modal.dataset.editId;
   inp('rfq-modal-ttl').innerHTML = '<i class="ti ti-copy" style="color:var(--tx-i);"></i>견적요청서 복제 등록';
@@ -230,11 +625,12 @@ function cloneRfq(id) {
   _syncRfqClientDropdown(r.clientId);
   inp('rq-client').value = r.clientId; onRfqClientChange();
   inp('rq-product').value = r.productId||'';
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('rq-product', 'rq-product-search');
   inp('rq-supplier').value = r.supplier||''; inp('rq-semail').value = r.supplierEmail||'';
-  inp('rq-item').value = r.itemName||''; inp('rq-spec').value = r.spec||'';
-  inp('rq-qty').value = r.qty||1; inp('rq-unit').value = r.unit||'EA';
+  _initDocItemTable('rq', _docItems(r));
+  inp('rq-spec').value = r.spec||'';
+  inp('rq-unit').value = r.unit||'EA';
   if (inp('rq-target')) inp('rq-target').value = r.targetPrice||'';
-  inp('rq-note').value = r.note||'';
   inp('rfq-save-btn').onclick = saveRfqForm;
   modal.classList.add('open');
 }
@@ -242,13 +638,20 @@ function cloneRfq(id) {
 function changeRfqStatus(id, val) {
   const r = rfqList.find(x => x.id === id);
   if (!r) return;
-  r.status = val; saveStorage('rfqList', rfqList); renderRfq();
+  if (!roleFeatureAllowed('status') || !requireRecordPermission('edit', r, 'rfq')) return;
+  const before = _safeJsonClone(r);
+  r.status = val;
+  stampRecordUpdate(r, before, 'rfq');
+  writeAuditLog('rfq', id, 'statusChange', before, r, { summary:`견적요청서 상태 변경: ${before.status || ''} → ${val}` });
+  saveStorage('rfqList', rfqList); renderRfq();
 }
 
 function convertRfqToPo(ids) {
   if (!checkAdminAction()) return;
+  if (typeof requirePurchaseOrderData === 'function' && !requirePurchaseOrderData('구매발주서 생성')) return;
+  if (typeof requireCreateAction === 'function' && !requireCreateAction('po', '구매발주서 생성')) return;
   const idList = Array.isArray(ids) ? ids : [ids];
-  const targets = idList.map(id => rfqList.find(r => r.id === id)).filter(Boolean);
+  const targets = idList.map(id => visibleRfqList().find(r => r.id === id)).filter(Boolean);
   if (!targets.length) {
     showToast('구매발주서로 보낼 견적요청서가 없습니다.', 'info');
     return;
@@ -266,7 +669,8 @@ function convertRfqToPo(ids) {
   if (!confirm(`${fresh.length}건의 견적요청서를 구매발주서로 생성하시겠습니까?${suffix}`)) return;
 
   fresh.forEach(r => {
-    poList.unshift({
+    const before = _safeJsonClone(r);
+    const po = stampRecordCreate({
       id: nextDocCode('P', poList),
       date: today(),
       clientId: r.clientId || '',
@@ -282,9 +686,14 @@ function convertRfqToPo(ids) {
       dlvMethod: '직납',
       status: '작성중',
       note: `견적요청서 ${r.id}에서 생성${r.note ? ' - ' + r.note : ''}`,
+      items: _docItems(r),
       sourceRfqId: r.id
-    });
+    }, 'po', { visibility: r.visibility || 'assignee', ownerUserId: r.ownerUserId, ownerUserName: r.ownerUserName, ownerDeptId: r.ownerDeptId, ownerDeptName: r.ownerDeptName });
+    poList.unshift(po);
     if (r.status !== '미채택') r.status = '채택';
+    stampRecordUpdate(r, before, 'rfq');
+    writeAuditLog('po', po.id, 'create', null, po, { summary:`견적요청서 ${r.id}에서 구매발주서 생성` });
+    writeAuditLog('rfq', r.id, 'statusChange', before, r, { summary:`견적요청서 채택 및 발주 전환` });
   });
 
   saveStorage('poList', poList);
@@ -296,24 +705,36 @@ function convertRfqToPo(ids) {
 
 function deleteRfq(id) {
   if (!checkAdminAction()) return;
+  const target = rfqList.find(r => r.id === id);
+  if (!target || !requireRecordPermission('delete', target, 'rfq')) return;
   if (!confirm('이 견적요청서를 삭제하시겠습니까?')) return;
   rfqList = rfqList.filter(r => r.id !== id);
+  writeAuditLog('rfq', id, 'delete', target, null, { summary:'견적요청서 삭제' });
   saveStorage('rfqList', rfqList); renderRfq();
   showToast('견적요청서가 삭제되었습니다.');
 }
 
 function openRfqPrint(id) {
-  const targets = id ? [rfqList.find(x=>x.id===id)].filter(Boolean)
-                     : rfqList.filter(r => r.status !== '미채택');
+  if (typeof requirePdfAction === 'function' && !requirePdfAction('견적요청서 PDF 출력')) return;
+  const sourceRows = visibleRfqList();
+  const targets = id ? [sourceRows.find(x=>x.id===id)].filter(Boolean)
+                     : sourceRows.filter(r => r.status !== '미채택');
   if (!targets.length) { showToast('출력할 견적요청서가 없습니다.', 'error'); return; }
+  if (_docTemplateHasCustom('rfq')) {
+    const ids = targets.map(r => r.id);
+    openDocTemplatePdfPreview('rfq', ids.length === 1 ? ids[0] : ids);
+    return;
+  }
   const ci = getCompanyInfo();
   const pages = targets.map(r => {
     const client = getClientName(r.clientId)||'—';
     const prod   = r.productId ? getProductName(r.productId) : '—';
-    const tgt    = r.targetPrice;
-    const amt    = tgt ? Number(tgt*r.qty).toLocaleString('ko-KR') : '—';
-    const vat    = tgt ? Number(Math.round(tgt*r.qty*0.1)).toLocaleString('ko-KR') : '—';
-    const tot    = tgt ? Number(Math.round(tgt*r.qty*1.1)).toLocaleString('ko-KR') : '—';
+    const lines  = _docLines(r, 'rfq');
+    const total  = _docAmount(r, 'rfq');
+    const amt    = total ? Number(total).toLocaleString('ko-KR') : '—';
+    const vatVal = Math.round(total * 0.1);
+    const vat    = total ? Number(vatVal).toLocaleString('ko-KR') : '—';
+    const tot    = total ? Number(total + vatVal).toLocaleString('ko-KR') : '—';
     return `
     <div style="page-break-after:always;">
       <div class="approval-box">
@@ -341,10 +762,7 @@ function openRfqPrint(id) {
         <th style="width:46px;">수량</th><th style="width:40px;">단위</th>
         <th style="width:100px;">희망 단가</th><th style="width:110px;">희망 금액</th><th>비 고</th></tr></thead>
         <tbody>
-          <tr><td class="ctr">1</td><td><strong>${r.itemName}</strong></td><td class="ctr">${r.spec||'—'}</td>
-          <td class="ctr">${r.qty}</td><td class="ctr">${r.unit}</td>
-          <td class="num">${tgt?Number(tgt).toLocaleString('ko-KR'):'—'}</td>
-          <td class="num">${amt}</td><td style="font-size:10px;">${r.note||''}</td></tr>
+          ${_docItemRowsHtml(lines, 'rfq')}
           <tr class="empty-row"><td colspan="8">—</td></tr>
           <tr class="empty-row"><td colspan="8">—</td></tr>
           <tr class="total-row"><td colspan="6" style="text-align:right;">합 계</td>
@@ -380,16 +798,18 @@ function openRfqPrint(id) {
 }
 
 function exportRfqXLS(id = null) {
-  const targets = id ? rfqList.filter(r => r.id === id) : rfqList;
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('견적요청서 엑셀 내보내기')) return;
+  const sourceRows = visibleRfqList();
+  const targets = id ? sourceRows.filter(r => r.id === id) : sourceRows;
   if (!targets.length) { showToast('내보낼 데이터가 없습니다.', 'error'); return; }
   const ci = getCompanyInfo();
   const wb = XLSX.utils.book_new();
   const hdr = ['문서번호','요청일','고객사','연결제품','공급처','공급처이메일','품목명','규격/사양','수량','단위','희망단가','희망금액','상태','비고'];
-  const rows = targets.map(r => [
+  const rows = targets.flatMap(r => _docLines(r, 'rfq').map(line => [
     r.id, r.date, getClientName(r.clientId)||'', r.productId?getProductName(r.productId):'',
-    r.supplier, r.supplierEmail||'', r.itemName, r.spec||'', r.qty, r.unit,
-    r.targetPrice||0, (r.targetPrice||0)*r.qty, r.status, r.note||''
-  ]);
+    r.supplier, r.supplierEmail||'', line.itemName, line.spec||'', line.qty, line.unit,
+    line.price||0, line.amount, r.status, line.rowNote || ''
+  ]));
   const titleText = id ? `${ci.name} — 견적요청서 (${id})` : `${ci.name} — 견적요청서 목록`;
   const ws = XLSX.utils.aoa_to_sheet([
     [titleText],
@@ -408,11 +828,14 @@ function exportRfqXLS(id = null) {
 
 /* ╦╦╦╦╦╦╦╦ 구매발주서 (PO) ╦╦╦╦╦╦╦╦ */
 function renderPo() {
-  ensureDateView('po', 'po-table', poList.map(p=>p.date), renderPo);
-  const total  = poList.length;
-  const sent   = poList.filter(p => p.status === '발송완료').length;
-  const done   = poList.filter(p => p.status === '입고완료').length;
-  const amt    = poList.reduce((s, p) => s + (p.unitPrice||0)*p.qty, 0);
+  const cont = inp('po-table');
+  const hasPoAccess = typeof purchaseOrderDataAllowed !== 'function' || purchaseOrderDataAllowed();
+  const sourceRows = typeof visiblePurchaseOrderList === 'function' ? visiblePurchaseOrderList() : poList;
+  ensureDateView('po', 'po-table', sourceRows.map(p=>p.date), renderPo);
+  const total  = sourceRows.length;
+  const sent   = sourceRows.filter(p => p.status === '발송완료').length;
+  const done   = sourceRows.filter(p => p.status === '입고완료').length;
+  const amt    = sourceRows.reduce((s, p) => s + _docAmount(p, 'po'), 0);
   inp('po-kpi-total').textContent = total + '건';
   inp('po-kpi-sent').textContent  = sent  + '건';
   inp('po-kpi-done').textContent  = done  + '건';
@@ -421,23 +844,30 @@ function renderPo() {
 
   const badge = inp('poBadge');
   if (badge) {
-    const pending = poList.filter(p => p.status === '작성중').length;
+    const pending = hasPoAccess ? sourceRows.filter(p => p.status === '작성중').length : 0;
     badge.textContent = pending; badge.style.display = pending ? '' : 'none';
+  }
+  if (typeof updatePaymentRequestBadge === 'function') updatePaymentRequestBadge();
+
+  if (!hasPoAccess) {
+    if (cont) cont.innerHTML = '<div class="empty"><i class="ti ti-lock"></i>구매발주서 접근 권한이 없습니다.</div>';
+    poUpdateBulkBar();
+    return;
   }
 
   const fcSel = inp('po-fc');
   if (fcSel) {
     const cur = fcSel.value;
     fcSel.innerHTML = '<option value="">전체 고객사</option>' +
-      clients.map(c => `<option value="${c.id}"${c.id===cur?' selected':''}>${c.name}</option>`).join('');
+      visibleDocClients().map(c => `<option value="${c.id}"${c.id===cur?' selected':''}>${c.name}</option>`).join('');
   }
 
   const fc = v('po-fc'), fs = v('po-fs'), q = v('po-q').toLowerCase();
-  const rows = poList.filter(p => {
+  const rows = sourceRows.filter(p => {
     if (!dateViewMatch('po', p.date)) return false;
     if (fc && p.clientId !== fc) return false;
     if (fs && p.status !== fs)   return false;
-    if (q && !p.itemName.toLowerCase().includes(q) && !p.supplier.toLowerCase().includes(q)) return false;
+    if (q && !_docItemsSearchText(p).includes(q) && !p.supplier.toLowerCase().includes(q)) return false;
     return true;
   });
 
@@ -447,74 +877,111 @@ function renderPo() {
       let va, vb;
       if (k === 'client') { va = getClientName(a.clientId); vb = getClientName(b.clientId); }
       else if (k === 'product') { va = getProductName(a.productId); vb = getProductName(b.productId); }
-      else if (k === 'totalAmt') { va = (Number(a.unitPrice)||0)*(Number(a.qty)||0); vb = (Number(b.unitPrice)||0)*(Number(b.qty)||0); }
+      else if (k === 'itemName') { va = _docItemSummary(a); vb = _docItemSummary(b); }
+      else if (k === 'qty') { va = _docItems(a).reduce((s, x) => s + (Number(x.qty) || 0), 0); vb = _docItems(b).reduce((s, x) => s + (Number(x.qty) || 0), 0); }
+      else if (k === 'totalAmt') { va = _docAmount(a, 'po'); vb = _docAmount(b, 'po'); }
       else { va = a[k] == null ? '' : a[k]; vb = b[k] == null ? '' : b[k]; }
       if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * asc;
       return String(va).localeCompare(String(vb), 'ko-KR') * asc;
     });
   }
-
-  const cont = inp('po-table');
   if (!rows.length) {
     cont.innerHTML = '<div class="empty"><i class="ti ti-inbox"></i>해당 조건의 구매발주서가 없습니다.</div>';
     poUpdateBulkBar();
     return;
   }
   const _poth = (k, l) => `<th onclick="toggleSort('po','${k}')" style="cursor:pointer;user-select:none;">${l} ${sortIcon('po',k)}</th>`;
-  cont.innerHTML = `<table style="min-width:1130px;">
+  cont.innerHTML = `<table class="po-compact-table" data-managed-table="false">
     <thead><tr>
       <th style="width:24px;padding:6px 3px;text-align:center;"><input type="checkbox" id="po-check-all" onclick="poToggleAll(this.checked)" style="width:12px;height:12px;cursor:pointer;vertical-align:middle;"></th>
       ${_poth('id','발주번호')}${_poth('date','발행일')}${_poth('client','고객사')}${_poth('product','연결제품')}
       ${_poth('supplier','공급처')}${_poth('itemName','품목명')}<th>규격</th>${_poth('qty','수량')}
-      ${_poth('unitPrice','단가')}${_poth('totalAmt','금액')}<th>결제조건</th><th>납품방법</th>${_poth('status','상태')}<th>비고</th>
+      ${_poth('unitPrice','단가')}${_poth('totalAmt','금액')}<th>결제조건</th><th>납품방법</th><th>결제</th>${_poth('status','상태')}<th>비고</th>
     </tr></thead>
-    <tbody>${rows.map(p => `
-      <tr onclick="poRowClick(event,'${p.id}')">
-        <td style="text-align:center;padding:6px 3px;"><input type="checkbox" class="po-check" value="${p.id}" onclick="event.stopPropagation()" onchange="poUpdateBulkBar()" style="width:12px;height:12px;cursor:pointer;vertical-align:middle;"></td>
-        <td style="font-weight:700;color:var(--tx-i);">${p.id}</td>
-        <td>${p.date}</td>
+    <tbody>${rows.map(p => {
+      const amount = Number(_docAmount(p, 'po')) || 0;
+      return `
+      <tr data-po-id="${esc(p.id)}" onclick="poRowClick(event,this)" style="cursor:pointer;">
+        <td style="text-align:center;padding:6px 3px;"><input type="checkbox" class="po-check" value="${esc(p.id)}" onclick="event.stopPropagation()" onchange="poUpdateBulkBar()" style="width:12px;height:12px;cursor:pointer;vertical-align:middle;"></td>
+        <td><button type="button" class="order-id-link" onclick="event.stopPropagation();openPoEdit('${esc(p.id)}')">${esc(p.id)}</button></td>
+        <td>${esc(p.date || '—')}</td>
         <td>${getClientName(p.clientId)||'—'}</td>
         <td style="font-size:11px;">${p.productId?getProductName(p.productId):'—'}</td>
-        <td style="font-weight:600;">${p.supplier}${p.supplierEmail?`<br><span style="font-size:10px;color:var(--tx-t);">${p.supplierEmail}</span>`:''}</td>
-        <td style="font-weight:700;">${p.itemName}</td>
-        <td style="font-size:11px;color:var(--tx-t);">${p.spec||'—'}</td>
-        <td>${p.qty} ${p.unit}</td>
+        <td><div class="po-main-cell"><strong>${esc(p.supplier || '—')}</strong>${p.supplierEmail?`<span>${esc(p.supplierEmail)}</span>`:''}${typeof emailSendSummaryHtml === 'function' ? `<div class="po-email-line">${emailSendSummaryHtml('po', p.id).replace(/^<br>/, '')}</div>` : ''}</div></td>
+        <td style="font-weight:700;">${esc(_docItemSummary(p))}</td>
+        <td class="po-muted-cell">${esc(p.spec || '—')}</td>
+        <td>${_docQtySummary(p)}</td>
         <td>${p.unitPrice?'₩'+Number(p.unitPrice).toLocaleString('ko-KR'):'—'}</td>
-        <td style="font-weight:700;color:var(--tx-i);">${p.unitPrice?'₩'+Number(p.unitPrice*p.qty).toLocaleString('ko-KR'):'—'}</td>
-        <td><span class="bd bd-neu">${p.payMethod||'현금'}</span></td>
-        <td><span class="bd bd-info">${p.dlvMethod||'직납'}</span></td>
-        <td><select class="stat-sel" onclick="event.stopPropagation()" onchange="changePoStatus('${p.id}',this.value)" style="color:${poStatusColor(p.status)}">
+        <td><span class="po-money">${amount ? '₩'+amount.toLocaleString('ko-KR') : '—'}</span></td>
+        <td><span class="bd bd-neu">${esc(p.payMethod || '현금')}</span></td>
+        <td><span class="bd bd-info">${esc(p.dlvMethod || '직납')}</span></td>
+        <td class="po-payment-td">${typeof poPaymentCell === 'function' ? poPaymentCell(p) : '<span class="bd bd-neu">미요청</span>'}</td>
+        <td><span class="readonly-status-pill ${poStatusPillClass(p.status)}" title="상태">${esc(p.status || '작성중')}</span><select class="stat-sel readonly-status-source" aria-hidden="true" tabindex="-1" onchange="changePoStatus('${p.id}',this.value)" style="color:${poStatusColor(p.status)}">
           ${['작성중','발송완료','확인완료','입고완료'].map(s=>`<option${s===p.status?' selected':''}>${s}</option>`).join('')}
         </select></td>
-        <td style="font-size:11px;color:var(--tx-t);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${p.note||''}">${p.note||'—'}</td>
-      </tr>`).join('')}
+        <td class="po-note-cell" title="${esc(p.note||'')}">${esc(p.note||'—')}</td>
+      </tr>`;
+    }).join('')}
     </tbody>
   </table>`;
   poUpdateBulkBar();
 }
 /* ── 구매발주서 선택 일괄 동작 ── */
 function poCheckedIds(){ return [...document.querySelectorAll('#po-table .po-check:checked')].map(c=>c.value); }
-function poRowClick(event, id){
-  if (event.target.closest('button,input,select,textarea,a')) return;
-  const cb = [...document.querySelectorAll('#po-table .po-check')].find(c => c.value === id);
+function poSyncSelectedRows(){
+  document.querySelectorAll('#po-table tbody tr').forEach(row => {
+    const cb = row.querySelector('.po-check');
+    if (cb) row.classList.toggle('table-row-selected', cb.checked);
+  });
+}
+function poRowClick(event, rowOrId){
+  const rawTarget = event && event.target;
+  const target = rawTarget && rawTarget.nodeType === 1 ? rawTarget : rawTarget?.parentElement;
+  if (target && target.closest('button,input,select,textarea,a,label')) return;
+  if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+  const row = rowOrId && typeof rowOrId !== 'string' ? rowOrId : target?.closest('tr');
+  const cb = row?.querySelector('.po-check') || [...document.querySelectorAll('#po-table .po-check')].find(c => c.value === String(rowOrId || ''));
   if (!cb) return;
   cb.checked = !cb.checked;
+  poSyncSelectedRows();
   poUpdateBulkBar();
 }
 function poToggleAll(checked){
   document.querySelectorAll('#po-table .po-check').forEach(c=>c.checked=checked);
+  poSyncSelectedRows();
   poUpdateBulkBar();
 }
 function poSelectionBarHtml(count){
+  if (typeof registerBulkDocMenuListeners === 'function') registerBulkDocMenuListeners();
+  const auditBtn = (typeof managedAuditButtonHtml === 'function') ? managedAuditButtonHtml('po', poCheckedIds()) : '';
   return `<span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ${count}건 선택됨</span>
+    ${auditBtn}
     <button class="btn btn-sm" data-edit onclick="poBulkEdit()"><i class="ti ti-edit"></i>수정</button>
     <button class="btn btn-sm" data-clone onclick="poBulkClone()"><i class="ti ti-copy"></i>복제</button>
-    <button class="btn btn-sm" onclick="poBulkPrint()"><i class="ti ti-printer"></i>PDF 출력</button>
-    <button class="btn btn-sm" onclick="poBulkExport()"><i class="ti ti-file-spreadsheet"></i>엑셀</button>
-    <button class="btn btn-sm drive-save-btn" onclick="poBulkDrive()"><i class="ti ti-cloud-upload"></i>Drive 저장</button>
-    <button class="btn btn-sm" onclick="poBulkEmail()"><i class="ti ti-mail"></i>이메일</button>
+    <span class="bulk-doc-menu-wrap" data-bulk-doc-wrap>
+      <button class="btn btn-sm bulk-doc-menu-trigger" type="button" data-bulk-doc-trigger onclick="bulkToggleDocMenu(event,this)"><i class="ti ti-folder-cog"></i>문서 처리<i class="ti ti-chevron-down bulk-doc-menu-caret"></i></button>
+      <span class="bulk-doc-menu" data-bulk-doc-menu role="menu">
+        <button class="btn btn-sm" type="button" data-doc-action="pdf" role="menuitem" onclick="poRunDocMenu(event,'print')"><i class="ti ti-printer"></i>PDF 출력</button>
+        <button class="btn btn-sm" type="button" data-doc-action="excel" role="menuitem" onclick="poRunDocMenu(event,'export')"><i class="ti ti-file-spreadsheet"></i>엑셀</button>
+        <button class="btn btn-sm drive-save-btn" type="button" data-doc-action="drive" role="menuitem" onclick="poRunDocMenu(event,'drive')"><i class="ti ti-cloud-upload"></i>Drive 저장</button>
+        <button class="btn btn-sm" type="button" data-doc-action="email" data-email role="menuitem" onclick="poRunDocMenu(event,'email')"><i class="ti ti-mail"></i>이메일</button>
+      </span>
+    </span>
+    <button class="btn btn-sm" data-payreq onclick="poBulkPaymentRequest()"><i class="ti ti-send"></i>결제요청</button>
+    <button class="btn btn-sm btn-primary" onclick="poBulkComplete()"><i class="ti ti-circle-check"></i>입고완료</button>
     <button class="btn btn-sm btn-danger" onclick="poBulkDelete()"><i class="ti ti-trash"></i>삭제</button>
     <button class="btn btn-sm date-view-clear-selection" onclick="poToggleAll(false)"><i class="ti ti-x"></i>해제</button>`;
+}
+function poRunDocMenu(event, action){
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  if (typeof bulkCloseDocMenus === 'function') bulkCloseDocMenus();
+  if (action === 'print') poBulkPrint();
+  else if (action === 'export') poBulkExport();
+  else if (action === 'drive') poBulkDrive();
+  else if (action === 'email') poBulkEmail();
 }
 function ensurePoDateSelectionClearer(){
   if (ensurePoDateSelectionClearer.done || typeof registerDateViewSelectionClearer !== 'function') return;
@@ -523,28 +990,54 @@ function ensurePoDateSelectionClearer(){
 }
 function poUpdateBulkBar(){
   ensurePoDateSelectionClearer();
-  const ids=poCheckedIds(), bar=inp('po-bulkbar');
-  const slotted = typeof setDateViewSelectionBar === 'function' && setDateViewSelectionBar('po', poSelectionBarHtml(ids.length), ids.length > 0);
-  if(bar){ bar.style.display = (!slotted && ids.length) ? 'flex' : 'none'; const cnt=inp('po-sel-count'); if(cnt) cnt.textContent=ids.length; }
-  [bar, inp('date-view-po')].filter(Boolean).forEach(scope => {
-    const edit=scope.querySelector('[data-edit],#po-edit-btn'); if(edit) edit.style.display=ids.length===1?'':'none';
-    const clone=scope.querySelector('[data-clone],#po-clone-btn'); if(clone) clone.style.display=ids.length===1?'':'none';
+  poSyncSelectedRows();
+  const ids=poCheckedIds();
+  if (typeof setDateViewSelectionBar === 'function') setDateViewSelectionBar('po', poSelectionBarHtml(ids.length), ids.length > 0);
+  [inp('date-view-po')].filter(Boolean).forEach(scope => {
+    scope.querySelectorAll('[data-edit]').forEach(el => { el.style.display=ids.length===1?'':'none'; });
+    scope.querySelectorAll('[data-clone]').forEach(el => { el.style.display=ids.length===1?'':'none'; });
+    scope.querySelectorAll('[data-email]').forEach(el => { el.style.display=ids.length===1?'':'none'; });
+    scope.querySelectorAll('[data-payreq]').forEach(el => { el.style.display=ids.length===1?'':'none'; });
   });
   const all=inp('po-check-all');
   if(all){ const total=document.querySelectorAll('#po-table .po-check').length;
     all.checked = total>0 && ids.length===total; all.indeterminate = ids.length>0 && ids.length<total; }
+  if (typeof updateSelectionDetailPanelFromPo === 'function') updateSelectionDetailPanelFromPo();
 }
-function poBulkPrint(){ const ids=poCheckedIds(); if(!ids.length) return; openPoPrint(ids, true); }   // 선택 건은 건별 개별 출력
+function poBulkPrint(){ if (typeof requirePdfAction === 'function' && !requirePdfAction('구매발주서 PDF 출력')) return; const ids=poCheckedIds(); if(!ids.length) return; openPoPrint(ids, true); }   // 선택 건은 건별 개별 출력
 function poBulkEdit(){ const ids=poCheckedIds(); if(ids.length===1) openPoEdit(ids[0]); }
 function poBulkClone(){ const ids=poCheckedIds(); if(ids.length===1) clonePo(ids[0]); }
-function poBulkExport(){ const ids=poCheckedIds(); if(!ids.length) return; exportPoXLS(ids); }
+function poBulkExport(){ if (typeof requireCsvAction === 'function' && !requireCsvAction('구매발주서 엑셀 내보내기')) return; const ids=poCheckedIds(); if(!ids.length) return; exportPoXLS(ids); }
 function poBulkDrive(){ const ids=poCheckedIds(); if(!ids.length) return; saveDocumentBundleToGoogleDrive('po', ids); }
-function poBulkEmail(){ const ids=poCheckedIds(); if(ids.length!==1){ showToast('이메일은 한 건만 선택해 발송하세요.','info'); return; } openEmailModal(poList.find(x=>x.id===ids[0]),'po'); }
+function poBulkEmail(){ const ids=poCheckedIds(); if(ids.length!==1){ showToast('이메일은 한 건만 선택해 발송하세요.','info'); return; } const rows=typeof visiblePurchaseOrderList==='function'?visiblePurchaseOrderList():poList; openEmailModal(rows.find(x=>x.id===ids[0]),'po'); }
+function poBulkPaymentRequest(){ const ids=poCheckedIds(); if(ids.length===1 && typeof openPaymentRequestFromPo === 'function') openPaymentRequestFromPo(ids[0]); }
+function poBulkComplete(){
+  const ids = poCheckedIds();
+  if(!ids.length) return;
+  const targets = ids.map(id => poList.find(p => p.id === id)).filter(p => p && p.status !== '입고완료');
+  if(!targets.length){ showToast('선택 항목은 이미 입고완료 상태입니다.', 'info'); return; }
+  if(!confirm(`선택한 ${targets.length}건을 입고완료 처리하시겠습니까?`)) return;
+  targets.forEach(p => changePoStatus(p.id, '입고완료'));
+  if(typeof closeSelectionDetailPanel === 'function') closeSelectionDetailPanel(false);
+  poToggleAll(false);
+  showToast(`${targets.length}건 입고완료 처리되었습니다.`, 'success');
+}
 function poBulkDelete(){
   const ids=poCheckedIds(); if(!ids.length) return;
   if(!checkAdminAction()) return;
+  const rows=typeof visiblePurchaseOrderList==='function'?visiblePurchaseOrderList():poList;
+  const targets = rows.filter(p=>ids.includes(p.id));
+  if (targets.some(p => !canDeleteRecord(p, 'po'))) { showToast('삭제 권한이 없는 구매발주서가 포함되어 있습니다.', 'error'); return; }
+  const locked = targets.find(p => typeof guardFinanceMonth === 'function' && !guardFinanceMonth(p.date || today()));
+  if (locked) return;
   if(!confirm(ids.length+'건의 구매발주서를 삭제하시겠습니까?')) return;
+  targets.forEach(p => writeAuditLog('po', p.id, 'delete', p, null, { summary:'구매발주서 일괄 삭제', source:'bulkAction' }));
   poList=poList.filter(p=>!ids.includes(p.id));
+  if (financeData) {
+    if (financeData.paidPayable) ids.forEach(id => delete financeData.paidPayable[id]);
+    if (Array.isArray(financeData.paymentRequests)) financeData.paymentRequests = financeData.paymentRequests.filter(req => !ids.includes(req.poId));
+    saveStorage('financeData', financeData);
+  }
   saveStorage('poList', poList); renderPo();
   showToast(ids.length+'건이 삭제되었습니다.');
 }
@@ -554,7 +1047,14 @@ function poStatusColor(s) {
   return m[s] || 'var(--tx-s)';
 }
 
+function poStatusPillClass(s) {
+  const m = { '작성중':'is-muted', '확인완료':'is-warn', '입고완료':'is-ok' };
+  return m[s] || 'is-info';
+}
+
 function openPoAdd() {
+  if (typeof requirePurchaseOrderData === 'function' && !requirePurchaseOrderData('구매발주서 등록')) return;
+  if (typeof requireCreateAction === 'function' && !requireCreateAction('po', '구매발주서 등록')) return;
   try {
     const modal = inp('po-modal');
       delete modal.dataset.editId;
@@ -563,8 +1063,9 @@ function openPoAdd() {
       inp('po-date').value = today(); inp('po-status').value = '작성중';
       _syncPoClientDropdown('');
       inp('po-product-sel').innerHTML = '<option value="">-- 선택 --</option>';
-      ['po-supplier','po-semail','po-item','po-spec','po-note'].forEach(id => { if(inp(id)) inp(id).value = ''; });
-      inp('po-qty').value = '1'; inp('po-unit').value = 'EA';
+      ['po-supplier','po-semail','po-spec','po-note-common'].forEach(id => { if(inp(id)) inp(id).value = ''; });
+      _initDocItemTable('po');
+      inp('po-unit').value = 'EA';
       if(inp('po-price')) inp('po-price').value = '';
       inp('po-pay').value = '현금'; inp('po-dlv').value = '직납';
       inp('po-save-btn').onclick = savePoForm;
@@ -576,50 +1077,82 @@ function openPoAdd() {
 }
 
 function _syncPoClientDropdown(selId) {
+  const visibleClients = typeof visibleRecords === 'function' ? visibleRecords(clients, 'clients') : clients;
   inp('po-client-sel').innerHTML = '<option value="">-- 선택 --</option>' +
-    clients.map(c => `<option value="${c.id}"${c.id===selId?' selected':''}>${c.name}</option>`).join('');
+    visibleClients.map(c => `<option value="${c.id}"${c.id===selId?' selected':''}>${c.name}</option>`).join('');
   onPoClientChange();
 }
 
 function onPoClientChange() {
   const cid = v('po-client-sel');
+  const visibleProducts = typeof visibleRecords === 'function' ? visibleRecords(products, 'products') : products;
   inp('po-product-sel').innerHTML = '<option value="">-- 선택 --</option>' +
-    products.filter(p => !cid || p.clientId === cid).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    visibleProducts.filter(p => !cid || p.clientId === cid).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('po-client-sel', 'po-client-search');
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('po-product-sel', 'po-product-search');
 }
 
 function savePoForm() {
   if (!checkAdminAction()) return;
   const modal = inp('po-modal');
   const editId = modal.dataset.editId;
+  const items = _readDocItemTable('po');
   if (!v('po-supplier')) { showToast('공급처를 입력하세요.', 'error'); return; }
-  if (!v('po-item'))     { showToast('품목명을 입력하세요.', 'error'); return; }
+  if (!items.length)     { showToast('품목명을 입력하세요.', 'error'); return; }
   if (editId) {
     const idx = poList.findIndex(p => p.id === editId);
-    if (idx !== -1) poList[idx] = { ...poList[idx], ...buildPoObj(editId) };
+    if (idx !== -1) {
+      const before = _safeJsonClone(poList[idx]);
+      if (!requireRecordPermission('edit', before, 'po')) return;
+      const draft = buildPoObj(editId);
+      if (typeof guardFinanceMonth === 'function' && (!guardFinanceMonth(before.date || today()) || !guardFinanceMonth(draft.date || today()))) return;
+      const next = stampRecordUpdate({ ...poList[idx], ...draft }, before, 'po');
+      poList[idx] = next;
+      writeAuditLog('po', editId, 'update', before, next, { summary:'구매발주서 수정' });
+    }
     delete modal.dataset.editId;
   } else {
-    poList.unshift(buildPoObj(v('po-id')));
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('po', '구매발주서 등록')) return;
+    const draft = buildPoObj(v('po-id'));
+    if (typeof guardFinanceMonth === 'function' && !guardFinanceMonth(draft.date || today())) return;
+    const created = [];
+    items.forEach((item, index) => {
+      const id = _nextDocCodeForBatch('P', poList, created, index === 0 ? v('po-id') : '');
+      const next = stampRecordCreate(buildPoObjForItem(id, item), 'po');
+      created.push(next);
+      writeAuditLog('po', next.id, 'create', null, next, { summary:items.length > 1 ? `구매발주서 개별 등록 (${index + 1}/${items.length})` : '구매발주서 등록' });
+    });
+    poList.unshift(...created);
   }
   saveStorage('poList', poList); closeModal('po-modal'); renderPo();
-  showToast(editId ? '구매발주서가 수정되었습니다.' : '구매발주서가 등록되었습니다.');
+  showToast(editId ? '구매발주서가 수정되었습니다.' : (items.length > 1 ? `구매발주서 ${items.length}건이 개별 등록되었습니다.` : '구매발주서가 등록되었습니다.'));
 }
 
 function buildPoObj(id) {
+  const items = _readDocItemTable('po');
+  const first = items[0] || { itemName:'', spec:'', qty:1, unit:'EA', price:null, note:'' };
   return {
     id, date: v('po-date')||today(),
     clientId: v('po-client-sel'), productId: v('po-product-sel'),
     supplier: v('po-supplier'), supplierEmail: v('po-semail')||'',
-    itemName: v('po-item'), spec: v('po-spec'),
-    qty: Number(v('po-qty'))||1, unit: v('po-unit')||'EA',
-    unitPrice: Number(v('po-price'))||0,
+    itemName: first.itemName, spec: first.spec || '',
+    qty: Number(first.qty)||1, unit: first.unit || 'EA',
+    unitPrice: Number(first.price)||0,
     payMethod: v('po-pay')||'현금', dlvMethod: v('po-dlv')||'직납',
-    status: v('po-status')||'작성중', note: v('po-note')
+    status: v('po-status')||'작성중', note: v('po-note-common') || first.note || '',
+    commonNote: v('po-note-common') || '',
+    items
   };
+}
+
+function buildPoObjForItem(id, item) {
+  return _singleItemDoc(buildPoObj(id), item, 'po');
 }
 
 function openPoEdit(id) {
   const p = poList.find(x => x.id === id);
   if (!p) return;
+  if (!requireRecordPermission('edit', p, 'po')) return;
   const modal = inp('po-modal');
   modal.dataset.editId = id;
   inp('po-modal-ttl').innerHTML = '<i class="ti ti-edit" style="color:var(--tx-w);"></i>구매발주서 수정';
@@ -628,18 +1161,23 @@ function openPoEdit(id) {
   _syncPoClientDropdown(p.clientId);
   inp('po-client-sel').value = p.clientId; onPoClientChange();
   inp('po-product-sel').value = p.productId||'';
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('po-product-sel', 'po-product-search');
   inp('po-supplier').value = p.supplier; inp('po-semail').value = p.supplierEmail||'';
-  inp('po-item').value = p.itemName; inp('po-spec').value = p.spec||'';
-  inp('po-qty').value = p.qty; inp('po-unit').value = p.unit;
+  _initDocItemTable('po', _docItems(p));
+  inp('po-spec').value = p.spec||'';
+  inp('po-unit').value = p.unit;
   if(inp('po-price')) inp('po-price').value = p.unitPrice||'';
   inp('po-pay').value = p.payMethod||'현금'; inp('po-dlv').value = p.dlvMethod||'직납';
-  inp('po-note').value = p.note||'';
+  if (inp('po-note-common')) inp('po-note-common').value = p.commonNote || p.note || '';
   modal.classList.add('open');
 }
 
 function clonePo(id) {
   if (!checkAdminAction()) return;
+  if (typeof requirePurchaseOrderData === 'function' && !requirePurchaseOrderData('구매발주서 복제')) return;
+  if (typeof requireCreateAction === 'function' && !requireCreateAction('po', '구매발주서 복제')) return;
   const p = poList.find(x => x.id === id); if (!p) return;
+  if (typeof canViewRecord === 'function' && !canViewRecord(p, 'po')) { showToast('이 구매발주서에 접근할 권한이 없습니다.', 'error'); return; }
   const modal = inp('po-modal');
   delete modal.dataset.editId;
   inp('po-modal-ttl').innerHTML = '<i class="ti ti-copy" style="color:var(--tx-i);"></i>구매발주서 복제 등록';
@@ -648,12 +1186,14 @@ function clonePo(id) {
   _syncPoClientDropdown(p.clientId);
   inp('po-client-sel').value = p.clientId; onPoClientChange();
   inp('po-product-sel').value = p.productId||'';
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('po-product-sel', 'po-product-search');
   inp('po-supplier').value = p.supplier||''; inp('po-semail').value = p.supplierEmail||'';
-  inp('po-item').value = p.itemName||''; inp('po-spec').value = p.spec||'';
-  inp('po-qty').value = p.qty||1; inp('po-unit').value = p.unit||'EA';
+  _initDocItemTable('po', _docItems(p));
+  inp('po-spec').value = p.spec||'';
+  inp('po-unit').value = p.unit||'EA';
   if (inp('po-price')) inp('po-price').value = p.unitPrice||'';
   inp('po-pay').value = p.payMethod||'현금'; inp('po-dlv').value = p.dlvMethod||'직납';
-  inp('po-note').value = p.note||'';
+  if (inp('po-note-common')) inp('po-note-common').value = p.commonNote || p.note || '';
   inp('po-save-btn').onclick = savePoForm;
   modal.classList.add('open');
 }
@@ -661,32 +1201,57 @@ function clonePo(id) {
 function changePoStatus(id, val) {
   const p = poList.find(x => x.id === id);
   if (!p) return;
-  p.status = val; saveStorage('poList', poList); renderPo();
+  if (!roleFeatureAllowed('status') || !requireRecordPermission('edit', p, 'po')) return;
+  if (typeof guardFinanceMonth === 'function' && !guardFinanceMonth(p.date || today())) return;
+  const before = _safeJsonClone(p);
+  p.status = val;
+  stampRecordUpdate(p, before, 'po');
+  writeAuditLog('po', id, 'statusChange', before, p, { summary:`구매발주서 상태 변경: ${before.status || ''} → ${val}` });
+  saveStorage('poList', poList); renderPo();
 }
 
 function deletePo(id) {
   if (!checkAdminAction()) return;
+  const target = poList.find(p => p.id === id);
+  if (!target || !requireRecordPermission('delete', target, 'po')) return;
+  if (typeof guardFinanceMonth === 'function' && !guardFinanceMonth(target.date || today())) return;
   if (!confirm('이 구매발주서를 삭제하시겠습니까?')) return;
   poList = poList.filter(p => p.id !== id);
+  if (financeData) {
+    if (financeData.paidPayable) delete financeData.paidPayable[id];
+    if (Array.isArray(financeData.paymentRequests)) financeData.paymentRequests = financeData.paymentRequests.filter(req => req.poId !== id);
+    saveStorage('financeData', financeData);
+  }
+  writeAuditLog('po', id, 'delete', target, null, { summary:'구매발주서 삭제' });
   saveStorage('poList', poList); renderPo();
   showToast('구매발주서가 삭제되었습니다.');
 }
 
 function openPoPrint(id, individual=false) {
+  if (typeof requirePdfAction === 'function' && !requirePdfAction('구매발주서 PDF 출력')) return;
+  if (typeof requirePurchaseOrderData === 'function' && !requirePurchaseOrderData('구매발주서 PDF 출력')) return;
   const ids = Array.isArray(id) ? id : (id ? [id] : null);
-  const targetList = ids ? ids.map(i=>poList.find(x=>x.id===i)).filter(Boolean)
-                        : poList;   // 전체 출력: 입고완료 포함 모든 발주서
+  const visiblePo = typeof visiblePurchaseOrderList === 'function' ? visiblePurchaseOrderList() : poList;
+  const targetList = ids ? ids.map(i=>visiblePo.find(x=>x.id===i)).filter(Boolean)
+                        : visiblePo;   // 전체 출력: 입고완료 포함 모든 발주서
   if (!targetList.length) { showToast('출력할 발주서가 없습니다.', 'error'); return; }
+  if (_docTemplateHasCustom('po')) {
+    const targetIds = targetList.map(p => p.id);
+    openDocTemplatePdfPreview('po', targetIds.length === 1 ? targetIds[0] : targetIds, { individual });
+    return;
+  }
   const ci = getCompanyInfo();
   const grouped = {};
   // individual=true: 건별 개별 페이지 / false: 공급처별로 묶음
   targetList.forEach(p => { const gkey = individual ? p.id : p.supplier; (grouped[gkey] = grouped[gkey] || []).push(p); });
   const pages = Object.entries(grouped).map(([supplier, items]) => {
-    const total   = items.reduce((s, p) => s + (p.unitPrice||0)*p.qty, 0);
+    const lines   = _docLines(items, 'po');
+    const total   = lines.reduce((s, line) => s + line.amount, 0);
     const vat     = Math.round(total * 0.1);
     const grandTotal = total + vat;
     const refDate = items[0].date;
     const poNums  = [...new Set(items.map(p => p.id))].join(', ');
+    const groupNotes = items.map(p => p.commonNote || '').filter(Boolean).join('<br>');
     return `
     <div style="page-break-after:always;">
       <div class="approval-box">
@@ -715,13 +1280,7 @@ function openPoPrint(id, individual=false) {
         <th style="width:46px;">수량</th><th style="width:40px;">단위</th>
         <th style="width:100px;">단 가 (원)</th><th style="width:110px;">금 액 (원)</th><th>비 고</th></tr></thead>
         <tbody>
-          ${items.map((p,i) => `<tr>
-            <td class="ctr">${i+1}</td><td><strong>${p.itemName}</strong></td><td class="ctr">${p.spec||'—'}</td>
-            <td class="ctr">${p.qty}</td><td class="ctr">${p.unit}</td>
-            <td class="num">${p.unitPrice?Number(p.unitPrice).toLocaleString('ko-KR'):'—'}</td>
-            <td class="num">${p.unitPrice?Number(p.unitPrice*p.qty).toLocaleString('ko-KR'):'—'}</td>
-            <td style="font-size:10px;">${p.note||''}</td>
-          </tr>`).join('')}
+          ${_docItemRowsHtml(lines, 'po')}
           <tr class="empty-row"><td colspan="8">—</td></tr>
           <tr class="total-row"><td colspan="5" style="text-align:right;">공급가액 합계</td>
           <td></td><td class="num">${total.toLocaleString('ko-KR')}</td><td></td></tr>
@@ -734,6 +1293,7 @@ function openPoPrint(id, individual=false) {
       </div></div>
       <div class="remarks">
         <div class="remarks-title">◆ 특기사항 및 거래조건</div>
+        ${groupNotes ? groupNotes + '<br>' : ''}
         1. 상기 품목에 대하여 발주하오니 납기일에 맞추어 납품하여 주시기 바랍니다.<br>
         2. 납품 시 반드시 거래명세표를 동봉하여 주시기 바랍니다.<br>
         3. 세금계산서는 납품 완료 후 익일 발행 바랍니다.
@@ -756,17 +1316,20 @@ function openPoPrint(id, individual=false) {
 }
 
 function exportPoXLS(id = null) {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('구매발주서 엑셀 내보내기')) return;
+  if (typeof requirePurchaseOrderData === 'function' && !requirePurchaseOrderData('구매발주서 엑셀 내보내기')) return;
   const ids = Array.isArray(id) ? id : (id ? [id] : null);
-  const targets = ids ? poList.filter(p => ids.includes(p.id)) : poList;
+  const sourceRows = typeof visiblePurchaseOrderList === 'function' ? visiblePurchaseOrderList() : poList;
+  const targets = ids ? sourceRows.filter(p => ids.includes(p.id)) : sourceRows;
   if (!targets.length) { showToast('내보낼 데이터가 없습니다.', 'error'); return; }
   const ci = getCompanyInfo();
   const wb = XLSX.utils.book_new();
   const hdr = ['발주번호','발행일','고객사','연결제품','공급처','공급처이메일','품목명','규격/사양','수량','단위','단가','금액','결제조건','납품방법','상태','비고'];
-  const rows = targets.map(p => [
+  const rows = targets.flatMap(p => _docLines(p, 'po').map(line => [
     p.id, p.date, getClientName(p.clientId)||'', p.productId?getProductName(p.productId):'',
-    p.supplier, p.supplierEmail||'', p.itemName, p.spec||'', p.qty, p.unit,
-    p.unitPrice||0, (p.unitPrice||0)*p.qty, p.payMethod||'현금', p.dlvMethod||'직납', p.status, p.note||''
-  ]);
+    p.supplier, p.supplierEmail||'', line.itemName, line.spec||'', line.qty, line.unit,
+    line.price||0, line.amount, p.payMethod||'현금', p.dlvMethod||'직납', p.status, line.rowNote || ''
+  ]));
   const titleText = id ? `${ci.name} — 구매발주서 (${id})` : `${ci.name} — 구매발주서 목록`;
   const ws = XLSX.utils.aoa_to_sheet([
     [titleText],
@@ -809,6 +1372,7 @@ function _numFrom(val) { return Number(String(val).replace(/[,₩\s원]/g, '')) 
 
 function _importDocsXLS(cfg) {
   if (!checkAdminAction()) return;
+  if (typeof requireCreateAction === 'function' && !requireCreateAction(cfg.tableKey || cfg.key, `${cfg.title} 가져오기`)) return;
   _pickXlsxFile(file => _readXlsxRows(file, aoa => {
     // 헤더 행 탐색: 식별 헤더 + '품목명' 이 함께 있는 행
     let hrow = -1, hdr = null;
@@ -833,14 +1397,23 @@ function _importDocsXLS(cfg) {
       const obj = {
         id,
         date: get(row, cfg.dateHeader) || today(),
-        clientId: clients.find(c => c.name === clientName)?.id || '',
-        productId: products.find(p => p.name === productName)?.id || '',
+        clientId: visibleDocClients().find(c => c.name === clientName)?.id || '',
+        productId: (typeof visibleRecords === 'function' ? visibleRecords(products, 'products') : products).find(p => p.name === productName)?.id || '',
         supplier, supplierEmail: get(row, '공급처이메일'),
         itemName, spec: get(row, '규격/사양'),
         qty: Number(get(row, '수량')) || 1, unit: get(row, '단위') || 'EA',
-        status: get(row, '상태') || cfg.defaultStatus, note: get(row, '비고')
+        status: get(row, '상태') || cfg.defaultStatus, note: get(row, '비고'),
+        items: []
       };
       cfg.extra(obj, row, get);
+      obj.items = [{
+        itemName,
+        spec: obj.spec || '',
+        qty: obj.qty || 1,
+        unit: obj.unit || 'EA',
+        price: obj.targetPrice || obj.unitPrice || 0,
+        note: obj.note || ''
+      }];
       list.unshift(obj);
       added++;
     }
@@ -852,6 +1425,7 @@ function _importDocsXLS(cfg) {
 function importRfqXLS() {
   _importDocsXLS({
     key:'rfqList', prefix:'Q', title:'견적요청서', idHeader:'문서번호', dateHeader:'요청일',
+    tableKey:'rfq',
     defaultStatus:'요청전', getList:() => rfqList, render: renderRfq,
     extra:(obj, row, get) => { obj.targetPrice = _numFrom(get(row, '희망단가')); }
   });
@@ -860,6 +1434,7 @@ function importRfqXLS() {
 function importPoListXLS() {
   _importDocsXLS({
     key:'poList', prefix:'P', title:'구매발주서', idHeader:'발주번호', dateHeader:'발행일',
+    tableKey:'po',
     defaultStatus:'작성중', getList:() => poList, render: renderPo,
     extra:(obj, row, get) => {
       obj.unitPrice  = _numFrom(get(row, '단가'));
@@ -901,7 +1476,7 @@ function _docTemplateVariableSchema() {
   return {
     version:1,
     common:['회사명','회사주소','회사전화','회사팩스','회사연락처','회사사업자정보','사업자번호','대표자','부서'],
-    document:['문서번호','발행일','공급처','공급처이메일','고객사','고객이메일','연결제품','결제조건','납품방법','납품주소','상태','비고'],
+    document:['문서번호','발행일','공급처','공급처이메일','고객사','고객이메일','고객사업자번호','공급받는자사업자번호','연결제품','결제조건','납품방법','납품주소','상태','비고'],
     amounts:['공급가액','부가세','합계금액'],
     repeating:{
       pattern:['번호{n}','품목명{n}','규격{n}','수량{n}','단위{n}','단가{n}','금액{n}','품목비고{n}'],
@@ -1067,6 +1642,11 @@ function _docTemplateStore() {
   return loadStorage('docXlsxTemplates', {});
 }
 
+function _docTemplateHasCustom(type) {
+  const saved = _docTemplateStore()[type];
+  return !!(saved && saved.data);
+}
+
 function _arrayToBase64(array) {
   const bytes = new Uint8Array(array);
   let out = '';
@@ -1184,7 +1764,7 @@ function _defaultDocTemplateBook(type) {
     ['A12:B12','담당 연락처','C12:L12','{{부서}} {{회사전화}}']
   ] : [
     ['A9:B9','공급자','C9:F9','{{회사명}} ({{사업자번호}})','G9:H9','발행일자','I9:L9','{{발행일}}'],
-    ['A10:B10','공급받는자','C10:F10','{{고객사}} 귀중','G10:H10','관련 제품','I10:L10','{{연결제품}}'],
+    ['A10:B10','공급받는자','C10:F10','{{고객사}} 귀중','G10:H10','사업자번호','I10:L10','{{고객사업자번호}}'],
     ['A11:B11','고객 이메일','C11:L11','{{고객이메일}}'],
     ['A12:B12',isQuote?'견적 유효기간':'문서 상태','C12:L12',isQuote?'발행일로부터 30일':'{{상태}}']
   ];
@@ -1318,7 +1898,7 @@ function _defaultDocTemplateBook(type) {
     ['3','기본 양식은 A4 한 페이지이며 품목은 12개까지 표시됩니다. 필요하면 {{품목명13}}부터 추가할 수 있습니다.'],
     ['4','수정한 파일을 화면의 "수정한 엑셀 인쇄 양식 등록" 버튼으로 등록합니다.'],
     ['공통 표시값','{{회사명}}, {{회사주소}}, {{회사전화}}, {{회사팩스}}, {{회사연락처}}, {{회사사업자정보}}, {{사업자번호}}, {{대표자}}, {{부서}}'],
-    ['문서 표시값','{{문서번호}}, {{발행일}}, {{공급처}}, {{공급처이메일}}, {{고객사}}, {{연결제품}}, {{결제조건}}, {{납품방법}}, {{납품주소}}, {{비고}}'],
+    ['문서 표시값','{{문서번호}}, {{발행일}}, {{공급처}}, {{공급처이메일}}, {{고객사}}, {{고객사업자번호}}, {{연결제품}}, {{결제조건}}, {{납품방법}}, {{납품주소}}, {{비고}}'],
     ['금액 표시값','{{공급가액}}, {{부가세}}, {{합계금액}}'],
     ['품목 표시값','{{번호1}}, {{품목명1}}, {{규격1}}, {{수량1}}, {{단위1}}, {{단가1}}, {{금액1}}, {{품목비고1}} ... 20']
   ].forEach(row => guide.addRow(row));
@@ -1491,24 +2071,31 @@ async function _docTemplateArray(type) {
 }
 
 function _docTemplateGroups(type, id) {
+  return _docTemplateGroupsWithOptions(type, id, {});
+}
+
+function _docTemplateGroupsWithOptions(type, id, options = {}) {
   const ids = Array.isArray(id) ? id : (id ? [id] : null);
   if (type === 'rfq') {
-    const list = ids ? rfqList.filter(r => ids.includes(r.id)) : rfqList;
+    const source = visibleRfqList();
+    const list = ids ? source.filter(r => ids.includes(r.id)) : source;
     return list.map(r => ({ key:r.id, items:[r] }));
   }
-  if (type === 'quote') {
-    const list = ids ? quoteList.filter(d => ids.includes(d.id)) : quoteList;
+  if (type === 'quote' || type === 'order') {
+    const source = visibleSODocList(type);
+    const list = ids ? source.filter(d => ids.includes(d.id)) : source;
     return list.map(d => ({key:d.id,items:[d]}));
   }
   if (type === 'statement' || type === 'tax') {
-    const list = salesList(type);
+    const list = visibleSalesList(type);
     const targets = ids ? list.filter(d => ids.includes(d.id)) : list;
     return targets.map(d => ({key:d.id,items:[d]}));
   }
-  const list = ids ? poList.filter(p => ids.includes(p.id)) : poList;
+  const rows = typeof visiblePurchaseOrderList === 'function' ? visiblePurchaseOrderList() : poList;
+  const list = ids ? rows.filter(p => ids.includes(p.id)) : rows;
   const grouped = {};
   list.forEach(p => {
-    const key = ids && ids.length === 1 ? p.id : (p.supplier || p.id);
+    const key = options.individual || (ids && ids.length === 1) ? p.id : (p.supplier || p.id);
     (grouped[key] = grouped[key] || []).push(p);
   });
   return Object.entries(grouped).map(([key, items]) => ({ key, items }));
@@ -1517,11 +2104,12 @@ function _docTemplateGroups(type, id) {
 function _docTemplateValues(type, items) {
   const ci = getCompanyInfo();
   const first = items[0];
-  const amount = items.reduce((sum, item) => {
-    const price = type === 'rfq' ? item.targetPrice : item.unitPrice;
-    return sum + (Number(price) || 0) * (Number(item.qty) || 0);
-  }, 0);
+  const lines = _docLines(items, type);
+  const amount = lines.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
   const vat = Math.round(amount * 0.1);
+  const clientName = first.clientName || getClientName(first.clientId) || '';
+  const clientBizNo = _docClientBizNo(first);
+  const isCustomerDoc = ['statement','tax','quote','order'].includes(type);
   const values = {
     회사명:ci.name || '', 회사주소:ci.address || '', 회사전화:ci.tel || '',
     회사팩스:ci.fax || '', 사업자번호:ci.bizNo || '', 대표자:ci.ceo || '',
@@ -1531,9 +2119,10 @@ function _docTemplateValues(type, items) {
     문서번호:[...new Set(items.map(x => x.id))].join(', '),
     발행일:first.date || '', 공급처:first.supplier || '',
     공급처이메일:first.supplierEmail || '',
-    고객사:first.clientName || getClientName(first.clientId) || '',
+    고객사:clientName,
     고객이메일:first.clientEmail || '',
-    연결제품:first.productId ? getProductName(first.productId) : '',
+    고객사업자번호:clientBizNo,
+    연결제품:isCustomerDoc ? clientBizNo : (first.productId ? getProductName(first.productId) : ''),
     결제조건:first.payMethod || '', 납품방법:first.dlvMethod || '', 상태:first.status || '',
     납품주소:ci.address || '', 공급가액:amount, 부가세:vat,
     합계금액:amount + vat, 비고:items.map(x => x.note || '').filter(Boolean).join(' / '),
@@ -1541,16 +2130,15 @@ function _docTemplateValues(type, items) {
     공급자회사명:ci.name || '', 공급자사업자번호:ci.bizNo || '', 공급자대표자:ci.ceo || '',
     공급자주소:ci.address || '', 공급자업태:ci.bizType || '', 공급자종목:ci.bizItem || '', 공급자이메일:ci.email || ''
   };
-  const clientName = first.clientName || getClientName(first.clientId) || '';
   const bp = partners.find(p => p.name === clientName) || {};
   Object.assign(values, {
-    공급받는자회사명:clientName, 공급받는자사업자번호:bp.bizNo || '', 공급받는자대표자:bp.ceo || '',
+    공급받는자회사명:clientName, 공급받는자사업자번호:clientBizNo || bp.bizNo || '', 공급받는자대표자:bp.ceo || '',
     공급받는자주소:bp.address || '', 공급받는자업태:bp.bizType || '', 공급받는자종목:bp.bizItem || '',
     공급받는자이메일:first.clientEmail || bp.email || ''
   });
   for (let i = 1; i <= 20; i++) {
-    const item = items[i - 1];
-    const price = item ? Number(type === 'rfq' ? item.targetPrice : item.unitPrice) || 0 : '';
+    const item = lines[i - 1];
+    const price = item ? Number(item.price) || 0 : '';
     values['번호' + i] = item ? i : '';
     values['품목명' + i] = item ? item.itemName || '' : '';
     values['규격' + i] = item ? item.spec || '' : '';
@@ -1558,8 +2146,8 @@ function _docTemplateValues(type, items) {
     values['단위' + i] = item ? item.unit || '' : '';
     values['단가' + i] = item ? price : '';
     values['금액' + i] = item ? price * (Number(item.qty) || 0) : '';
-    values['품목비고' + i] = item ? item.note || '' : '';
-    const dateParts = item && item.date ? item.date.split('-') : [];
+    values['품목비고' + i] = item ? item.rowNote || item.note || '' : '';
+    const dateParts = item && item.doc && item.doc.date ? item.doc.date.split('-') : [];
     values['월' + i] = item ? (dateParts[1] || '') : '';
     values['일' + i] = item ? (dateParts[2] || '') : '';
     values['세액' + i] = item ? Math.round(price * (Number(item.qty) || 0) * 0.1) : '';
@@ -1589,42 +2177,247 @@ function _safeSheetName(name, used) {
   return out;
 }
 
+async function _buildDocTemplateWorkbook(type, id = null, options = {}) {
+  const info = DOC_XLS_TEMPLATE_INFO[type];
+  if (!info) throw new Error('지원하지 않는 문서 양식입니다.');
+  const groups = _docTemplateGroupsWithOptions(type, id, options);
+  if (!groups.length) throw new Error('양식으로 출력할 문서가 없습니다.');
+  const templateData = await _docTemplateArray(type);
+  const out = new ExcelJS.Workbook();
+  await out.xlsx.load(templateData);
+  const templateWs = out.worksheets[0];
+  const templateModel = JSON.parse(JSON.stringify(templateWs.model));
+  out.worksheets.slice(1).forEach(sheet => out.removeWorksheet(sheet.id));
+  const used = new Set();
+  groups.forEach((group, index) => {
+    let ws;
+    if (index === 0) {
+      ws = templateWs;
+    } else {
+      const sheetName = _safeSheetName(group.key, used);
+      ws = out.addWorksheet(sheetName);
+      const cloneModel = JSON.parse(JSON.stringify(templateModel));
+      cloneModel.id = ws.id;
+      cloneModel.name = sheetName;
+      ws.model = cloneModel;
+    }
+    ws.name = _safeSheetName(group.key, used);
+    _fillDocTemplateSheet(ws, _docTemplateValues(type, group.items));
+  });
+  return { workbook:out, groups, info };
+}
+
 async function exportDocTemplateXLS(type, id = null) {
   const info = DOC_XLS_TEMPLATE_INFO[type];
   if (!info || !_requireExcelJS()) return;
-  const groups = _docTemplateGroups(type, id);
-  if (!groups.length) { showToast('양식으로 출력할 문서가 없습니다.', 'error'); return; }
   try {
-    const templateData = await _docTemplateArray(type);
-    const out = new ExcelJS.Workbook();
-    await out.xlsx.load(templateData);
-    const templateWs = out.worksheets[0];
-    const templateModel = JSON.parse(JSON.stringify(templateWs.model));
-    out.worksheets.slice(1).forEach(sheet => out.removeWorksheet(sheet.id));
-    const used = new Set();
-    groups.forEach((group, index) => {
-      let ws;
-      if (index === 0) {
-        ws = templateWs;
-      } else {
-        const sheetName = _safeSheetName(group.key, used);
-        ws = out.addWorksheet(sheetName);
-        const cloneModel = JSON.parse(JSON.stringify(templateModel));
-        cloneModel.id = ws.id;
-        cloneModel.name = sheetName;
-        ws.model = cloneModel;
-        _fillDocTemplateSheet(ws, _docTemplateValues(type, group.items));
-        return;
-      }
-      ws.name = _safeSheetName(group.key, used);
-      _fillDocTemplateSheet(ws, _docTemplateValues(type, group.items));
-    });
+    const { workbook, groups } = await _buildDocTemplateWorkbook(type, id);
     const suffix = groups.length === 1 ? groups[0].key : today();
-    const buffer = await out.xlsx.writeBuffer();
+    const buffer = await workbook.xlsx.writeBuffer();
     _downloadExcelBuffer(buffer, `${info.title}_${suffix}.xlsx`);
     showToast(`${info.title} ${groups.length}건을 등록 양식으로 출력했습니다.`);
   } catch(err) {
     showToast('엑셀 양식 출력 실패: ' + err.message, 'error');
+  }
+}
+
+function _xlsxColor(value) {
+  const argb = value && (value.argb || value.rgb);
+  if (!argb) return '';
+  const clean = String(argb).replace(/^#/, '');
+  return '#' + (clean.length === 8 ? clean.slice(2) : clean).slice(0, 6);
+}
+
+function _excelColumnNumber(label) {
+  return String(label || '').toUpperCase().split('').reduce((sum, ch) => sum * 26 + ch.charCodeAt(0) - 64, 0);
+}
+
+function _excelAddressParts(address) {
+  const match = String(address || '').match(/([A-Z]+)(\d+)/i);
+  return match ? { col:_excelColumnNumber(match[1]), row:Number(match[2]) } : null;
+}
+
+function _excelRangeBounds(range) {
+  const clean = String(range || '').replace(/^.*!/, '').replace(/\$/g, '').replace(/'/g, '');
+  const parts = clean.split(':');
+  const start = _excelAddressParts(parts[0]);
+  const end = _excelAddressParts(parts[1] || parts[0]);
+  if (!start || !end) return null;
+  return {
+    top:Math.min(start.row, end.row),
+    left:Math.min(start.col, end.col),
+    bottom:Math.max(start.row, end.row),
+    right:Math.max(start.col, end.col)
+  };
+}
+
+function _worksheetPrintBounds(ws) {
+  const printArea = ws && ws.pageSetup && ws.pageSetup.printArea;
+  const parsed = printArea ? _excelRangeBounds(String(printArea).split('&&')[0]) : null;
+  if (parsed) return parsed;
+  let top = 1, left = 1, bottom = Math.max(1, ws.rowCount || 1), right = Math.max(1, ws.columnCount || 1);
+  (ws.model && ws.model.merges || []).forEach(range => {
+    const b = _excelRangeBounds(range);
+    if (!b) return;
+    bottom = Math.max(bottom, b.bottom);
+    right = Math.max(right, b.right);
+  });
+  return { top, left, bottom, right };
+}
+
+function _worksheetMergeMap(ws) {
+  const map = new Map();
+  (ws.model && ws.model.merges || []).forEach(range => {
+    const b = _excelRangeBounds(range);
+    if (!b) return;
+    for (let r = b.top; r <= b.bottom; r++) {
+      for (let c = b.left; c <= b.right; c++) {
+        const key = r + ':' + c;
+        if (r === b.top && c === b.left) map.set(key, { rowSpan:b.bottom - b.top + 1, colSpan:b.right - b.left + 1 });
+        else map.set(key, { skip:true });
+      }
+    }
+  });
+  return map;
+}
+
+function _excelBorderCss(border) {
+  if (!border || !border.style) return '';
+  const width = ['medium', 'thick', 'double'].includes(border.style) ? 2 : 1;
+  return `${width}px solid ${_xlsxColor(border.color) || '#d0d4dc'}`;
+}
+
+function _excelCellText(cell) {
+  let value = cell && cell.value;
+  if (value == null) return '';
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (typeof value === 'object') {
+    if (Array.isArray(value.richText)) value = value.richText.map(part => part.text || '').join('');
+    else if (value.text != null) value = value.text;
+    else if (value.result != null) value = value.result;
+    else if (value.formula != null) value = value.result != null ? value.result : '';
+  }
+  if (typeof value === 'number') {
+    const fmt = String(cell.numFmt || '');
+    if (fmt.includes('%')) return (value * 100).toLocaleString('ko-KR') + '%';
+    if (fmt.includes('#,##0')) {
+      const suffix = fmt.includes('" 원"') || fmt.includes('"원"') ? ' 원' : '';
+      return value.toLocaleString('ko-KR') + suffix;
+    }
+  }
+  return String(value);
+}
+
+function _excelCellCss(cell) {
+  const css = ['box-sizing:border-box'];
+  const font = cell.font || {};
+  const align = cell.alignment || {};
+  const fill = cell.fill || {};
+  if (font.name) css.push(`font-family:'${String(font.name).replace(/['\\]/g, '')}','Malgun Gothic',sans-serif`);
+  if (font.size) css.push(`font-size:${Math.max(7, Number(font.size))}pt`);
+  if (font.bold) css.push('font-weight:700');
+  if (font.italic) css.push('font-style:italic');
+  if (font.underline) css.push('text-decoration:underline');
+  const fontColor = _xlsxColor(font.color);
+  if (fontColor) css.push(`color:${fontColor}`);
+  const fillColor = _xlsxColor(fill.fgColor || fill.bgColor);
+  if (fillColor && fillColor.toLowerCase() !== '#ffffff') css.push(`background:${fillColor}`);
+  if (align.horizontal) css.push(`text-align:${align.horizontal === 'centerContinuous' ? 'center' : align.horizontal}`);
+  if (align.vertical) css.push(`vertical-align:${align.vertical}`);
+  if (align.wrapText) css.push('white-space:pre-wrap');
+  else css.push('white-space:normal');
+  if (align.textRotation) css.push('writing-mode:vertical-rl;text-orientation:upright');
+  const border = cell.border || {};
+  const sides = [['top','border-top'], ['right','border-right'], ['bottom','border-bottom'], ['left','border-left']];
+  sides.forEach(([key, prop]) => {
+    const val = _excelBorderCss(border[key]);
+    if (val) css.push(`${prop}:${val}`);
+  });
+  return css.join(';');
+}
+
+const DOC_TEMPLATE_PDF_PAGE_WIDTH = 746;
+const DOC_TEMPLATE_PDF_PAGE_HEIGHT = 1083;
+const DOC_TEMPLATE_PDF_SAFE_GUTTER = 18;
+
+function _worksheetToHtmlTable(ws) {
+  const bounds = _worksheetPrintBounds(ws);
+  const merges = _worksheetMergeMap(ws);
+  const colParts = [];
+  let totalWidth = 0;
+  for (let c = bounds.left; c <= bounds.right; c++) {
+    const col = ws.getColumn(c);
+    if (col && col.hidden) continue;
+    const width = Math.max(24, Math.round(((col && col.width) || 8.43) * 7 + 5));
+    totalWidth += width;
+    colParts.push(`<col style="width:${width}px;">`);
+  }
+  const rows = [];
+  let totalHeight = 0;
+  for (let r = bounds.top; r <= bounds.bottom; r++) {
+    const row = ws.getRow(r);
+    if (row && row.hidden) continue;
+    const height = Math.max(18, Math.round(((row && row.height) || ws.properties.defaultRowHeight || 16) * 1.333));
+    totalHeight += height;
+    const cells = [];
+    for (let c = bounds.left; c <= bounds.right; c++) {
+      const col = ws.getColumn(c);
+      if (col && col.hidden) continue;
+      const merge = merges.get(r + ':' + c);
+      if (merge && merge.skip) continue;
+      const cell = ws.getCell(r, c);
+      const span = merge || {};
+      const attrs = [
+        span.rowSpan > 1 ? `rowspan="${span.rowSpan}"` : '',
+        span.colSpan > 1 ? `colspan="${span.colSpan}"` : ''
+      ].filter(Boolean).join(' ');
+      cells.push(`<td ${attrs} style="${_excelCellCss(cell)}">${esc(_excelCellText(cell)).replace(/\n/g, '<br>')}</td>`);
+    }
+    rows.push(`<tr style="height:${height}px;">${cells.join('')}</tr>`);
+  }
+  const tableWidth = Math.max(totalWidth, 1);
+  const tableHeight = Math.max(totalHeight, 1);
+  const scale = Math.min(
+    1,
+    (DOC_TEMPLATE_PDF_PAGE_WIDTH - DOC_TEMPLATE_PDF_SAFE_GUTTER) / tableWidth,
+    (DOC_TEMPLATE_PDF_PAGE_HEIGHT - DOC_TEMPLATE_PDF_SAFE_GUTTER) / tableHeight
+  );
+  const fittedHeight = Math.ceil(tableHeight * scale);
+  const scaleText = scale.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
+  const table = `<table class="xlsx-print-table" style="width:${tableWidth}px;"><colgroup>${colParts.join('')}</colgroup><tbody>${rows.join('')}</tbody></table>`;
+  return `<div class="xlsx-print-fit" style="width:${DOC_TEMPLATE_PDF_PAGE_WIDTH}px;height:${fittedHeight}px;"><div class="xlsx-print-scale" style="width:${tableWidth}px;height:${tableHeight}px;transform:scale(${scaleText});">${table}</div></div>`;
+}
+
+async function buildDocTemplatePdfHtml(type, id = null, options = {}) {
+  if (!_requireExcelJS()) throw new Error('엑셀 인쇄 모듈을 불러오지 못했습니다.');
+  const { workbook, groups, info } = await _buildDocTemplateWorkbook(type, id, options);
+  const pages = workbook.worksheets.map((ws, index) => `
+    <section class="xlsx-print-page" style="${index < workbook.worksheets.length - 1 ? 'page-break-after:always;break-after:page;' : ''}">
+      ${_worksheetToHtmlTable(ws)}
+    </section>
+  `).join('');
+  const suffix = groups.length === 1 ? groups[0].key : today();
+  return {
+    title:`${info.title}_${suffix}`,
+    html:`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${info.title}</title>
+      <style>
+        @page{size:A4 portrait;margin:0;}
+        body{margin:0;background:#fff;color:#111;font-family:'Malgun Gothic','맑은 고딕',sans-serif;}
+        .xlsx-print-page{width:${DOC_TEMPLATE_PDF_PAGE_WIDTH}px;min-height:${DOC_TEMPLATE_PDF_PAGE_HEIGHT}px;box-sizing:border-box;background:#fff;overflow:hidden;}
+        .xlsx-print-fit{position:relative;overflow:hidden;}
+        .xlsx-print-scale{transform-origin:top left;}
+        .xlsx-print-table{border-collapse:collapse;table-layout:fixed;background:#fff;color:#111;}
+        .xlsx-print-table td{padding:2px 4px;line-height:1.25;word-break:break-word;overflow:hidden;}
+      </style></head><body>${pages}</body></html>`
+  };
+}
+
+async function openDocTemplatePdfPreview(type, id = null, options = {}) {
+  try {
+    const result = await buildDocTemplatePdfHtml(type, id, options);
+    openDocumentPdfPreview(result.html, result.title);
+  } catch(err) {
+    showToast('등록 양식 PDF 출력 실패: ' + err.message, 'error');
   }
 }
 
@@ -1635,6 +2428,10 @@ const SALES = {
 };
 function salesList(type) { return type === 'statement' ? statementList : taxList; }
 function setSalesList(type, arr) { if (type === 'statement') statementList = arr; else taxList = arr; }
+function visibleSalesList(type) {
+  const list = salesList(type);
+  return typeof visibleRecords === 'function' ? visibleRecords(list, type) : list;
+}
 function salesStatusColor(type, s) {
   const st = SALES[type].statuses;
   if (s === st[1]) return 'var(--tx-i)';
@@ -1642,10 +2439,25 @@ function salesStatusColor(type, s) {
   return 'var(--tx-s)';
 }
 
+function _docClientName(d) {
+  return (d && d.clientName) || getClientName(d && d.clientId) || '';
+}
+function _docClientPartner(d) {
+  const name = _docClientName(d);
+  return partners.find(p => p.name === name) || {};
+}
+function _docClientBizNo(d) {
+  if (d && d.clientBizNo) return d.clientBizNo;
+  const client = d && d.clientId ? visibleDocClients().find(c => c.id === d.clientId) : null;
+  if (client && (client.bizNo || client.businessNo || client.bizno)) return client.bizNo || client.businessNo || client.bizno;
+  const partner = _docClientPartner(d);
+  return partner.bizNo || '';
+}
+
 function renderSalesDoc(type) {
-  const cfg = SALES[type], idp = cfg.idp, list = salesList(type);
+  const cfg = SALES[type], idp = cfg.idp, list = visibleSalesList(type);
   ensureDateView(type, idp+'-table', list.map(d=>d.date), ()=>renderSalesDoc(type));
-  const amtOf = d => (d.unitPrice||0) * (d.qty||0);
+  const amtOf = d => _docAmount(d, type);
   const total = list.length;
   const sent  = list.filter(d => d.status === cfg.statuses[1]).length;
   const done  = list.filter(d => d.status === cfg.statuses[2]).length;
@@ -1660,14 +2472,14 @@ function renderSalesDoc(type) {
   if (fcSel) {
     const cur = fcSel.value;
     fcSel.innerHTML = '<option value="">전체 고객사</option>' +
-      clients.map(c => `<option value="${c.id}"${c.id===cur?' selected':''}>${c.name}</option>`).join('');
+      visibleDocClients().map(c => `<option value="${c.id}"${c.id===cur?' selected':''}>${c.name}</option>`).join('');
   }
   const fc = v(idp+'-fc'), fs = v(idp+'-fs'), q = (v(idp+'-q')||'').toLowerCase();
   const rows = list.filter(d => {
     if (!dateViewMatch(type, d.date)) return false;
     if (fc && d.clientId !== fc) return false;
     if (fs && d.status !== fs)   return false;
-    if (q && !(d.itemName||'').toLowerCase().includes(q) && !getClientName(d.clientId).toLowerCase().includes(q)) return false;
+    if (q && !_docItemsSearchText(d).includes(q) && !getClientName(d.clientId).toLowerCase().includes(q)) return false;
     return true;
   }).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
 
@@ -1679,20 +2491,20 @@ function renderSalesDoc(type) {
 
   cont.innerHTML = `<table style="min-width:1080px;">
     <thead><tr>
-      <th>문서번호</th><th>발행일</th><th>공급받는 고객사</th><th>연결제품</th>
+      <th>문서번호</th><th>발행일</th><th>공급받는 고객사</th><th>사업자번호</th>
       <th>품목명</th><th>규격</th><th>수량</th><th>단가</th><th>공급가액</th><th>부가세</th><th>합계</th><th>상태</th><th>관리</th>
     </tr></thead>
     <tbody>${rows.map(d => {
-      const sup = (d.unitPrice||0)*(d.qty||0), vat = Math.round(sup*0.1), grand = sup+vat;
+      const sup = _docAmount(d, type), vat = Math.round(sup*0.1), grand = sup+vat;
       return `
       <tr>
         <td style="font-weight:700;color:var(--tx-i);">${d.id}</td>
         <td>${d.date}</td>
-        <td>${getClientName(d.clientId)||'—'}${d.clientEmail?`<br><span style="font-size:10px;color:var(--tx-t);">${d.clientEmail}</span>`:''}</td>
-        <td style="font-size:11px;">${d.productId?getProductName(d.productId):'—'}</td>
-        <td style="font-weight:700;">${d.itemName}</td>
+        <td>${_docClientName(d)||'—'}${d.clientEmail?`<br><span style="font-size:10px;color:var(--tx-t);">${d.clientEmail}</span>`:''}${typeof emailSendSummaryHtml === 'function' ? emailSendSummaryHtml(type, d.id) : ''}</td>
+        <td style="font-size:11px;">${_docClientBizNo(d) || '—'}</td>
+        <td style="font-weight:700;">${esc(_docItemSummary(d))}</td>
         <td style="font-size:11px;color:var(--tx-t);">${d.spec||'—'}</td>
-        <td>${d.qty} ${d.unit}</td>
+        <td>${_docQtySummary(d)}</td>
         <td>${d.unitPrice?'₩'+Number(d.unitPrice).toLocaleString('ko-KR'):'—'}</td>
         <td>₩${sup.toLocaleString('ko-KR')}</td>
         <td style="color:var(--tx-t);">₩${vat.toLocaleString('ko-KR')}</td>
@@ -1704,7 +2516,7 @@ function renderSalesDoc(type) {
           <button class="edit-btn" onclick="openSalesDocEdit('${type}','${d.id}')"><i class="ti ti-edit"></i>수정</button>
           <button class="btn btn-sm" style="margin-left:3px;" onclick="openSalesDocPrint('${type}','${d.id}')" title="PDF 출력"><i class="ti ti-printer"></i></button>
           <button class="btn btn-sm drive-save-btn" style="margin-left:3px;" onclick="saveDocumentBundleToGoogleDrive('${type}','${d.id}')" title="PDF/XLSX Google Drive 저장"><i class="ti ti-cloud-upload"></i>Drive</button>
-          <button class="btn btn-sm" style="margin-left:3px;border-color:var(--br-i);color:var(--tx-i);" onclick="openEmailModal(salesList('${type}').find(x=>x.id==='${d.id}'),'${type}')" title="이메일 발송"><i class="ti ti-mail"></i></button>
+          <button class="btn btn-sm" style="margin-left:3px;border-color:var(--br-i);color:var(--tx-i);" onclick="openEmailModal(visibleSalesList('${type}').find(x=>x.id==='${d.id}'),'${type}')" title="이메일 발송"><i class="ti ti-mail"></i></button>
           <button class="del-btn" style="margin-left:3px;" onclick="deleteSalesDoc('${type}','${d.id}')"><i class="ti ti-trash"></i></button>
         </td>
       </tr>`;
@@ -1714,13 +2526,15 @@ function renderSalesDoc(type) {
 
 function onSalesDocClientChange() {
   const cid = v('sd-client');
-  fillProductSelect('sd-product', cid);
-  const c = clients.find(x => x.id === cid);
+  const c = visibleDocClients().find(x => x.id === cid);
   if (c && c.email && !v('sd-email')) sv('sd-email', c.email);
+  sv('sd-bizno', _docClientBizNo({ clientId: cid }));
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('sd-client', 'sd-client-search');
 }
 
 function openSalesDocAdd(type) {
   const cfg = SALES[type];
+  if (typeof requireCreateAction === 'function' && !requireCreateAction(type, `${cfg.title} 등록`)) return;
   const modal = inp('salesdoc-modal');
   modal.dataset.type = type;
   delete modal.dataset.editId;
@@ -1730,10 +2544,10 @@ function openSalesDocAdd(type) {
   sv('sd-id', nextDocCode(cfg.prefix, salesList(type)));
   sv('sd-date', today());
   sv('sd-status', cfg.statuses[0]);
-  inp('sd-client').innerHTML = '<option value="">-- 선택 --</option>' + clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-  inp('sd-product').innerHTML = '<option value="">-- 선택 --</option>';
-  ['sd-email','sd-item','sd-spec','sd-note'].forEach(id=>sv(id,''));
-  sv('sd-qty','1'); sv('sd-unit','EA'); sv('sd-price','');
+  inp('sd-client').innerHTML = '<option value="">-- 선택 --</option>' + visibleDocClients().map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('sd-client', 'sd-client-search');
+  ['sd-product','sd-email','sd-bizno','sd-note-common'].forEach(id=>sv(id,''));
+  _initDocItemTable('sd');
   modal.classList.add('open');
 }
 
@@ -1741,6 +2555,7 @@ function openSalesDocEdit(type, id) {
   if (!checkAdminAction()) return;
   const cfg = SALES[type];
   const d = salesList(type).find(x => x.id === id); if (!d) return;
+  if (!requireRecordPermission('edit', d, type)) return;
   const modal = inp('salesdoc-modal');
   modal.dataset.type = type;
   modal.dataset.editId = id;
@@ -1749,15 +2564,13 @@ function openSalesDocEdit(type, id) {
   inp('sd-status').innerHTML = cfg.statuses.map(s=>`<option>${s}</option>`).join('');
   sv('sd-id', d.id);
   sv('sd-date', d.date);
-  inp('sd-client').innerHTML = '<option value="">-- 선택 --</option>' + clients.map(c=>`<option value="${c.id}"${c.id===d.clientId?' selected':''}>${c.name}</option>`).join('');
-  fillProductSelect('sd-product', d.clientId, d.productId);
+  inp('sd-client').innerHTML = '<option value="">-- 선택 --</option>' + visibleDocClients().map(c=>`<option value="${c.id}"${c.id===d.clientId?' selected':''}>${c.name}</option>`).join('');
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('sd-client', 'sd-client-search');
+  sv('sd-product', d.productId || '');
   sv('sd-email', d.clientEmail||'');
-  sv('sd-item', d.itemName||'');
-  sv('sd-spec', d.spec||'');
-  sv('sd-qty', d.qty||1);
-  sv('sd-unit', d.unit||'EA');
-  sv('sd-price', d.unitPrice||'');
-  sv('sd-note', d.note||'');
+  sv('sd-bizno', _docClientBizNo(d));
+  _initDocItemTable('sd', _docItems(d));
+  sv('sd-note-common', d.commonNote || d.note||'');
   sv('sd-status', d.status || cfg.statuses[0]);
   modal.classList.add('open');
 }
@@ -1765,7 +2578,8 @@ function openSalesDocEdit(type, id) {
 function cloneSalesDoc(type, id) {
   if (!checkAdminAction()) return;
   const cfg = SALES[type];
-  const d = salesList(type).find(x => x.id === id); if (!d) return;
+  if (typeof requireCreateAction === 'function' && !requireCreateAction(type, `${cfg.title} 등록`)) return;
+  const d = visibleSalesList(type).find(x => x.id === id); if (!d) return;
   const modal = inp('salesdoc-modal');
   modal.dataset.type = type;
   delete modal.dataset.editId;
@@ -1774,11 +2588,13 @@ function cloneSalesDoc(type, id) {
   inp('sd-status').innerHTML = cfg.statuses.map(s=>`<option>${s}</option>`).join('');
   sv('sd-id', nextDocCode(cfg.prefix, salesList(type)));
   sv('sd-date', today());
-  inp('sd-client').innerHTML = '<option value="">-- 선택 --</option>' + clients.map(c=>`<option value="${c.id}"${c.id===d.clientId?' selected':''}>${c.name}</option>`).join('');
-  fillProductSelect('sd-product', d.clientId, d.productId);
-  sv('sd-email', d.clientEmail||''); sv('sd-item', d.itemName||''); sv('sd-spec', d.spec||'');
-  sv('sd-qty', d.qty||1); sv('sd-unit', d.unit||'EA'); sv('sd-price', d.unitPrice||'');
-  sv('sd-note', d.note||''); sv('sd-status', cfg.statuses[0]);
+  inp('sd-client').innerHTML = '<option value="">-- 선택 --</option>' + visibleDocClients().map(c=>`<option value="${c.id}"${c.id===d.clientId?' selected':''}>${c.name}</option>`).join('');
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('sd-client', 'sd-client-search');
+  sv('sd-product', d.productId || '');
+  sv('sd-email', d.clientEmail||'');
+  sv('sd-bizno', _docClientBizNo(d));
+  _initDocItemTable('sd', _docItems(d));
+  sv('sd-note-common', d.commonNote || d.note||''); sv('sd-status', cfg.statuses[0]);
   modal.classList.add('open');
 }
 
@@ -1787,30 +2603,44 @@ function saveSalesDoc() {
   const modal = inp('salesdoc-modal');
   const type = modal.dataset.type || 'statement';
   const cfg = SALES[type];
+  const items = _readDocItemTable('sd');
   if (!v('sd-client')) { showToast('공급받는 고객사를 선택하세요.', 'error'); return; }
-  if (!v('sd-item').trim()) { showToast('품목명을 입력하세요.', 'error'); return; }
+  if (!items.length) { showToast('품목명을 입력하세요.', 'error'); return; }
+  const first = items[0] || { itemName:'', spec:'', qty:1, unit:'EA', price:null, note:'' };
   const data = {
     date: v('sd-date') || today(),
     clientId: v('sd-client'),
     productId: v('sd-product'),
     clientEmail: v('sd-email') || '',
-    itemName: v('sd-item').trim(),
-    spec: v('sd-spec'),
-    qty: Number(v('sd-qty')) || 1,
-    unit: v('sd-unit') || 'EA',
-    unitPrice: Number(v('sd-price')) || 0,
-    note: v('sd-note'),
+    clientBizNo: v('sd-bizno') || _docClientBizNo({ clientId: v('sd-client') }),
+    itemName: first.itemName,
+    spec: first.spec || '',
+    qty: Number(first.qty) || 1,
+    unit: first.unit || 'EA',
+    unitPrice: Number(first.price) || 0,
+    note: v('sd-note-common') || first.note || '',
+    commonNote: v('sd-note-common') || '',
+    items,
     status: v('sd-status') || cfg.statuses[0]
   };
   const list = salesList(type);
   const editId = modal.dataset.editId;
   if (editId) {
     const d = list.find(x => x.id === editId);
-    if (d) Object.assign(d, data);
+    if (d) {
+      if (!requireRecordPermission('edit', d, type)) return;
+      const before = _safeJsonClone(d);
+      Object.assign(d, data);
+      stampRecordUpdate(d, before, type);
+      writeAuditLog(type, editId, 'update', before, d, { summary:`${cfg.title} 수정` });
+    }
     delete modal.dataset.editId;
     showToast(`${cfg.title}가 수정되었습니다.`);
   } else {
-    list.unshift({ id: v('sd-id') || nextDocCode(cfg.prefix, list), ...data });
+    if (typeof requireCreateAction === 'function' && !requireCreateAction(type, `${cfg.title} 등록`)) return;
+    const doc = stampRecordCreate({ id: v('sd-id') || nextDocCode(cfg.prefix, list), ...data }, type);
+    list.unshift(doc);
+    writeAuditLog(type, doc.id, 'create', null, doc, { summary:`${cfg.title} 등록` });
     showToast(`${cfg.title}가 등록되었습니다.`);
   }
   saveStorage(cfg.key, list);
@@ -1821,15 +2651,24 @@ function saveSalesDoc() {
 function changeSalesDocStatus(type, id, val) {
   if (!checkAdminAction()) return;
   const d = salesList(type).find(x => x.id === id);
-  if (d) { d.status = val; saveStorage(SALES[type].key, salesList(type)); renderSalesDoc(type); }
+  if (d) {
+    if (!roleFeatureAllowed('status') || !requireRecordPermission('edit', d, type)) return;
+    const before = _safeJsonClone(d);
+    d.status = val;
+    stampRecordUpdate(d, before, type);
+    writeAuditLog(type, id, 'statusChange', before, d, { summary:`${SALES[type].title} 상태 변경` });
+    saveStorage(SALES[type].key, salesList(type)); renderSalesDoc(type);
+  }
 }
 
 function deleteSalesDoc(type, id) {
   if (!checkAdminAction()) return;
   const cfg = SALES[type];
   const d = salesList(type).find(x => x.id === id); if (!d) return;
-  confirm_(`${cfg.title} 삭제`, `<strong>${d.id}</strong> (${d.itemName}) 문서를 삭제하시겠습니까?`, () => {
+  if (!requireRecordPermission('delete', d, type)) return;
+  confirm_(`${cfg.title} 삭제`, `<strong>${d.id}</strong> (${_docItemSummary(d)}) 문서를 삭제하시겠습니까?`, () => {
     setSalesList(type, salesList(type).filter(x => x.id !== id));
+    writeAuditLog(type, id, 'delete', d, null, { summary:`${cfg.title} 삭제` });
     saveStorage(cfg.key, salesList(type));
     renderSalesDoc(type);
     showToast(`${cfg.title}가 삭제되었습니다.`);
@@ -1837,16 +2676,17 @@ function deleteSalesDoc(type, id) {
 }
 
 function exportSalesDocCSV(type) {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('판매 문서 엑셀 내보내기')) return;
   if (typeof XLSX === 'undefined') { showToast('SheetJS 로딩 중...', 'error'); return; }
-  const cfg = SALES[type], list = salesList(type);
+  const cfg = SALES[type], list = visibleSalesList(type);
   if (!list.length) { showToast('내보낼 데이터가 없습니다.', 'error'); return; }
   const wb = XLSX.utils.book_new();
-  const hdr = ['문서번호','발행일','고객사','고객이메일','연결제품','품목명','규격','수량','단위','단가','공급가액','부가세','합계','상태','비고'];
-  const rows = list.map(d => {
-    const sup = (d.unitPrice||0)*(d.qty||0), vat = Math.round(sup*0.1);
-    return [d.id, d.date, getClientName(d.clientId)||'', d.clientEmail||'', d.productId?getProductName(d.productId):'',
-      d.itemName, d.spec||'', d.qty, d.unit, d.unitPrice||0, sup, vat, sup+vat, d.status, d.note||''];
-  });
+  const hdr = ['문서번호','발행일','고객사','고객이메일','사업자번호','품목명','규격','수량','단위','단가','공급가액','부가세','합계','상태','비고'];
+  const rows = list.flatMap(d => _docLines(d, type).map(line => {
+    const vat = Math.round(line.amount * 0.1);
+    return [d.id, d.date, getClientName(d.clientId)||'', d.clientEmail||'', _docClientBizNo(d),
+      line.itemName, line.spec||'', line.qty, line.unit, line.price||0, line.amount, vat, line.amount+vat, d.status, line.rowNote || ''];
+  }));
   const ws = XLSX.utils.aoa_to_sheet([hdr, ...rows]);
   ws['!cols'] = hdr.map(h => ({ wch: Math.max(h.length+2, 12) }));
   XLSX.utils.book_append_sheet(wb, ws, cfg.title);
@@ -1856,9 +2696,10 @@ function exportSalesDocCSV(type) {
 
 /* 표준 전자세금계산서 1부 (공급자/공급받는자 좌우 배치) */
 function _taxInvoiceHtml(d, ci, copyLabel) {
-  const total = (d.unitPrice||0)*(d.qty||0), vat = Math.round(total*0.1), grand = total+vat;
-  const cn = getClientName(d.clientId) || '';
-  const bp = partners.find(p => p.name === cn) || {};
+  const lines = _docLines(d, 'tax');
+  const total = _docAmount(d, 'tax'), vat = Math.round(total*0.1), grand = total+vat;
+  const cn = _docClientName(d);
+  const bp = _docClientPartner(d);
   const num = n => Number(n||0).toLocaleString('ko-KR');
   const dt = (d.date || today()).split('-');
   const b = '1px solid #b9b9b9';
@@ -1896,8 +2737,20 @@ function _taxInvoiceHtml(d, ci, copyLabel) {
       </tr>
     </table>`;
   const supplier = { reg:ci.bizNo, company:ci.name, ceo:ci.ceo, address:ci.address, bizType:ci.bizType, bizItem:ci.bizItem, email:ci.email };
-  const buyer = { reg:bp.bizNo||'', company:cn, ceo:'', address:bp.address||'', bizType:'', bizItem:'', email:d.clientEmail||bp.email||'' };
-  const empties = [0,1].map(()=>`<tr style="height:17px;">${('<td style="border:'+b+';"></td>').repeat(9)}</tr>`).join('');
+  const buyer = { reg:_docClientBizNo(d), company:cn, ceo:'', address:bp.address||'', bizType:'', bizItem:'', email:d.clientEmail||bp.email||'' };
+  const itemRows = lines.map(line => {
+    const parts = line.doc && line.doc.date ? line.doc.date.split('-') : dt;
+    const lineVat = Math.round((Number(line.amount) || 0) * 0.1);
+    return `<tr style="height:22px;">
+      <td style="border:${b};text-align:center;">${parts[1]||''}</td><td style="border:${b};text-align:center;">${parts[2]||''}</td>
+      <td style="border:${b};padding:2px 6px;">${esc(line.itemName||'')}</td><td style="border:${b};text-align:center;">${esc(line.spec||'')}</td>
+      <td style="border:${b};text-align:center;">${line.qty||''}</td><td style="border:${b};text-align:right;padding:2px 6px;">${line.price?num(line.price):''}</td>
+      <td style="border:${b};text-align:right;padding:2px 6px;">${num(line.amount)}</td><td style="border:${b};text-align:right;padding:2px 6px;">${num(lineVat)}</td>
+      <td style="border:${b};padding:2px 4px;">${esc(line.rowNote || '')}</td>
+    </tr>`;
+  }).join('');
+  const emptyCount = Math.max(0, 3 - lines.length);
+  const empties = Array.from({length:emptyCount}).map(()=>`<tr style="height:17px;">${('<td style="border:'+b+';"></td>').repeat(9)}</tr>`).join('');
   return `
   <div style="border:2px solid #555;">
     <table style="width:100%;border-collapse:collapse;font-size:11px;margin:0;">
@@ -1934,12 +2787,7 @@ function _taxInvoiceHtml(d, ci, copyLabel) {
         <td style="border:${b};width:88px;">공급가액</td><td style="border:${b};width:78px;">세액</td><td style="border:${b};width:54px;">비고</td>
       </tr></thead>
       <tbody>
-        <tr style="height:22px;">
-          <td style="border:${b};text-align:center;">${dt[1]||''}</td><td style="border:${b};text-align:center;">${dt[2]||''}</td>
-          <td style="border:${b};padding:2px 6px;">${d.itemName||''}</td><td style="border:${b};text-align:center;">${d.spec||''}</td>
-          <td style="border:${b};text-align:center;">${d.qty||''}</td><td style="border:${b};text-align:right;padding:2px 6px;">${d.unitPrice?num(d.unitPrice):''}</td>
-          <td style="border:${b};text-align:right;padding:2px 6px;">${num(total)}</td><td style="border:${b};text-align:right;padding:2px 6px;">${num(vat)}</td><td style="border:${b};"></td>
-        </tr>
+        ${itemRows}
         ${empties}
       </tbody>
     </table>
@@ -1970,11 +2818,12 @@ function _taxInvoiceA4(d, ci) {
 function _salesDocBodyHtml(d, type, ci) {
   if (type === 'tax') return _taxInvoiceA4(d, ci);
   const isTax = type === 'tax';
-  const total = (d.unitPrice||0) * (d.qty||0);
+  const lines = _docLines(d, type);
+  const total = _docAmount(d, type);
   const vat = Math.round(total * 0.1);
   const grand = total + vat;
-  const client = (d.clientName || getClientName(d.clientId)) || '—';
-  const prod = d.productId ? getProductName(d.productId) : '—';
+  const client = _docClientName(d) || '—';
+  const clientBizNo = _docClientBizNo(d) || '—';
   const DOCMETA = {
     statement: { title:'거 래 명 세 표', sec:'거래 품목', remark:'위와 같이 거래 내역을 통보하오니 확인하여 주시기 바랍니다.' },
     quote:     { title:'견 적 서',        sec:'견적 품목', remark:'위와 같이 견적서를 제출하오니 검토 후 발주 부탁드립니다. (견적 유효기간: 발행일로부터 30일)' },
@@ -1998,7 +2847,7 @@ function _salesDocBodyHtml(d, type, ci) {
       </div>
       <table class="info-tbl" style="margin-top:15px;">
         <tr><th>공급자</th><td>${ci.name}${ci.bizNo?' ('+ci.bizNo+')':''}</td><th style="width:90px;">발행일자</th><td>${d.date}</td></tr>
-        <tr><th>공급받는자</th><td class="hl">${client} 귀중</td><th>관련 제품</th><td>${prod}</td></tr>
+        <tr><th>공급받는자</th><td class="hl">${client} 귀중</td><th>사업자번호</th><td>${clientBizNo}</td></tr>
       </table>
       <div class="sec-title" style="margin-top:20px;">■ ${isTax?'공급 내역':'거래 품목'}</div>
       <table class="items-tbl">
@@ -2006,11 +2855,11 @@ function _salesDocBodyHtml(d, type, ci) {
         <th style="width:46px;">수량</th><th style="width:40px;">단위</th>
         <th style="width:100px;">단 가</th><th style="width:100px;">공급가액</th><th style="width:90px;">세 액</th></tr></thead>
         <tbody>
-          <tr><td class="ctr">1</td><td><strong>${d.itemName}</strong></td><td class="ctr">${d.spec||'—'}</td>
-          <td class="ctr">${d.qty}</td><td class="ctr">${d.unit}</td>
-          <td class="num">${d.unitPrice?Number(d.unitPrice).toLocaleString('ko-KR'):'—'}</td>
-          <td class="num">${total.toLocaleString('ko-KR')}</td>
-          <td class="num">${vat.toLocaleString('ko-KR')}</td></tr>
+          ${lines.map((line, i) => `<tr><td class="ctr">${i + 1}</td><td><strong>${esc(line.itemName)}</strong></td><td class="ctr">${line.spec ? esc(line.spec) : '—'}</td>
+          <td class="ctr">${line.qty}</td><td class="ctr">${esc(line.unit || '')}</td>
+          <td class="num">${line.price?Number(line.price).toLocaleString('ko-KR'):'—'}</td>
+          <td class="num">${Number(line.amount).toLocaleString('ko-KR')}</td>
+          <td class="num">${Math.round(line.amount * 0.1).toLocaleString('ko-KR')}</td></tr>`).join('')}
           <tr class="empty-row"><td colspan="8">—</td></tr>
           <tr class="total-row"><td colspan="6" style="text-align:right;">합 계</td>
           <td class="num">${total.toLocaleString('ko-KR')}</td><td class="num">${vat.toLocaleString('ko-KR')}</td></tr>
@@ -2037,9 +2886,15 @@ function _salesDocBodyHtml(d, type, ci) {
 }
 
 function openSalesDocPrint(type, id) {
-  const cfg = SALES[type], list = salesList(type);
+  if (typeof requirePdfAction === 'function' && !requirePdfAction('판매 문서 PDF 출력')) return;
+  const cfg = SALES[type], list = visibleSalesList(type);
   const targets = Array.isArray(id) ? list.filter(x=>id.includes(x.id)) : (id ? list.filter(x => x.id === id) : list);
   if (!targets.length) { showToast('출력할 문서가 없습니다.', 'error'); return; }
+  if (_docTemplateHasCustom(type)) {
+    const ids = targets.map(d => d.id);
+    openDocTemplatePdfPreview(type, ids.length === 1 ? ids[0] : ids);
+    return;
+  }
   const ci = getCompanyInfo();
   const pages = targets.map((d,i) => `<div style="${i<targets.length-1?'page-break-after:always;':''}">${_salesDocBodyHtml(d, type, ci)}</div>`).join('');
   const docTitle = id || cfg.title;
@@ -2051,7 +2906,11 @@ function openSalesDocPrint(type, id) {
 
 function buildSalesEmailBody(d, ci, label) {
   const client = getClientName(d.clientId) || '—';
-  const total = (d.unitPrice||0)*(d.qty||0), vat = Math.round(total*0.1), grand = total+vat;
+  const total = _docAmount(d, label === '견적서' ? 'quote' : label === '수주확인서' ? 'order' : 'statement');
+  const vat = Math.round(total*0.1), grand = total+vat;
+  const itemLines = _docLines(d, label === '견적서' ? 'quote' : label === '수주확인서' ? 'order' : 'statement')
+    .map((line, idx) => `${idx + 1}. ${line.itemName}${line.spec ? ' (' + line.spec + ')' : ''} / ${line.qty} ${line.unit}${line.rowNote ? ' / ' + line.rowNote : ''}`)
+    .join('\n');
   return `안녕하세요, ${client} 담당자님.
 
 ${ci.name} ${ci.dept}입니다.
@@ -2061,8 +2920,8 @@ ${label}를 첨부와 같이 송부드립니다.
 ─────────────────────────────
 문서번호: ${d.id}
 발행일자: ${d.date}
-품목: ${d.itemName}${d.spec?' ('+d.spec+')':''}
-수량: ${d.qty} ${d.unit}
+품목:
+${itemLines}
 공급가액: ₩${total.toLocaleString('ko-KR')}
 부가세(10%): ₩${vat.toLocaleString('ko-KR')}
 합계금액: ₩${grand.toLocaleString('ko-KR')}
@@ -2093,22 +2952,32 @@ function switchSalesTab(tab) {
 }
 function soDocList(type) { return type === 'quote' ? quoteList : orderList; }
 function setSoDocList(type, arr) { if (type === 'quote') quoteList = arr; else orderList = arr; }
+function visibleSODocList(type) {
+  const list = soDocList(type);
+  return typeof visibleRecords === 'function' ? visibleRecords(list, type) : list;
+}
 function soDocStatusColor(type, s) {
   if (type === 'quote') return s==='수주전환' ? 'var(--tx-ok)' : s==='발송' ? 'var(--tx-i)' : s==='보류' ? 'var(--tx-d)' : 'var(--tx-s)';
   return s==='완료' ? 'var(--tx-ok)' : s==='진행중' ? 'var(--tx-i)' : 'var(--tx-s)';
 }
 function soDocLabel(d) { return d.clientName || getClientName(d.clientId) || '—'; }
+function _soDocClientId(d) {
+  if (!d) return '';
+  if (d.clientId && visibleDocClients().some(c => c.id === d.clientId)) return d.clientId;
+  const name = (d.clientName || '').trim();
+  return name ? (visibleDocClients().find(c => c.name === name)?.id || '') : '';
+}
 
 function updateOrderBadge() {
   const b = inp('orderBadge'); if (!b) return;
-  const n = orderList.filter(o => o.status !== '완료').length;
+  const n = visibleSODocList('order').filter(o => o.status !== '완료').length;
   b.textContent = n; b.style.display = n ? '' : 'none';
 }
 
 function renderSODoc(type) {
-  const cfg = SODOCS[type], idp = cfg.idp, list = soDocList(type);
+  const cfg = SODOCS[type], idp = cfg.idp, list = visibleSODocList(type);
   ensureDateView(type, idp+'-table', list.map(d=>d.date), ()=>renderSODoc(type));
-  const amtOf = d => (d.unitPrice||0)*(d.qty||0);
+  const amtOf = d => _docAmount(d, type);
   const total = list.length;
   const sumAmt = list.reduce((s,d)=>s+Math.round(amtOf(d)*1.1),0);
   let kSent, kDone;
@@ -2122,13 +2991,13 @@ function renderSODoc(type) {
   updateOrderBadge();
 
   const fcSel = inp(idp+'-fc');
-  if (fcSel) { const cur = fcSel.value; fcSel.innerHTML = '<option value="">전체 고객사</option>' + clients.map(c=>`<option value="${c.id}"${c.id===cur?' selected':''}>${c.name}</option>`).join(''); }
+  if (fcSel) { const cur = fcSel.value; fcSel.innerHTML = '<option value="">전체 고객사</option>' + visibleDocClients().map(c=>`<option value="${c.id}"${c.id===cur?' selected':''}>${c.name}</option>`).join(''); }
   const fc = v(idp+'-fc'), fs = v(idp+'-fs'), q = (v(idp+'-q')||'').toLowerCase();
   const rows = list.filter(d => {
     if (!dateViewMatch(type, d.date)) return false;
     if (fc && d.clientId !== fc) return false;
     if (fs && d.status !== fs) return false;
-    if (q && !(d.itemName||'').toLowerCase().includes(q) && !soDocLabel(d).toLowerCase().includes(q)) return false;
+    if (q && !_docItemsSearchText(d).includes(q) && !soDocLabel(d).toLowerCase().includes(q)) return false;
     return true;
   }).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
 
@@ -2138,28 +3007,25 @@ function renderSODoc(type) {
     return;
   }
 
-  const headExtra = type === 'quote' ? '<th>납기</th>' : '<th>연결 제품(공정)</th>';
-  cont.innerHTML = `<table style="min-width:1080px;">
+  const headExtra = type === 'quote' ? '<th>납기</th>' : '<th>사업자번호</th>';
+  cont.innerHTML = `<table class="narrow-compact-table salesdoc-compact-table" style="min-width:1080px;">
     <thead><tr>
       <th>${type==='quote'?'견적번호':'수주번호'}</th><th>일자</th><th>고객사</th>
       <th>품목명</th><th>규격</th><th>수량</th><th>단가</th><th>공급가액</th>${headExtra}<th>상태</th><th>관리</th>
     </tr></thead>
     <tbody>${rows.map(d => {
-      const sup = (d.unitPrice||0)*(d.qty||0);
+      const sup = _docAmount(d, type);
       let extraCell;
       if (type === 'quote') extraCell = `<td>${d.deliveryDate||'—'}</td>`;
-      else {
-        const p = d.productId ? products.find(x=>x.id===d.productId) : null;
-        extraCell = `<td style="font-size:11px;">${p?`${p.name}<br><span style="color:var(--tx-i);">${p.processStage}</span>`:'—'}</td>`;
-      }
+      else extraCell = `<td style="font-size:11px;">${_docClientBizNo(d) || '—'}</td>`;
       return `
       <tr>
         <td style="font-weight:700;color:var(--tx-i);">${d.id}</td>
         <td>${d.date}</td>
-        <td>${soDocLabel(d)}${d.clientName && !d.clientId?'<br><span style="font-size:9px;color:var(--tx-t);">미등록</span>':''}</td>
-        <td style="font-weight:700;">${d.itemName}</td>
+        <td>${soDocLabel(d)}${d.clientName && !d.clientId?'<br><span style="font-size:9px;color:var(--tx-t);">미등록</span>':''}${d.clientEmail?`<br><span style="font-size:10px;color:var(--tx-t);">${d.clientEmail}</span>`:''}${typeof emailSendSummaryHtml === 'function' ? emailSendSummaryHtml(type, d.id) : ''}</td>
+        <td style="font-weight:700;">${esc(_docItemSummary(d))}</td>
         <td style="font-size:11px;color:var(--tx-t);">${d.spec||'—'}</td>
-        <td>${d.qty} ${d.unit}</td>
+        <td>${_docQtySummary(d)}</td>
         <td>${d.unitPrice?'₩'+Number(d.unitPrice).toLocaleString('ko-KR'):'—'}</td>
         <td style="font-weight:700;color:var(--tx-i);">₩${sup.toLocaleString('ko-KR')}</td>
         ${extraCell}
@@ -2170,7 +3036,7 @@ function renderSODoc(type) {
           <button class="edit-btn" onclick="openSODocEdit('${type}','${d.id}')"><i class="ti ti-edit"></i>수정</button>
           <button class="btn btn-sm" style="margin-left:3px;" onclick="openSODocPrint('${type}','${d.id}')" title="PDF 출력"><i class="ti ti-printer"></i></button>
           <button class="btn btn-sm drive-save-btn" style="margin-left:3px;" onclick="saveDocumentBundleToGoogleDrive('${type}','${d.id}')" title="PDF/XLSX Google Drive 저장"><i class="ti ti-cloud-upload"></i>Drive</button>
-          <button class="btn btn-sm" style="margin-left:3px;border-color:var(--br-i);color:var(--tx-i);" onclick="openEmailModal(soDocList('${type}').find(x=>x.id==='${d.id}'),'${type}')" title="이메일 발송"><i class="ti ti-mail"></i></button>
+          <button class="btn btn-sm" style="margin-left:3px;border-color:var(--br-i);color:var(--tx-i);" onclick="openEmailModal(visibleSODocList('${type}').find(x=>x.id==='${d.id}'),'${type}')" title="이메일 발송"><i class="ti ti-mail"></i></button>
           ${type==='quote'
             ? `<button class="btn btn-sm" style="margin-left:3px;border-color:var(--br-ok);color:var(--tx-ok);" onclick="convertQuoteToOrder('${d.id}')" title="수주 전환"${d.status==='수주전환'?' disabled':''}><i class="ti ti-arrow-right-bar"></i>수주전환</button>`
             : `<button class="btn btn-sm" style="margin-left:3px;border-color:var(--br-i);color:var(--tx-i);" onclick="gotoOrderProcess('${d.id}')" title="공정 보기"><i class="ti ti-layout-kanban"></i>공정</button>`}
@@ -2183,12 +3049,15 @@ function renderSODoc(type) {
 
 function onSODocClientChange() {
   const cid = v('so2-client');
-  const c = clients.find(x => x.id === cid);
+  const c = visibleDocClients().find(x => x.id === cid);
   if (c && c.email && !v('so2-email')) sv('so2-email', c.email);
+  sv('so2-bizno', _docClientBizNo({ clientId: cid }));
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('so2-client', 'so2-client-search');
 }
 
 function openSODocAdd(type) {
   const cfg = SODOCS[type];
+  if (typeof requireCreateAction === 'function' && !requireCreateAction(type, `${cfg.title} 등록`)) return;
   const modal = inp('sodoc-modal');
   modal.dataset.type = type;
   delete modal.dataset.editId;
@@ -2198,9 +3067,11 @@ function openSODocAdd(type) {
   sv('so2-id', nextDocCode(cfg.prefix, soDocList(type)));
   sv('so2-date', today());
   sv('so2-status', cfg.statuses[0]);
-  inp('so2-client').innerHTML = '<option value="">-- 선택 (미등록 시 비움) --</option>' + clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-  ['so2-client-text','so2-email','so2-item','so2-spec','so2-note','so2-due'].forEach(id=>sv(id,''));
-  sv('so2-qty','1'); sv('so2-unit','대'); sv('so2-price','');
+  inp('so2-client').innerHTML = '<option value="">-- 선택 --</option>' + visibleDocClients().map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('so2-client', 'so2-client-search');
+  ['so2-email','so2-bizno','so2-spec','so2-note-common','so2-due'].forEach(id=>sv(id,''));
+  _initDocItemTable('so2');
+  sv('so2-unit','대'); sv('so2-price','');
   modal.classList.add('open');
 }
 
@@ -2208,6 +3079,7 @@ function openSODocEdit(type, id) {
   if (!checkAdminAction()) return;
   const cfg = SODOCS[type];
   const d = soDocList(type).find(x=>x.id===id); if (!d) return;
+  if (!requireRecordPermission('edit', d, type)) return;
   const modal = inp('sodoc-modal');
   modal.dataset.type = type;
   modal.dataset.editId = id;
@@ -2216,16 +3088,17 @@ function openSODocEdit(type, id) {
   inp('so2-status').innerHTML = cfg.statuses.map(s=>`<option>${s}</option>`).join('');
   sv('so2-id', d.id);
   sv('so2-date', d.date);
-  inp('so2-client').innerHTML = '<option value="">-- 선택 (미등록 시 비움) --</option>' + clients.map(c=>`<option value="${c.id}"${c.id===d.clientId?' selected':''}>${c.name}</option>`).join('');
-  sv('so2-client-text', d.clientName||'');
+  const clientId = _soDocClientId(d);
+  inp('so2-client').innerHTML = '<option value="">-- 선택 --</option>' + visibleDocClients().map(c=>`<option value="${c.id}"${c.id===clientId?' selected':''}>${c.name}</option>`).join('');
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('so2-client', 'so2-client-search');
   sv('so2-email', d.clientEmail||'');
-  sv('so2-item', d.itemName||'');
+  sv('so2-bizno', _docClientBizNo(d));
+  _initDocItemTable('so2', _docItems(d));
   sv('so2-spec', d.spec||'');
-  sv('so2-qty', d.qty||1);
   sv('so2-unit', d.unit||'대');
   sv('so2-price', d.unitPrice||'');
   sv('so2-due', d.deliveryDate||'');
-  sv('so2-note', d.note||'');
+  sv('so2-note-common', d.commonNote || d.note||'');
   sv('so2-status', d.status || cfg.statuses[0]);
   modal.classList.add('open');
 }
@@ -2233,7 +3106,8 @@ function openSODocEdit(type, id) {
 function cloneSODoc(type, id) {
   if (!checkAdminAction()) return;
   const cfg = SODOCS[type];
-  const d = soDocList(type).find(x=>x.id===id); if (!d) return;
+  if (typeof requireCreateAction === 'function' && !requireCreateAction(type, `${cfg.title} 등록`)) return;
+  const d = visibleSODocList(type).find(x=>x.id===id); if (!d) return;
   const modal = inp('sodoc-modal');
   modal.dataset.type = type;
   delete modal.dataset.editId;
@@ -2242,11 +3116,14 @@ function cloneSODoc(type, id) {
   inp('so2-status').innerHTML = cfg.statuses.map(s=>`<option>${s}</option>`).join('');
   sv('so2-id', nextDocCode(cfg.prefix, soDocList(type)));
   sv('so2-date', today());
-  inp('so2-client').innerHTML = '<option value="">-- 선택 (미등록 시 비움) --</option>' + clients.map(c=>`<option value="${c.id}"${c.id===d.clientId?' selected':''}>${c.name}</option>`).join('');
-  sv('so2-client-text', d.clientName||''); sv('so2-email', d.clientEmail||'');
-  sv('so2-item', d.itemName||''); sv('so2-spec', d.spec||'');
-  sv('so2-qty', d.qty||1); sv('so2-unit', d.unit||'대'); sv('so2-price', d.unitPrice||'');
-  sv('so2-due', d.deliveryDate||''); sv('so2-note', d.note||''); sv('so2-status', cfg.statuses[0]);
+  const clientId = _soDocClientId(d);
+  inp('so2-client').innerHTML = '<option value="">-- 선택 --</option>' + visibleDocClients().map(c=>`<option value="${c.id}"${c.id===clientId?' selected':''}>${c.name}</option>`).join('');
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('so2-client', 'so2-client-search');
+  sv('so2-email', d.clientEmail||''); sv('so2-bizno', _docClientBizNo(d));
+  _initDocItemTable('so2', _docItems(d));
+  sv('so2-spec', d.spec||'');
+  sv('so2-unit', d.unit||'대'); sv('so2-price', d.unitPrice||'');
+  sv('so2-due', d.deliveryDate||''); sv('so2-note-common', d.commonNote || d.note||''); sv('so2-status', cfg.statuses[0]);
   modal.classList.add('open');
 }
 
@@ -2255,31 +3132,45 @@ function saveSODoc() {
   const modal = inp('sodoc-modal');
   const type = modal.dataset.type || 'quote';
   const cfg = SODOCS[type];
-  if (!v('so2-client') && !v('so2-client-text').trim()) { showToast('고객사를 선택하거나 직접 입력하세요.', 'error'); return; }
-  if (!v('so2-item').trim()) { showToast('품목명을 입력하세요.', 'error'); return; }
+  const items = _readDocItemTable('so2');
+  if (!v('so2-client')) { showToast('고객사를 선택하세요. 목록에 없으면 찾기에서 신규 고객사 등록 후 선택하세요.', 'error'); return; }
+  if (!items.length) { showToast('품목명을 입력하세요.', 'error'); return; }
+  const first = items[0] || { itemName:'', spec:'', qty:1, unit:'대', price:null, note:'' };
   const data = {
     date: v('so2-date') || today(),
     clientId: v('so2-client'),
-    clientName: v('so2-client-text').trim(),
+    clientName: '',
     clientEmail: v('so2-email') || '',
-    itemName: v('so2-item').trim(),
-    spec: v('so2-spec'),
-    qty: Number(v('so2-qty')) || 1,
-    unit: v('so2-unit') || '대',
-    unitPrice: Number(v('so2-price')) || 0,
+    clientBizNo: v('so2-bizno') || _docClientBizNo({ clientId: v('so2-client') }),
+    itemName: first.itemName,
+    spec: first.spec || '',
+    qty: Number(first.qty) || 1,
+    unit: first.unit || '대',
+    unitPrice: Number(first.price) || 0,
     deliveryDate: v('so2-due') || '',
-    note: v('so2-note'),
+    note: v('so2-note-common') || first.note || '',
+    commonNote: v('so2-note-common') || '',
+    items,
     status: v('so2-status') || cfg.statuses[0]
   };
   const list = soDocList(type);
   const editId = modal.dataset.editId;
   if (editId) {
     const d = list.find(x=>x.id===editId);
-    if (d) Object.assign(d, data);
+    if (d) {
+      if (!requireRecordPermission('edit', d, type)) return;
+      const before = _safeJsonClone(d);
+      Object.assign(d, data);
+      stampRecordUpdate(d, before, type);
+      writeAuditLog(type, editId, 'update', before, d, { summary:`${cfg.title} 수정` });
+    }
     delete modal.dataset.editId;
     showToast(`${cfg.title}가 수정되었습니다.`);
   } else {
-    list.unshift({ id: v('so2-id') || nextDocCode(cfg.prefix, list), orderId:'', productId:'', quoteId:'', ...data });
+    if (typeof requireCreateAction === 'function' && !requireCreateAction(type, `${cfg.title} 등록`)) return;
+    const doc = stampRecordCreate({ id: v('so2-id') || nextDocCode(cfg.prefix, list), orderId:'', productId:'', quoteId:'', ...data }, type);
+    list.unshift(doc);
+    writeAuditLog(type, doc.id, 'create', null, doc, { summary:`${cfg.title} 등록` });
     showToast(`${cfg.title}가 등록되었습니다.`);
   }
   saveStorage(cfg.key, list);
@@ -2290,15 +3181,24 @@ function saveSODoc() {
 function changeSODocStatus(type, id, val) {
   if (!checkAdminAction()) return;
   const d = soDocList(type).find(x=>x.id===id);
-  if (d) { d.status = val; saveStorage(SODOCS[type].key, soDocList(type)); renderSODoc(type); }
+  if (d) {
+    if (!roleFeatureAllowed('status') || !requireRecordPermission('edit', d, type)) return;
+    const before = _safeJsonClone(d);
+    d.status = val;
+    stampRecordUpdate(d, before, type);
+    writeAuditLog(type, id, 'statusChange', before, d, { summary:`${SODOCS[type].title} 상태 변경` });
+    saveStorage(SODOCS[type].key, soDocList(type)); renderSODoc(type);
+  }
 }
 
 function deleteSODoc(type, id) {
   if (!checkAdminAction()) return;
   const cfg = SODOCS[type];
   const d = soDocList(type).find(x=>x.id===id); if (!d) return;
-  confirm_(`${cfg.title} 삭제`, `<strong>${d.id}</strong> (${d.itemName}) 문서를 삭제하시겠습니까?`, () => {
+  if (!requireRecordPermission('delete', d, type)) return;
+  confirm_(`${cfg.title} 삭제`, `<strong>${d.id}</strong> (${_docItemSummary(d)}) 문서를 삭제하시겠습니까?`, () => {
     setSoDocList(type, soDocList(type).filter(x=>x.id!==id));
+    writeAuditLog(type, id, 'delete', d, null, { summary:`${cfg.title} 삭제` });
     saveStorage(cfg.key, soDocList(type));
     renderSODoc(type);
     showToast(`${cfg.title}가 삭제되었습니다.`);
@@ -2306,15 +3206,16 @@ function deleteSODoc(type, id) {
 }
 
 function exportSODocCSV(type) {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('견적/수주 문서 엑셀 내보내기')) return;
   if (typeof XLSX === 'undefined') { showToast('SheetJS 로딩 중...', 'error'); return; }
-  const cfg = SODOCS[type], list = soDocList(type);
+  const cfg = SODOCS[type], list = visibleSODocList(type);
   if (!list.length) { showToast('내보낼 데이터가 없습니다.', 'error'); return; }
   const wb = XLSX.utils.book_new();
-  const hdr = ['문서번호','일자','고객사','고객이메일','품목명','규격','수량','단위','단가','공급가액','부가세','합계','납기','상태','비고'];
-  const rows = list.map(d => {
-    const sup = (d.unitPrice||0)*(d.qty||0), vat = Math.round(sup*0.1);
-    return [d.id, d.date, soDocLabel(d), d.clientEmail||'', d.itemName, d.spec||'', d.qty, d.unit, d.unitPrice||0, sup, vat, sup+vat, d.deliveryDate||'', d.status, d.note||''];
-  });
+  const hdr = ['문서번호','일자','고객사','고객이메일','사업자번호','품목명','규격','수량','단위','단가','공급가액','부가세','합계','납기','상태','비고'];
+  const rows = list.flatMap(d => _docLines(d, type).map(line => {
+    const vat = Math.round(line.amount * 0.1);
+    return [d.id, d.date, soDocLabel(d), d.clientEmail||'', _docClientBizNo(d), line.itemName, line.spec||'', line.qty, line.unit, line.price||0, line.amount, vat, line.amount+vat, d.deliveryDate||'', d.status, line.rowNote || ''];
+  }));
   const ws = XLSX.utils.aoa_to_sheet([hdr, ...rows]);
   ws['!cols'] = hdr.map(h=>({wch:Math.max(h.length+2,12)}));
   XLSX.utils.book_append_sheet(wb, ws, cfg.title);
@@ -2323,9 +3224,15 @@ function exportSODocCSV(type) {
 }
 
 function openSODocPrint(type, id) {
-  const cfg = SODOCS[type], list = soDocList(type);
+  if (typeof requirePdfAction === 'function' && !requirePdfAction('견적/수주 문서 PDF 출력')) return;
+  const cfg = SODOCS[type], list = visibleSODocList(type);
   const targets = Array.isArray(id) ? list.filter(x=>id.includes(x.id)) : (id ? list.filter(x=>x.id===id) : list);
   if (!targets.length) { showToast('출력할 문서가 없습니다.', 'error'); return; }
+  if (_docTemplateHasCustom(type)) {
+    const ids = targets.map(d => d.id);
+    openDocTemplatePdfPreview(type, ids.length === 1 ? ids[0] : ids);
+    return;
+  }
   const ci = getCompanyInfo();
   const pages = targets.map((d, index) =>
     `<div style="${index < targets.length - 1 ? 'page-break-after:always;' : ''}">${_salesDocBodyHtml(d, cfg.docType, ci)}</div>`
@@ -2340,45 +3247,80 @@ function openSODocPrint(type, id) {
 /* 견적 → 수주 전환: 고객사 자동등록 + 제품(공정 '설계/도면') 자동생성 + 수주 레코드 생성 */
 function convertQuoteToOrder(id) {
   if (!checkAdminAction()) return;
-  const q = quoteList.find(x=>x.id===id); if (!q) return;
+  if (typeof requireCreateAction === 'function' && !requireCreateAction('order', '수주 등록')) return;
+  const q = visibleSODocList('quote').find(x=>x.id===id); if (!q) return;
+  if (!requireRecordPermission('edit', q, 'quote')) return;
   if (q.status === '수주전환') { showToast('이미 수주 전환된 견적입니다.', 'info'); return; }
-  confirm_('수주 전환', `<strong>${q.id}</strong> (${q.itemName}) 견적을 수주로 전환합니다.<br>제품이 자동 생성되어 공정 관리 '설계/도면' 단계로 투입됩니다. 진행할까요?`, () => {
-    // 1) 고객사 확보 (미등록·존재하지 않는 clientId면 이름으로 찾거나 자동 등록)
+  const itemSummary = _docItemSummary(q);
+  const totalQty = _docItems(q).reduce((sum, item) => sum + (Number(item.qty) || 0), 0) || q.qty || 1;
+  const clientBizNo = _docClientBizNo(q);
+  confirm_('수주 전환', `<strong>${q.id}</strong> (${itemSummary}) 견적을 수주로 전환합니다.<br>제품이 자동 생성되어 공정 관리 '설계/도면' 단계로 투입됩니다. 진행할까요?`, () => {
+    // 1) 고객사 확보 (존재하지 않는 clientId면 거래처 고객사로 자동 등록)
     let clientId = q.clientId;
-    const valid = clientId && clients.some(c => c.id === clientId);
+    const valid = clientId && visibleDocClients().some(c => c.id === clientId);
     if (!valid) {
+      if (typeof requireCreateAction === 'function' && !requireCreateAction('clients', '고객사 등록')) return;
       const name = (q.clientName || (clientId ? getClientName(clientId) : '') || '신규 고객사').trim();
       const existing = clients.find(c => c.name === name);
       if (existing) clientId = existing.id;
       else {
-        clientId = nextCode('CL', clients);
-        clients.push({ id: clientId, name, manager:'', tel:'', email: q.clientEmail||'', date: today(), note: '견적 수주 전환 자동 등록' });
+        const created = ensureCustomerClient({ name, email:q.clientEmail || '', bizNo:clientBizNo, note:'견적 수주 전환 자동 등록' });
+        clientId = created.id;
         saveStorage('clients', clients);
+        saveStorage('partners', partners);
       }
+    }
+    const orderClient = clients.find(c => c.id === clientId);
+    if (!orderClient) { showToast('수주 전환할 고객사 정보를 찾을 수 없습니다.', 'error'); return; }
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('clients', '제품 등록')) return;
+    let clientTouched = false;
+    if (orderClient.closed) { orderClient.closed = false; delete orderClient.closedAt; clientTouched = true; }
+    if (q.clientEmail && !orderClient.email) { orderClient.email = q.clientEmail; clientTouched = true; }
+    if (clientBizNo && !orderClient.bizNo) { orderClient.bizNo = clientBizNo; clientTouched = true; }
+    if (clientTouched) {
+      if (typeof syncPartnerFromClient === 'function') syncPartnerFromClient(orderClient);
+      saveStorage('clients', clients);
+      saveStorage('partners', partners);
     }
     // 2) 제품 자동 생성 (공정 첫 단계)
     const firstStage = processStages[0] || '설계/도면';
     const productId = nextCode('PR', products);
     products.push({
-      id: productId, clientId, name: q.itemName, spec: q.spec||'',
-      qty: q.qty||1, unit: q.unit||'대', price: q.unitPrice||0,
+      id: productId, clientId, name: itemSummary, spec: q.spec||'',
+      qty: totalQty, unit: q.unit||'대', price: q.unitPrice||0,
       deliveryDate: q.deliveryDate||'', processStage: firstStage,
       status: stageToStatus(firstStage), processMemo: `견적 ${q.id} 수주 전환 자동 생성`, note: q.note||''
     });
+    const product = products.find(x=>x.id===productId);
+    if (product) {
+      stampRecordCreate(product, 'products', { visibility:'company' });
+      writeAuditLog('products', product.id, 'create', null, product, { summary:'견적 수주 전환 제품 생성' });
+    }
     saveStorage('products', products);
     // 3) 수주 레코드 생성
     const orderId = nextDocCode('SO', orderList);
     orderList.unshift({
-      id: orderId, date: today(), clientId, clientName: q.clientName||'', clientEmail: q.clientEmail||'',
+      id: orderId, date: today(), clientId, clientName: '', clientEmail: q.clientEmail||'', clientBizNo,
       itemName: q.itemName, spec: q.spec||'', qty: q.qty||1, unit: q.unit||'대', unitPrice: q.unitPrice||0,
-      deliveryDate: q.deliveryDate||'', note: q.note||'', status: '수주확정', productId, quoteId: q.id
+      deliveryDate: q.deliveryDate||'', note: q.note||'', commonNote: q.commonNote || '', items: _docItems(q),
+      status: '수주확정', productId, quoteId: q.id
     });
+    const orderDoc = orderList.find(x=>x.id===orderId);
+    if (orderDoc) {
+      stampRecordCreate(orderDoc, 'order');
+      writeAuditLog('order', orderDoc.id, 'create', null, orderDoc, { summary:'견적서에서 수주 생성' });
+    }
     saveStorage('orderList', orderList);
+    const quoteBefore = _safeJsonClone(q);
     // 4) 견적 상태 갱신
-    q.status = '수주전환'; q.orderId = orderId;
+    q.status = '수주전환'; q.orderId = orderId; q.clientId = clientId; q.clientName = '';
+    stampRecordUpdate(q, quoteBefore, 'quote');
+    writeAuditLog('quote', q.id, 'statusChange', quoteBefore, q, { summary:'견적서 수주 전환' });
     saveStorage('quoteList', quoteList);
     // 화면 갱신
     syncFilterDropdowns && syncFilterDropdowns();
+    if (typeof expandedClients !== 'undefined') expandedClients.add(clientId);
+    if (typeof showClosedProjects !== 'undefined') showClosedProjects = false;
     if (typeof renderClients === 'function') renderClients();
     renderSODoc('quote');
     showToast('수주로 전환되었습니다. 제품이 수주정보관리·공정 관리에 등록되었습니다.', 'success');
@@ -2386,8 +3328,8 @@ function convertQuoteToOrder(id) {
 }
 
 function gotoOrderProcess(id) {
-  const o = orderList.find(x=>x.id===id); if (!o) return;
+  const o = visibleSODocList('order').find(x=>x.id===id); if (!o) return;
   go('dashboard');
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
-  setTimeout(()=>{ switchDashTab('process'); setProcView && setProcView('list'); showToast(`수주 ${o.id} 연결 제품: ${o.itemName} — 공정 관리에서 확인`, 'info'); }, 60);
+  setTimeout(()=>{ switchDashTab('process'); setProcView && setProcView('list'); showToast(`수주 ${o.id} 공정 관리에서 확인`, 'info'); }, 60);
 }

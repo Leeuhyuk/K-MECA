@@ -25,7 +25,6 @@
           <div style="display:flex; gap:6px; align-items:center;">
             <select id="dlv-filter-client" onchange="renderDeliveries()" style="min-width:130px; height:28px; font-size:11px;"><option value="">전체 고객사</option></select>
             <input type="text" id="dlv-q" placeholder="제품명·납품번호 검색..." style="width:200px; height:28px; font-size:11px;" oninput="renderDeliveries()">
-            <button class="btn btn-sm btn-icon" onclick="exportDeliveriesCSV()" title="엑셀 내보내기"><i class="ti ti-download"></i></button>
           </div>
         </div>
         <div id="dlv-table" style="overflow-x:auto;"><div class="empty"><i class="ti ti-inbox"></i>납품 기록이 없습니다. 공정관리에서 [납품] 단계로 변경하면 자동 등록됩니다.</div></div>

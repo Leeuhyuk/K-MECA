@@ -1,5 +1,8 @@
 /* ════════ 대시보드 탭 제어 ════════ */
 let currentDashTab = 'overview';
+function dashRecords(list, entityType) {
+  return typeof visibleRecords === 'function' ? visibleRecords(list || [], entityType) : (list || []);
+}
 
 function switchDashTab(tab, el) {
   currentDashTab = tab;
@@ -56,21 +59,27 @@ function renderDashboard() {
 }
 
 function renderDashOverview() {
-  const pending    = materials.filter(m => m.status === '발주전').length;
-  const orderMats  = materials.filter(m => m.status === '발주중').length;
-  const arrived    = materials.filter(m => m.status === '입고완료').length;
-  const totalAmt   = materials.reduce((s, m) => s + getMatAmt(m), 0);
-  const lowStockCount = inventory.filter(i => i.qty <= i.minQty).length;
-  const activeProds   = products.filter(p => p.status !== '견적').length;
-  const doneProds     = products.filter(p => ['완료','납품'].includes(p.processStage)).length;
-  const openDefects   = defects.filter(d => d.status !== '완료').length;
+  const dashMaterials = dashRecords(materials, 'material');
+  const dashInventory = dashRecords(inventory, 'inventory');
+  const dashProducts  = dashRecords(products, 'processProduct');
+  const dashDefects   = dashRecords(defects, 'defect');
+  const dashClaims    = dashRecords(claims, 'claim');
+  const dashDeliveries= dashRecords(deliveries, 'delivery');
+  const pending    = dashMaterials.filter(m => m.status === '발주전').length;
+  const orderMats  = dashMaterials.filter(m => m.status === '발주중').length;
+  const arrived    = dashMaterials.filter(m => m.status === '입고완료').length;
+  const totalAmt   = dashMaterials.reduce((s, m) => s + getMatAmt(m), 0);
+  const lowStockCount = dashInventory.filter(i => i.qty <= i.minQty).length;
+  const activeProds   = dashProducts.filter(p => p.status !== '견적').length;
+  const doneProds     = dashProducts.filter(p => ['완료','납품'].includes(p.processStage)).length;
+  const openDefects   = dashDefects.filter(d => d.status !== '완료').length;
 
   /* ── KPI 카드 ── */
   inp('dash-kpi').innerHTML = `
     <div class="mc clickable" onclick="go('clients')">
       <div class="mc-lbl"><i class="ti ti-box" style="color:var(--tx-i);"></i>진행 중 프로젝트</div>
       <div class="mc-val" style="color:var(--tx-i);">${activeProds}건</div>
-      <div class="mc-sub">완료 ${doneProds}건 포함 전체 ${products.length}종</div>
+      <div class="mc-sub">완료 ${doneProds}건 포함 전체 ${dashProducts.length}종</div>
     </div>
     <div class="mc clickable" onclick="go('materials')">
       <div class="mc-lbl"><i class="ti ti-circle-dashed" style="color:var(--tx-t);"></i>발주 대기 자재</div>
@@ -80,27 +89,27 @@ function renderDashOverview() {
     <div class="mc clickable" onclick="go('inventory')">
       <div class="mc-lbl"><i class="ti ti-packages" style="color:${lowStockCount>0?'var(--tx-d)':'var(--tx-ok)'}"></i>안전재고 미달</div>
       <div class="mc-val" style="color:${lowStockCount>0?'var(--tx-d)':'var(--tx-ok)'};">${lowStockCount}개 품목</div>
-      <div class="mc-sub">전체 재고 ${inventory.length}종 관리 중</div>
+      <div class="mc-sub">전체 재고 ${dashInventory.length}종 관리 중</div>
     </div>
     <div class="mc clickable" onclick="go('quality')">
       <div class="mc-lbl"><i class="ti ti-shield-alert" style="color:${openDefects>0?'var(--tx-w)':'var(--tx-ok)'}"></i>미처리 품질장애</div>
       <div class="mc-val" style="color:${openDefects>0?'var(--tx-w)':'var(--tx-ok)'};">${openDefects}건</div>
-      <div class="mc-sub">클레임 ${claims.filter(c=>c.status!=='완료').length}건 처리중</div>
+      <div class="mc-sub">클레임 ${dashClaims.filter(c=>c.status!=='완료').length}건 처리중</div>
     </div>`;
 
   /* ── 조치 현황 ── */
   const actions = [];
-  materials.filter(m => m.status === '발주전').slice(0, 3).forEach(m => {
+  dashMaterials.filter(m => m.status === '발주전').slice(0, 3).forEach(m => {
     const pr = getProductById(m.productId);
     actions.push({ cls:'urgent', icon:'ti-alert-circle', txt:`[자재발주 요청] ${esc(m.name)}`, sub:`${esc(pr?.name)||''} 공정자재 · 미발주`, page:'materials' });
   });
-  materials.filter(m => m.status==='발주중' && m.expectedDate && daysUntil(m.expectedDate)<=7).slice(0,2).forEach(m => {
+  dashMaterials.filter(m => m.status==='발주중' && m.expectedDate && daysUntil(m.expectedDate)<=7).slice(0,2).forEach(m => {
     actions.push({ cls:'warn', icon:'ti-truck-delivery', txt:`[입고임박] ${esc(m.name)}`, sub:`${esc(m.supplier)} · ${esc(m.expectedDate)} 예정`, page:'materials' });
   });
-  defects.filter(d => d.status !== '완료').slice(0,2).forEach(d => {
+  dashDefects.filter(d => d.status !== '완료').slice(0,2).forEach(d => {
     actions.push({ cls:'urgent', icon:'ti-shield-alert', txt:`[미처리 불량] ${esc(d.type)}`, sub:`${esc(getProductName(d.productId))} · ${esc(d.stage)}`, page:'quality' });
   });
-  inventory.filter(i => i.qty <= i.minQty).slice(0,2).forEach(i => {
+  dashInventory.filter(i => i.qty <= i.minQty).slice(0,2).forEach(i => {
     actions.push({ cls:'warn', icon:'ti-package-off', txt:`[안전재고 미달] ${esc(i.name)}`, sub:`현재고 ${esc(i.qty)}${esc(i.unit)} / 안전 ${esc(i.minQty)}${esc(i.unit)}`, page:'inventory' });
   });
   inp('dash-actions').innerHTML = actions.length ? actions.map(a => `
@@ -118,7 +127,7 @@ function renderDashOverview() {
     </div>`;
 
   /* ── 납기 현황 ── */
-  const dl = products.filter(p => p.deliveryDate && p.status !== '견적' && !['완료','납품'].includes(p.processStage))
+  const dl = dashProducts.filter(p => p.deliveryDate && p.status !== '견적' && !['완료','납품'].includes(p.processStage))
     .sort((a,b) => a.deliveryDate.localeCompare(b.deliveryDate));
   inp('dash-deadlines').innerHTML = dl.length ? `
     <table>
@@ -139,9 +148,9 @@ function renderDashOverview() {
   /* 납품 요약 (종합현황 탭) */
   const dlvEl = inp('dash-dlv-summary');
   if (dlvEl) {
-    const dlvCnt = deliveries.length;
-    const dlvAmt = deliveries.reduce((s,d)=>s+d.price*d.qty,0);
-    const dlvMonth = deliveries.filter(d=>d.deliveredAt?.slice(0,7)===today().slice(0,7)).length;
+    const dlvCnt = dashDeliveries.length;
+    const dlvAmt = dashDeliveries.reduce((s,d)=>s+d.price*d.qty,0);
+    const dlvMonth = dashDeliveries.filter(d=>d.deliveredAt?.slice(0,7)===today().slice(0,7)).length;
     dlvEl.innerHTML = dlvCnt === 0
       ? `<div style="padding:10px 4px;color:var(--tx-t);font-size:11px;"><i class="ti ti-truck-delivery" style="opacity:.3;"></i> 납품 기록 없음</div>`
       : `<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:4px 0;">
@@ -151,7 +160,7 @@ function renderDashOverview() {
           <div style="width:1px;height:30px;background:var(--br);"></div>
           <div><div style="font-size:15px;font-weight:700;color:var(--tx-i);">${dlvMonth}건</div><div style="font-size:10px;color:var(--tx-t);">이번달</div></div>
           <div style="margin-left:auto;">
-            ${deliveries.slice(0,2).map(d=>`<div style="font-size:10px;margin-bottom:2px;"><b>${esc(d.productName)}</b> · ${esc(getClientName(d.clientId))} · ${esc(d.deliveredAt)}</div>`).join('')}
+            ${dashDeliveries.slice(0,2).map(d=>`<div style="font-size:10px;margin-bottom:2px;"><b>${esc(d.productName)}</b> · ${esc(getClientName(d.clientId))} · ${esc(d.deliveredAt)}</div>`).join('')}
           </div>
         </div>`;
   }
@@ -160,8 +169,20 @@ function renderDashOverview() {
 
 function renderDashProjects() {
   const stageColors = STAGE_COLORS;
-  const activeClients = clients.filter(c => !c.closed);
-  inp('dash-project-summary').innerHTML = activeClients.length ? `
+  const canView = (typeof canViewRecord === 'function') ? canViewRecord : function(){ return true; };
+  const visibleClients = clients.filter(c => canView(c, 'processClient'));
+  const visibleProducts = products.filter(p => canView(p, 'processProduct'));
+  const activeClients = visibleClients.filter(c => !c.closed);
+  const knownClientIds = new Set(visibleClients.map(c => c.id));
+  const projectGroups = activeClients.map(c => ({
+    client: c,
+    products: visibleProducts.filter(p => p.clientId === c.id)
+  }));
+  const unlinkedProducts = visibleProducts.filter(p => !p.clientId || !knownClientIds.has(p.clientId));
+  if (unlinkedProducts.length) {
+    projectGroups.push({ client: { id:'__unlinked__', name:'고객사 미연결', manager:'' }, products: unlinkedProducts });
+  }
+  inp('dash-project-summary').innerHTML = projectGroups.length ? `
     <table data-managed-table="false" style="min-width:860px;">
       <thead>
         <tr>
@@ -170,18 +191,19 @@ function renderDashProjects() {
         </tr>
       </thead>
       <tbody>
-        ${activeClients.flatMap(c => {
-          const prods = products.filter(p => p.clientId === c.id);
+        ${projectGroups.flatMap(group => {
+          const c = group.client;
+          const prods = group.products;
           if (!prods.length) return [`<tr><td style="font-weight:700;">${esc(c.name)}</td><td style="font-size:11px;color:var(--tx-t);">${esc(c.manager)||'—'}</td><td colspan="8" style="color:var(--tx-t);font-size:11px;font-style:italic;">등록된 제품 없음</td></tr>`];
           return prods.map((p, i) => {
-            const pMats  = materials.filter(m => m.productId === p.id);
+            const pMats  = dashRecords(materials, 'processMaterial').filter(m => m.productId === p.id);
             const matPre = pMats.filter(m => m.status==='발주전').length;
             const matOrd = pMats.filter(m => m.status==='발주중').length;
             const matDone= pMats.filter(m => m.status==='입고완료').length;
-            const relOrder = workOrders.find(o => o.productId === p.id);
+            const relOrder = dashRecords(workOrders, 'workOrder').find(o => o.productId === p.id);
             const sc = stageColors[p.processStage] || '#495057';
             return `
-              <tr style="cursor:pointer;" onclick="navToProduct('${c.id}','${p.id}')">
+              <tr style="cursor:pointer;" onclick="navToProduct('${p.clientId || c.id}','${p.id}')">
                 ${i===0 ? `<td rowspan="${prods.length}" style="font-weight:700;border-right:2px solid var(--br-i);vertical-align:middle;">${esc(c.name)}</td>
                             <td rowspan="${prods.length}" style="font-size:11px;color:var(--tx-s);border-right:1px solid var(--br);vertical-align:middle;">${esc(c.manager)||'—'}</td>` : ''}
                 <td style="font-weight:700;">${esc(p.name)} <span style="font-size:10px;color:var(--tx-t);font-weight:400;">${esc(p.spec)||''}</span></td>
@@ -196,7 +218,7 @@ function renderDashProjects() {
                 </td>
                 <td style="font-size:11px;">${relOrder ? pctBar(relOrder.done, relOrder.qty, 50) : '<span style="color:var(--tx-t);">미발행</span>'}</td>
                 <td>${statusBadge(p.status)}</td>
-                <td><button class="btn btn-sm" style="height:22px;padding:0 6px;font-size:10px;" onclick="event.stopPropagation();navToProduct('${c.id}','${p.id}')"><i class="ti ti-external-link"></i>이동</button></td>
+                <td><button class="btn btn-sm" style="height:22px;padding:0 6px;font-size:10px;" onclick="event.stopPropagation();navToProduct('${p.clientId || c.id}','${p.id}')"><i class="ti ti-external-link"></i>이동</button></td>
               </tr>`;
           });
         }).join('')}
@@ -206,11 +228,16 @@ function renderDashProjects() {
 
 function renderDashResources() {
   /* 제품별 자재 발주율 */
-  const prodList = products.filter(p => materials.some(m => m.productId === p.id));
+  const visibleProducts = dashRecords(products, 'processProduct');
+  const visibleMaterials = dashRecords(materials, 'material');
+  const visibleDefects = dashRecords(defects, 'defect');
+  const visibleClaims = dashRecords(claims, 'claim');
+  const visibleInventory = dashRecords(inventory, 'inventory');
+  const prodList = visibleProducts.filter(p => visibleMaterials.some(m => m.productId === p.id));
   inp('dash-mat-by-product').innerHTML = prodList.length ? `
     <div class="thin-scroll" style="display:flex;flex-direction:column;gap:10px;max-height:280px;overflow-y:auto;padding-right:6px;">
       ${prodList.map(p => {
-        const pMats = materials.filter(m => m.productId === p.id);
+        const pMats = visibleMaterials.filter(m => m.productId === p.id);
         const pre=pMats.filter(m=>m.status==='발주전').length;
         const ord=pMats.filter(m=>m.status==='발주').length;
         const done=pMats.filter(m=>m.status==='입고완료').length;
@@ -243,8 +270,8 @@ function renderDashResources() {
     </div>` : empty('자재가 등록된 제품이 없습니다.');
 
   /* 품질 요약 */
-  const openDefects = defects.filter(d => d.status !== '완료').length;
-  const openClaims  = claims.filter(c => c.status !== '완료');
+  const openDefects = visibleDefects.filter(d => d.status !== '완료').length;
+  const openClaims  = visibleClaims.filter(c => c.status !== '완료');
   inp('dash-quality-summary').innerHTML = `
     <div style="display:flex;flex-direction:column;gap:6px;">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;">
@@ -257,7 +284,7 @@ function renderDashResources() {
           <div style="font-size:18px;font-weight:700;color:var(--tx-d);">${openClaims.length}건</div>
         </div>
       </div>
-      ${defects.filter(d=>d.status!=='완료').slice(0,2).map(d=>`
+      ${visibleDefects.filter(d=>d.status!=='완료').slice(0,2).map(d=>`
         <div class="action-item warn" style="cursor:pointer;padding:7px 10px;" onclick="go('quality')">
           <i class="ti ti-alert-triangle" style="font-size:12px;"></i>
           <div style="flex:1;"><div style="font-size:10px;font-weight:700;">${esc(d.type)}</div>
@@ -268,13 +295,13 @@ function renderDashResources() {
     </div>`;
 
   /* 재고 현황 */
-  const lowItems = inventory.filter(i => i.qty <= i.minQty);
+  const lowItems = visibleInventory.filter(i => i.qty <= i.minQty);
   inp('dash-inventory-summary').innerHTML = `
     <div style="display:flex;flex-direction:column;gap:6px;">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;">
         <div style="background:var(--bg-s);border:1px solid var(--br);border-radius:var(--rm);padding:9px 12px;">
           <div style="font-size:9px;color:var(--tx-s);font-weight:600;margin-bottom:2px;"><i class="ti ti-box"></i> 전체 재고</div>
-          <div style="font-size:18px;font-weight:700;">${inventory.length}종</div>
+          <div style="font-size:18px;font-weight:700;">${visibleInventory.length}종</div>
         </div>
         <div style="background:${lowItems.length>0?'var(--bg-d)':'var(--bg-ok)'};border:1px solid ${lowItems.length>0?'var(--br-d)':'var(--br-ok)'};border-radius:var(--rm);padding:9px 12px;cursor:pointer;" onclick="go('inventory')">
           <div style="font-size:9px;color:${lowItems.length>0?'var(--tx-d)':'var(--tx-ok)'};font-weight:600;margin-bottom:2px;"><i class="ti ti-package-off"></i> 안전재고 미달</div>

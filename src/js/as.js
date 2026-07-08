@@ -1,8 +1,13 @@
 /* ════════ 고객 A/S · 사후관리 ════════ */
 let editAsId = null;
-function asWorkerName(id){ const w = workers.find(x=>x.id===id); return w ? w.name : (id||'미배정'); }
+function asWorkerName(id){
+  const list = typeof visibleWorkersList === 'function' ? visibleWorkersList() : (typeof visibleRecords === 'function' ? visibleRecords(workers, 'worker') : workers);
+  const w = list.find(x=>x.id===id);
+  return w ? w.name : (id||'미배정');
+}
 function updateAsBadge(){
-  const open = asList.filter(a => a.status==='접수' || a.status==='처리중').length;
+  const visibleAs = typeof visibleRecords === 'function' ? visibleRecords(asList, 'as') : asList;
+  const open = visibleAs.filter(a => a.status==='접수' || a.status==='처리중').length;
   const b = inp('asBadge'); if(!b) return;
   b.textContent = open; b.style.display = open>0 ? '' : 'none';
 }
@@ -13,11 +18,12 @@ function renderAS(){
   updateAsBadge();
   const fil = (inp('as-filter')?.value)||'';
   const q = ((inp('as-search')?.value)||'').toLowerCase();
-  const total = asList.length;
-  const open = asList.filter(a=>a.status==='접수'||a.status==='처리중').length;
-  const done = asList.filter(a=>a.status==='완료').length;
-  const paidCost = asList.reduce((s,a)=>s+(a.warranty==='유상'?(Number(a.cost)||0):0),0);
-  const list = asList.filter(a=>{
+  const visibleAs = typeof visibleRecords === 'function' ? visibleRecords(asList, 'as') : asList;
+  const total = visibleAs.length;
+  const open = visibleAs.filter(a=>a.status==='접수'||a.status==='처리중').length;
+  const done = visibleAs.filter(a=>a.status==='완료').length;
+  const paidCost = visibleAs.reduce((s,a)=>s+(a.warranty==='유상'?(Number(a.cost)||0):0),0);
+  const list = visibleAs.filter(a=>{
     if (!dateViewMatch('asRecords', a.recvDate)) return false;
     if (fil === 'open') { if (!(a.status==='접수'||a.status==='처리중')) return false; }
     else if (fil && a.status!==fil) return false;
@@ -71,13 +77,18 @@ function renderAS(){
       </table></div>
     </div>`;
 }
-function _asClientOptions(sel){ return clients.map(c=>`<option value="${esc(c.id)}"${c.id===sel?' selected':''}>${esc(c.name)}</option>`).join(''); }
-function _asWorkerOptions(sel){ return '<option value="">미배정</option>'+workers.map(w=>`<option value="${esc(w.id)}"${w.id===sel?' selected':''}>${esc(w.name)}${w.dept?' · '+esc(w.dept):''}</option>`).join(''); }
+function _asClientOptions(sel){ const list=typeof visibleRecords==='function'?visibleRecords(clients,'clients'):clients; return list.map(c=>`<option value="${esc(c.id)}"${c.id===sel?' selected':''}>${esc(c.name)}</option>`).join(''); }
+function _asWorkerOptions(sel){
+  const list = typeof visibleWorkersList === 'function' ? visibleWorkersList() : (typeof visibleRecords === 'function' ? visibleRecords(workers, 'worker') : workers);
+  return '<option value="">미배정</option>'+list.map(w=>`<option value="${esc(w.id)}"${w.id===sel?' selected':''}>${esc(w.name)}${w.dept?' · '+esc(w.dept):''}</option>`).join('');
+}
 function openAsAdd(){
+  if (typeof requireCreateAction === 'function' && !requireCreateAction('as', 'A/S 등록')) return;
   editAsId = null;
   inp('as-modal-ttl').innerHTML = '<i class="ti ti-tool" style="color:var(--tx-i);"></i>A/S 접수 등록';
   sv('asa-id', nextCode('AS', asList));
   inp('asa-client').innerHTML = _asClientOptions();
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('asa-client', 'asa-client-search');
   inp('asa-owner').innerHTML = _asWorkerOptions();
   sv('asa-product',''); sv('asa-recv', today()); sv('asa-symptom','');
   sv('asa-warranty','보증'); sv('asa-status','접수'); sv('asa-action','');
@@ -85,11 +96,14 @@ function openAsAdd(){
   inp('as-modal').classList.add('open');
 }
 function openAsEdit(id){
+  if (typeof requireFeatureAction === 'function' && !requireFeatureAction('edit', 'A/S 수정')) return;
   const a = asList.find(x=>x.id===id); if(!a) return;
+  if (typeof requireRecordPermission === 'function' && !requireRecordPermission('edit', a, 'as')) return;
   editAsId = id;
   inp('as-modal-ttl').innerHTML = '<i class="ti ti-edit" style="color:var(--tx-w);"></i>A/S 정보 수정';
   sv('asa-id', a.id);
   inp('asa-client').innerHTML = _asClientOptions(a.clientId);
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('asa-client', 'asa-client-search');
   inp('asa-owner').innerHTML = _asWorkerOptions(a.owner);
   sv('asa-product', a.productName||''); sv('asa-recv', a.recvDate||''); sv('asa-symptom', a.symptom||'');
   sv('asa-warranty', a.warranty||'보증'); sv('asa-status', a.status||'접수'); sv('asa-action', a.action||'');
@@ -98,6 +112,11 @@ function openAsEdit(id){
 }
 function saveAsModal(){
   if (!checkAdminAction()) return;
+  if (editAsId) {
+    if (typeof requireFeatureAction === 'function' && !requireFeatureAction('edit', 'A/S 수정')) return;
+  } else if (typeof requireCreateAction === 'function' && !requireCreateAction('as', 'A/S 등록')) {
+    return;
+  }
   const clientId = v('asa-client');
   const symptom = v('asa-symptom').trim();
   if (!symptom) { showToast('증상/접수 내용은 필수입니다.', 'error'); return; }
@@ -107,11 +126,19 @@ function saveAsModal(){
     action: v('asa-action'), doneDate: v('asa-done'), cost: parseInt(v('asa-cost'))||0, note: v('asa-note')
   };
   if (editAsId) {
-    const a = asList.find(x=>x.id===editAsId); if(a) Object.assign(a, rec);
+    const a = asList.find(x=>x.id===editAsId);
+    if(a) {
+      if (typeof requireRecordPermission === 'function' && !requireRecordPermission('edit', a, 'as')) return;
+      const before = _safeJsonClone(a);
+      Object.assign(a, rec);
+      stampRecordUpdate(a, before, 'as');
+      writeAuditLog('as', editAsId, 'update', before, a, { summary:'A/S 수정' });
+    }
     showToast('A/S 정보가 수정되었습니다.');
   } else {
-    const newAs = Object.assign({ id: nextCode('AS', asList) }, rec);
+    const newAs = stampRecordCreate(Object.assign({ id: nextCode('AS', asList) }, rec), 'as');
     asList.push(newAs);
+    writeAuditLog('as', newAs.id, 'create', null, newAs, { summary:'A/S 등록' });
     showToast('A/S 접수가 등록되었습니다.');
     if (typeof sendAlimtalkAsRegistered === 'function') sendAlimtalkAsRegistered(newAs);
   }
@@ -121,8 +148,12 @@ function saveAsModal(){
 }
 function deleteAS(id){
   if (!checkAdminAction()) return;
+  if (typeof requireFeatureAction === 'function' && !requireFeatureAction('delete', 'A/S 삭제')) return;
+  const target = asList.find(x=>x.id===id);
+  if (!target || (typeof requireRecordPermission === 'function' && !requireRecordPermission('delete', target, 'as'))) return;
   if (!confirm('이 A/S 기록을 삭제하시겠습니까?')) return;
   asList = asList.filter(x=>x.id!==id);
+  if (target) writeAuditLog('as', id, 'delete', target, null, { summary:'A/S 삭제' });
   saveStorage('asList', asList);
   renderAS();
   showToast('A/S 기록이 삭제되었습니다.');

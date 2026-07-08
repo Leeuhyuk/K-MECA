@@ -1,26 +1,53 @@
 /* ════════ 6. 품질 및 검사 관리 ════════ */
+let qualityActiveTab = 'defects';
+
+function switchQualityTab(tab) {
+  qualityActiveTab = tab === 'checks' ? 'checks' : 'defects';
+  try { localStorage.setItem('qualityActiveTab', qualityActiveTab); } catch(e) {}
+  document.querySelectorAll('#quality-tabs [data-quality-tab]').forEach(btn => {
+    const active = btn.dataset.qualityTab === qualityActiveTab;
+    btn.classList.toggle('btn-primary', active);
+    btn.classList.toggle('active', active);
+  });
+  document.querySelectorAll('#pg-quality [data-quality-panel]').forEach(panel => {
+    panel.classList.toggle('active', panel.dataset.qualityPanel === qualityActiveTab);
+  });
+}
+
+function ensureQualityTab() {
+  if (!document.getElementById('quality-tabs')) return;
+  try {
+    const saved = localStorage.getItem('qualityActiveTab');
+    if (saved === 'checks' || saved === 'defects') qualityActiveTab = saved;
+  } catch(e) {}
+  switchQualityTab(qualityActiveTab);
+}
+
 function renderQuality() {
   ensureDateView('defects', 'defect-table', defects.map(d=>d.date), renderQuality);
   ensureDateView('qualityClaims', 'claim-table', claims.map(c=>c.date), renderQuality);
   ensureDateView('checks', 'check-table', checkRecords.map(r=>r.date), renderQuality);
-  const totDefect = defects.reduce((s, d) => s + d.qty, 0);
-  const openDefect = defects.filter(d => d.status !== '완료').length;
-  const claimOpen = claims.filter(c => c.status !== '완료').length;
+  const visibleDefects = defects.filter(d => canViewRecord(d, 'defect'));
+  const visibleClaims = claims.filter(c => canViewRecord(c, 'claim'));
+  const visibleChecks = checkRecords.filter(r => canViewRecord(r, 'checkRecord'));
+  const totDefect = visibleDefects.reduce((s, d) => s + d.qty, 0);
+  const openDefect = visibleDefects.filter(d => d.status !== '완료').length;
+  const claimOpen = visibleClaims.filter(c => c.status !== '완료').length;
 
   inp('qc-kpi').innerHTML = `
-    <div class="mc"><div class="mc-lbl"><i class="ti ti-alert-triangle" style="color:var(--tx-w);"></i>공정 내 불량 유실수</div><div class="mc-val">${totDefect}개</div><div class="mc-sub">${defects.length}회 검출</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-alert-triangle" style="color:var(--tx-w);"></i>공정 내 불량 유실수</div><div class="mc-val">${totDefect}개</div><div class="mc-sub">${visibleDefects.length}회 검출</div></div>
     <div class="mc"><div class="mc-lbl"><i class="ti ti-loader" style="color:var(--tx-i);"></i>개선/조치중 품질장애</div><div class="mc-val" style="color:var(--tx-i);">${openDefect}건</div></div>
-    <div class="mc"><div class="mc-lbl"><i class="ti ti-message-report" style="color:var(--tx-d);"></i>해외/고객사 제기 클레임</div><div class="mc-val">${claims.length}건</div><div class="mc-sub">처리중 ${claimOpen}건</div></div>
-    <div class="mc"><div class="mc-lbl"><i class="ti ti-clipboard-check" style="color:var(--tx-ok);"></i>납품전수검사</div><div class="mc-val" style="color:var(--tx-ok);">${checkRecords.filter(c=>c.result==='합격').length}/${checkRecords.length}건</div><div class="mc-sub">통과/검사기록</div></div>`;
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-message-report" style="color:var(--tx-d);"></i>해외/고객사 제기 클레임</div><div class="mc-val">${visibleClaims.length}건</div><div class="mc-sub">처리중 ${claimOpen}건</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-clipboard-check" style="color:var(--tx-ok);"></i>납품전수검사</div><div class="mc-val" style="color:var(--tx-ok);">${visibleChecks.filter(c=>c.result==='합격').length}/${visibleChecks.length}건</div><div class="mc-sub">통과/검사기록</div></div>`;
 
   fillClientSelect('df-client', false);
   fillStageSelect('df-stage');
-  fillClientSelect('cl-client', false);
+  _fillClaimClientSelect(v('cl-client'));
   fillClientSelect('ck-client', false);
 
   const _dfq = (v('df-q')||'').toLowerCase();
   const _dffs = v('df-fs');
-  let filteredDefects = defects.filter(d => {
+  let filteredDefects = visibleDefects.filter(d => {
     if (!dateViewMatch('defects', d.date)) return false;
     const cname = getClientName(getProductById(d.productId)?.clientId);
     if (_dfq && ![d.id, getProductName(d.productId), cname, d.type, d.stage, d.cause||''].join(' ').toLowerCase().includes(_dfq)) return false;
@@ -48,7 +75,7 @@ function renderQuality() {
   }
 
   inp('defect-table').innerHTML = filteredDefects.length ? `
-    <table>
+    <table class="narrow-compact-table quality-compact-table">
       <thead>
         <tr>
           <th onclick="toggleSort('defects', 'id')" style="cursor:pointer; user-select:none;">코드 ${sortIcon('defects', 'id')}</th>
@@ -89,7 +116,7 @@ function renderQuality() {
 
   const _clq = (v('cl-q')||'').toLowerCase();
   const _clfs = v('cl-fs');
-  let filteredClaims = claims.filter(c => {
+  let filteredClaims = visibleClaims.filter(c => {
     if (!dateViewMatch('qualityClaims', c.date)) return false;
     if (_clq && ![c.id, getClientName(c.clientId), getProductName(c.productId), c.content||''].join(' ').toLowerCase().includes(_clq)) return false;
     if (_clfs && c.status !== _clfs) return false;
@@ -119,7 +146,7 @@ function renderQuality() {
   }
 
   inp('claim-table').innerHTML = filteredClaims.length ? `
-    <table>
+    <table class="narrow-compact-table quality-compact-table claim-compact-table">
       <thead>
         <tr>
           <th onclick="toggleSort('claims', 'date')" style="cursor:pointer; user-select:none;">인입일 ${sortIcon('claims', 'date')}</th>
@@ -159,7 +186,7 @@ function renderQuality() {
 
   const _ckq = (v('ck-q')||'').toLowerCase();
   const _ckfs = v('ck-fs');
-  let filteredChecks = checkRecords.filter(r => {
+  let filteredChecks = visibleChecks.filter(r => {
     if (!dateViewMatch('checks', r.date)) return false;
     if (_ckq && ![getProductName(r.productId), getClientName(r.clientId), r.inspector||''].join(' ').toLowerCase().includes(_ckq)) return false;
     if (_ckfs && r.result !== _ckfs) return false;
@@ -189,7 +216,7 @@ function renderQuality() {
   }
 
   inp('check-table').innerHTML = filteredChecks.length ? `
-    <table>
+    <table class="narrow-compact-table quality-compact-table check-compact-table">
       <thead>
         <tr>
           <th onclick="toggleSort('checks', 'date')" style="cursor:pointer; user-select:none;">검사일 ${sortIcon('checks', 'date')}</th>
@@ -222,6 +249,7 @@ function renderQuality() {
       </tbody>
     </table>` : empty('검색 조건에 맞는 검사 기록이 없습니다.');
 
+  ensureQualityTab();
   // 클레임 전용 페이지도 함께 동기화
   if (typeof renderClaims === 'function') renderClaims();
 }
@@ -231,10 +259,11 @@ function _escHtml(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').r
 
 function renderClaims() {
   ensureDateView('claims', 'claims-table-full', claims.map(c=>c.date), renderClaims);
+  const visibleClaims = claims.filter(c => canViewRecord(c, 'claim'));
   const kpi = inp('claims-kpi');
   if (kpi) {
-    const ing  = claims.filter(c => c.status === '처리중').length;
-    const done = claims.filter(c => c.status === '완료').length;
+    const ing  = visibleClaims.filter(c => c.status === '처리중').length;
+    const done = visibleClaims.filter(c => c.status === '완료').length;
     const fsCur = v('claims-fs') || '';
     // 클릭 시 claims-fs 필터 토글(같은 값 재클릭 시 전체 복구). 카운트=정확 상태라 필터 결과와 일치.
     const cl = (status, label, cnt, color, icon) =>
@@ -242,10 +271,10 @@ function renderClaims() {
       '<div class="mc-lbl"><i class="ti '+icon+'" style="color:'+color+';"></i>'+label+'</div>' +
       '<div class="mc-val" style="color:'+color+';">'+cnt+'건</div></div>';
     kpi.innerHTML =
-      '<div class="mc"><div class="mc-lbl"><i class="ti ti-message-report" style="color:var(--tx-d);"></i>전체 클레임</div><div class="mc-val">'+claims.length+'건</div></div>' +
+      '<div class="mc"><div class="mc-lbl"><i class="ti ti-message-report" style="color:var(--tx-d);"></i>전체 클레임</div><div class="mc-val">'+visibleClaims.length+'건</div></div>' +
       cl('처리중', '처리중', ing, 'var(--tx-i)', 'ti-loader') +
       cl('완료', '처리 완료', done, 'var(--tx-ok)', 'ti-circle-check') +
-      '<div class="mc"><div class="mc-lbl"><i class="ti ti-building-community" style="color:var(--tx-w);"></i>관련 고객사</div><div class="mc-val" style="color:var(--tx-w);">'+new Set(claims.map(c=>c.clientId)).size+'곳</div></div>';
+      '<div class="mc"><div class="mc-lbl"><i class="ti ti-building-community" style="color:var(--tx-w);"></i>관련 고객사</div><div class="mc-val" style="color:var(--tx-w);">'+new Set(visibleClaims.map(c=>c.clientId)).size+'곳</div></div>';
   }
 
   // 클레임 등록 모달용 고객사 옵션 동기화
@@ -254,7 +283,7 @@ function renderClaims() {
   const cont = inp('claims-table-full'); if (!cont) return;
   const q = (v('claims-q')||'').toLowerCase();
   const fs = v('claims-fs');
-  let list = claims.filter(c => {
+  let list = visibleClaims.filter(c => {
     if (!dateViewMatch('claims', c.date)) return false;
     if (q && ![c.id, c.kind||'', claimClientLabel(c), claimProductLabel(c), c.content||'', c.response||''].join(' ').toLowerCase().includes(q)) return false;
     if (fs && c.status !== fs) return false;
@@ -317,6 +346,7 @@ function renderClaims() {
 
 function openClaimDetail(id) {
   const c = claims.find(x => x.id === id); if (!c) return;
+  if (!canViewRecord(c, 'claim')) { showToast('이 클레임에 접근할 권한이 없습니다.', 'error'); return; }
   const stCls = { '접수':'bd-warn', '처리중':'bd-info', '완료':'bd-ok' }[c.status] || 'bd-neu';
   const memoBox = txt => `<div style="white-space:pre-wrap; word-break:break-word; line-height:1.6; font-size:13px; background:var(--bg-s); border:1px solid var(--br); border-radius:var(--rm); padding:10px 12px; max-height:240px; overflow-y:auto;" class="thin-scroll">${_escHtml(txt) || '<span style="color:var(--tx-t);">내용 없음</span>'}</div>`;
   inp('claim-detail-body').innerHTML = `
@@ -336,7 +366,100 @@ function openClaimDetail(id) {
   inp('claim-detail-modal').classList.add('open');
 }
 
+registerBulkEntryTable('df', {
+  layout: 'sharedLabels',
+  body: 'df-bulk-body',
+  minRows: 1,
+  fields: [
+    { name: 'productId', label: '발생 제품', type: 'select', options: () => bulkProductOptions(v('df-client')), required: true },
+    { name: 'stage', label: '발생 공정', type: 'select', default: () => processStages[0] || '', options: () => processStages },
+    { name: 'type', label: '불량 유형', type: 'text', placeholder: '불량 유형', required: true },
+    { name: 'qty', label: '수량', type: 'number', min: 1, step: 1, default: '1', required: true },
+    { name: 'cause', label: '귀책 원인', type: 'text', placeholder: '원인' },
+    { name: 'action', label: '처리 방안', type: 'text', placeholder: '조치' },
+    { name: 'status', label: '상태', type: 'select', default: '조치중', options: ['조치중','완료','보류'] },
+    { name: 'note', label: '참고', type: 'text', placeholder: '비고' }
+  ]
+});
+
+registerBulkEntryTable('cl', {
+  layout: 'sharedLabels',
+  body: 'cl-bulk-body',
+  minRows: 1,
+  fields: [
+    { name: 'kind', label: '유형', type: 'select', default: '클레임', options: ['클레임','AS','기타'] },
+    { name: 'spec', label: '사양', type: 'text', placeholder: '사양' },
+    { name: 'content', label: '요청 내용', type: 'text', placeholder: '불만/요청 내용', required: true },
+    { name: 'response', label: '조치 방안', type: 'text', placeholder: '조치 방안' },
+    { name: 'status', label: '상태', type: 'select', default: '접수', options: ['접수','처리중','완료'] }
+  ]
+});
+
+registerBulkEntryTable('ck', {
+  layout: 'sharedLabels',
+  body: 'ck-bulk-body',
+  minRows: 1,
+  fields: [
+    { name: 'productId', label: '검사 제품', type: 'select', options: () => bulkProductOptions(v('ck-client')), required: true },
+    { name: 'visual', label: '외관 검사', type: 'select', default: '합격', options: ['합격','불합격','조건부합격'] },
+    { name: 'dim', label: '치수 계측', type: 'select', default: '합격', options: ['합격','불합격','조건부합격'] },
+    { name: 'func', label: '기능 검사', type: 'select', default: '합격', options: ['합격','불합격','조건부합격'] },
+    { name: 'result', label: '종합 판정', type: 'select', default: '합격', options: ['합격','불합격','조건부합격'] },
+    { name: 'note', label: '참고', type: 'text', placeholder: '특이 사항' }
+  ]
+});
+
+function setDefectEntryMode(mode) {
+  const bulk = mode === 'bulk';
+  setBulkEntryMode('df', bulk);
+  const saveBtn = inp('df-save-btn');
+  if (saveBtn && !editDefectId) saveBtn.innerHTML = bulk ? '<i class="ti ti-check"></i>일괄 저장' : '<i class="ti ti-check"></i>저장 완료';
+}
+
+function setClaimEntryMode(mode) {
+  const bulk = mode === 'bulk';
+  setBulkEntryMode('cl', bulk);
+  const saveBtn = inp('cl-save-btn');
+  if (saveBtn && !editClaimId) saveBtn.innerHTML = bulk ? '<i class="ti ti-check"></i>일괄 접수' : '<i class="ti ti-check"></i>기록 접수';
+}
+
+function setCheckEntryMode(mode) {
+  const bulk = mode === 'bulk';
+  setBulkEntryMode('ck', bulk);
+  const saveBtn = inp('ck-save-btn');
+  if (saveBtn && !editCheckId) saveBtn.innerHTML = bulk ? '<i class="ti ti-check"></i>일괄 저장' : '<i class="ti ti-check"></i>저장 완료';
+}
+
+function onClaimClientChange() {
+  fillProductSelect('cl-product', v('cl-client'));
+  const client = clients.find(c => c.id === v('cl-client'));
+  if (client && typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('cl-client', 'cl-client-search');
+  sv('cl-product', '');
+  sv('cl-product-search', '');
+  if (typeof hideProductFieldMatches === 'function') hideProductFieldMatches('cl-product-results');
+}
+
+function onCheckClientChange() {
+  fillProductSelect('ck-product', v('ck-client'));
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('ck-client', 'ck-client-search');
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('ck-product', 'ck-product-search');
+  if (isBulkEntryMode('ck')) refreshBulkEntryTable('ck');
+}
+
+function syncDefectOrderCounts(productIds) {
+  let changed = false;
+  [...new Set(productIds.filter(Boolean))].forEach(productId => {
+    const relOrder = workOrders.find(o => o.productId === productId && o.status !== '완료');
+    if (relOrder) {
+      relOrder.defect = defects.filter(d => d.productId === productId).reduce((s, d) => s + d.qty, 0);
+      changed = true;
+    }
+  });
+  if (changed) saveStorage('workOrders', workOrders);
+}
+
 function openDefectAdd() {
+  if (typeof requireCreateAction === 'function' && !requireCreateAction('defects', '불량 기록 등록')) return;
   editDefectId = null;
   inp('defect-modal-ttl').innerHTML = '<i class="ti ti-plus"></i>제조 과정 불량 상세 리포트';
   inp('df-save-btn').innerHTML = '<i class="ti ti-check"></i>저장 완료';
@@ -344,6 +467,8 @@ function openDefectAdd() {
   sv('df-date', today());
   sv('df-client', clients[0]?.id || '');
   fillProductSelect('df-product', clients[0]?.id || '');
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('df-client', 'df-client-search');
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('df-product', 'df-product-search');
   sv('df-stage', processStages[0]);
   sv('df-type', '');
   sv('df-qty', '1');
@@ -351,12 +476,16 @@ function openDefectAdd() {
   sv('df-action', '');
   sv('df-status', '조치중');
   sv('df-note', '');
+  initBulkEntryTable('df');
+  setDefectEntryMode('bulk');
+  const mode = inp('df-mode-switch'); if (mode) mode.style.display = '';
   inp('defect-modal').classList.add('open');
 }
 
 function openDefectEdit(id) {
   if (!checkAdminAction()) return;
   const d = defects.find(x => x.id === id); if (!d) return;
+  if (!requireRecordPermission('edit', d, 'defect')) return;
   editDefectId = id;
   inp('defect-modal-ttl').innerHTML = `<i class="ti ti-edit" style="color:var(--tx-w);"></i>불량 검출 분석서 수정 (${d.id})`;
   inp('df-save-btn').innerHTML = '<i class="ti ti-device-floppy"></i>수정 반영';
@@ -366,6 +495,8 @@ function openDefectEdit(id) {
   sv('df-date', d.date);
   sv('df-client', pr?.clientId || clients[0]?.id);
   fillProductSelect('df-product', pr?.clientId || clients[0]?.id, d.productId);
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('df-client', 'df-client-search');
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('df-product', 'df-product-search');
   sv('df-stage', d.stage);
   sv('df-type', d.type);
   sv('df-qty', d.qty);
@@ -373,18 +504,54 @@ function openDefectEdit(id) {
   sv('df-action', d.action || '');
   sv('df-status', d.status);
   sv('df-note', d.note || '');
+  setDefectEntryMode('single');
+  const mode = inp('df-mode-switch'); if (mode) mode.style.display = 'none';
   
   inp('defect-modal').classList.add('open');
 }
 
 function addDefect() {
   if (!checkAdminAction()) return;
+  if (!editDefectId && isBulkEntryMode('df')) {
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('defects', '불량 기록 등록')) return;
+    const rows = readBulkEntryTable('df');
+    if (!rows.length) { showToast('등록할 불량 행을 입력해주세요.', 'error'); return; }
+    const invalid = rows.find(r => !r.productId || !r.type.trim() || (parseInt(r.qty) || 0) <= 0);
+    if (invalid) { showToast('제품, 불량 유형, 수량은 각 행에 필요합니다.', 'error'); return; }
+    const records = [];
+    rows.slice().reverse().forEach(r => {
+      const rec = stampRecordCreate({
+        id: nextCode('DF', defects),
+        productId: r.productId,
+        date: v('df-date'),
+        stage: r.stage || processStages[0],
+        type: r.type.trim(),
+        qty: parseInt(r.qty) || 0,
+        cause: r.cause,
+        action: r.action,
+        status: r.status || '조치중',
+        note: r.note
+      }, 'defect');
+      defects.unshift(rec);
+      records.push(rec);
+      writeAuditLog('defect', rec.id, 'create', null, rec, { summary:'불량 리포트 일괄 등록', source:'bulkAction' });
+    });
+    saveStorage('defects', defects);
+    closeModal('defect-modal');
+    syncDefectOrderCounts(records.map(r => r.productId));
+    generateAlert('warn', `[불량 일괄 등록] ${rows.length}건`, `발생일자: ${v('df-date')}`);
+    renderQuality();
+    showToast(`불량 리포트 ${rows.length}건이 저장되었습니다.`);
+    return;
+  }
   const type = v('df-type').trim();
   const qty = parseInt(v('df-qty'));
   if (!type || isNaN(qty) || qty <= 0) { showToast('불량 원인 유형 및 정확한 불량 수량을 명시해주세요.', 'error'); return; }
   
   if (editDefectId) {
     const d = defects.find(x => x.id === editDefectId); if (!d) return;
+    if (!requireRecordPermission('edit', d, 'defect')) return;
+    const before = _safeJsonClone(d);
     d.productId = v('df-product');
     d.date = v('df-date');
     d.stage = v('df-stage');
@@ -394,8 +561,11 @@ function addDefect() {
     d.action = v('df-action');
     d.status = v('df-status');
     d.note = v('df-note');
+    stampRecordUpdate(d, before, 'defect');
+    writeAuditLog('defect', d.id, 'update', before, d, { summary:'불량 리포트 수정' });
   } else {
-    defects.unshift({
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('defects', '불량 기록 등록')) return;
+    const rec = stampRecordCreate({
       id: nextCode('DF', defects),
       productId: v('df-product'),
       date: v('df-date'),
@@ -406,7 +576,9 @@ function addDefect() {
       action: v('df-action'),
       status: v('df-status'),
       note: v('df-note')
-    });
+    }, 'defect');
+    defects.unshift(rec);
+    writeAuditLog('defect', rec.id, 'create', null, rec, { summary:'불량 리포트 등록' });
   }
   saveStorage('defects', defects);
   editDefectId = null;
@@ -426,7 +598,14 @@ function addDefect() {
 
 function changeDefectStatus(id, status) {
   const d = defects.find(x => x.id === id);
-  if (d) { d.status = status; saveStorage('defects', defects); renderQuality(); }
+  if (d) {
+    if (!roleFeatureAllowed('status') || !requireRecordPermission('edit', d, 'defect')) return;
+    const before = _safeJsonClone(d);
+    d.status = status;
+    stampRecordUpdate(d, before, 'defect');
+    writeAuditLog('defect', id, 'statusChange', before, d, { summary:`불량 상태 변경: ${before.status || ''} → ${status}` });
+    saveStorage('defects', defects); renderQuality();
+  }
 }
 
 /* 품질기록 - 고객 클레임 등록 / 수정 */
@@ -436,7 +615,16 @@ function _fillClaimClientSelect(selId) {
     clients.map(c => `<option value="${esc(c.id)}"${c.id===selId?' selected':''}>${esc(c.name)}</option>`).join('');
 }
 
+function claimClientInputName() {
+  return v('cl-client') ? '' : (v('cl-client-search') || v('cl-client-text')).trim();
+}
+
+function claimProductInputName() {
+  return v('cl-product') ? '' : (v('cl-product-search') || v('cl-product-text')).trim();
+}
+
 function openClaimAdd() {
+  if (typeof requireCreateAction === 'function' && !requireCreateAction('claims', '고객 클레임 등록')) return;
   editClaimId = null;
   inp('claim-modal-ttl').innerHTML = '<i class="ti ti-plus"></i>신규 고객 클레임 / AS 접수';
   inp('cl-save-btn').innerHTML = '<i class="ti ti-check"></i>기록 접수';
@@ -445,18 +633,22 @@ function openClaimAdd() {
   sv('cl-kind', '클레임');
   _fillClaimClientSelect('');
   fillProductSelect('cl-product', '');
+  sv('cl-client-search', '');
+  sv('cl-product-search', '');
   sv('cl-client-text', '');
   sv('cl-product-text', '');
   sv('cl-spec', '');
   sv('cl-content', '');
   sv('cl-status', '접수');
   sv('cl-response', '');
+  const single = inp('cl-single-fields'); if (single) single.style.display = '';
   inp('claim-modal').classList.add('open');
 }
 
 function openClaimEdit(id) {
   if (!checkAdminAction()) return;
   const c = claims.find(x => x.id === id); if (!c) return;
+  if (!requireRecordPermission('edit', c, 'claim')) return;
   editClaimId = id;
   inp('claim-modal-ttl').innerHTML = `<i class="ti ti-edit" style="color:var(--tx-w);"></i>클레임 / AS 내역 수정 (${c.id})`;
   inp('cl-save-btn').innerHTML = '<i class="ti ti-device-floppy"></i>수정 반영';
@@ -465,23 +657,67 @@ function openClaimEdit(id) {
   sv('cl-kind', c.kind || '클레임');
   _fillClaimClientSelect(c.clientId);
   fillProductSelect('cl-product', c.clientId, c.productId);
+  if (c.clientId) {
+    if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('cl-client', 'cl-client-search');
+  } else {
+    sv('cl-client-search', c.clientName || '');
+  }
+  if (c.productId) {
+    if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('cl-product', 'cl-product-search');
+  } else {
+    sv('cl-product-search', c.productName || '');
+  }
   sv('cl-client-text', c.clientName || '');
   sv('cl-product-text', c.productName || '');
   sv('cl-spec', c.spec || '');
   sv('cl-content', c.content);
   sv('cl-status', c.status);
   sv('cl-response', c.response || '');
+  const single = inp('cl-single-fields'); if (single) single.style.display = '';
   inp('claim-modal').classList.add('open');
 }
 
 function addClaim() {
   if (!checkAdminAction()) return;
+  if (!editClaimId && isBulkEntryMode('cl')) {
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('claims', '고객 클레임 등록')) return;
+    const clientId = v('cl-client');
+    const clientName = claimClientInputName();
+    if (!clientId && !clientName) { showToast('고객사를 선택하거나 직접 입력하세요.', 'error'); return; }
+    const rows = readBulkEntryTable('cl');
+    if (!rows.length) { showToast('접수할 클레임 행을 입력해주세요.', 'error'); return; }
+    const invalid = rows.find(r => !r.content.trim());
+    if (invalid) { showToast('불만/요청 내용은 각 행에 필요합니다.', 'error'); return; }
+    rows.slice().reverse().forEach(r => {
+      const rec = stampRecordCreate({
+        id: nextCode('CLM', claims),
+        date: v('cl-date'),
+        kind: r.kind || '클레임',
+        clientId,
+        clientName,
+        productId: v('cl-product'),
+        productName: claimProductInputName(),
+        spec: r.spec.trim(),
+        content: r.content.trim(),
+        status: r.status || '접수',
+        response: r.response
+      }, 'claim');
+      claims.unshift(rec);
+      writeAuditLog('claim', rec.id, 'create', null, rec, { summary:'클레임 / AS 일괄 접수', source:'bulkAction' });
+    });
+    saveStorage('claims', claims);
+    editClaimId = null;
+    closeModal('claim-modal');
+    renderQuality();
+    showToast(`클레임 / AS ${rows.length}건이 접수되었습니다.`);
+    return;
+  }
   const content = v('cl-content').trim();
   if (!content) { showToast('접수 내용을 구체적으로 기록해야 합니다.', 'error'); return; }
   const clientId = v('cl-client');
-  const clientName = v('cl-client-text').trim();
+  const clientName = claimClientInputName();
   const productId = v('cl-product');
-  const productName = v('cl-product-text').trim();
+  const productName = claimProductInputName();
   if (!clientId && !clientName) { showToast('고객사를 선택하거나 직접 입력하세요.', 'error'); return; }
   const fields = {
     date: v('cl-date'),
@@ -495,9 +731,16 @@ function addClaim() {
   };
   if (editClaimId) {
     const c = claims.find(x => x.id === editClaimId); if (!c) return;
+    if (!requireRecordPermission('edit', c, 'claim')) return;
+    const before = _safeJsonClone(c);
     Object.assign(c, fields);
+    stampRecordUpdate(c, before, 'claim');
+    writeAuditLog('claim', c.id, 'update', before, c, { summary:'클레임 / AS 수정' });
   } else {
-    claims.unshift({ id: nextCode('CLM', claims), ...fields });
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('claims', '고객 클레임 등록')) return;
+    const rec = stampRecordCreate({ id: nextCode('CLM', claims), ...fields }, 'claim');
+    claims.unshift(rec);
+    writeAuditLog('claim', rec.id, 'create', null, rec, { summary:'클레임 / AS 접수' });
   }
   saveStorage('claims', claims);
   editClaimId = null;
@@ -512,11 +755,19 @@ function claimProductLabel(c) { return c.productName || (c.productId ? getProduc
 
 function changeClaimStatus(id, status) {
   const c = claims.find(x => x.id === id);
-  if (c) { c.status = status; saveStorage('claims', claims); renderQuality(); }
+  if (c) {
+    if (!roleFeatureAllowed('status') || !requireRecordPermission('edit', c, 'claim')) return;
+    const before = _safeJsonClone(c);
+    c.status = status;
+    stampRecordUpdate(c, before, 'claim');
+    writeAuditLog('claim', id, 'statusChange', before, c, { summary:`클레임 상태 변경: ${before.status || ''} → ${status}` });
+    saveStorage('claims', claims); renderQuality();
+  }
 }
 
 /* 품질기록 - 최종 출하 검증 체크리스트 추가 / 수정 */
 function openCheckAdd() {
+  if (typeof requireCreateAction === 'function' && !requireCreateAction('checks', '검사 기록 등록')) return;
   editCheckId = null;
   inp('check-modal-ttl').innerHTML = '<i class="ti ti-clipboard-check"></i>납품 검사 성적 기록';
   inp('ck-save-btn').innerHTML = '<i class="ti ti-check"></i>저장 완료';
@@ -524,18 +775,24 @@ function openCheckAdd() {
   sv('ck-date', today());
   sv('ck-client', clients[0]?.id || '');
   fillProductSelect('ck-product', clients[0]?.id || '');
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('ck-client', 'ck-client-search');
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('ck-product', 'ck-product-search');
   sv('ck-inspector', '');
   sv('ck-visual', '합격');
   sv('ck-dim', '합격');
   sv('ck-func', '합격');
   sv('ck-result', '합격');
   sv('ck-note', '');
+  initBulkEntryTable('ck');
+  setCheckEntryMode('bulk');
+  const mode = inp('ck-mode-switch'); if (mode) mode.style.display = '';
   inp('check-modal').classList.add('open');
 }
 
 function openCheckEdit(id) {
   if (!checkAdminAction()) return;
   const r = checkRecords.find(x => x.id === id); if (!r) return;
+  if (!requireRecordPermission('edit', r, 'checkRecord')) return;
   editCheckId = id;
   inp('check-modal-ttl').innerHTML = `<i class="ti ti-edit" style="color:var(--tx-w);"></i>출하 품질 성적 검사서 수정 (${r.id})`;
   inp('ck-save-btn').innerHTML = '<i class="ti ti-device-floppy"></i>수정 반영';
@@ -543,12 +800,16 @@ function openCheckEdit(id) {
   sv('ck-date', r.date);
   sv('ck-client', r.clientId);
   fillProductSelect('ck-product', r.clientId, r.productId);
+  if (typeof syncClientFieldDisplay === 'function') syncClientFieldDisplay('ck-client', 'ck-client-search');
+  if (typeof syncProductFieldDisplay === 'function') syncProductFieldDisplay('ck-product', 'ck-product-search');
   sv('ck-inspector', r.inspector || '');
   sv('ck-visual', r.visual);
   sv('ck-dim', r.dim);
   sv('ck-func', r.func);
   sv('ck-result', r.result);
   sv('ck-note', r.note || '');
+  setCheckEntryMode('single');
+  const mode = inp('ck-mode-switch'); if (mode) mode.style.display = 'none';
   
   inp('check-modal').classList.add('open');
 }
@@ -557,9 +818,40 @@ function addCheckRecord() {
   if (!checkAdminAction()) return;
   const inspector = v('ck-inspector').trim();
   if (!inspector) { showToast('검사 실무자의 성함(사인)이 필요합니다.', 'error'); return; }
+  if (!editCheckId && isBulkEntryMode('ck')) {
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('checks', '검사 기록 등록')) return;
+    const rows = readBulkEntryTable('ck');
+    if (!rows.length) { showToast('등록할 검사 행을 입력해주세요.', 'error'); return; }
+    const invalid = rows.find(r => !r.productId);
+    if (invalid) { showToast('검사 제품은 각 행에 필요합니다.', 'error'); return; }
+    rows.slice().reverse().forEach(r => {
+      const rec = stampRecordCreate({
+        id: nextCode('CHK', checkRecords),
+        date: v('ck-date'),
+        clientId: v('ck-client'),
+        productId: r.productId,
+        inspector,
+        visual: r.visual || '합격',
+        dim: r.dim || '합격',
+        func: r.func || '합격',
+        result: r.result || '합격',
+        note: r.note
+      }, 'checkRecord');
+      checkRecords.unshift(rec);
+      writeAuditLog('checkRecord', rec.id, 'create', null, rec, { summary:'검사 기록 일괄 등록', source:'bulkAction' });
+    });
+    saveStorage('checkRecords', checkRecords);
+    editCheckId = null;
+    closeModal('check-modal');
+    renderQuality();
+    showToast(`검사 기록 ${rows.length}건이 저장되었습니다.`);
+    return;
+  }
   
   if (editCheckId) {
     const r = checkRecords.find(x => x.id === editCheckId); if (!r) return;
+    if (!requireRecordPermission('edit', r, 'checkRecord')) return;
+    const before = _safeJsonClone(r);
     r.date = v('ck-date');
     r.clientId = v('ck-client');
     r.productId = v('ck-product');
@@ -569,8 +861,11 @@ function addCheckRecord() {
     r.func = v('ck-func');
     r.result = v('ck-result');
     r.note = v('ck-note');
+    stampRecordUpdate(r, before, 'checkRecord');
+    writeAuditLog('checkRecord', r.id, 'update', before, r, { summary:'검사 기록 수정' });
   } else {
-    checkRecords.unshift({
+    if (typeof requireCreateAction === 'function' && !requireCreateAction('checks', '검사 기록 등록')) return;
+    const rec = stampRecordCreate({
       id: nextCode('CHK', checkRecords),
       date: v('ck-date'),
       clientId: v('ck-client'),
@@ -581,7 +876,9 @@ function addCheckRecord() {
       func: v('ck-func'),
       result: v('ck-result'),
       note: v('ck-note')
-    });
+    }, 'checkRecord');
+    checkRecords.unshift(rec);
+    writeAuditLog('checkRecord', rec.id, 'create', null, rec, { summary:'검사 기록 등록' });
   }
   saveStorage('checkRecords', checkRecords);
   editCheckId = null;
@@ -614,8 +911,10 @@ function deleteDefect(id) {
   confirm_('불량 레포트 기록 삭제', '해당 품질 부적합 분석 파일을 데이터베이스에서 폐기하시겠습니까?', () => {
     const d = defects.find(x => x.id === id);
     if (d) {
+      if (!requireRecordPermission('delete', d, 'defect')) return;
       pushToTrash('defect', `${d.type} (불량기록)`, id, d);
       defects = defects.filter(x => x.id !== id);
+      writeAuditLog('defect', id, 'delete', d, null, { summary:'불량 리포트 삭제' });
       saveStorage('defects', defects);
       renderQuality();
       showToast('불량 분석 기록이 휴지통으로 이동했습니다.', 'info');
@@ -627,8 +926,10 @@ function deleteClaim(id) {
   confirm_('고객 클레임 소멸 확인', '해당 고객사의 소송/조치 클레임 파일을 완전히 파기하시겠습니까?', () => {
     const c = claims.find(x => x.id === id);
     if (c) {
+      if (!requireRecordPermission('delete', c, 'claim')) return;
       pushToTrash('claim', `${c.content} (고객클레임)`, id, c);
       claims = claims.filter(x => x.id !== id);
+      writeAuditLog('claim', id, 'delete', c, null, { summary:'클레임 삭제' });
       saveStorage('claims', claims);
       renderQuality();
       showToast('클레임 기록이 휴지통으로 이동했습니다.', 'info');
@@ -640,8 +941,10 @@ function deleteCheck(id) {
   confirm_('검사 성적 삭제 확인', '완제품 출하 품질 성적 체크 대장에서 지우시겠습니까?', () => {
     const r = checkRecords.find(x => x.id === id);
     if (r) {
+      if (!requireRecordPermission('delete', r, 'checkRecord')) return;
       pushToTrash('check', `${getProductName(r.productId)} - ${r.inspector} (검사기록)`, id, r);
       checkRecords = checkRecords.filter(x => x.id !== id);
+      writeAuditLog('checkRecord', id, 'delete', r, null, { summary:'검사 기록 삭제' });
       saveStorage('checkRecords', checkRecords);
       renderQuality();
       showToast('검사 성적 대장이 휴지통으로 이동했습니다.', 'info');
@@ -650,8 +953,10 @@ function deleteCheck(id) {
 }
 
 function exportDefectsCSV() {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('불량 기록 엑셀 내보내기')) return;
   const h = ['코드','발생일자','완제품모델','공정단계','하자유형','수량','원인파악','조치사항','상태','비고'];
-  const rows = defects.map(d => [
+  const source = typeof visibleRecords === 'function' ? visibleRecords(defects, 'defect') : defects;
+  const rows = source.map(d => [
     d.id, d.date, getProductName(d.productId), d.stage, d.type, d.qty, d.cause || '', d.action || '', d.status, d.note || ''
   ]);
   const csv = '\uFEFF' + [h, ...rows].map(r => r.map(x => `"${String(x || '').replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -663,8 +968,10 @@ function exportDefectsCSV() {
 }
 
 function exportClaimsCSV() {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('고객 클레임 엑셀 내보내기')) return;
   const h = ['클레임코드','접수일자','의뢰고객사','완제품모델','클레임사양','불만및피드백사항','조치방안','처리상태'];
-  const rows = claims.map(c => [
+  const source = typeof visibleRecords === 'function' ? visibleRecords(claims, 'claim') : claims;
+  const rows = source.map(c => [
     c.id, c.date, claimClientLabel(c), claimProductLabel(c), c.spec || '', c.content, c.response || '', c.status
   ]);
   const csv = '\uFEFF' + [h, ...rows].map(r => r.map(x => `"${String(x || '').replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -676,8 +983,10 @@ function exportClaimsCSV() {
 }
 
 function exportChecksCSV() {
+  if (typeof requireCsvAction === 'function' && !requireCsvAction('검사 기록 엑셀 내보내기')) return;
   const h = ['검사코드','출하검사일','고객사명','완성품명','인스펙터','외관테스트','치수계측','기능검사','종합판정','비고'];
-  const rows = checkRecords.map(r => [
+  const source = typeof visibleRecords === 'function' ? visibleRecords(checkRecords, 'checkRecord') : checkRecords;
+  const rows = source.map(r => [
     r.id, r.date, getClientName(r.clientId), getProductName(r.productId), r.inspector, r.visual, r.dim, r.func, r.result, r.note || ''
   ]);
   const csv = '\uFEFF' + [h, ...rows].map(r => r.map(x => `"${String(x || '').replace(/"/g, '""')}"`).join(',')).join('\n');

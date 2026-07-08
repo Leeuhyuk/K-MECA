@@ -52,17 +52,22 @@ function renderMobileHome() {
   const el = inp('mobile-home');
   if (!el) return;
 
-  const pending     = materials.filter(m => m.status === '발주전').length;
-  const orderMats   = materials.filter(m => m.status === '발주중').length;
-  const arrived     = materials.filter(m => m.status === '입고완료').length;
-  const activeProds = products.filter(p => p.status !== '견적' && !['완료','납품'].includes(p.processStage)).length;
-  const doneProds   = products.filter(p => ['완료','납품'].includes(p.processStage)).length;
-  const lowStock    = inventory.filter(i => i.qty <= i.minQty && i.minQty > 0).length;
-  const openDefects = defects.filter(d => d.status !== '완료').length;
-  const openClaims  = claims.filter(c => c.status !== '완료').length;
+  const mobileMaterials = typeof visibleRecords === 'function' ? visibleRecords(materials, 'material') : materials;
+  const mobileProducts  = typeof visibleRecords === 'function' ? visibleRecords(products, 'processProduct') : products;
+  const mobileInventory = typeof visibleRecords === 'function' ? visibleRecords(inventory, 'inventory') : inventory;
+  const mobileDefects   = typeof visibleRecords === 'function' ? visibleRecords(defects, 'defect') : defects;
+  const mobileClaims    = typeof visibleRecords === 'function' ? visibleRecords(claims, 'claim') : claims;
+  const pending     = mobileMaterials.filter(m => m.status === '발주전').length;
+  const orderMats   = mobileMaterials.filter(m => m.status === '발주중').length;
+  const arrived     = mobileMaterials.filter(m => m.status === '입고완료').length;
+  const activeProds = mobileProducts.filter(p => p.status !== '견적' && !['완료','납품'].includes(p.processStage)).length;
+  const doneProds   = mobileProducts.filter(p => ['완료','납품'].includes(p.processStage)).length;
+  const lowStock    = mobileInventory.filter(i => i.qty <= i.minQty && i.minQty > 0).length;
+  const openDefects = mobileDefects.filter(d => d.status !== '완료').length;
+  const openClaims  = mobileClaims.filter(c => c.status !== '완료').length;
 
   // 임박 납기 (진행 중 제품, 납기일 빠른 순)
-  const deadlines = products
+  const deadlines = mobileProducts
     .filter(p => p.deliveryDate && p.status !== '견적' && !['완료','납품'].includes(p.processStage))
     .sort((a, b) => a.deliveryDate.localeCompare(b.deliveryDate))
     .slice(0, 4);
@@ -70,10 +75,11 @@ function renderMobileHome() {
   const recentAlerts = alertsList.slice(0, 4);
   const alertIco = { err: 'ti-alert-triangle', warn: 'ti-alert-circle', info: 'ti-info-circle' };
   const alertCol = { err: 'var(--tx-d)', warn: 'var(--tx-w)', info: 'var(--tx-i)' };
+  const brandTitle = typeof getAppBrandTitle === 'function' ? getAppBrandTitle() : 'MES Pro';
 
   el.innerHTML = `
     <div class="mh-hero">
-      <span class="mh-greet">MES Pro</span>
+      <span class="mh-greet" data-app-brand-title>${esc(brandTitle)}</span>
       <span class="mh-date">${today()}</span>
     </div>
 
@@ -88,7 +94,7 @@ function renderMobileHome() {
       <div class="mh-kpi" onclick="mobileGo('clients')">
         <div class="mh-k-lbl"><i class="ti ti-box" style="color:var(--tx-i);"></i>진행 중 프로젝트</div>
         <div class="mh-k-val" style="color:var(--tx-i);">${activeProds}<span style="font-size:13px;">건</span></div>
-        <div class="mh-k-sub">완료 ${doneProds}건 · 전체 ${products.length}종</div>
+        <div class="mh-k-sub">완료 ${doneProds}건 · 전체 ${mobileProducts.length}종</div>
       </div>
       <div class="mh-kpi" onclick="mobileGo('materials')">
         <div class="mh-k-lbl"><i class="ti ti-circle-dashed" style="color:var(--tx-t);"></i>발주 대기 자재</div>
@@ -98,7 +104,7 @@ function renderMobileHome() {
       <div class="mh-kpi" onclick="mobileGoInv()">
         <div class="mh-k-lbl"><i class="ti ti-packages" style="color:${lowStock > 0 ? 'var(--tx-d)' : 'var(--tx-ok)'};"></i>안전재고 미달</div>
         <div class="mh-k-val" style="color:${lowStock > 0 ? 'var(--tx-d)' : 'var(--tx-ok)'};">${lowStock}<span style="font-size:13px;">품목</span></div>
-        <div class="mh-k-sub">전체 재고 ${inventory.length}종</div>
+        <div class="mh-k-sub">전체 재고 ${mobileInventory.length}종</div>
       </div>
       <div class="mh-kpi" onclick="mobileGo('quality')">
         <div class="mh-k-lbl"><i class="ti ti-shield-alert" style="color:${openDefects > 0 ? 'var(--tx-w)' : 'var(--tx-ok)'};"></i>미처리 품질장애</div>
