@@ -30680,10 +30680,73 @@ function ensureNotesDateSelectionClearer() {
   registerDateViewSelectionClearer('notes', function() {
     _memoSelected.clear();
     _todoSelected.clear();
+    closeNotesSelectionDetailPanel();
   });
 }
 function setNotesSelectionBar(html, active) {
   if (typeof setDateViewSelectionBar === 'function') setDateViewSelectionBar('notes', html, active);
+}
+function closeNotesSelectionDetailPanel() {
+  if (typeof closeSelectionDetailPanel === 'function') closeSelectionDetailPanel(false);
+}
+
+function activeNotesSelectionKind() {
+  if (memoTab === 'memos') return 'memo';
+  if (memoTab === 'todos') return 'todo';
+  return '';
+}
+
+function noteSelectionRecord(kind, id) {
+  var list = kind === 'todo' ? todoList : memoList;
+  return (Array.isArray(list) ? list : []).find(function(item) { return item.id === id; }) || null;
+}
+
+function noteSelectionDetailItem(kind, id) {
+  var type = kind === 'todo' ? 'todo' : 'memo';
+  var record = noteSelectionRecord(kind, id);
+  if (!record) return null;
+  var ref = { entityType:type, entityId:id };
+  if (typeof selectionDetailItem === 'function') return selectionDetailItem(ref, null, record);
+  return {
+    ref:ref,
+    row:null,
+    record:record,
+    title:record.title || record.id || '선택 항목',
+    sub:type === 'todo' ? (record.owner || '담당자 미지정') : (record.author || '작성자 미지정')
+  };
+}
+
+function updateNotesSelectionDetailPanel(kind, force) {
+  if (typeof showSelectionDetailPanel !== 'function') return;
+  var page = inp('pg-notes');
+  if (page && !page.classList.contains('active')) {
+    closeNotesSelectionDetailPanel();
+    return;
+  }
+  var activeKind = kind || activeNotesSelectionKind();
+  if (!activeKind) {
+    closeNotesSelectionDetailPanel();
+    return;
+  }
+  var selected = Array.from(activeKind === 'todo' ? _todoSelected : _memoSelected);
+  if (!selected.length) {
+    closeNotesSelectionDetailPanel();
+    return;
+  }
+  var items = selected.map(function(id) { return noteSelectionDetailItem(activeKind, id); }).filter(Boolean);
+  if (!items.length) {
+    closeNotesSelectionDetailPanel();
+    return;
+  }
+  if (typeof releaseSelectionDetailNavigationSuppress === 'function') releaseSelectionDetailNavigationSuppress();
+  if (force && typeof closeSelectionDetailPanel === 'function') closeSelectionDetailPanel(false);
+  showSelectionDetailPanel({
+    source:'notes',
+    key:activeKind,
+    ids:items.map(function(item) { return item.ref.entityId; }),
+    items:items,
+    count:items.length
+  });
 }
 function memoSelectionBarHtml(count) {
   return '<span class="date-view-selection-count"><i class="ti ti-checkbox"></i> ' + count + '건 선택됨</span>' +
@@ -30756,6 +30819,7 @@ function renderNotes() {
     _memoSelected.clear();
     _todoSelected.clear();
     setNotesSelectionBar('', false);
+    closeNotesSelectionDetailPanel();
   }
   _notesLastViewKey = viewKey;
   var visibleMemos = typeof visibleRecords === 'function' ? visibleRecords(memoList, 'memo') : memoList;
@@ -30773,8 +30837,8 @@ function renderNotes() {
     btn.classList.toggle('btn-primary', btn.dataset.memotab === memoTab);
   });
   if (memoTab === 'todos') renderTodoList();
-  else if (memoTab === 'board') { setNotesSelectionBar('', false); renderTodoBoard(); }
-  else if (memoTab === 'report') { setNotesSelectionBar('', false); renderWeeklyReportPanel(); }
+  else if (memoTab === 'board') { setNotesSelectionBar('', false); closeNotesSelectionDetailPanel(); renderTodoBoard(); }
+  else if (memoTab === 'report') { setNotesSelectionBar('', false); closeNotesSelectionDetailPanel(); renderWeeklyReportPanel(); }
   else renderMemoCards();
 }
 
@@ -30817,6 +30881,7 @@ function renderMemoCards() {
   if (!list.length) {
     _memoSelected.clear();
     setNotesSelectionBar('', false);
+    closeNotesSelectionDetailPanel();
     content.innerHTML = '<div class="card"><div class="empty"><i class="ti ti-notes"></i>등록된 메모가 없습니다.</div></div>';
     return;
   }
@@ -30840,6 +30905,7 @@ function renderMemoCards() {
       '<span style="margin-left:auto;">' + _memoEsc(m.author || '') + ' · ' + _memoEsc(String(m.updatedAt || '').slice(0, 10)) + '</span></div>' +
     '</div>';
   }).join('') + '</div>';
+  updateNotesSelectionDetailPanel('memo');
 }
 
 function _filteredTodos() {
@@ -30965,6 +31031,7 @@ function renderTodoList() {
   if (!list.length) {
     _todoSelected.clear();
     setNotesSelectionBar('', false);
+    closeNotesSelectionDetailPanel();
     content.innerHTML = '<div class="card"><div class="empty"><i class="ti ti-list-check"></i>등록된 할 일이 없습니다.</div></div>';
     return;
   }
@@ -30991,6 +31058,7 @@ function renderTodoList() {
     }).join('') + '</tbody></table></div>';
   var selectAll = content.querySelector('thead input[type=checkbox]');
   if (selectAll) selectAll.indeterminate = visibleSelected > 0 && !allVisibleSelected;
+  updateNotesSelectionDetailPanel('todo');
 }
 
 function toggleTodoSelection(id, checked) {
@@ -31287,6 +31355,37 @@ async function runMemoAiSummary(ev) {
   }
 }
 
+async function summarizeMemoFromDetailPanel(id, ev) {
+  var memo = memoList.find(function(m) { return m.id === id; });
+  if (!memo) { showToast('요약할 메모를 찾지 못했습니다.', 'error'); return; }
+  var text = String(memo.content || '').trim();
+  if (!text) { showToast('요약할 메모 내용을 입력하세요.', 'error'); return; }
+  var button = ev && ev.currentTarget;
+  var oldHtml = button ? button.innerHTML : '';
+  if (button) {
+    button.disabled = true;
+    button.innerHTML = '<i class="ti ti-loader animate-spin"></i>요약 중';
+  }
+  try {
+    var result = await summarizeMemoWithGemini(text);
+    memo.aiResult = result;
+    memo.summary = result.summary || '';
+    memo.updatedAt = _memoNow();
+    saveStorage('memoList', memoList);
+    renderNotes();
+    if (typeof updateNotesSelectionDetailPanel === 'function' && _memoSelected.has(id)) {
+      updateNotesSelectionDetailPanel('memo', true);
+    }
+    showToast('메모 AI 요약이 상세정보에 반영되었습니다.', 'success');
+  } catch (error) {
+    showToast(error.message || 'AI 요약에 실패했습니다.', 'error');
+  } finally {
+    if (button && button.isConnected) {
+      button.disabled = false;
+      button.innerHTML = oldHtml || 'AI 요약';
+    }
+  }
+}
 function addAiTodos() {
   var actions = normalizeAiActionItems(_memoAiResult && _memoAiResult.actionItems);
   if (!actions.length) {
@@ -32353,7 +32452,8 @@ const BULK_AUDIT_TYPES = {
   rfq:'rfq', materials:'material', inventory:'inventory', orders:'workOrder',
   defects:'defect', checks:'checkRecord', claims:'claim', deliveries:'delivery',
   workers:'worker', as:'as', partners:'partners', statement:'statement',
-  tax:'tax', quote:'quote', order:'order', products:'products', bom:'bom'
+  tax:'tax', quote:'quote', order:'order', products:'products', bom:'bom',
+  memo:'memo', todo:'todo'
 };
 const TABLE_AUDIT_TYPES = {
   'rfq-table':'rfq', 'po-table':'po', 'mat-table':'material',
@@ -32387,6 +32487,8 @@ const AUDIT_ENTITY_ALIASES = {
   fixedCostPayment:['fixedCostPayment'],
   financePayment:['financePayment'],
   financeEntry:['financeEntry','finance'],
+  memo:['memo','memos','memoList'],
+  todo:['todo','todos','todoList'],
   trash:['trash']
 };
 const ROW_AUDIT_PATTERNS = [
@@ -32488,6 +32590,12 @@ function auditRecordListsForType(type) {
   }
   if (has('financeEntry') || has('finance')) {
     if (typeof financeData !== 'undefined' && financeData) addAuditRecordList(lists, financeData.entries);
+  }
+  if (has('memo') || has('memos') || has('memoList')) {
+    if (typeof memoList !== 'undefined') addAuditRecordList(lists, memoList);
+  }
+  if (has('todo') || has('todos') || has('todoList')) {
+    if (typeof todoList !== 'undefined') addAuditRecordList(lists, todoList);
   }
   return lists;
 }
@@ -32822,15 +32930,15 @@ function selectionDetailRecordForRef(ref) {
 
 function selectionDetailFieldLabel(field) {
   const labels = {
-    id:'번호', code:'코드', no:'번호', docId:'문서번호', date:'일자', issueDate:'발행일', requestDate:'요청일',
-    dueDate:'납기일', due:'납기일', createdAt:'등록일', updatedAt:'수정일', customer:'고객사', client:'고객사', clientId:'고객사', clientName:'고객사',
+    id:'번호', code:'코드', no:'번호', docId:'문서번호', title:'제목', date:'일자', issueDate:'발행일', requestDate:'요청일',
+    dueDate:'납기일', due:'납기일', startDate:'시작일', reminderDate:'알림일', createdAt:'등록일', updatedAt:'수정일', author:'작성자', customer:'고객사', client:'고객사', clientId:'고객사', clientName:'고객사',
     company:'거래처', project:'연계제품', product:'제품', productId:'제품', productName:'제품명', item:'품목',
     itemName:'품목명', name:'품목명', material:'자재명', materialName:'자재명', spec:'규격', supplier:'공급처',
     supplierEmail:'공급처 이메일', email:'이메일', phone:'연락처', manager:'담당자', owner:'담당자', assignee:'담당자',
     qty:'수량', quantity:'수량', targetQty:'목표량', goodQty:'실적량', done:'실적량', defect:'불량', defectQty:'불량', stock:'현재고',
     safeStock:'안전재고', minQty:'안전재고', unit:'단위', unitPrice:'단가', price:'단가', cost:'비용', amount:'금액', total:'합계',
     status:'상태', paymentStatus:'결제', payStatus:'결제', deliveryMethod:'납품방법', dlvMethod:'납품방법', payMethod:'결제조건', line:'라인',
-    category:'재고 구분', type:'유형', kind:'유형', location:'보관위치', warehouse:'창고', memo:'메모', note:'비고', remark:'비고',
+    category:'재고 구분', type:'유형', kind:'유형', priority:'우선순위', repeat:'반복', entityType:'연결 유형', entityId:'연결 번호', important:'중요', tags:'태그', summary:'AI 요약', attachments:'첨부파일', checklist:'체크리스트', memoId:'연결 메모', location:'보관위치', warehouse:'창고', memo:'메모', note:'비고', remark:'비고',
     recvDate:'접수일', doneDate:'완료일', symptom:'증상', warranty:'보증', action:'처리내용', stage:'발생공정',
     cause:'원인', inspector:'검사원', visual:'외관', dim:'치수', func:'기능', result:'판정', content:'내용',
     response:'조치 방안', orderDate:'주문일자', expectedDate:'입고예정일', start:'개시일'
@@ -32894,7 +33002,9 @@ function selectionDetailPriorityFields(type) {
     products:['id','productId','name','spec','customer','clientId','clientName','qty','unit','price','deliveryDate','processStage','status','memo','note','createdAt'],
     bom:['id','productId','productName','materialName','qty','quantity','unit','createdAt'],
     delivery:['id','customer','clientName','productName','qty','quantity','status','dueDate','createdAt'],
-    as:['id','recvDate','clientId','customer','clientName','productName','symptom','warranty','status','owner','manager','action','doneDate','cost','memo','note','createdAt']
+    as:['id','recvDate','clientId','customer','clientName','productName','symptom','warranty','status','owner','manager','action','doneDate','cost','memo','note','createdAt'],
+    memo:['id','title','content','tags','important','author','entityType','entityId','summary','attachments','createdAt','updatedAt'],
+    todo:['id','title','content','owner','dueDate','startDate','reminderDate','priority','status','repeat','memoId','checklist','createdAt','updatedAt']
   };
   return map[type] || common;
 }
@@ -32931,7 +33041,7 @@ function selectionDetailRowFields(row) {
 
 function selectionDetailTitle(ref, record, row) {
   if (record) {
-    return record.name || record.productName || record.itemName || record.company || record.customer || record.clientName || record.id || ref.entityId || '선택 항목';
+    return record.title || record.name || record.productName || record.itemName || record.company || record.customer || record.clientName || record.id || ref.entityId || '선택 항목';
   }
   const rowFields = selectionDetailRowFields(row);
   const firstValue = rowFields.find(field => field.value && field.value !== '-')?.value;
@@ -32955,7 +33065,8 @@ function selectionDetailEntityLabel(type) {
     material:'자재 발주', inventory:'재고', workOrder:'생산 지시', defect:'품질 불량',
     checkRecord:'납품 검사', claim:'고객 클레임', rfq:'견적요청서', po:'구매발주서',
     statement:'거래명세표', tax:'세금계산서', quote:'견적서', order:'수주',
-    products:'제품', partners:'거래처', worker:'인사', delivery:'납품', as:'고객 A/S', bom:'BOM'
+    products:'제품', partners:'거래처', worker:'인사', delivery:'납품', as:'고객 A/S', bom:'BOM',
+    memo:'메모', todo:'할 일'
   };
   return labels[type] || '선택';
 }
@@ -33323,6 +33434,17 @@ function selectionDetailHeaderHtml(context, primary) {
     sub = `${typeof claimClientLabel === 'function' ? claimClientLabel(record) : selectionDetailClientName(record)} · ${typeof claimProductLabel === 'function' ? claimProductLabel(record) : selectionDetailProductName(record)}`;
     status = record.status || status || '접수';
   }
+  if (type === 'memo' && record) {
+    title = record.title || ref.entityId || title;
+    const tags = Array.isArray(record.tags) && record.tags.length ? record.tags.slice(0, 2).map(tag => '#' + tag).join(' ') : '태그 없음';
+    sub = `${record.author || '작성자 미지정'} · ${tags}`;
+    status = record.important ? '중요' : '일반';
+  }
+  if (type === 'todo' && record) {
+    title = record.title || ref.entityId || title;
+    sub = `${record.owner || '담당자 미지정'} · ${record.dueDate || '마감일 미설정'}`;
+    status = record.status || status || '대기';
+  }
   if (type === 'inventory' && record) {
     title = record.id || record.code || ref.entityId || title;
     sub = `${record.name || '품목명 없음'} · ${record.type || record.category || '분류 없음'}`;
@@ -33564,6 +33686,37 @@ function selectionDetailBasicRows(primary) {
       { label:'상태', value:record.status || '-' }
     ];
   }
+  if (record && ref && ref.entityType === 'memo') {
+    const tags = Array.isArray(record.tags) && record.tags.length ? record.tags.map(tag => '#' + tag).join(' ') : '-';
+    const linked = record.entityType ? `${record.entityType} ${record.entityId || ''}`.trim() : '일반 메모';
+    const content = String(record.content || '-');
+    const summary = String(record.summary || '').trim();
+    return [
+      { label:'제목', value:record.title || '-' },
+      { label:'내용', value:content.length > 500 ? content.slice(0, 500) + '...' : content },
+      { label:'태그', value:tags },
+      { label:'중요', value:record.important ? '예' : '아니오' },
+      { label:'작성자', value:record.author || '-' },
+      { label:'연결 항목', value:linked },
+      { label:'첨부파일', value:Array.isArray(record.attachments) && record.attachments.length ? `${record.attachments.length}건` : '-' },
+      { label:'AI 요약', value:summary ? (summary.length > 300 ? summary.slice(0, 300) + '...' : summary) : '-' }
+    ];
+  }
+  if (record && ref && ref.entityType === 'todo') {
+    const checklist = Array.isArray(record.checklist) ? record.checklist : [];
+    const done = checklist.filter(item => item && typeof item === 'object' && item.done).length;
+    const linkedMemo = record.memoId && typeof memoList !== 'undefined' ? memoList.find(m => m.id === record.memoId) : null;
+    return [
+      { label:'할 일', value:record.title || '-' },
+      { label:'상세 내용', value:record.content || '-' },
+      { label:'담당자', value:record.owner || '-' },
+      { label:'우선순위', value:record.priority || '-' },
+      { label:'상태', value:record.status || '-' },
+      { label:'마감일', value:record.dueDate || '-' },
+      { label:'체크리스트', value:checklist.length ? `${done}/${checklist.length} 완료` : '-' },
+      { label:'연결 메모', value:linkedMemo ? linkedMemo.title || linkedMemo.id : (record.memoId || '-') }
+    ];
+  }
   if (record && ref && ref.entityType === 'inventory') {
     return [
       { label:'재고코드', value:record.id || record.code || '-' },
@@ -33635,6 +33788,20 @@ function selectionDetailScheduleRows(primary) {
     if (record.deliveryDate) rows.push({ label:'납기', value:record.deliveryDate });
     return rows;
   }
+  if (record && ref && ref.entityType === 'memo') {
+    return [
+      { label:'등록일', value:selectionDetailFormatValue('createdAt', record.createdAt) },
+      { label:'수정일', value:selectionDetailFormatValue('updatedAt', record.updatedAt) }
+    ];
+  }
+  if (record && ref && ref.entityType === 'todo') {
+    return [
+      { label:'시작일', value:record.startDate || '-' },
+      { label:'알림일', value:record.reminderDate || '-' },
+      { label:'등록일', value:selectionDetailFormatValue('createdAt', record.createdAt) },
+      { label:'수정일', value:selectionDetailFormatValue('updatedAt', record.updatedAt) }
+    ];
+  }
   if (record && ref && ['as','defect','checkRecord','claim','inventory','workOrder'].includes(ref.entityType)) return [];
   const fields = primary ? selectionDetailRecordFields(primary.ref, primary.record, primary.row) : [];
   return fields.filter(field => /(금액|단가|합계|총액|일자|납기|예정|등록일|수정일)/.test(field.label)).slice(0, 5);
@@ -33647,6 +33814,20 @@ function selectionDetailWorkActionsHtml(context) {
   }
   const isBulk = context.source === 'bulk';
   const key = context.key || '';
+  if (context.source === 'notes') {
+    const item = context.items && context.items[0];
+    const type = item && item.ref && item.ref.entityType;
+    if (type === 'memo') {
+      return `<button class="selection-detail-work-btn" onclick="runSelectionDetailPanelAction('edit')">수정</button>
+        <button class="selection-detail-work-btn" onclick="runSelectionDetailPanelAction('aiSummary', event)">AI 요약</button>
+        <button class="selection-detail-work-btn" onclick="runSelectionDetailPanelAction('toTodo')">할 일로 이동</button>
+        <button class="selection-detail-work-btn is-danger" onclick="runSelectionDetailPanelAction('delete')">삭제</button>`;
+    }
+    if (type === 'todo') {
+      return `<button class="selection-detail-work-btn" onclick="runSelectionDetailPanelAction('edit')">수정</button>
+        <button class="selection-detail-work-btn is-danger" onclick="runSelectionDetailPanelAction('delete')">삭제</button>`;
+    }
+  }
   if (context.source === 'po') {
     const docMenu = selectionDetailPoDocumentMenuHtml();
     return `
@@ -33685,7 +33866,7 @@ function selectionDetailPoDocumentMenuHtml() {
 function selectionDetailCompletionSpec(ref) {
   const type = ref && ref.entityType;
   if (type === 'material' || type === 'po') return { status:'입고완료', label:'입고 완료 처리' };
-  if (['workOrder','defect','claim','order'].includes(type)) return { status:'완료', label:'완료 처리' };
+  if (['workOrder','defect','claim','order','todo'].includes(type)) return { status:'완료', label:'완료 처리' };
   return null;
 }
 
@@ -34159,6 +34340,10 @@ function selectionDetailHasActiveSelection(context) {
     const table = context.table || MANAGED_TABLES.get(context.token);
     return !!(table && selectedManagedRows(table).length);
   }
+  if (context.source === 'notes') {
+    if (context.key === 'memo') return typeof _memoSelected !== 'undefined' && _memoSelected.size > 0;
+    if (context.key === 'todo') return typeof _todoSelected !== 'undefined' && _todoSelected.size > 0;
+  }
   return true;
 }
 
@@ -34276,6 +34461,10 @@ function clearSelectionDetailSelection() {
   if (context.source === 'bulk' && typeof bulkToggleAll === 'function') bulkToggleAll(context.key, false);
   else if (context.source === 'po' && typeof poToggleAll === 'function') poToggleAll(false);
   else if (context.source === 'managed') clearManagedTableSelection(context.token);
+  else if (context.source === 'notes') {
+    if (context.key === 'memo' && typeof clearMemoSelection === 'function') clearMemoSelection();
+    else if (context.key === 'todo' && typeof clearTodoSelection === 'function') clearTodoSelection();
+  }
   closeSelectionDetailPanel(false);
 }
 
@@ -34288,7 +34477,7 @@ function runSelectionDetailDocMenuAction(event, action) {
   runSelectionDetailPanelAction(action);
 }
 
-function runSelectionDetailPanelAction(action) {
+function runSelectionDetailPanelAction(action, event) {
   const context = selectionDetailContext;
   if (!context || context.count !== 1) return;
   if (context.source === 'po') {
@@ -34301,6 +34490,29 @@ function runSelectionDetailPanelAction(action) {
     else if (action === 'export' && typeof poBulkExport === 'function') poBulkExport();
     else if (action === 'payment' && typeof poBulkPaymentRequest === 'function') poBulkPaymentRequest();
     return;
+  }
+  if (context.source === 'notes') {
+    const primary = context.items && context.items[0];
+    const ref = primary && primary.ref;
+    const id = ref && ref.entityId;
+    if (!id) return;
+    if (action === 'edit') {
+      if (ref.entityType === 'memo' && typeof openMemoEditor === 'function') openMemoEditor(id);
+      else if (ref.entityType === 'todo' && typeof openTodoEditor === 'function') openTodoEditor(id);
+      return;
+    }
+    if (action === 'aiSummary' && ref.entityType === 'memo' && typeof summarizeMemoFromDetailPanel === 'function') {
+      summarizeMemoFromDetailPanel(id, event);
+      return;
+    }
+    if (action === 'toTodo' && ref.entityType === 'memo' && typeof moveSelectedMemosToTodos === 'function') {
+      moveSelectedMemosToTodos();
+      return;
+    }
+    if (action === 'delete') {
+      runSelectionDetailDeleteAction();
+      return;
+    }
   }
   if (context.source === 'bulk' && typeof bulkRun === 'function') {
     if (action === 'po') {
@@ -34324,6 +34536,11 @@ function runSelectionDetailPanelAction(action) {
 function runSelectionDetailDeleteAction() {
   const context = selectionDetailContext;
   if (!context || !context.count) return;
+  if (context.source === 'notes') {
+    if (context.key === 'memo' && typeof deleteSelectedMemos === 'function') deleteSelectedMemos();
+    else if (context.key === 'todo' && typeof deleteSelectedTodos === 'function') deleteSelectedTodos();
+    return;
+  }
   if (context.source === 'bulk' && typeof bulkRun === 'function') {
     bulkRun(context.key, 'delete');
     return;
@@ -34375,6 +34592,7 @@ function runSelectionDetailPrimaryAction() {
       else if (ref.entityType === 'defect' && typeof changeDefectStatus === 'function') { changeDefectStatus(id, '완료'); done++; }
       else if (ref.entityType === 'claim' && typeof changeClaimStatus === 'function') { changeClaimStatus(id, '완료'); done++; }
       else if (ref.entityType === 'order' && typeof changeSODocStatus === 'function') { changeSODocStatus('order', id, '완료'); done++; }
+      else if (ref.entityType === 'todo' && typeof setTodoStatus === 'function') { setTodoStatus(id, '완료'); done++; }
     } catch(e) {
       console.warn('선택 상세 완료 처리 실패:', ref.entityType, id, e);
     }
@@ -34397,6 +34615,7 @@ Object.assign(window, {
   updateSelectionDetailPanelFromManagedTable,
   updateSelectionDetailPanelFromBulk,
   updateSelectionDetailPanelFromPo,
+  showSelectionDetailPanel,
   syncSelectionDetailPanelVisibility,
   runManagedDetailAction,
   openSelectionDetailAudit,

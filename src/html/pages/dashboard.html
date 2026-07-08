@@ -1,0 +1,250 @@
+  <!-- ══════ 1. 종합 대시보드 (공정관리 통합) ══════ -->
+  <div class="content active" id="pg-dashboard">
+
+    <!-- 고정 헤더: 탭 + KPI 카드 -->
+    <div class="dash-sticky-header">
+      <div class="dash-tabs">
+        <button class="dash-tab active" onclick="switchDashTab('overview',this)"><i class="ti ti-layout-dashboard"></i> 종합 현황</button>
+        <button class="dash-tab" onclick="switchDashTab('process',this)"><i class="ti ti-layout-kanban"></i> 공정 관리</button>
+        <button class="dash-tab" onclick="switchDashTab('resources',this)"><i class="ti ti-packages"></i> 자재·품질·재고</button>
+      </div>
+      <div class="metrics" id="dash-kpi">
+    <div class="mc clickable" onclick="go('clients')">
+      <div class="mc-lbl"><i class="ti ti-box" style="color:var(--tx-i);"></i>진행 중 프로젝트</div>
+      <div class="mc-val" style="color:var(--tx-i);">14건</div>
+      <div class="mc-sub">완료 1건 포함 전체 14종</div>
+    </div>
+    <div class="mc clickable" onclick="go('materials')">
+      <div class="mc-lbl"><i class="ti ti-circle-dashed" style="color:var(--tx-t);"></i>발주 대기 자재</div>
+      <div class="mc-val" style="color:var(--tx-d);">8건</div>
+      <div class="mc-sub">발주중 37건 · 입고완료 28건</div>
+    </div>
+    <div class="mc clickable" onclick="go('inventory')">
+      <div class="mc-lbl"><i class="ti ti-packages" style="color:var(--tx-ok)"></i>안전재고 미달</div>
+      <div class="mc-val" style="color:var(--tx-ok);">0개 품목</div>
+      <div class="mc-sub">전체 재고 15종 관리 중</div>
+    </div>
+    <div class="mc clickable" onclick="go('quality')">
+      <div class="mc-lbl"><i class="ti ti-shield-alert" style="color:var(--tx-ok)"></i>미처리 품질장애</div>
+      <div class="mc-val" style="color:var(--tx-ok);">0건</div>
+      <div class="mc-sub">클레임 1건 처리중</div>
+    </div></div>
+    </div>
+
+    <!-- ── Tab 1: 종합 현황 ── -->
+    <div class="dash-panel active" id="dt-overview">
+
+      <!-- 상단 3컬럼: 조치 + 납기 + 납품 -->
+      <div class="row3" style="gap:12px; margin-bottom:12px;">
+        <div class="card">
+          <div class="card-hd"><span class="card-ttl"><i class="ti ti-alert-circle" style="color:var(--tx-d);"></i>조치 필요 현황</span></div>
+          <div id="dash-actions" class="action-row fixed-scroll-area">
+    <div class="action-item urgent" style="cursor:pointer;" onclick="go('materials')">
+      <i class="ti ti-alert-circle"></i>
+      <div style="flex:1;">
+        <div class="action-txt">[자재발주 요청] 각파이프절단</div>
+        <div class="action-sub">윈치크레인 공정자재 · 미발주</div>
+      </div>
+      <i class="ti ti-chevron-right" style="font-size:14px; opacity:.5;"></i>
+    </div>
+    <div class="action-item urgent" style="cursor:pointer;" onclick="go('materials')">
+      <i class="ti ti-alert-circle"></i>
+      <div style="flex:1;">
+        <div class="action-txt">[자재발주 요청] 프로파일</div>
+        <div class="action-sub">오발 압축 시험기 공정자재 · 미발주</div>
+      </div>
+      <i class="ti ti-chevron-right" style="font-size:14px; opacity:.5;"></i>
+    </div>
+    <div class="action-item urgent" style="cursor:pointer;" onclick="go('materials')">
+      <i class="ti ti-alert-circle"></i>
+      <div style="flex:1;">
+        <div class="action-txt">[자재발주 요청] 프로파일</div>
+        <div class="action-sub">팔걸이 내구성 시험기 공정자재 · 미발주</div>
+      </div>
+      <i class="ti ti-chevron-right" style="font-size:14px; opacity:.5;"></i>
+    </div></div>
+        </div>
+        <div class="card">
+          <div class="card-hd">
+            <span class="card-ttl"><i class="ti ti-calendar-due"></i>납기 임박 (30일)</span>
+            <button class="btn btn-sm" onclick="go('orders')"><i class="ti ti-external-link"></i></button>
+          </div>
+          <div id="dash-deadlines" class="fixed-scroll-area"><div class="empty"><i class="ti ti-inbox"></i>현재 납기 일정이 걸려있는 제품군이 없습니다.</div></div>
+        </div>
+        <div class="card">
+          <div class="card-hd">
+            <span class="card-ttl"><i class="ti ti-truck-delivery" style="color:#2b8a3e;"></i>납품 현황</span>
+            <button class="btn btn-sm" onclick="go('deliveries')"><i class="ti ti-external-link"></i></button>
+          </div>
+          <div id="dash-dlv-summary" class="fixed-scroll-area"><div style="padding:10px 4px;color:var(--tx-t);font-size:11px;"><i class="ti ti-truck-delivery" style="opacity:.3;"></i> 납품 기록 없음</div></div>
+        </div>
+      </div>
+
+      <!-- 프로젝트 진행 상태 (종합 현황에 통합) -->
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-building-community"></i>프로젝트별 진행 상태</span>
+          <button class="btn btn-sm" onclick="go('clients')"><i class="ti ti-external-link"></i>수주관리</button>
+        </div>
+        <div id="dash-project-summary" style="overflow-x:auto;">
+    <table data-managed-table="false" style="min-width:860px;">
+      <thead>
+        <tr>
+          <th>고객사</th><th>담당자</th><th>제품명</th><th>납기일</th><th>D-Day</th>
+          <th>공정 단계</th><th>자재 현황</th><th>생산지시</th><th>상태</th><th>바로가기</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table></div>
+      </div>
+    </div>
+
+    <!-- ── Tab 2: 공정 관리 (통합) ── -->
+    <div class="dash-panel" id="dt-process">
+      <!-- 공정 KPI (컴팩트) -->
+      <div class="metrics" id="proc-kpi" style="margin-bottom:12px;">
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-box"></i>전체 제품</div>
+      <div class="mc-val">14건</div>
+      <div style="height:4px; background:var(--bg-t); border-radius:2px; margin-top:6px; overflow:hidden;">
+        <div style="height:100%; width:7%; background:#37b24d; border-radius:2px;"></div>
+      </div>
+      <div class="mc-sub">완료 1건 (7%)</div>
+    </div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-loader" style="color:var(--tx-i);"></i>제조 진행 중</div><div class="mc-val" style="color:var(--tx-i);">11건</div><div class="mc-sub">가공·조립·검사 단계</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-calendar-due" style="color:var(--tx-ok);"></i>14일 이내 납기</div><div class="mc-val" style="color:var(--tx-ok);">0건</div><div class="mc-sub">여유 있음</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-circle-dashed" style="color:var(--tx-w);"></i>미발주 자재</div><div class="mc-val" style="color:var(--tx-w);">8건</div><div class="mc-sub">발주 대기 중</div></div></div>
+
+      <!-- 파이프라인 + 컨트롤 -->
+      <div class="card" style="margin-bottom:12px; padding:12px 14px;">
+        <div class="card-hd" style="margin-bottom:10px;">
+          <span class="card-ttl"><i class="ti ti-git-branch"></i>공정 흐름</span>
+          <div style="display:flex; gap:5px; align-items:center;">
+            <div style="display:flex; gap:2px; background:var(--bg-t); border-radius:var(--rm); padding:2px; margin-right:4px;">
+              <button class="btn btn-sm" id="proc-view-list" onclick="setProcView('list')" style="height:24px; padding:0 9px;"><i class="ti ti-list"></i>목록</button>
+              <button class="btn btn-sm" id="proc-view-kanban" onclick="setProcView('kanban')" style="height:24px; padding:0 9px;"><i class="ti ti-layout-kanban"></i>칸반</button>
+            </div>
+            <select id="proc-fc" onchange="renderProcess()" style="font-size:11px; height:26px; min-width:110px;"><option value="">전체 의뢰 고객사</option></select>
+            <button class="btn btn-sm" onclick="openProcStagePanel()"><i class="ti ti-settings"></i></button>
+          </div>
+        </div>
+        <div id="pipeline-view" class="pipeline">
+      <div class="pipe-step" onclick="togglePipeFilter('설계/도면')" title="설계/도면: 2건">
+        <div class="pipe-step-inner" style="">
+          <div class="pipe-step-name" style="color:var(--tx-s);">설계/도면</div>
+          <div class="pipe-step-count" style="color:#6741d9;">2</div>
+          <div class="pipe-step-bar">
+            <div class="pipe-step-fill" style="width:14%; background:#6741d9;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="pipe-step" onclick="togglePipeFilter('자재발주')" title="자재발주: 0건">
+        <div class="pipe-step-inner" style="">
+          <div class="pipe-step-name" style="color:var(--tx-s);">자재발주</div>
+          <div class="pipe-step-count" style="color:var(--tx-t);">0</div>
+          <div class="pipe-step-bar">
+            <div class="pipe-step-fill" style="width:0%; background:#1c7ed6;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="pipe-step" onclick="togglePipeFilter('가공/제작')" title="가공/제작: 11건">
+        <div class="pipe-step-inner" style="">
+          <div class="pipe-step-name" style="color:var(--tx-s);">가공/제작</div>
+          <div class="pipe-step-count" style="color:#e8590c;">11</div>
+          <div class="pipe-step-bar">
+            <div class="pipe-step-fill" style="width:79%; background:#e8590c;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="pipe-step" onclick="togglePipeFilter('조립')" title="조립: 0건">
+        <div class="pipe-step-inner" style="">
+          <div class="pipe-step-name" style="color:var(--tx-s);">조립</div>
+          <div class="pipe-step-count" style="color:var(--tx-t);">0</div>
+          <div class="pipe-step-bar">
+            <div class="pipe-step-fill" style="width:0%; background:#2b8a3e;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="pipe-step" onclick="togglePipeFilter('배선/전기')" title="배선/전기: 0건">
+        <div class="pipe-step-inner" style="">
+          <div class="pipe-step-name" style="color:var(--tx-s);">배선/전기</div>
+          <div class="pipe-step-count" style="color:var(--tx-t);">0</div>
+          <div class="pipe-step-bar">
+            <div class="pipe-step-fill" style="width:0%; background:#0b7285;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="pipe-step" onclick="togglePipeFilter('검사/시험')" title="검사/시험: 0건">
+        <div class="pipe-step-inner" style="">
+          <div class="pipe-step-name" style="color:var(--tx-s);">검사/시험</div>
+          <div class="pipe-step-count" style="color:var(--tx-t);">0</div>
+          <div class="pipe-step-bar">
+            <div class="pipe-step-fill" style="width:0%; background:#c92a2a;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="pipe-step" onclick="togglePipeFilter('완료')" title="완료: 1건">
+        <div class="pipe-step-inner" style="">
+          <div class="pipe-step-name" style="color:var(--tx-s);">완료</div>
+          <div class="pipe-step-count" style="color:#0ca678;">1</div>
+          <div class="pipe-step-bar">
+            <div class="pipe-step-fill" style="width:7%; background:#0ca678;"></div>
+          </div>
+        </div>
+      </div></div>
+      </div>
+
+      <!-- 단계 설정 패널 -->
+
+      <!-- 칸반 보드 -->
+      <div id="kanban-board" class="kanban" style="margin-bottom:12px;"></div>
+
+      <!-- 전체 목록 (요약 목록 보기) -->
+      <div class="card" id="proc-list-card">
+        <div class="card-hd" style="cursor:pointer;" onclick="toggleProcTable()">
+          <span class="card-ttl"><i class="ti ti-table"></i>제품 공정 현황 목록</span>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <input type="text" id="proc-q" placeholder="검색..." style="width:130px; height:26px; font-size:11px;" oninput="renderProcDetail()" onclick="event.stopPropagation()">
+            <i class="ti ti-chevron-down" id="proc-table-icon" style="font-size:14px; color:var(--tx-t);"></i>
+          </div>
+        </div>
+        <div id="proc-detail-table" style="overflow-x:auto; display:none;">
+    <table class="process-standard-table" style="min-width:1080px;">
+      <thead>
+        <tr>
+          <th>고객사</th><th>제품명</th><th>공정 단계</th><th>납기</th><th>D-Day</th>
+          <th>자재 현황</th><th>생산 진행률</th><th>공정 메모</th><th>수주관리</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table></div>
+      </div>
+    </div>
+
+    <!-- ── Tab 3: 자재·품질·재고 ── -->
+    <div class="dash-panel" id="dt-resources">
+      <div class="row2" style="gap:12px; margin-bottom:12px;">
+        <div class="card">
+          <div class="card-hd">
+            <span class="card-ttl"><i class="ti ti-package-import"></i>제품별 자재 발주율</span>
+            <button class="btn btn-sm" onclick="go('materials')"><i class="ti ti-external-link"></i></button>
+          </div>
+          <div id="dash-mat-by-product"></div>
+        </div>
+        <div class="card">
+          <div class="card-hd">
+            <span class="card-ttl"><i class="ti ti-shield-check"></i>품질 · 클레임</span>
+            <button class="btn btn-sm" onclick="go('quality')"><i class="ti ti-external-link"></i></button>
+          </div>
+          <div id="dash-quality-summary"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-packages"></i>재고 부족 현황</span>
+          <button class="btn btn-sm" onclick="go('inventory')"><i class="ti ti-external-link"></i></button>
+        </div>
+        <div id="dash-inventory-summary"></div>
+      </div>
+    </div>
+
+  </div>

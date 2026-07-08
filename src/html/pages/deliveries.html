@@ -1,0 +1,49 @@
+  <!-- ══════ 납품 현황 ══════ -->
+  <div class="content" id="pg-deliveries">
+    <!-- KPI -->
+    <div class="metrics" id="dlv-kpi">
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-package-export"></i>전체 납품</div><div class="mc-val">0건</div><div class="mc-sub">전체 납품 기록</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-coin" style="color:var(--tx-ok);"></i>납품 총액</div><div class="mc-val" style="color:var(--tx-ok);">₩0</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-calendar" style="color:var(--tx-i);"></i>이번달</div><div class="mc-val" style="color:var(--tx-i);">0건</div><div class="mc-sub">2026-05</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-building-community"></i>납품 고객사</div><div class="mc-val">0개사</div></div></div>
+
+    <!-- 탭 -->
+    <div class="dash-tabs">
+      <button class="dash-tab active" id="dlv-tab-list" onclick="switchDlvTab('list',this)">
+        <i class="ti ti-truck-delivery"></i> 납품 리스트
+      </button>
+      <button class="dash-tab" id="dlv-tab-closed" onclick="switchDlvTab('closed',this)">
+        <i class="ti ti-archive"></i> 종료된 프로젝트 <span id="dlv-closed-badge" style="background:#868e96; color:#fff; border-radius:10px; padding:1px 7px; font-size:10px; font-weight:700; margin-left:4px;">0</span>
+      </button>
+    </div>
+
+    <!-- 탭 1: 납품 리스트 -->
+    <div class="dash-panel active" id="dlv-panel-list">
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-truck-delivery" style="color:#2b8a3e;"></i>납품 완료 리스트</span>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <select id="dlv-filter-client" onchange="renderDeliveries()" style="min-width:130px; height:28px; font-size:11px;"><option value="">전체 고객사</option></select>
+            <input type="text" id="dlv-q" placeholder="제품명·납품번호 검색..." style="width:200px; height:28px; font-size:11px;" oninput="renderDeliveries()">
+          </div>
+        </div>
+        <div id="dlv-table" style="overflow-x:auto;"><div class="empty"><i class="ti ti-inbox"></i>납품 기록이 없습니다. 공정관리에서 [납품] 단계로 변경하면 자동 등록됩니다.</div></div>
+      </div>
+    </div>
+
+    <!-- 탭 2: 종료된 프로젝트 -->
+    <div class="dash-panel" id="dlv-panel-closed">
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-archive" style="color:#868e96;"></i>종료된 프로젝트</span>
+          <button class="btn btn-sm" onclick="showClosedProjects=true; go('clients')">
+            <i class="ti ti-external-link"></i>수주관리에서 보기
+          </button>
+        </div>
+        <div id="dlv-closed-projects"><div style="color:var(--tx-t); font-size:12px; padding:16px 4px; text-align:center;">
+      <i class="ti ti-circle-check" style="font-size:24px; display:block; margin-bottom:8px; color:var(--tx-ok);"></i>
+      종료된 프로젝트가 없습니다.
+    </div></div>
+      </div>
+    </div>
+  </div>

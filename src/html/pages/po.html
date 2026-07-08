@@ -1,0 +1,194 @@
+  <!-- ══════ 구매발주서 ══════ -->
+  <div class="content" id="pg-po">
+    <div class="metrics" id="po-kpi">
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-file-invoice"></i>전체 발주서</div><div class="mc-val" id="po-kpi-total">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('po-fs','발송완료','renderPo')"><div class="mc-lbl"><i class="ti ti-send" style="color:var(--tx-i);"></i>발송완료</div><div class="mc-val" id="po-kpi-sent" style="color:var(--tx-i);">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('po-fs','입고완료','renderPo')"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>입고완료</div><div class="mc-val" id="po-kpi-done" style="color:var(--tx-ok);">0건</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-coin" style="color:var(--tx-w);"></i>발주 총액</div><div class="mc-val" id="po-kpi-amt" style="color:var(--tx-w);">₩0</div></div>
+    </div>
+    <div class="toolbar">
+      <select id="po-fc" onchange="renderPo()" style="min-width:140px;"><option value="">전체 고객사</option></select>
+      <select id="po-fs" onchange="renderPo()">
+        <option value="">전체 상태</option>
+        <option>작성중</option><option>발송완료</option><option>확인완료</option><option>입고완료</option>
+      </select>
+      <input type="text" id="po-q" placeholder="품목명·공급처 검색..." style="min-width:180px;" oninput="renderPo()">
+      <button class="btn btn-primary btn-icon" onclick="openPoAdd()" title="구매발주서 등록"><i class="ti ti-plus"></i></button>
+      <button class="btn btn-icon" onclick="importPoListXLS()" title="엑셀 가져오기"><i class="ti ti-file-import"></i></button>
+    </div>
+    <div class="card">
+      <div id="po-table" style="overflow-x:auto;"><div class="empty"><i class="ti ti-inbox"></i>등록된 구매발주서가 없습니다.</div></div>
+    </div>
+  </div>
+
+  <!-- ══ 거래명세표 ══ -->
+  <div class="content" id="pg-statement">
+    <div class="metrics" id="st-kpi">
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-receipt"></i>전체 명세표</div><div class="mc-val" id="st-k-total">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('st-fs','발송완료','renderSalesDoc','statement')"><div class="mc-lbl"><i class="ti ti-send" style="color:var(--tx-i);"></i>발송완료</div><div class="mc-val" id="st-k-sent" style="color:var(--tx-i);">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('st-fs','수령확인','renderSalesDoc','statement')"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>수령확인</div><div class="mc-val" id="st-k-done" style="color:var(--tx-ok);">0건</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-coin" style="color:var(--tx-w);"></i>거래 총액(VAT 포함)</div><div class="mc-val" id="st-k-amt" style="color:var(--tx-w);">₩0</div></div>
+    </div>
+    <div class="toolbar">
+      <select id="st-fc" onchange="renderSalesDoc('statement')" style="min-width:140px;"><option value="">전체 고객사</option></select>
+      <select id="st-fs" onchange="renderSalesDoc('statement')"><option value="">전체 상태</option><option>작성</option><option>발송완료</option><option>수령확인</option></select>
+      <input type="text" id="st-q" placeholder="품목명·고객사 검색..." style="min-width:180px;" oninput="renderSalesDoc('statement')">
+      <button class="btn btn-primary btn-icon" onclick="openSalesDocAdd('statement')" title="거래명세표 등록"><i class="ti ti-plus"></i></button>
+    </div>
+    <div class="card"><div id="st-table" style="overflow-x:auto;"></div></div>
+  </div>
+
+  <!-- ══ 세금계산서 ══ -->
+  <div class="content" id="pg-taxinvoice">
+    <div class="metrics" id="tx-kpi">
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-file-dollar"></i>전체 계산서</div><div class="mc-val" id="tx-k-total">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('tx-fs','발행완료','renderSalesDoc','tax')"><div class="mc-lbl"><i class="ti ti-stamp" style="color:var(--tx-i);"></i>발행완료</div><div class="mc-val" id="tx-k-sent" style="color:var(--tx-i);">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('tx-fs','전송완료','renderSalesDoc','tax')"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>전송완료</div><div class="mc-val" id="tx-k-done" style="color:var(--tx-ok);">0건</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-coin" style="color:var(--tx-w);"></i>발행 총액(VAT 포함)</div><div class="mc-val" id="tx-k-amt" style="color:var(--tx-w);">₩0</div></div>
+    </div>
+    <div class="toolbar">
+      <select id="tx-fc" onchange="renderSalesDoc('tax')" style="min-width:140px;"><option value="">전체 고객사</option></select>
+      <select id="tx-fs" onchange="renderSalesDoc('tax')"><option value="">전체 상태</option><option>작성</option><option>발행완료</option><option>전송완료</option></select>
+      <input type="text" id="tx-q" placeholder="품목명·고객사 검색..." style="min-width:180px;" oninput="renderSalesDoc('tax')">
+      <button class="btn btn-primary btn-icon" onclick="openSalesDocAdd('tax')" title="세금계산서 등록"><i class="ti ti-plus"></i></button>
+    </div>
+    <div class="card"><div id="tx-table" style="overflow-x:auto;"></div></div>
+  </div>
+
+  <!-- ══ 견적/수주 (탭 통합) ══ -->
+  <div class="content" id="pg-salesdoc">
+    <div class="toolbar" id="sd-tabs">
+      <button class="btn btn-primary" data-sdtab="quote" onclick="switchSalesTab('quote')"><i class="ti ti-file-text"></i>견적서</button>
+      <button class="btn" data-sdtab="order" onclick="switchSalesTab('order')"><i class="ti ti-clipboard-check"></i>수주<span class="nbadge" id="orderBadge" style="display:none;background:#2b8a3e;margin-left:4px;">0</span></button>
+    </div>
+
+    <div id="sd-tab-quote">
+    <div class="metrics" id="qt-kpi">
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-file-text"></i>전체 견적</div><div class="mc-val" id="qt-k-total">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('qt-fs','발송','renderSODoc','quote')"><div class="mc-lbl"><i class="ti ti-send" style="color:var(--tx-i);"></i>발송</div><div class="mc-val" id="qt-k-sent" style="color:var(--tx-i);">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('qt-fs','수주전환','renderSODoc','quote')"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>수주 전환</div><div class="mc-val" id="qt-k-done" style="color:var(--tx-ok);">0건</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-coin" style="color:var(--tx-w);"></i>견적 총액(VAT 포함)</div><div class="mc-val" id="qt-k-amt" style="color:var(--tx-w);">₩0</div></div>
+    </div>
+    <div class="toolbar">
+      <select id="qt-fc" onchange="renderSODoc('quote')" style="min-width:140px;"><option value="">전체 고객사</option></select>
+      <select id="qt-fs" onchange="renderSODoc('quote')"><option value="">전체 상태</option><option>작성</option><option>발송</option><option>협의중</option><option>보류</option><option>수주전환</option></select>
+      <input type="text" id="qt-q" placeholder="품목명·고객사 검색..." style="min-width:180px;" oninput="renderSODoc('quote')">
+      <button class="btn btn-primary btn-icon" onclick="openSODocAdd('quote')" title="견적서 등록"><i class="ti ti-plus"></i></button>
+    </div>
+    <div class="card narrow-table-card"><div id="qt-table" style="overflow-x:auto;"></div></div>
+    </div><!-- /sd-tab-quote -->
+
+    <div id="sd-tab-order" style="display:none;">
+    <div class="metrics" id="so-kpi">
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-clipboard-check"></i>전체 수주</div><div class="mc-val" id="so-k-total">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('so-fs','진행중','renderSODoc','order')"><div class="mc-lbl"><i class="ti ti-loader" style="color:var(--tx-i);"></i>진행중</div><div class="mc-val" id="so-k-sent" style="color:var(--tx-i);">0건</div></div>
+      <div class="mc clickable" onclick="kpiFilter('so-fs','완료','renderSODoc','order')"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>완료</div><div class="mc-val" id="so-k-done" style="color:var(--tx-ok);">0건</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-coin" style="color:var(--tx-w);"></i>수주 총액(VAT 포함)</div><div class="mc-val" id="so-k-amt" style="color:var(--tx-w);">₩0</div></div>
+    </div>
+    <div class="toolbar">
+      <select id="so-fc" onchange="renderSODoc('order')" style="min-width:140px;"><option value="">전체 고객사</option></select>
+      <select id="so-fs" onchange="renderSODoc('order')"><option value="">전체 상태</option><option>수주확정</option><option>진행중</option><option>완료</option></select>
+      <input type="text" id="so-q" placeholder="품목명·고객사 검색..." style="min-width:180px;" oninput="renderSODoc('order')">
+    </div>
+    <div class="card narrow-table-card"><div id="so-table" style="overflow-x:auto;"></div></div>
+    </div><!-- /sd-tab-order -->
+  </div>
+
+<!-- ══ 회사정보 설정 모달 ══ -->
+<div class="overlay" id="company-modal">
+  <div class="dlg" style="max-width:500px;">
+    <div class="dlg-title"><i class="ti ti-building" style="color:var(--tx-i);"></i>회사 정보 설정</div>
+    <div class="dlg-msg" style="margin-bottom:14px;">인쇄 양식 상단에 표시될 회사 정보를 입력하세요.</div>
+    <div class="fg fg2" style="margin-bottom:14px;">
+      <div class="ff"><label>회사명 *</label><input id="ci-name" placeholder="예: ㈜우리제조"></div>
+      <div class="ff"><label>대표이사</label><input id="ci-ceo" placeholder="홍길동"></div>
+      <div class="ff" style="grid-column:span 2;"><label>주소</label><input id="ci-addr" placeholder="경기도 화성시 ..."></div>
+      <div class="ff"><label>전화번호</label><input id="ci-tel" placeholder="031-000-0000"></div>
+      <div class="ff"><label>팩스번호</label><input id="ci-fax" placeholder="031-000-0001"></div>
+      <div class="ff"><label>사업자등록번호</label><input id="ci-bizno" placeholder="123-45-67890"></div>
+      <div class="ff"><label>발주 부서</label><input id="ci-dept" placeholder="구매팀"></div>
+      <div class="ff"><label>업태</label><input id="ci-biztype" placeholder="예: 제조업"></div>
+      <div class="ff"><label>종목</label><input id="ci-bizitem" placeholder="예: 시험기 제조"></div>
+      <div class="ff" style="grid-column:span 2;"><label>이메일(세금계산서)</label><input id="ci-email" type="email" placeholder="tax@company.com"></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('company-modal')">취소</button>
+      <button class="btn btn-primary" onclick="saveCompanySettings()"><i class="ti ti-check"></i>저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ EmailJS 설정 모달 ══ -->
+<div class="overlay" id="emailjs-modal">
+  <div class="dlg" style="max-width:520px;">
+    <div class="dlg-title"><i class="ti ti-mail-cog" style="color:var(--tx-i);"></i>이메일 직접발송 설정 (EmailJS)</div>
+    <div class="dlg-msg" style="margin-bottom:14px; font-size:11.5px;">
+      <strong>1회 설정</strong>으로 브라우저에서 직접 이메일 발송이 가능합니다.<br>
+      <a href="https://www.emailjs.com" target="_blank" style="color:var(--tx-i);">emailjs.com</a>에서 무료 계정 생성 → Gmail/Outlook 연결 → Service ID · Template ID · Public Key 확인
+    </div>
+    <div class="fg" style="gap:10px; margin-bottom:14px;">
+      <div class="ff"><label>Service ID</label><input id="ejs-service" placeholder="service_xxxxxxx"></div>
+      <div class="ff"><label>Template ID</label><input id="ejs-template" placeholder="template_xxxxxxx"></div>
+      <div class="ff"><label>Public Key</label><input id="ejs-pubkey" placeholder="xxxxxxxxxxxxxxxxxxxx"></div>
+    </div>
+    <div style="background:var(--bg-s); border-radius:var(--rm); padding:10px 12px; font-size:11px; color:var(--tx-t); margin-bottom:14px;">
+      템플릿 변수: <code>{{to_email}}</code> · <code>{{subject}}</code> · <code>{{message}}</code> · <code>{{from_name}}</code>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn" onclick="closeModal('emailjs-modal')">취소</button>
+      <button class="btn btn-primary" onclick="saveEmailjsSettings()"><i class="ti ti-check"></i>저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 이메일 발송 모달 ══ -->
+<div class="overlay" id="email-send-modal">
+  <div class="dlg" style="max-width:500px;">
+    <div class="dlg-title"><i class="ti ti-send" style="color:var(--tx-i);"></i>이메일 발송</div>
+    <div class="fg" style="gap:10px; margin-bottom:14px;">
+      <div class="ff"><label>수신 이메일</label><input id="em-to" type="email" placeholder="supplier@example.com"></div>
+      <div class="ff"><label>제목</label><input id="em-subject"></div>
+      <div class="ff"><label>본문 미리보기</label><textarea id="em-body" style="height:140px; font-size:11px; line-height:1.7;"></textarea></div>
+    </div>
+    <!-- 첨부파일 영역 신설 -->
+    <div class="ff" id="em-attachment-area" style="background:var(--bg-s); border:1px solid var(--br); border-radius:var(--rm); padding:10px 12px; display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <i class="ti ti-file-type-pdf" style="font-size:20px; color:#e03131;"></i>
+        <div>
+          <div style="font-weight:600; font-size:11.5px;" id="em-attachment-status">PDF 첨부 준비 중...</div>
+          <div style="font-size:10px; color:var(--tx-t);" id="em-attachment-name">-</div>
+        </div>
+      </div>
+      <div id="em-attachment-spinner" style="font-size:16px; color:var(--tx-i);"><i class="ti ti-loader animate-spin"></i></div>
+    </div>
+    <div id="em-history-panel" style="border:1px solid var(--br); border-radius:var(--rm); padding:10px 12px; margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="font-weight:700;font-size:12px;"><i class="ti ti-history"></i> 최근 발송 내역</div>
+        <span class="bd bd-neu" id="em-history-count" style="font-size:10px;">0건</span>
+      </div>
+      <div id="em-history-list"></div>
+    </div>
+    <div class="dlg-actions" style="flex-direction:column; gap:8px;">
+      <div style="display:flex; gap:8px; justify-content:flex-end;">
+        <button class="btn" onclick="closeModal('email-send-modal')">취소</button>
+        <button class="btn" onclick="doMailto()"><i class="ti ti-mail"></i>메일 앱으로 열기</button>
+        <button class="btn btn-primary" id="email-submit-btn" onclick="doEmailJS()" disabled><i class="ti ti-send"></i>직접 발송</button>
+      </div>
+      <div style="font-size:10px; color:var(--tx-t); text-align:right;">
+        직접 발송: Firebase 이메일 확장 사용
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 이메일 발송 내역 모달 ══ -->
+<div class="overlay" id="email-history-modal">
+  <div class="dlg" style="max-width:640px;">
+    <div class="dlg-title"><i class="ti ti-history" style="color:var(--tx-i);"></i><span id="email-history-title">이메일 발송 내역</span></div>
+    <div id="email-history-summary" style="font-size:12px;color:var(--tx-t);margin-bottom:12px;"></div>
+    <div id="email-history-list" style="max-height:420px;overflow:auto;"></div>
+    <div class="dlg-actions">
+      <button class="btn btn-primary" onclick="closeModal('email-history-modal')">닫기</button>
+    </div>
+  </div>
+</div>

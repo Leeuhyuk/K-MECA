@@ -1,0 +1,68 @@
+  <!-- ══════ 실시간 재고 관리 ══════ -->
+  <div class="content" id="pg-inventory">
+    <div class="metrics" id="inv-kpi">
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-box"></i>관리 품목수</div><div class="mc-val">15개 종</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-package-off" style="color:var(--tx-d);"></i>안전재고 미달</div><div class="mc-val" style="color:var(--tx-d);">0개 품목</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-tools" style="color:var(--tx-i);"></i>자재 원재료 품목</div><div class="mc-val" style="color:var(--tx-i);">5종</div></div>
+    <div class="mc"><div class="mc-lbl"><i class="ti ti-building-factory" style="color:var(--tx-ok);"></i>완제품 보유 재고</div><div class="mc-val" style="color:var(--tx-ok);">13개</div></div></div>
+    <div class="sec-lbl" id="inv-sec-lbl"><i class="ti ti-packages"></i>재고 목록</div>
+
+    <!-- 탭 전환 -->
+    <div class="inv-tabbar" style="display:flex;gap:4px;border-bottom:1px solid var(--br);margin-bottom:14px;">
+      <button class="inv-tab active" data-invtab="list" onclick="switchInvTab('list')"><i class="ti ti-packages"></i> 재고 목록</button>
+      <button class="inv-tab" data-invtab="ledger" onclick="switchInvTab('ledger')"><i class="ti ti-history"></i> 입출고 이력</button>
+    </div>
+
+    <!-- 재고 목록 탭 -->
+    <div id="inv-tab-list">
+    <div class="toolbar">
+      <select id="inv-filter-type" onchange="renderInventory()" style="min-width:140px;">
+        <option value="">전체 세부유형</option>
+      </select>
+      <select id="inv-filter-status" onchange="renderInventory()" style="min-width:140px;">
+        <option value="">전체 재고 상태</option>
+        <option value="normal">정상 수준</option>
+        <option value="low">안전재고 미달</option>
+      </select>
+      <input type="text" id="inv-q" placeholder="재고명, 보관위치 검색..." style="min-width:200px;" oninput="renderInventory()">
+      <button class="btn btn-primary btn-icon" onclick="openInvAdd()" title="신규 재고 품목 등록"><i class="ti ti-plus"></i></button>
+    </div>
+
+    <!-- 재고 추가/수정 패널 -->
+
+    <div class="card inventory-table-card">
+      <div id="inventory-table" style="overflow-x:auto;">
+    <table class="inventory-compact-table" style="min-width: 860px;">
+      <thead>
+        <tr>
+          <th>재고 코드</th>
+          <th>분류</th>
+          <th>품목명</th>
+          <th>현재고</th>
+          <th>안전재고량</th>
+          <th>단위</th>
+          <th>보관 위치</th>
+          <th>재고 상태</th>
+          <th>빠른 수량 조정</th>
+          <th>비고 및 특이사항</th>
+          <th>동작</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table></div>
+    </div>
+    </div><!-- /inv-tab-list -->
+
+    <!-- 입출고 이력 탭 -->
+    <div id="inv-tab-ledger" style="display:none;">
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-ttl"><i class="ti ti-history"></i>입출고 이력</span>
+          <select id="inv-ledger-inv" onchange="renderInventoryLedger()" style="font-size:12px;padding:4px 8px;border:1px solid var(--br);border-radius:var(--rm);background:var(--bg-p);color:var(--tx);">
+            <option value="">전체 품목</option>
+          </select>
+        </div>
+        <div style="overflow-x:auto;" id="inv-ledger-table"></div>
+      </div>
+    </div><!-- /inv-tab-ledger -->
+  </div>
