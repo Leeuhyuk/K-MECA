@@ -51,7 +51,10 @@ export function InventoryTable({ selectable = false, selectedIds = null, onToggl
   const cat = getInvCategory();
 
   if (!rows.length) {
-    return <div className="empty-wrap">{`${cat} 분류에 등록된 재고가 없습니다. [신규 재고 품목 등록] 버튼으로 추가하세요.`}</div>;
+    const msg = `${cat} 분류에 등록된 재고가 없습니다. [신규 재고 품목 등록] 버튼으로 추가하세요.`;
+    const html = g('empty', msg);
+    if (html) return <div dangerouslySetInnerHTML={{ __html: html }} />;
+    return <div className="empty-wrap">{msg}</div>;
   }
 
   return (
