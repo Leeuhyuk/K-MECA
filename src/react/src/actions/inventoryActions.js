@@ -7,7 +7,7 @@ function toObj(form, id) {
     id,
     name: String(form.name || '').trim(),
     category: form.category || '생산부품',
-    type: form.type,
+    type: form.type || '자재',
     unit: form.unit || 'EA',
     qty: parseInt(form.qty, 10) || 0,
     minQty: parseInt(form.minQty, 10) || 0,

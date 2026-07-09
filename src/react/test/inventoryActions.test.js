@@ -68,6 +68,11 @@ describe('saveInventoryBulk', () => {
     expect(globalThis.writeAuditLog).toHaveBeenCalledTimes(2);
   });
 
+  it('행에 type 이 없으면 기본값 "자재" 로 저장한다', () => {
+    saveInventoryBulk({ rows: [{ name: 'A', qty: '1', minQty: '0' }] });
+    expect(globalThis.inventory[0].type).toBe('자재');
+  });
+
   it('유효한 행이 없으면 0 을 반환하고 저장하지 않는다', () => {
     const n = saveInventoryBulk({ rows: [{ name: '', qty: '0', minQty: '0' }] });
     expect(n).toBe(0);
