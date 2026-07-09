@@ -66,8 +66,8 @@ export function InventoryTable({ selectable = false, selectedIds = null, onToggl
       <thead>
         <tr>
           {selectable && <th data-col="select" />}
-          {COLS.map((c) => <SortableTh key={c.key} label={c.label} sortKey={c.key} />)}
-          <th>관리</th>
+          {COLS.map((c, idx) => <SortableTh key={c.key} label={c.label} sortKey={c.key} displayCol={`inventory-${idx}`} />)}
+          <th data-table-display-col="inventory-7">관리</th>
         </tr>
       </thead>
       <tbody>

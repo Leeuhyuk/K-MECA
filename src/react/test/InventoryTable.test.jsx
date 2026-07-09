@@ -43,6 +43,16 @@ describe('InventoryTable', () => {
     ]);
   });
 
+  it('헤더 셀도 data-table-display-col 인덱스(0~7)를 가진다 (RBAC 게이팅이 헤더+본문 함께 숨김)', () => {
+    const { container } = render(<InventoryTable />);
+    const headIdxs = Array.from(container.querySelectorAll('thead th[data-table-display-col]'))
+      .map((el) => el.getAttribute('data-table-display-col'));
+    expect(headIdxs).toEqual([
+      'inventory-0','inventory-1','inventory-2','inventory-3',
+      'inventory-4','inventory-5','inventory-6','inventory-7'
+    ]);
+  });
+
   it('안전재고 미달 행에 경고 아이콘을 표시한다 (qty<minQty)', () => {
     const { container } = render(<InventoryTable />);
     expect(container.querySelector('[data-low="true"]')).toBeTruthy();
