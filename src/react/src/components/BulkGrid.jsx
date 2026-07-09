@@ -3,8 +3,8 @@ import { setCell, addRow, removeRow, applyPaste } from '../hooks/useBulkGrid.js'
 // inventory.js 의 registerBulkEntryTable('inv', ...) 필드 스키마와 동일.
 export const INV_BULK_FIELDS = [
   { name: 'name', label: '품목명', type: 'text', placeholder: '품목명', required: true },
-  { name: 'category', label: '재고 구분', type: 'select', options: ['완제품', '생산부품', '사무비품'], default: '생산부품' },
-  { name: 'type', label: '세부 유형', type: 'select', options: ['자재', '반제품', '완제품', '비품', '소모품', '기타'], default: '자재' },
+  { name: 'category', label: '재고 구분', type: 'select', options: ['완제품', '생산부품', '사무비품'], default: () => globalThis.invCategory || '생산부품' },
+  { name: 'type', label: '세부 유형', type: 'select', options: ['자재', '반제품', '완제품', '비품', '소모품', '기타'], default: () => { const c = globalThis.invCategory; return c === '완제품' ? '완제품' : c === '사무비품' ? '소모품' : '자재'; } },
   { name: 'qty', label: '현재고', type: 'number', min: 0, step: 1, default: '0', required: true },
   { name: 'unit', label: '단위', type: 'select', options: ['EA', '대', 'SET', 'kg', 'M', 'L', 'BOX', 'ton'], default: 'EA' },
   { name: 'minQty', label: '안전재고', type: 'number', min: 0, step: 1, default: '10' },

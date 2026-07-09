@@ -40,6 +40,14 @@ describe('BulkGrid', () => {
     expect(nameInputs[0].value).toBe('B');
   });
 
+  it('빈 행의 재고구분/세부유형 기본값이 현재 invCategory 를 따른다', () => {
+    globalThis.invCategory = '완제품';
+    render(<Harness initial={[{}]} />);
+    expect(document.querySelector('select[data-field="category"]').value).toBe('완제품');
+    expect(document.querySelector('select[data-field="type"]').value).toBe('완제품');
+    delete globalThis.invCategory;
+  });
+
   it('탭 구분 텍스트 붙여넣기가 여러 셀로 분해된다', () => {
     render(<Harness initial={[{}]} />);
     const nameInput = document.querySelector('input[data-field="name"]');
