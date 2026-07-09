@@ -533,6 +533,9 @@ function _markTableDisplayCells(tableKey, table, root){
   if (!wrap) return null;
   const tableEl = wrap.matches && wrap.matches('table') ? wrap : wrap.querySelector('table');
   if (!tableEl || !tableEl.tHead || !tableEl.tHead.rows.length) return null;
+  // React 소유 테이블 등 opt-out 대상은 셀 재마킹을 건너뛴다(React 가 렌더한
+  // data-table-display-col 을 보존 → rbac.js CSS 게이팅은 그대로 작동).
+  if (tableEl.dataset.managedTable === 'false' || tableEl.hasAttribute('data-no-managed-table')) return null;
   tableEl.classList.add('table-display-fluid');
   const head = tableEl.tHead.rows[0];
   const cols = table.cols || [];
@@ -1343,7 +1346,9 @@ function _escRe(s){ return String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
 function enhanceBulk(key){
   const c=BULK_CFG[key]; if(!c) return;
   const cont=document.querySelector(c.sel); if(!cont) return;
-  const tables=[...cont.querySelectorAll('table')]; if(!tables.length) return;
+  // React 소유 테이블 등 opt-out 대상은 일괄선택 체크박스 컬럼 주입에서 제외한다.
+  const tables=[...cont.querySelectorAll('table')].filter(t=>!(t.dataset.managedTable==='false'||t.hasAttribute('data-no-managed-table')));
+  if(!tables.length) return;
   if(!bulkSel[key] || tables.some(table=>!table.dataset.bulk)) bulkSel[key]=new Set();
   // (type,id) 시그니처 함수는 두 번째 인자가 id
   const delRe = c.type

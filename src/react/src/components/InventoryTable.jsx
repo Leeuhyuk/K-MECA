@@ -58,7 +58,11 @@ export function InventoryTable({ selectable = false, selectedIds = null, onToggl
   }
 
   return (
-    <table className="inventory-compact-table" style={{ minWidth: 860 }}>
+    // data-no-managed-table: vanilla 테이블 데코레이터(table-selection·table-reorder·
+    // applyTableDisplaySettings)가 React 소유 DOM 을 변형하지 않도록 opt-out.
+    // (행 선택·컬럼 재정렬/표시설정은 파일럿 비범위 — 후속 React 구현으로 복구)
+    // RBAC 컬럼 게이팅은 rbac.js 의 CSS 가 React 가 렌더한 data-table-display-col 로 계속 작동.
+    <table className="inventory-compact-table" style={{ minWidth: 860 }} data-no-managed-table="true">
       <thead>
         <tr>
           {selectable && <th data-col="select" />}
