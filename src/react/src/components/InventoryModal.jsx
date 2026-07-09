@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { flushSync } from 'react-dom';
+import { useState, useSyncExternalStore } from 'react';
 import { modalStore } from '../bridge/store.js';
 import { getInventory, getInvCategory, g } from '../bridge/globals.js';
 import { saveInventorySingle, saveInventoryBulk } from '../actions/inventoryActions.js';
@@ -20,14 +19,7 @@ function formFromItem(i) {
 }
 
 export function InventoryModal() {
-  const [modal, setModal] = useState(modalStore.getState());
-  // 스토어 변경을 구독한다. vanilla 코드가 modalStore.setState 를 호출하면
-  // flushSync 로 즉시 DOM 에 반영해 모달이 동기적으로 열리도록 한다.
-  useEffect(() => modalStore.subscribe(() => {
-    const next = modalStore.getState();
-    try { flushSync(() => setModal(next)); } catch { setModal(next); }
-  }), []);
-
+  const modal = useSyncExternalStore(modalStore.subscribe, modalStore.getState, modalStore.getState);
   const isEdit = modal?.mode === 'edit';
   const modalKey = modal ? `${modal.mode}:${modal.id ?? ''}` : null;
   const [loadedKey, setLoadedKey] = useState(null);

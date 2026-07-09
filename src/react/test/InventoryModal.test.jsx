@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { InventoryModal } from '../src/components/InventoryModal.jsx';
 import { modalStore, inventoryStore } from '../src/bridge/store.js';
 
@@ -29,7 +29,7 @@ describe('InventoryModal', () => {
 
   it('add 모드에서 제목 "재고 품목 등록" 과 단건 폼을 연다', () => {
     render(<InventoryModal />);
-    modalStore.setState({ mode: 'add' });
+    act(() => { modalStore.setState({ mode: 'add' }); });
     expect(screen.getByText(/재고 품목 등록/)).toBeInTheDocument();
     // add 모드는 일괄 기본이지만 "단건 입력" 탭으로 전환 가능해야 한다
     fireEvent.click(screen.getByRole('button', { name: '단건 입력' }));
@@ -38,7 +38,7 @@ describe('InventoryModal', () => {
 
   it('edit 모드에서 기존 값을 채우고 저장 시 renderInventory 를 호출한다', () => {
     render(<InventoryModal />);
-    modalStore.setState({ mode: 'edit', id: 'INV-1' });
+    act(() => { modalStore.setState({ mode: 'edit', id: 'INV-1' }); });
     const nameInput = screen.getByLabelText(/품목명/);
     expect(nameInput.value).toBe('레일');
     fireEvent.change(nameInput, { target: { value: '레일2' } });
@@ -50,7 +50,7 @@ describe('InventoryModal', () => {
 
   it('취소 버튼은 저장 없이 모달을 닫는다', () => {
     render(<InventoryModal />);
-    modalStore.setState({ mode: 'add' });
+    act(() => { modalStore.setState({ mode: 'add' }); });
     fireEvent.click(screen.getByRole('button', { name: '취소' }));
     expect(modalStore.getState()).toBeNull();
     expect(globalThis.saveStorage).not.toHaveBeenCalled();
