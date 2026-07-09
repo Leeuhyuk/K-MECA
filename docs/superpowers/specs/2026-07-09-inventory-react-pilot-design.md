@@ -43,7 +43,10 @@ React가 소유하는 것은 **① `#inventory-table` 안의 테이블 본체 + 
 React 테이블이 재현하는 DOM 계약:
 - 각 셀에 `data-table-display-col="inventory-{idx}"` → 컬럼 게이팅 CSS 그대로 작동.
 - 수정/삭제 버튼에 `.edit-btn`/`.del-btn` 클래스 유지 → 삭제 게이팅 작동.
-- **행 선택 시스템은 재고 테이블에서 opt-out**(파일럿 비범위). 단, **나중에 React 자체 구현으로 복구**할 수 있게 seam을 남긴다: `InventoryTable`에 `selectable`(기본 off) prop과 맨 앞 선택 컬럼 슬롯을 비워두고, 훗날 `useRowSelection` 훅으로 채우도록 명시.
+- **행 선택 시스템은 재고 테이블에서 opt-out**(파일럿 비범위). 파일럿 동안 체크박스 일괄선택이 일시적으로 사라지는 것은 허용된다. 단, **행 선택은 확정된 후속 요구사항**이며 이후 React 자체 구현으로 반드시 복구한다. 따라서 파일럿에서 복구용 seam을 반드시 남긴다:
+  - `InventoryTable`에 `selectable`(기본 off) prop과 맨 앞 선택 컬럼 슬롯을 비워둔다.
+  - 행 데이터에 안정적인 key(`id`)를 노출해 이후 선택 상태 매핑이 가능하게 한다.
+  - 후속 복구는 `useRowSelection` 훅 + 선택 컬럼 렌더로 채운다(별도 후속 스펙). 이 파일럿에서 그 자리가 구조적으로 확보돼 있는지를 완료 기준에 포함한다.
 
 ### 상태 브리지 (핵심)
 `inventory`는 앱 전역(`data-storage.js:886`)에서 in-place로 변형되는 전역 배열이라 React가 변경을 모른다.
@@ -125,5 +128,5 @@ src/js-dist/inventory-react.js   # 빌드 산출물 (git 커밋)
 
 - **번들 크기**: React 18 인라인 ~140KB 증가. 내부 도구라 허용. 필요 시 preact/compat로 축소 가능(별도 결정).
 - **컬럼 인덱스 표류**: `data-table-display-col` 인덱스가 rbac.js `cols` 순서와 어긋나면 잘못된 컬럼이 숨겨짐 → 테스트로 고정.
-- **행 선택 회귀**: 재고에서 체크박스 일괄선택을 쓰고 있었다면 파일럿 중 일시 사라짐 → seam을 남겨 이후 복구.
+- **행 선택 회귀**: 파일럿 중 체크박스 일괄선택이 일시 사라짐(허용됨). 단 **행 선택 복구는 확정 후속 작업**이므로 seam(`selectable` prop·선택 컬럼 슬롯·안정적 행 key)을 반드시 남기고, 그 확보 여부를 완료 기준에 포함한다.
 - **이중 빌드**: `npm run build`(Vite) → `python build.py` 2단계. README/빌드 문서에 순서 명시 필요.
