@@ -1122,6 +1122,7 @@ async function permToggleRolePage(role, pageId, on){
    각 표의 행 삭제 버튼 onclick에서 id를 추출하므로 렌더 함수 수정 불필요. */
 const BULK_CFG = {
   rfq:        {sel:'#rfq-table',        del:'deleteRfq',       edit:'openRfqEdit',    clone:'cloneRfq', pdf:'openRfqPrint', csv:'exportRfqXLS', email:'openEmailModal', drive:true, toPo:true},
+  po:         {sel:'#po-table',         del:'deletePo',        edit:'openPoEdit',     clone:'clonePo',  pdf:'openPoPrint',  csv:'exportPoXLS', email:'openEmailModal', drive:true, complete:'입고완료'},
   materials:  {sel:'#mat-table',        del:'deleteMat',       edit:'openMatEdit',    clone:'cloneMat', complete:'입고완료'},
   inventory:  {sel:'#inventory-table',  del:'deleteInventory', edit:'openInvEdit'},
   orders:     {sel:'#orders-table',     del:'deleteOrder',     edit:'openOrderEdit',  clone:'cloneOrder', complete:'완료'},
@@ -1140,10 +1141,19 @@ const BULK_CFG = {
   bom:        {sel:'#bom-body',          del:'deleteBom',       edit:'openBomEdit',    clone:'cloneBom'}
 };
 const bulkSel = {};
+
+function setBulkSelectionFromReact(key, ids) {
+  if (!BULK_CFG[key]) return;
+  const cleanIds = (Array.isArray(ids) ? ids : [])
+    .map(id => String(id || '').trim())
+    .filter(Boolean);
+  bulkSel[key] = new Set(cleanIds);
+  if (typeof updateBulkBar === 'function') updateBulkBar(key);
+}
 let _bulkDateViewClearersRegistered = false;
 function bulkEntityType(key) {
   const map = {
-    rfq:'rfq', materials:'material', inventory:'inventory', orders:'workOrder',
+    rfq:'rfq', po:'po', materials:'material', inventory:'inventory', orders:'workOrder',
     defects:'defect', checks:'checkRecord', claims:'claim', deliveries:'delivery',
     workers:'worker', as:'as', partners:'partners', statement:'statement',
     tax:'tax', quote:'quote', order:'order', products:'products', bom:'bom'
@@ -1153,6 +1163,7 @@ function bulkEntityType(key) {
 function bulkAllRecords(key) {
   const map = {
     rfq: typeof rfqList !== 'undefined' ? rfqList : [],
+    po: typeof poList !== 'undefined' ? poList : [],
     materials: typeof materials !== 'undefined' ? materials : [],
     inventory: typeof inventory !== 'undefined' ? inventory : [],
     orders: typeof workOrders !== 'undefined' ? workOrders : [],

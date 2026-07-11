@@ -31,6 +31,10 @@ describe('InventoryModal', () => {
     render(<InventoryModal />);
     act(() => { modalStore.setState({ mode: 'add' }); });
     expect(screen.getByText(/재고 품목 등록/)).toBeInTheDocument();
+    expect(document.querySelector('#inv-modal.side-entry-overlay')).toBeTruthy();
+    expect(document.querySelector('#inv-modal .side-entry-dialog')).toBeTruthy();
+    expect(document.querySelector('#inv-modal .side-entry-body')).toBeTruthy();
+    expect(document.querySelector('#inv-modal .side-entry-actions')).toBeTruthy();
     // add 모드는 일괄 기본이지만 "단건 입력" 탭으로 전환 가능해야 한다
     fireEvent.click(screen.getByRole('button', { name: '단건 입력' }));
     expect(screen.getByLabelText(/품목명/)).toBeInTheDocument();
@@ -46,6 +50,7 @@ describe('InventoryModal', () => {
     expect(globalThis.inventory[0].name).toBe('레일2');
     expect(globalThis.renderInventory).toHaveBeenCalled();
     expect(modalStore.getState()).toBeNull();
+    expect(screen.queryByText('재고 수정')).not.toBeInTheDocument();
   });
 
   it('취소 버튼은 저장 없이 모달을 닫는다', () => {

@@ -13,6 +13,15 @@ function syncFilterDropdowns() {
     fp.innerHTML = '<option value="">전체 제품 목록</option>' + visibleProducts.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===cur?' selected':'')+'>'+esc(p.name)+'</option>').join('');
   }
 }
+function getMaterialsReactState() {
+  return {
+    materials,
+    clients,
+    products,
+    sortState: sortState.materials
+  };
+}
+
 function onMatClientChange() {
   const cid = v('mat-fc');
   const visibleProducts = typeof visibleRecords === 'function' ? visibleRecords(products, 'products') : products;
@@ -311,6 +320,39 @@ function saveMaterialForm() {
   renderMaterials();
   if (typeof scanAndGenerateAlerts === 'function') scanAndGenerateAlerts();
   showToast(editMatId ? '자재 발주가 수정되었습니다.' : '자재 발주가 등록되었습니다.');
+}
+function saveMaterialFromReact(payload) {
+  payload = payload || {};
+  const form = payload.form || {};
+  const rows = Array.isArray(payload.rows) ? payload.rows : [];
+  const editingId = payload.mode === 'edit' ? String(payload.editId || '') : '';
+  const beforeCount = materials.length;
+  const beforeRecord = editingId ? JSON.stringify(materials.find(m => m.id === editingId) || null) : '';
+  editMatId = editingId || null;
+  sv('ma-id', form.id || (editingId || nextMaterialCode()));
+  if (typeof fillClientSelect === 'function') fillClientSelect('ma-client', false);
+  sv('ma-client', form.clientId || '');
+  if (typeof onAddMatClientChange === 'function') onAddMatClientChange();
+  sv('ma-product', form.productId || '');
+  sv('ma-odate', form.orderDate || today());
+  sv('ma-name', form.name || '');
+  sv('ma-spec', form.spec || '');
+  sv('ma-supplier', form.supplier || '');
+  sv('ma-price', form.unitPrice == null ? '' : form.unitPrice);
+  sv('ma-qty', form.qty == null ? '' : form.qty);
+  sv('ma-unit', form.unit || 'EA');
+  sv('ma-status', form.status || '발주전');
+  sv('ma-edate', form.expectedDate || '');
+  sv('ma-note', form.note || '');
+  if (!editingId && payload.bulk) {
+    initBulkEntryTable('mat', rows);
+    setMaterialEntryMode('bulk');
+  } else {
+    setMaterialEntryMode('single');
+  }
+  saveMaterialForm();
+  if (editingId) return beforeRecord !== JSON.stringify(materials.find(m => m.id === editingId) || null);
+  return materials.length > beforeCount;
 }
 function changeMatStatus(id, status) {
   const m = materials.find(x=>x.id===id); if (!m) return;

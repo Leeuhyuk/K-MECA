@@ -3,7 +3,14 @@ import { wireGlobals } from '../src/entry.jsx';
 import { inventoryStore, modalStore } from '../src/bridge/store.js';
 
 describe('wireGlobals', () => {
-  beforeEach(() => { modalStore.setState(null); });
+  beforeEach(() => {
+    modalStore.setState(null);
+    globalThis.getInventoryReactState = () => ({
+      inventory: globalThis.inventory || [],
+      invCategory: globalThis.invCategory || '생산부품',
+      sortState: { key: '', asc: true }
+    });
+  });
 
   it('renderInventory 는 renderInventoryKpi 와 inventoryStore.emit 을 모두 호출한다', () => {
     globalThis.renderInventoryKpi = vi.fn();

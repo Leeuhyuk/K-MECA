@@ -4,6 +4,11 @@ import { saveInventorySingle, saveInventoryBulk } from '../src/actions/inventory
 function installGlobals() {
   globalThis.inventory = [];
   globalThis.invCategory = '생산부품';
+  globalThis.getInventoryReactState = () => ({
+    inventory: globalThis.inventory,
+    invCategory: globalThis.invCategory,
+    sortState: { key: '', asc: true }
+  });
   globalThis.nextCode = vi.fn(() => 'INV-NEW');
   globalThis.stampRecordCreate = vi.fn((rec) => ({ ...rec, _c: 1 }));
   globalThis.stampRecordUpdate = vi.fn((rec) => ({ ...rec, _u: 1 }));
@@ -71,6 +76,18 @@ describe('saveInventoryBulk', () => {
   it('행에 type 이 없으면 기본값 "자재" 로 저장한다', () => {
     saveInventoryBulk({ rows: [{ name: 'A', qty: '1', minQty: '0' }] });
     expect(globalThis.inventory[0].type).toBe('자재');
+  });
+
+  it('완제품 메뉴의 기본 행은 완제품 분류와 유형으로 저장한다', () => {
+    globalThis.invCategory = '완제품';
+    saveInventoryBulk({ rows: [{ name: '완제품 A', qty: '1', minQty: '0' }] });
+    expect(globalThis.inventory[0]).toMatchObject({ category: '완제품', type: '완제품' });
+  });
+
+  it('사무비품 메뉴의 기본 행은 사무비품 분류와 소모품 유형으로 저장한다', () => {
+    globalThis.invCategory = '사무비품';
+    saveInventoryBulk({ rows: [{ name: '비품 A', qty: '1', minQty: '0' }] });
+    expect(globalThis.inventory[0]).toMatchObject({ category: '사무비품', type: '소모품' });
   });
 
   it('유효한 행이 없으면 0 을 반환하고 저장하지 않는다', () => {

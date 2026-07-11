@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { InventoryTable } from '../src/components/InventoryTable.jsx';
 import { inventoryStore } from '../src/bridge/store.js';
 
@@ -22,6 +23,37 @@ const sample = [
   { id: 'INV-1', name: '레일', type: '자재', category: '생산부품', qty: 3, minQty: 5, unit: 'EA', location: 'A-1', note: '메모' },
   { id: 'INV-2', name: '베어링', type: '반제품', category: '생산부품', qty: 20, minQty: 10, unit: 'EA', location: 'B-2', note: '' }
 ];
+
+function SelectionHarness() {
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const toggleRow = (id) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const toggleAll = (ids) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      const allSelected = ids.length > 0 && ids.every((id) => next.has(id));
+      ids.forEach((id) => {
+        if (allSelected) next.delete(id);
+        else next.add(id);
+      });
+      return next;
+    });
+  };
+  return (
+    <InventoryTable
+      selectable
+      selectedIds={selectedIds}
+      onToggleRow={toggleRow}
+      onToggleAll={toggleAll}
+    />
+  );
+}
 
 describe('InventoryTable', () => {
   beforeEach(() => { globalThis.__filters = {}; installGlobals(sample); });
@@ -75,6 +107,42 @@ describe('InventoryTable', () => {
     installGlobals([]);
     render(<InventoryTable />);
     expect(screen.getByText(/등록된 재고가 없습니다/)).toBeInTheDocument();
+  });
+
+  it('행을 클릭하면 선택되고 같은 행을 다시 클릭하면 해제된다', () => {
+    render(<SelectionHarness />);
+    const row = screen.getByText('레일').closest('tr');
+    const checkbox = screen.getByLabelText('레일 선택');
+    expect(checkbox.closest('td')).toHaveClass('table-row-select-td');
+    expect(screen.getByLabelText('현재 표시 재고 전체 선택').closest('th')).toHaveClass('table-row-select-th');
+
+    fireEvent.click(screen.getByText('레일'));
+    expect(checkbox).toBeChecked();
+    expect(row).toHaveClass('table-row-selected');
+
+    fireEvent.click(screen.getByText('레일'));
+    expect(checkbox).not.toBeChecked();
+    expect(row).not.toHaveClass('table-row-selected');
+  });
+
+  it('헤더 체크박스로 현재 표시 행을 전체 선택하고 해제한다', () => {
+    render(<SelectionHarness />);
+    const checkAll = screen.getByLabelText('현재 표시 재고 전체 선택');
+
+    fireEvent.click(checkAll);
+    expect(screen.getByLabelText('레일 선택')).toBeChecked();
+    expect(screen.getByLabelText('베어링 선택')).toBeChecked();
+
+    fireEvent.click(checkAll);
+    expect(screen.getByLabelText('레일 선택')).not.toBeChecked();
+    expect(screen.getByLabelText('베어링 선택')).not.toBeChecked();
+  });
+
+  it('수량 조정 버튼 클릭은 행 선택을 바꾸지 않는다', () => {
+    const { container } = render(<SelectionHarness />);
+    fireEvent.click(container.querySelector('[data-act="inc"]'));
+    expect(screen.getByLabelText('레일 선택')).not.toBeChecked();
+    expect(globalThis.adjustStock).toHaveBeenCalledWith('INV-1', 1);
   });
 
   it('selectable=false(기본)이면 선택 컬럼을 렌더하지 않는다', () => {

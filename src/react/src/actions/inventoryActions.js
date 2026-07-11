@@ -1,13 +1,16 @@
-import { g } from '../bridge/globals.js';
+import { g, getInventory, getInvCategory } from '../bridge/globals.js';
 
-const w = () => globalThis;
+function defaultType(category) {
+  return category === '완제품' ? '완제품' : category === '사무비품' ? '소모품' : '자재';
+}
 
 function toObj(form, id) {
+  const category = form.category || getInvCategory();
   return {
     id,
     name: String(form.name || '').trim(),
-    category: form.category || '생산부품',
-    type: form.type || '자재',
+    category,
+    type: form.type || defaultType(category),
     unit: form.unit || 'EA',
     qty: parseInt(form.qty, 10) || 0,
     minQty: parseInt(form.minQty, 10) || 0,
@@ -21,7 +24,7 @@ export function saveInventorySingle({ editId, form }) {
   const name = String(form.name || '').trim();
   if (!name) { g('showToast', '품목명은 필수입니다.', 'error'); return false; }
 
-  const inventory = w().inventory;
+  const inventory = getInventory();
   const id = editId || form.id || g('nextCode', 'INV', inventory);
   const obj = toObj(form, id);
 
@@ -51,7 +54,7 @@ export function saveInventoryBulk({ rows }) {
   if (invalid) { g('showToast', '품목명과 수량을 확인해주세요.', 'error'); return 0; }
   if (!g('requireCreateAction', 'inventory', '재고 등록')) return 0;
 
-  const inventory = w().inventory;
+  const inventory = getInventory();
   clean.slice().reverse().forEach((r) => {
     const item = g('stampRecordCreate', toObj(r, g('nextCode', 'INV', inventory)), 'inventory');
     inventory.unshift(item);

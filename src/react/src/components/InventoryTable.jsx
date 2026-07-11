@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { inventoryStore } from '../bridge/store.js';
 import { getInventory, getInvCategory, getSortState, g } from '../bridge/globals.js';
 import { SortableTh } from './SortableTh.jsx';
+import { SelectAllCheckbox, isInteractiveTableTarget } from './TableSelection.jsx';
 
 const TYPE_BORDER = { 자재: 'bd-info', 완제품: 'bd-ok', 반제품: 'bd-warn', 소모품: 'bd-neu', 비품: 'bd-neu' };
 const COLS = [
@@ -44,8 +45,7 @@ function filterRows() {
   return rows;
 }
 
-// selectable, onToggleRow, selectedIds: 후속 행 선택 복구용 seam (기본 미사용).
-export function InventoryTable({ selectable = false, selectedIds = null, onToggleRow = null }) {
+export function InventoryTable({ selectable = false, selectedIds = null, onToggleRow = null, onToggleAll = null }) {
   useInventorySnapshot();
   const rows = filterRows();
   const cat = getInvCategory();
@@ -65,7 +65,11 @@ export function InventoryTable({ selectable = false, selectedIds = null, onToggl
     <table className="inventory-compact-table" style={{ minWidth: 860 }} data-no-managed-table="true">
       <thead>
         <tr>
-          {selectable && <th data-col="select" />}
+          {selectable && (
+            <th className="table-row-select-th" data-col="select">
+              <SelectAllCheckbox ids={rows.map((row) => row.id)} selectedIds={selectedIds} onToggleAll={onToggleAll} ariaLabel="현재 표시 재고 전체 선택" />
+            </th>
+          )}
           {COLS.map((c, idx) => <SortableTh key={c.key} label={c.label} sortKey={c.key} displayCol={`inventory-${idx}`} />)}
           <th data-table-display-col="inventory-7">관리</th>
         </tr>
@@ -73,14 +77,25 @@ export function InventoryTable({ selectable = false, selectedIds = null, onToggl
       <tbody>
         {rows.map((i) => {
           const low = i.qty < (i.minQty || 0);
+          const selected = !!selectedIds?.has?.(i.id);
           return (
-            <tr key={i.id} data-low={low ? 'true' : undefined}>
+            <tr
+              key={i.id}
+              data-low={low ? 'true' : undefined}
+              className={selected ? 'table-row-selected' : undefined}
+              onClick={(event) => {
+                if (!isInteractiveTableTarget(event.target)) onToggleRow?.(i.id);
+              }}
+            >
               {selectable && (
-                <td data-col="select">
+                <td className="table-row-select-td" data-col="select">
                   <input
                     type="checkbox"
-                    checked={!!selectedIds?.has?.(i.id)}
+                    className="table-row-select"
+                    aria-label={i.name + ' 선택'}
+                    checked={selected}
                     onChange={() => onToggleRow?.(i.id)}
+                    onClick={(event) => event.stopPropagation()}
                   />
                 </td>
               )}

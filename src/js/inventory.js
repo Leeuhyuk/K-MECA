@@ -28,6 +28,15 @@ function setInventoryEntryMode(mode) {
   const saveBtn = inp('inv-save-btn');
   if (saveBtn && !editInvId) saveBtn.innerHTML = bulk ? '<i class="ti ti-check"></i>일괄 등록' : '<i class="ti ti-check"></i>저장';
 }
+/* React 번들은 classic script의 top-level let/const에 직접 접근할 수 없다.
+   함수 호출 시점의 최신 lexical 상태를 반환해 클라우드 재동기화 후 배열 교체도 반영한다. */
+function getInventoryReactState() {
+  return {
+    inventory,
+    invCategory,
+    sortState: sortState.inventory
+  };
+}
 /* KPI·분류 라벨·세부유형 필터 옵션·이력 드롭다운 갱신만 담당(테이블 렌더 제외).
    React 파일럿에서 window.renderInventory 는 이 함수 + inventoryStore.emit() 로 대체된다.
    vanilla renderInventory() 는 롤백 경로로 그대로 보존한다(테이블 HTML 조립 포함). */

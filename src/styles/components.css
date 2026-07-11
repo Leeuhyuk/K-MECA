@@ -31,6 +31,7 @@
 .ff { position: relative; }
 .field-search { position: relative; width: 100%; }
 .field-search input { padding-right: 36px; }
+.material-product-search-field { grid-column: span 2; }
 .field-search select.linked-hidden-select { display: none; }
 .field-search-btn {
   position: absolute;
@@ -1893,8 +1894,12 @@
 }
 .inventory-compact-table .table-row-select-th,
 .inventory-compact-table .table-row-select-td {
-  width: 34px;
-  min-width: 34px;
+  width: 24px;
+  min-width: 24px;
+  max-width: 24px;
+  padding-right: 4px !important;
+  padding-left: 4px !important;
+  text-align: center !important;
 }
 .inventory-compact-table th:nth-child(2),
 .inventory-compact-table td:nth-child(2) {

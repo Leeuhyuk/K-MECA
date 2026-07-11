@@ -19,6 +19,15 @@ export function createStore(initialState = null) {
   return { subscribe, emit, getVersion, getState, setState };
 }
 
-// 앱 전역 단일 인스턴스.
-export const inventoryStore = createStore();  // 데이터 변경 신호 (state 미사용)
+// 도메인별 단일 인스턴스. 화면이 늘어나도 같은 React 런타임과 저장소 레지스트리를 공유한다.
+const domainStores = new Map();
+
+export function getDomainStore(key) {
+  if (!domainStores.has(key)) domainStores.set(key, createStore());
+  return domainStores.get(key);
+}
+
+export const inventoryStore = getDomainStore('inventory');
+export const materialsStore = getDomainStore('materials');
 export const modalStore = createStore(null);  // { mode:'add'|'edit', id? } | null
+export const materialModalStore = createStore(null); // { mode:'add'|'edit'|'clone', id? } | null

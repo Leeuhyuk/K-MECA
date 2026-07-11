@@ -26,3 +26,18 @@ export function applyPaste(rows, fields, startRow, startCol, text) {
   });
   return next;
 }
+// 세로 라벨 배치: 줄바꿈은 필드 방향, 탭은 항목 방향으로 채운다.
+export function applyTransposedPaste(rows, fields, startItem, startField, text) {
+  const matrix = text.replace(/\r/g, '').split('\n').filter((line) => line.length).map((line) => line.split('\t'));
+  const next = rows.map((row) => ({ ...row }));
+  matrix.forEach((cells, fieldOffset) => {
+    const field = fields[startField + fieldOffset];
+    if (!field) return;
+    cells.forEach((cell, itemOffset) => {
+      const itemIndex = startItem + itemOffset;
+      while (next.length <= itemIndex) next.push({});
+      next[itemIndex][field.name] = String(cell || '').trim();
+    });
+  });
+  return next;
+}

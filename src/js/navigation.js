@@ -402,6 +402,7 @@ function closeSelectionDetailOnNavigation() {
 
 function closeFloatingEditorsOnNavigation() {
   closeSelectionDetailOnNavigation();
+  if (typeof closeReactEntryPanels === 'function') closeReactEntryPanels();
   document.querySelectorAll('.add-panel.open').forEach(panel => panel.classList.remove('open'));
   document.querySelectorAll('.overlay.open').forEach(modal => {
     if (modal.id === 'confirmDlg') return;
