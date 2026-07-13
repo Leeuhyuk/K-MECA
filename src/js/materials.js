@@ -109,7 +109,8 @@ function renderMaterials() {
       '<div class="mc-lbl">'+iconHtml+label+'</div>' +
       '<div class="mc-val"'+(valColor?' style="color:'+valColor+'"':'')+'>'+cnt+'건</div></div>';
     kpi.innerHTML =
-      card('발주전', '발주 전 대기', '<i class="ti ti-circle-dashed"></i>', before, '') +
+      // modern-shell에서는 '발주 전 대기'를 WorkStrip(waiting)이 대체하므로 KPI 중복 카드 제거.
+      (document.body.classList.contains('modern-shell') ? '' : card('발주전', '발주 전 대기', '<i class="ti ti-circle-dashed"></i>', before, '')) +
       card('발주중', '외주 배송중', '<i class="ti ti-truck-delivery" style="color:var(--tx-i);"></i>', shipping, 'var(--tx-i)') +
       card('입고완료', '창고 입고 완료', '<i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>', done, 'var(--tx-ok)') +
       '<div class="mc"><div class="mc-lbl"><i class="ti ti-coin"></i>예산 소요 규모</div><div class="mc-val">'+fmtW(totalAmt)+'</div></div>';

@@ -9,6 +9,8 @@ import { SelectionDetailPanel } from './components/SelectionDetailPanel.jsx';
 import { LegacyTableIsland } from './components/LegacyTableIsland.jsx';
 import { useDomainSelection } from './hooks/useDomainSelection.js';
 import { InventoryModal } from './components/InventoryModal.jsx';
+import { AppShellNavigation } from './components/AppShellNavigation.jsx';
+import { TodayWorkStrip, clearModernInventoryWorkFilter, clearModernMaterialsWorkFilter } from './components/TodayWorkStrip.jsx';
 
 const LEGACY_TABLE_ISLANDS = [
   { key: 'rfq', entityType: 'rfq', selector: '#rfq-table', render: 'renderRfq' },
@@ -54,6 +56,12 @@ function wireLegacyTableIslandRenders(w) {
 // window.* 전역 재바인딩. inventory.js include 이후 실행되어 승리한다.
 export function wireGlobals() {
   const w = globalThis;
+
+  // 재고/자재 필터·검색의 인라인 핸들러(onchange/oninput)가 호출하는 전역.
+  // import만 하고 전역에 붙이지 않으면 번들러가 미사용 export로 tree-shaking 제거해
+  // ReferenceError로 필터·검색이 전면 동작 불능이 된다.
+  w.clearModernInventoryWorkFilter = clearModernInventoryWorkFilter;
+  w.clearModernMaterialsWorkFilter = clearModernMaterialsWorkFilter;
 
   w.closeReactEntryPanels = function () {
     modalStore.setState(null);
@@ -211,7 +219,35 @@ function mountLegacyTableIsland(config) {
   );
 }
 
+function mountAppShellNavigation() {
+  const main = document.querySelector('.main');
+  if (!main) return;
+  let host = document.getElementById('modern-app-nav-root');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'modern-app-nav-root';
+    main.insertAdjacentElement('beforebegin', host);
+  }
+  createRoot(host).render(<AppShellNavigation />);
+}
+function mountTodayWorkStrip(domain, pageSelector) {
+  const page = document.querySelector(pageSelector);
+  if (!page) return;
+  const rootId = `${domain}-today-work-react-root`;
+  let host = document.getElementById(rootId);
+  if (!host) {
+    host = document.createElement('div');
+    host.id = rootId;
+    host.className = 'modern-work-queue-root';
+    page.insertAdjacentElement('afterbegin', host);
+  }
+  createRoot(host).render(<TodayWorkStrip domain={domain} />);
+}
+
 function mount() {
+  mountAppShellNavigation();
+  mountTodayWorkStrip('materials', '#pg-materials');
+  mountTodayWorkStrip('inventory', '#pg-inventory');
   const host = document.getElementById('inventory-table');
   if (host) {
     host.innerHTML = '';

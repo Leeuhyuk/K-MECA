@@ -53,7 +53,7 @@ function renderInventoryKpi() {
   const kpi = inp('inv-kpi');
   if (kpi) kpi.innerHTML =
     '<div class="mc"><div class="mc-lbl"><i class="ti '+catIcon+'"></i>'+invCategory+' 품목수</div><div class="mc-val">'+total+'개 종</div></div>' +
-    '<div class="mc clickable'+(stCur==='low'?' kpi-active':'')+'" onclick="kpiFilter(\'inv-filter-status\',\'low\',\'renderInventory\')"><div class="mc-lbl"><i class="ti ti-package-off" style="color:var(--tx-d);"></i>안전재고 미달</div><div class="mc-val" style="color:var(--tx-d);">'+below+'개 품목</div></div>' +
+    (document.body.classList.contains('modern-shell') ? '' : '<div class="mc clickable'+(stCur==='low'?' kpi-active':'')+'" onclick="kpiFilter(\'inv-filter-status\',\'low\',\'renderInventory\')"><div class="mc-lbl"><i class="ti ti-package-off" style="color:var(--tx-d);"></i>안전재고 미달</div><div class="mc-val" style="color:var(--tx-d);">'+below+'개 품목</div></div>') +
     '<div class="mc"><div class="mc-lbl"><i class="ti ti-stack-2" style="color:var(--tx-i);"></i>총 보유 수량</div><div class="mc-val" style="color:var(--tx-i);">'+totalQty+'</div></div>' +
     '<div class="mc"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>안전재고 충족률</div><div class="mc-val" style="color:var(--tx-ok);">'+okRate+'%</div></div>';
   const typeSel = inp('inv-filter-type');
@@ -91,7 +91,7 @@ function renderInventory() {
   const kpi = inp('inv-kpi');
   if (kpi) kpi.innerHTML =
     '<div class="mc"><div class="mc-lbl"><i class="ti '+catIcon+'"></i>'+invCategory+' 품목수</div><div class="mc-val">'+total+'개 종</div></div>' +
-    '<div class="mc clickable'+(stCur==='low'?' kpi-active':'')+'" onclick="kpiFilter(\'inv-filter-status\',\'low\',\'renderInventory\')"><div class="mc-lbl"><i class="ti ti-package-off" style="color:var(--tx-d);"></i>안전재고 미달</div><div class="mc-val" style="color:var(--tx-d);">'+below+'개 품목</div></div>' +
+    (document.body.classList.contains('modern-shell') ? '' : '<div class="mc clickable'+(stCur==='low'?' kpi-active':'')+'" onclick="kpiFilter(\'inv-filter-status\',\'low\',\'renderInventory\')"><div class="mc-lbl"><i class="ti ti-package-off" style="color:var(--tx-d);"></i>안전재고 미달</div><div class="mc-val" style="color:var(--tx-d);">'+below+'개 품목</div></div>') +
     '<div class="mc"><div class="mc-lbl"><i class="ti ti-stack-2" style="color:var(--tx-i);"></i>총 보유 수량</div><div class="mc-val" style="color:var(--tx-i);">'+totalQty+'</div></div>' +
     '<div class="mc"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>안전재고 충족률</div><div class="mc-val" style="color:var(--tx-ok);">'+okRate+'%</div></div>';
 

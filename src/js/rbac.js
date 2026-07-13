@@ -90,6 +90,7 @@ function applyRoleGating(){
     group.style.display = items.some(item => item.style.display !== 'none') ? '' : 'none';
   });
   if (typeof syncSidebarExpandableGroups === 'function') syncSidebarExpandableGroups();
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('mes:permissions'));
 }
 /* ════════ 열(컬럼) 단위 권한 ════════
    각 표의 컬럼을 역할별로 숨길 수 있음. 표시 설정과 같은 컬럼 표식 방식이라 재렌더에도 자동 적용. */
@@ -213,7 +214,7 @@ async function cloudLoadRole(){
     if (usnap.exists){
       const d=usnap.data();
       role = isBoot ? 'admin' : (d.role||'staff');         // 부트스트랩은 항상 admin
-      active = isBoot ? true : (d.active!==false);
+      active = isBoot ? true : (d.active===true);
       name = d.name || signupName;
       if (signupName && !d.name) { try { await uref.update({ name:signupName }); } catch(e){} }  // 이름 보강
     } else {

@@ -3,6 +3,9 @@ import { materialsStore } from '../bridge/store.js';
 import { getClients, getMaterials, getMaterialsSortState, getProducts, g } from '../bridge/globals.js';
 import { SelectAllCheckbox, isInteractiveTableTarget } from './TableSelection.jsx';
 import { SortableTh } from './SortableTh.jsx';
+import { EmptyState } from './ui/EmptyState.jsx';
+import { IconButton } from './ui/IconButton.jsx';
+import { StatusPill } from './ui/StatusPill.jsx';
 
 const COLS = [
   { key: 'id', label: '자재코드' },
@@ -20,6 +23,7 @@ const COLS = [
 ];
 const STATUSES = ['발주전', '발주중', '입고완료', '지연'];
 const STATUS_CLASS = { 입고완료: 'is-ok', 지연: 'is-danger', 발주중: 'is-warn', 발주전: 'is-muted' };
+const STATUS_TONE = { 입고완료: 'success', 지연: 'danger', 발주중: 'info', 발주전: 'neutral' };
 
 function useMaterialsSnapshot() {
   useSyncExternalStore(materialsStore.subscribe, materialsStore.getVersion, materialsStore.getVersion);
@@ -42,6 +46,9 @@ function materialViewState() {
   const productFilter = g('v', 'mat-fp') || '';
   const statusFilter = g('v', 'mat-fs') || '';
   const query = String(g('v', 'mat-q') || '').toLowerCase();
+  const workFilter = globalThis.__modernMaterialsWorkFilter || '';
+  const now = new Date();
+  const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   let rows = getMaterials().filter((material) => {
     if (g('canViewRecord', material, 'material') === false) return false;
@@ -51,6 +58,8 @@ function materialViewState() {
     if (clientFilter && product?.clientId !== clientFilter) return false;
     if (productFilter && material.productId !== productFilter) return false;
     if (statusFilter && material.status !== statusFilter) return false;
+    if (workFilter === 'dueToday' && (material.status === '입고완료' || material.expectedDate !== todayKey)) return false;
+    if (workFilter === 'overdue' && (material.status === '입고완료' || !(material.status === '지연' || (material.expectedDate && material.expectedDate < todayKey)))) return false;
     if (query) {
       const haystack = [
         material.id, material.name, material.supplier, product?.name, client?.name
@@ -86,21 +95,39 @@ export function MaterialsTable({ selectable = false, selectedIds = null, onToggl
   const { rows, clientById, productById } = materialViewState();
 
   if (!rows.length) {
-    const message = '자재 발주 내역이 없습니다.';
-    const html = g('empty', message);
-    if (html) return <div dangerouslySetInnerHTML={{ __html: html }} />;
-    return <div className="empty-wrap">{message}</div>;
+    return (
+      <EmptyState
+        icon="ti-truck-loading"
+        title="자재 발주 내역이 없습니다."
+        description="필터를 초기화하거나 신규 자재 발주를 등록해 주세요."
+      />
+    );
   }
 
   const visibleTotal = rows.reduce((sum, material) => sum + materialAmount(material), 0);
 
   return (
     <table
-      className="materials-react-table"
-      style={{ minWidth: 1080 }}
+      className="materials-react-table modern-data-table"
       data-no-managed-table="true"
       data-react-domain="materials"
     >
+      <colgroup>
+        {selectable && <col className="modern-col-select" />}
+        <col className="modern-col-code" />
+        <col className="modern-col-client" />
+        <col className="modern-col-product" />
+        <col className="modern-col-material" />
+        <col className="modern-col-supplier" />
+        <col className="modern-col-money" />
+        <col className="modern-col-unit-quantity" />
+        <col className="modern-col-total" />
+        <col className="modern-col-date" />
+        <col className="modern-col-date" />
+        <col className="modern-col-status" />
+        <col className="modern-col-note" />
+        <col className="modern-col-actions" />
+      </colgroup>
       <thead>
         <tr>
           {selectable && (
@@ -122,7 +149,7 @@ export function MaterialsTable({ selectable = false, selectedIds = null, onToggl
               displayCol={'materials-' + index}
             />
           ))}
-          <th data-table-display-col="materials-12">관리작업</th>
+          <th data-table-display-col="materials-12">관리</th>
         </tr>
       </thead>
       <tbody>
@@ -152,21 +179,25 @@ export function MaterialsTable({ selectable = false, selectedIds = null, onToggl
                   />
                 </td>
               )}
-              <td data-table-display-col="materials-0">{material.id}</td>
+              <td data-table-display-col="materials-0" className="modern-cell-code">{material.id}</td>
               <td data-table-display-col="materials-1">{client?.name || '—'}</td>
-              <td data-table-display-col="materials-2" style={{ fontWeight: 600, fontSize: 11 }}>{product?.name || '—'}</td>
-              <td data-table-display-col="materials-3" style={{ fontWeight: 700 }}>
+              <td data-table-display-col="materials-2" className="modern-cell-secondary">{product?.name || '—'}</td>
+              <td data-table-display-col="materials-3" className="modern-cell-primary">
                 {material.name}
-                {material.spec && <div style={{ fontSize: 10.5, color: 'var(--tx-t)', fontWeight: 500 }}>{material.spec}</div>}
+                {material.spec && <span className="modern-cell-sub">{material.spec}</span>}
               </td>
               <td data-table-display-col="materials-4">{material.supplier || '—'}</td>
-              <td data-table-display-col="materials-5" style={{ fontWeight: 600 }}>{formatWon(material.unitPrice)}</td>
+              <td data-table-display-col="materials-5" className="modern-cell-money">{formatWon(material.unitPrice)}</td>
               <td data-table-display-col="materials-6">{material.qty} {material.unit}</td>
-              <td data-table-display-col="materials-7" style={{ fontWeight: 700, color: 'var(--tx-i)' }}>{formatWon(materialAmount(material))}</td>
+              <td data-table-display-col="materials-7" className="modern-cell-total">{formatWon(materialAmount(material))}</td>
               <td data-table-display-col="materials-8">{material.orderDate || '—'}</td>
               <td data-table-display-col="materials-9">{material.expectedDate || '—'}</td>
               <td data-table-display-col="materials-10">
-                <span className={'readonly-status-pill ' + statusClass}>{material.status || '—'}</span>
+                <StatusPill
+                  status={material.status || '—'}
+                  tone={STATUS_TONE[material.status]}
+                  className={`readonly-status-pill ${statusClass}`}
+                />
                 <select
                   className="stat-sel readonly-status-source"
                   aria-label={material.name + ' 상태'}
@@ -178,25 +209,21 @@ export function MaterialsTable({ selectable = false, selectedIds = null, onToggl
                   {STATUSES.map((status) => <option key={status}>{status}</option>)}
                 </select>
               </td>
-              <td
-                data-table-display-col="materials-11"
-                style={{ fontSize: 11, color: 'var(--tx-t)', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis' }}
-                title={material.note || ''}
-              >
+              <td data-table-display-col="materials-11" className="modern-cell-note" title={material.note || ''}>
                 {material.note || '—'}
               </td>
-              <td data-table-display-col="materials-12" style={{ whiteSpace: 'nowrap' }}>
-                <button className="edit-btn" onClick={() => g('openMatEdit', material.id)}><i className="ti ti-edit" />수정</button>
-                <button className="del-btn" style={{ marginLeft: 4 }} onClick={() => g('deleteMat', material.id)} aria-label={material.name + ' 삭제'}><i className="ti ti-trash" /></button>
+              <td data-table-display-col="materials-12" className="modern-cell-actions">
+                <IconButton icon="ti-edit" label={`${material.name} 수정`} className="edit-btn" onClick={() => g('openMatEdit', material.id)} />
+                <IconButton icon="ti-trash" label={`${material.name} 삭제`} tone="danger" className="del-btn" onClick={() => g('deleteMat', material.id)} />
               </td>
             </tr>
           );
         })}
       </tbody>
       <tfoot>
-        <tr style={{ background: 'var(--bg-s)' }}>
-          <td colSpan={selectable ? 8 : 7} style={{ fontSize: 11, fontWeight: 700 }}>조건부 합계 건수: {rows.length}건</td>
-          <td style={{ fontWeight: 700, color: 'var(--tx-i)' }}>{formatWon(visibleTotal)}</td>
+        <tr className="modern-table-summary-row">
+          <td colSpan={selectable ? 8 : 7}>조건부 합계 건수: {rows.length}건</td>
+          <td className="modern-cell-total">{formatWon(visibleTotal)}</td>
           <td colSpan="5" />
         </tr>
       </tfoot>

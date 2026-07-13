@@ -1905,19 +1905,25 @@ function renderSelectionDetailPanel(context) {
       <button class="icon-btn" type="button" onclick="closeSelectionDetailPanel(true)" title="닫기"><i class="ti ti-x"></i></button>
     </div>
     <div class="selection-detail-body">
-      ${selectionDetailHeaderHtml(context, primary)}
-      <section class="selection-detail-section selection-detail-work-section">
-        <div class="selection-detail-section-title">선택 작업</div>
-        <div class="selection-detail-work-actions">${selectionDetailWorkActionsHtml(context)}</div>
-      </section>
-      ${editHtml}
-      ${infoHtml}
-      ${listHtml}
-      <section class="selection-detail-section">
-        <div class="selection-detail-section-title">최근 이력</div>
-        ${selectionDetailTimelineHtml(refs)}
-      </section>
-      ${selectionDetailEmailPreviewHtml(refs)}
+      <div data-selection-detail-static>
+        ${selectionDetailHeaderHtml(context, primary)}
+        <section class="selection-detail-section selection-detail-work-section">
+          <div class="selection-detail-section-title">선택 작업</div>
+          <div class="selection-detail-work-actions">${selectionDetailWorkActionsHtml(context)}</div>
+        </section>
+      </div>
+      <div data-selection-detail-tab="overview">
+        ${editHtml}
+        ${infoHtml}
+      </div>
+      <div data-selection-detail-tab="items">${listHtml}</div>
+      <div data-selection-detail-tab="history">
+        <section class="selection-detail-section">
+          <div class="selection-detail-section-title">최근 이력</div>
+          ${selectionDetailTimelineHtml(refs)}
+        </section>
+        ${selectionDetailEmailPreviewHtml(refs)}
+      </div>
     </div>
     <div class="selection-detail-actions">${selectionDetailBottomActionsHtml(context)}</div>`;
   if (context.source === 'bulk' || context.source === 'react-domain') {

@@ -3,3 +3,16 @@ __pycache__/
 *.pyc
 firestore-backups/
 .firebase-cli-config/
+
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# 잡파일/로컬 백업/일회성 산출물
+*.zip
+backups/
+output/
+/index - *.html
+# 목업 생성 스크립트/이미지(로컬 참고용, 커밋 제외)
+tools/draw_registration_panel_*.py
+docs/generated-images/

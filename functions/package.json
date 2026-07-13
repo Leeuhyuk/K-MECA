@@ -8,6 +8,7 @@
   "main": "index.js",
   "scripts": {
     "serve": "firebase emulators:start --only functions",
+    "test:rules": "node test/run-firestore-rules.mjs",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log"
   },
@@ -15,5 +16,9 @@
     "firebase-admin": "^12.6.0",
     "firebase-functions": "^6.1.0",
     "popbill": "^1.62.0"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
+    "firebase": "^12.16.0"
   }
 }

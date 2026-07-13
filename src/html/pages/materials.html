@@ -9,10 +9,10 @@
     <div class="mc"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>창고 입고 완료</div><div class="mc-val" style="color:var(--tx-ok);">28건</div></div>
     <div class="mc"><div class="mc-lbl"><i class="ti ti-coin"></i>예산 소요 규모</div><div class="mc-val">₩501만</div><div class="mc-sub">실납품 완료액 ₩60만</div></div></div>
       <div class="toolbar" style="margin-bottom:0;">
-        <select id="mat-fc" onchange="onMatClientChange()" style="min-width:140px;"><option value="">전체 의뢰 고객사</option></select>
-        <select id="mat-fp" onchange="renderMaterials()" style="min-width:170px;"><option value="">전체 제품 목록</option></select>
-        <select id="mat-fs" onchange="renderMaterials()"><option value="">전체 입고 상태</option><option>발주전</option><option>발주중</option><option>입고완료</option><option>지연</option></select>
-        <input type="text" id="mat-q" placeholder="자재명 또는 발주처 검색..." style="min-width:180px;" oninput="renderMaterials()">
+        <select id="mat-fc" onchange="clearModernMaterialsWorkFilter();onMatClientChange()" style="min-width:140px;"><option value="">전체 의뢰 고객사</option></select>
+        <select id="mat-fp" onchange="clearModernMaterialsWorkFilter();renderMaterials()" style="min-width:170px;"><option value="">전체 제품 목록</option></select>
+        <select id="mat-fs" onchange="clearModernMaterialsWorkFilter();renderMaterials()"><option value="">전체 입고 상태</option><option>발주전</option><option>발주중</option><option>입고완료</option><option>지연</option></select>
+        <input type="text" id="mat-q" placeholder="자재명 또는 발주처 검색..." style="min-width:180px;" oninput="clearModernMaterialsWorkFilter();renderMaterials()">
         <button class="btn btn-primary btn-icon" onclick="openMatAdd()" title="신규 자재 발주 요청"><i class="ti ti-plus"></i></button>
         <label class="btn btn-icon pc-only" style="cursor:pointer; margin:0;" title="발주서 XLS 가져오기 (자재 수급에 자동 추가)">
           <i class="ti ti-file-import"></i>

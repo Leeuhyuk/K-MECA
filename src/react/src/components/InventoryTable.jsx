@@ -3,6 +3,9 @@ import { inventoryStore } from '../bridge/store.js';
 import { getInventory, getInvCategory, getSortState, g } from '../bridge/globals.js';
 import { SortableTh } from './SortableTh.jsx';
 import { SelectAllCheckbox, isInteractiveTableTarget } from './TableSelection.jsx';
+import { EmptyState } from './ui/EmptyState.jsx';
+import { IconButton } from './ui/IconButton.jsx';
+import { QuantityStepper } from './ui/QuantityStepper.jsx';
 
 const TYPE_BORDER = { 자재: 'bd-info', 완제품: 'bd-ok', 반제품: 'bd-warn', 소모품: 'bd-neu', 비품: 'bd-neu' };
 const COLS = [
@@ -25,10 +28,12 @@ function filterRows() {
   const ft = g('v', 'inv-filter-type') || '';
   const st = g('v', 'inv-filter-status') || '';
   const q = (g('v', 'inv-q') || '').toLowerCase();
+  const workFilter = globalThis.__modernInventoryWorkFilter || '';
   rows = rows.filter((i) => {
     if (ft && i.type !== ft) return false;
     if (st === 'low' && !(i.qty < (i.minQty || 0))) return false;
     if (st === 'normal' && (i.qty < (i.minQty || 0))) return false;
+    if (workFilter === 'emptyStock' && Number(i.qty) !== 0) return false;
     if (q && !String(i.id).toLowerCase().includes(q) && !String(i.name || '').toLowerCase().includes(q) && !String(i.location || '').toLowerCase().includes(q)) return false;
     return true;
   });
@@ -51,18 +56,28 @@ export function InventoryTable({ selectable = false, selectedIds = null, onToggl
   const cat = getInvCategory();
 
   if (!rows.length) {
-    const msg = `${cat} 분류에 등록된 재고가 없습니다. [신규 재고 품목 등록] 버튼으로 추가하세요.`;
-    const html = g('empty', msg);
-    if (html) return <div dangerouslySetInnerHTML={{ __html: html }} />;
-    return <div className="empty-wrap">{msg}</div>;
+    return (
+      <EmptyState
+        icon="ti-package-off"
+        title={`${cat} 분류에 등록된 재고가 없습니다.`}
+        description="상단의 신규 재고 품목 등록 버튼으로 추가할 수 있습니다."
+      />
+    );
   }
 
   return (
-    // data-no-managed-table: vanilla 테이블 데코레이터(table-selection·table-reorder·
-    // applyTableDisplaySettings)가 React 소유 DOM 을 변형하지 않도록 opt-out.
-    // (행 선택·컬럼 재정렬/표시설정은 파일럿 비범위 — 후속 React 구현으로 복구)
-    // RBAC 컬럼 게이팅은 rbac.js 의 CSS 가 React 가 렌더한 data-table-display-col 로 계속 작동.
-    <table className="inventory-compact-table" style={{ minWidth: 860 }} data-no-managed-table="true">
+    <table className="inventory-compact-table modern-data-table" data-no-managed-table="true">
+      <colgroup>
+        {selectable && <col className="modern-col-select" />}
+        <col className="modern-col-code" />
+        <col className="modern-col-name" />
+        <col className="modern-col-type" />
+        <col className="modern-col-quantity" />
+        <col className="modern-col-safe-stock" />
+        <col className="modern-col-location" />
+        <col className="modern-col-note" />
+        <col className="modern-col-actions" />
+      </colgroup>
       <thead>
         <tr>
           {selectable && (
@@ -70,21 +85,23 @@ export function InventoryTable({ selectable = false, selectedIds = null, onToggl
               <SelectAllCheckbox ids={rows.map((row) => row.id)} selectedIds={selectedIds} onToggleAll={onToggleAll} ariaLabel="현재 표시 재고 전체 선택" />
             </th>
           )}
-          {COLS.map((c, idx) => <SortableTh key={c.key} label={c.label} sortKey={c.key} displayCol={`inventory-${idx}`} />)}
+          {COLS.map((column, index) => (
+            <SortableTh key={column.key} label={column.label} sortKey={column.key} displayCol={`inventory-${index}`} />
+          ))}
           <th data-table-display-col="inventory-7">관리</th>
         </tr>
       </thead>
       <tbody>
-        {rows.map((i) => {
-          const low = i.qty < (i.minQty || 0);
-          const selected = !!selectedIds?.has?.(i.id);
+        {rows.map((item) => {
+          const low = item.qty < (item.minQty || 0);
+          const selected = !!selectedIds?.has?.(item.id);
           return (
             <tr
-              key={i.id}
+              key={item.id}
               data-low={low ? 'true' : undefined}
               className={selected ? 'table-row-selected' : undefined}
               onClick={(event) => {
-                if (!isInteractiveTableTarget(event.target)) onToggleRow?.(i.id);
+                if (!isInteractiveTableTarget(event.target)) onToggleRow?.(item.id);
               }}
             >
               {selectable && (
@@ -92,30 +109,34 @@ export function InventoryTable({ selectable = false, selectedIds = null, onToggl
                   <input
                     type="checkbox"
                     className="table-row-select"
-                    aria-label={i.name + ' 선택'}
+                    aria-label={item.name + ' 선택'}
                     checked={selected}
-                    onChange={() => onToggleRow?.(i.id)}
+                    onChange={() => onToggleRow?.(item.id)}
                     onClick={(event) => event.stopPropagation()}
                   />
                 </td>
               )}
-              <td data-table-display-col="inventory-0" style={{ fontSize: 11, color: 'var(--tx-t)' }}>{i.id}</td>
-              <td data-table-display-col="inventory-1" style={{ fontWeight: 700 }}>{i.name}</td>
+              <td data-table-display-col="inventory-0" className="modern-cell-code">{item.id}</td>
+              <td data-table-display-col="inventory-1" className="modern-cell-primary">{item.name}</td>
               <td data-table-display-col="inventory-2">
-                <span className={'bd ' + (TYPE_BORDER[i.type] || 'bd-neu')}>{i.type}</span>
+                <span className={'bd ' + (TYPE_BORDER[item.type] || 'bd-neu')}>{item.type}</span>
               </td>
-              <td data-table-display-col="inventory-3" style={{ fontWeight: 700, color: low ? 'var(--tx-d)' : undefined }}>
-                <button className="btn btn-sm" data-act="dec" style={{ padding: '0 7px' }} onClick={() => g('adjustStock', i.id, -1)}>−</button>{' '}
-                {i.qty} {i.unit}{' '}
-                <button className="btn btn-sm" data-act="inc" style={{ padding: '0 7px' }} onClick={() => g('adjustStock', i.id, 1)}>+</button>
-                {low && <i className="ti ti-alert-triangle" style={{ color: 'var(--tx-d)' }} title="안전재고 미달" />}
+              <td data-table-display-col="inventory-3">
+                <QuantityStepper
+                  value={item.qty}
+                  unit={item.unit}
+                  low={low}
+                  label={item.name}
+                  onDecrease={() => g('adjustStock', item.id, -1)}
+                  onIncrease={() => g('adjustStock', item.id, 1)}
+                />
               </td>
-              <td data-table-display-col="inventory-4">{i.minQty || 0}</td>
-              <td data-table-display-col="inventory-5" style={{ fontSize: 11 }}>{i.location || '—'}</td>
-              <td data-table-display-col="inventory-6" style={{ fontSize: 11, color: 'var(--tx-t)' }}>{i.note || '—'}</td>
-              <td data-table-display-col="inventory-7" style={{ whiteSpace: 'nowrap' }}>
-                <button className="edit-btn" onClick={() => g('openInvEdit', i.id)}><i className="ti ti-edit" />수정</button>
-                <button className="del-btn" style={{ marginLeft: 4 }} onClick={() => g('deleteInventory', i.id)}><i className="ti ti-trash" /></button>
+              <td data-table-display-col="inventory-4">{item.minQty || 0}</td>
+              <td data-table-display-col="inventory-5" className="modern-cell-secondary">{item.location || '—'}</td>
+              <td data-table-display-col="inventory-6" className="modern-cell-note" title={item.note || ''}>{item.note || '—'}</td>
+              <td data-table-display-col="inventory-7" className="modern-cell-actions">
+                <IconButton icon="ti-edit" label={`${item.name} 수정`} className="edit-btn" onClick={() => g('openInvEdit', item.id)} />
+                <IconButton icon="ti-trash" label={`${item.name} 삭제`} tone="danger" className="del-btn" onClick={() => g('deleteInventory', item.id)} />
               </td>
             </tr>
           );

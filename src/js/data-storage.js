@@ -431,7 +431,12 @@ function writeAuditLog(entityType, entityId, action, before, after, options = {}
   }
   try {
     if (typeof _fbDb !== 'undefined' && _fbDb && typeof _cloudActive !== 'undefined' && _cloudActive) {
-      _fbDb.collection('audit_logs').doc(entry.id).set(entry).catch(e => console.warn('감사 로그 서버 기록 실패:', e && e.code));
+      const serverEntry = Object.assign({}, entry, {
+        actorUserId: _cloudUser && _cloudUser.uid ? _cloudUser.uid : entry.actorUserId,
+        actorRole: (typeof currentRole !== 'undefined' && currentRole) || entry.actorRole,
+        serverAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      _fbDb.collection('audit_logs').doc(entry.id).set(serverEntry).catch(e => console.warn('감사 로그 서버 기록 실패:', e && e.code));
     }
   } catch(e) {}
   return entry;

@@ -335,6 +335,10 @@ function isSidebarHiddenByUser() {
 }
 
 function togglePrimaryMenu() {
+  if (document.body.classList.contains('modern-shell') && window.innerWidth > 900) {
+    window.dispatchEvent(new CustomEvent('mes:toggle-context-nav'));
+    return;
+  }
   if (window.innerWidth >= SB_WIDE_MIN && isSidebarHiddenByUser()) {
     _sidebarHiddenForSession = false;
     applySidebarMode();
@@ -551,6 +555,7 @@ function syncCurrentSubRoute(page, segment) {
   if (_routeApplying || currentPage !== page) return;
   const nextHash = appRouteHash(page, segment);
   if (location.hash !== nextHash) writeAppRoute(page, segment, 'push');
+  window.dispatchEvent(new CustomEvent('mes:navigation', { detail:{ page, segment } }));
 }
 
 function updateTopbarBackButton() {
@@ -641,6 +646,7 @@ function _goTo(id, el) {
   // 모바일: 페이지 이동 시 홈 오버레이 해제 + 하단 탭 동기화
   document.body.classList.remove('mhome');
   if (typeof syncMobileTab === 'function') syncMobileTab();
+  window.dispatchEvent(new CustomEvent('mes:navigation', { detail:{ page:id, segment:currentRouteSegment(id) } }));
   return true;
 }
 
@@ -684,6 +690,7 @@ function _showInventoryPage(key, meta, el) {
   // 모바일 드로어 닫기
   const sb = document.querySelector('.sidebar');
   if (sb && sb.classList.contains('mobile-open')) { sb.classList.remove('mobile-open'); document.getElementById('sidebar-backdrop')?.classList.remove('active'); }
+  window.dispatchEvent(new CustomEvent('mes:navigation', { detail:{ page:'inventory', segment:key } }));
   return true;
 }
 
