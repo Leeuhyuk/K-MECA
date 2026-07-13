@@ -824,3 +824,22 @@
     box-shadow: inset 0 -2px 0 var(--tx-i);
   }
 }
+
+/* 모바일(≤560px): 등록/상세 사이드 드로어를 전체 화면으로 표시.
+   좁은 폭에서 드로어가 좌측 자투리만 남기고 화면을 덮던 문제를 없앤다.
+   레거시 .dlg 중앙정렬 잔재(transform/max-height)까지 리셋하며, 마지막 로드
+   파일이라 캐스케이드에서 확실히 적용된다. */
+@media (max-width: 560px) {
+  .overlay.side-entry-overlay > .side-entry-dialog {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    transform: none !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+  }
+}
