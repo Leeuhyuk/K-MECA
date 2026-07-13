@@ -1692,6 +1692,39 @@ body.selection-detail-resizing {
   border-color: var(--br-d);
   background: var(--bg-d);
 }
+/* 아이콘 전용 ghost 버튼(예: 삭제) — 채움 없이 아이콘만, 위계를 낮춘다. */
+.selection-detail-work-btn.is-icon {
+  min-width: 32px;
+  width: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.selection-detail-work-btn.is-danger.is-icon {
+  background: transparent;
+  border-color: var(--detail-panel-action-border);
+  color: var(--tx-d);
+}
+.selection-detail-work-btn.is-danger.is-icon:hover {
+  background: var(--bg-d);
+  border-color: var(--br-d);
+}
+/* 보조 액션을 텍스트 링크로 표시(예: 이력 전체 보기) — 주 작업을 압도하지 않게. */
+.selection-detail-link-action {
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  color: var(--tx-i, #2f6feb);
+  font-family: var(--f);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.selection-detail-link-action:hover {
+  opacity: 0.8;
+}
 .selection-detail-edit-section {
   padding-top: 13px;
 }

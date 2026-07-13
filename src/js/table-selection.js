@@ -1017,8 +1017,9 @@ function selectionDetailHeaderHtml(context, primary) {
     status = record.status || status || '대기';
   }
   if (type === 'inventory' && record) {
-    title = record.id || record.code || ref.entityId || title;
-    sub = `${record.name || '품목명 없음'} · ${record.type || record.category || '분류 없음'}`;
+    const invCode = record.id || record.code || ref.entityId || '';
+    title = record.name || invCode || title;
+    sub = `${invCode || '코드 없음'} · ${record.type || record.category || '분류 없음'}`;
     status = (Number(record.qty) < Number(record.minQty || record.safeStock || 0)) ? '안전재고 미달' : (record.status || status || '정상');
   }
   if (type === 'workOrder' && record) {
@@ -1416,7 +1417,7 @@ function selectionDetailWorkActionsHtml(context) {
     }
   }
   if (context.source === 'react-inventory') {
-    return '<button class="selection-detail-work-btn" onclick="runSelectionDetailPanelAction(&quot;edit&quot;)">수정</button><button class="selection-detail-work-btn is-danger" onclick="runSelectionDetailPanelAction(&quot;delete&quot;)">삭제</button>';
+    return '<button class="selection-detail-work-btn is-primary" onclick="runSelectionDetailPanelAction(&quot;edit&quot;)">수정</button><button class="selection-detail-work-btn is-danger is-icon" title="삭제" aria-label="삭제" onclick="runSelectionDetailPanelAction(&quot;delete&quot;)"><i class="ti ti-trash"></i></button>';
   }
   if (context.source === 'po') {
     const docMenu = selectionDetailPoDocumentMenuHtml();
@@ -1533,10 +1534,9 @@ function selectionDetailBottomActionsHtml(context) {
       </div>`;
   }
   return `
-    <button class="selection-detail-primary-action" type="button" onclick="openSelectionDetailAudit()">이력 전체 보기</button>
     <div class="selection-detail-bottom-row">
       <button class="selection-detail-secondary-action" type="button" onclick="clearSelectionDetailSelection()">선택 해제</button>
-      <button class="selection-detail-secondary-action" type="button" onclick="closeSelectionDetailPanel(true)">닫기</button>
+      <button class="selection-detail-link-action" type="button" onclick="openSelectionDetailAudit()">이력 전체 보기</button>
     </div>`;
 }
 

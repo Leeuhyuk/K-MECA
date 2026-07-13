@@ -194,7 +194,7 @@
 
 #### 상세·등록 패널
 
-- [ ] **상세 패널 액션 위계** — `이력 전체 보기`(teal 채움)가 주 작업 `수정`을 시각적으로 압도, 닫기 수단 3개(헤더 X + `선택 해제` + `닫기`), 제목이 코드(`INV-001`). 개선: `수정`만 accent, `삭제`는 아이콘 ghost, `이력`은 텍스트 링크, 닫기 1개, 제목은 품목명·코드는 보조. 근거: `src/react/src/components/SelectionDetailPanel.jsx`.
+- [x] **상세 패널 액션 위계 (2026-07-13, 재고 패널 적용)** — 재고 상세에서 제목=품목명(코드는 보조 sub), `수정`=accent(is-primary), `삭제`=아이콘 ghost(aria-label 유지), `이력 전체 보기`=텍스트 링크(teal primary 제거), 하단 중복 `닫기` 제거(헤더 X가 유일 닫기). 합성 컨텍스트로 생성 HTML 구조 검증, 63테스트 통과. 근거: `src/js/table-selection.js`(`selectionDetailHeaderHtml`·`selectionDetailWorkActionsHtml`·`selectionDetailBottomActionsHtml`), `src/styles/base.css`. 남은 것: 시각 검증(데이터 필요) + 자재/수주/문서 등 타 도메인 패널로 동일 패턴 확장.
 - [x] **등록 드로어 접근성 (2026-07-13, 배경 inert 제외 완료)** — `SideEntryPanel`에 `role="dialog"`·`aria-modal="true"`·`aria-labelledby`(제목 연결)·초기 포커스(다이얼로그 컨테이너)·Escape 닫기·포커스 복귀 적용. 브라우저에서 5요소 검증. **과정에서 실버그 발견·수정**: effect 의존성이 `[onClose]`라 매 렌더 재실행되며 `dialog.focus()`가 입력 포커스를 계속 뺏던 문제(콤보박스 blur→닫힘)를 `onCloseRef` + `[]` 의존성으로 해결. 근거: `src/react/src/components/SideEntryPanel.jsx`. 남은 것: 배경 `inert`(오버레이가 `.main` 내부에 페이지와 형제로 중첩돼 DOM 타깃팅 필요 — `aria-modal`로 스크린리더 의미는 확보).
 - [ ] 기본 본문 글자를 12px에서 13px로 상향. 근거: `src/styles/base.css:77`.
 
