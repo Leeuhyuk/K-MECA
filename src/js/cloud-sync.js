@@ -244,14 +244,19 @@ function _cloudChip(state){
 
 /* ════════ 권한 관리 화면 ════════ */
 let systemTab = 'initial';
+// 모던 셸 사이드바에서 시스템 하위 탭으로 직접 이동(재무 goFinanceTab 과 대칭).
+function goSystemTab(tab) {
+  systemTab = tab || 'initial';
+  if (typeof currentPage !== 'undefined' && currentPage !== 'system') {
+    go('system');
+  } else {
+    switchSystemTab(systemTab);
+  }
+}
+
 function switchSystemTab(tab) {
   systemTab = tab || 'initial';
   syncCurrentSubRoute('system', systemTab);
-  document.querySelectorAll('#system-tabs [data-systab]').forEach(btn => {
-    const active = btn.dataset.systab === systemTab;
-    btn.classList.toggle('btn-primary', active);
-    btn.classList.toggle('active', active);
-  });
   document.querySelectorAll('#pg-system .system-panel').forEach(panel => {
     panel.style.display = panel.id === 'system-panel-' + systemTab ? '' : 'none';
   });

@@ -74,7 +74,19 @@ export const APP_MODULES = [
   {
     key: 'system', label: '시스템', icon: 'ti-settings',
     items: [
-      { page: 'system', label: '시스템 관리', icon: 'ti-settings' },
+      { page: 'system', segment: 'initial', label: '초기 설정', icon: 'ti-list-check' },
+      { page: 'system', segment: 'permissions', label: '권한 관리', icon: 'ti-user-shield' },
+      { page: 'system', segment: 'company', label: '회사 관리', icon: 'ti-building' },
+      { page: 'system', segment: 'columns', label: '표시 설정', icon: 'ti-table-options' },
+      { page: 'system', segment: 'display', label: '화면 설정', icon: 'ti-palette' },
+      { page: 'system', segment: 'templates', label: '양식 내보내기', icon: 'ti-template' },
+      { page: 'system', segment: 'backup', label: '백업/내보내기', icon: 'ti-database-export' },
+      { page: 'system', segment: 'api', label: 'API 관리', icon: 'ti-key' },
+      { page: 'system', segment: 'storage', label: '스토리지/요금', icon: 'ti-database-dollar' },
+      { page: 'system', segment: 'drive', label: 'Google Drive 저장', icon: 'ti-cloud' },
+      { page: 'system', segment: 'alimtalk', label: '알림톡 설정', icon: 'ti-brand-kakao' },
+      { page: 'system', segment: 'alerts', label: '알림 관리', icon: 'ti-bell' },
+      { page: 'system', segment: 'trash', label: '휴지통', icon: 'ti-trash' },
       { page: 'popbill', label: 'Popbill API', icon: 'ti-plug-connected' }
     ]
   }
@@ -103,6 +115,7 @@ function allowed(item) {
 function navigate(item) {
   if (item.page === 'inventory') return g('goInventory', item.segment || 'finished', null);
   if (item.page === 'finance') return g('goFinanceTab', item.segment || 'dashboard');
+  if (item.page === 'system') return g('goSystemTab', item.segment || 'initial');
   return g('go', item.page, null);
 }
 

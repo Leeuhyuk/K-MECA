@@ -1628,6 +1628,8 @@
 /* 시스템 관리 */
 #pg-system { background: var(--bg-t); }
 .system-shell { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 22px; align-items: start; }
+/* 시스템 설정 하위 항목을 좌측 사이드바로 옮긴 뒤: 콘텐츠가 전체 폭을 쓰도록 단일 열. */
+.system-shell.system-shell-single { grid-template-columns: minmax(0, 1fr); }
 .system-sidebar { position: static; align-self: start; margin: 0; background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: 16px 12px 12px; box-shadow: 0 1px 2px rgba(16,24,40,.04); }
 .system-sidebar-title { padding: 0 10px 14px; color: var(--tx-t); font-size: 13px; font-weight: 700; }
 .system-nav { display: flex; flex-direction: column; gap: 8px; }

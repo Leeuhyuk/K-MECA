@@ -22,26 +22,8 @@
 
   <!-- 시스템 관리 -->
 <div class="content" id="pg-system">
-    <div class="system-shell">
-      <aside class="system-sidebar">
-        <div class="system-sidebar-title">시스템 설정</div>
-        <div id="system-tabs" class="system-nav">
-          <button type="button" class="active" data-systab="initial" onclick="switchSystemTab('initial')"><i class="ti ti-list-check"></i>초기 설정</button>
-          <button type="button" data-systab="permissions" onclick="switchSystemTab('permissions')"><i class="ti ti-user-shield"></i>권한 관리</button>
-          <button type="button" data-systab="company" onclick="switchSystemTab('company')"><i class="ti ti-building"></i>회사 관리</button>
-          <button type="button" data-systab="columns" onclick="switchSystemTab('columns')"><i class="ti ti-table-options"></i>표시 설정</button>
-          <button type="button" data-systab="display" onclick="switchSystemTab('display')"><i class="ti ti-palette"></i>화면 설정</button>
-          <button type="button" data-systab="templates" onclick="switchSystemTab('templates')"><i class="ti ti-template"></i>양식 내보내기</button>
-          <button type="button" data-systab="backup" onclick="switchSystemTab('backup')"><i class="ti ti-database-export"></i>백업/내보내기</button>
-          <button type="button" data-systab="api" onclick="switchSystemTab('api')"><i class="ti ti-key"></i>API 관리</button>
-          <button type="button" data-systab="storage" onclick="switchSystemTab('storage')"><i class="ti ti-database-dollar"></i>스토리지/요금</button>
-          <button type="button" class="drive-save-btn" data-systab="drive" onclick="switchSystemTab('drive')"><i class="ti ti-cloud"></i>Google Drive 저장</button>
-          <button type="button" data-systab="alimtalk" onclick="switchSystemTab('alimtalk')"><i class="ti ti-brand-kakao"></i>알림톡 설정</button>
-          <button type="button" data-systab="alerts" onclick="switchSystemTab('alerts')"><i class="ti ti-bell"></i>알림 관리</button>
-          <button type="button" data-systab="trash" onclick="switchSystemTab('trash')"><i class="ti ti-trash"></i>휴지통</button>
-        </div>
-      </aside>
-
+    <!-- 시스템 설정 하위 항목은 좌측 사이드바(시스템 하위 메뉴)로 이동. -->
+    <div class="system-shell system-shell-single">
       <section class="system-workspace">
 
     <div class="system-panel" id="system-panel-initial">
