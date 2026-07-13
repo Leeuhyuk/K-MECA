@@ -1484,7 +1484,7 @@
 .sum-box.clickable:hover { background: var(--bg-s); border-color: var(--br-i); box-shadow: 0 0 0 1px var(--br-i) inset; }
 .sum-box.kpi-active { background: var(--bg-i); border-color: var(--br-i); box-shadow: 0 0 0 1px var(--br-i) inset; }
 .si { font-size: 20px; color: var(--tx-s); }
-.sn { font-size: 17px; font-weight: 700; }
+.sn { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .sl { font-size: 10.5px; color: var(--tx-t); font-weight: 500; }
 
 /* 수주처 카드 & 드래그엔드롭 스타일 */
@@ -1698,7 +1698,7 @@
 .system-kpi { min-height: 104px; padding: 18px 20px; border: 1px solid var(--br); border-radius: var(--rl); background: var(--bg-s); box-shadow: 0 1px 2px rgba(16,24,40,.04); }
 .system-kpi-label { display: flex; align-items: center; gap: 8px; color: var(--tx-s); font-size: 12px; font-weight: 700; }
 .system-kpi-label i { color: var(--tx-i); }
-.system-kpi strong { display: block; margin-top: 10px; font-size: 24px; line-height: 1; color: var(--tx); }
+.system-kpi strong { display: block; margin-top: 10px; font-size: 24px; line-height: 1; color: var(--tx); font-variant-numeric: tabular-nums; }
 .system-kpi span { display: block; margin-top: 8px; color: var(--tx-t); font-size: 12px; font-weight: 700; }
 .system-kpi.warn strong, .system-kpi.warn .system-kpi-label i { color: var(--tx-w); }
 .system-kpi.danger strong, .system-kpi.danger .system-kpi-label i { color: var(--tx-d); }

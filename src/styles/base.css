@@ -469,7 +469,7 @@ body.sb-mini .sidebar .nav-lbl.nav-lbl-source { display: none !important; }
 .mc.clickable.kpi-active .mc-lbl::after { content: '필터됨'; margin-left: auto; font-size: 9px; font-weight: 700; color: var(--tx-i); background: var(--bg-i); border: 1px solid var(--br-i); border-radius: 8px; padding: 0 6px; }
 .mc-lbl { font-size: 11px; color: var(--tx-s); margin-bottom: 3px; display: flex; align-items: center; gap: 5px; font-weight: 700; line-height: 1.2; min-width: 0; }
 .mc-lbl i { font-size: 13px; flex: 0 0 auto; }
-.mc-val { font-size: 20px; font-weight: 850; letter-spacing: 0; line-height: 1.05; min-width: 0; overflow-wrap: anywhere; }
+.mc-val { font-size: 20px; font-weight: 850; letter-spacing: 0; line-height: 1.05; min-width: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .mc-sub { font-size: 10.5px; color: var(--tx-t); margin-top: 2px; font-weight: 500; line-height: 1.2; }
 .up { color: var(--tx-ok) !important; }
 .dn { color: var(--tx-d) !important; }

@@ -493,7 +493,7 @@ body.sb-mini .sidebar .nav-lbl.nav-lbl-source { display: none !important; }
 .mc.clickable.kpi-active .mc-lbl::after { content: '필터됨'; margin-left: auto; font-size: 9px; font-weight: 700; color: var(--tx-i); background: var(--bg-i); border: 1px solid var(--br-i); border-radius: 8px; padding: 0 6px; }
 .mc-lbl { font-size: 11px; color: var(--tx-s); margin-bottom: 3px; display: flex; align-items: center; gap: 5px; font-weight: 700; line-height: 1.2; min-width: 0; }
 .mc-lbl i { font-size: 13px; flex: 0 0 auto; }
-.mc-val { font-size: 20px; font-weight: 850; letter-spacing: 0; line-height: 1.05; min-width: 0; overflow-wrap: anywhere; }
+.mc-val { font-size: 20px; font-weight: 850; letter-spacing: 0; line-height: 1.05; min-width: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .mc-sub { font-size: 10.5px; color: var(--tx-t); margin-top: 2px; font-weight: 500; line-height: 1.2; }
 .up { color: var(--tx-ok) !important; }
 .dn { color: var(--tx-d) !important; }
@@ -3941,7 +3941,7 @@ body.selection-detail-resizing {
 .sum-box.clickable:hover { background: var(--bg-s); border-color: var(--br-i); box-shadow: 0 0 0 1px var(--br-i) inset; }
 .sum-box.kpi-active { background: var(--bg-i); border-color: var(--br-i); box-shadow: 0 0 0 1px var(--br-i) inset; }
 .si { font-size: 20px; color: var(--tx-s); }
-.sn { font-size: 17px; font-weight: 700; }
+.sn { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .sl { font-size: 10.5px; color: var(--tx-t); font-weight: 500; }
 
 /* 수주처 카드 & 드래그엔드롭 스타일 */
@@ -4155,7 +4155,7 @@ body.selection-detail-resizing {
 .system-kpi { min-height: 104px; padding: 18px 20px; border: 1px solid var(--br); border-radius: var(--rl); background: var(--bg-s); box-shadow: 0 1px 2px rgba(16,24,40,.04); }
 .system-kpi-label { display: flex; align-items: center; gap: 8px; color: var(--tx-s); font-size: 12px; font-weight: 700; }
 .system-kpi-label i { color: var(--tx-i); }
-.system-kpi strong { display: block; margin-top: 10px; font-size: 24px; line-height: 1; color: var(--tx); }
+.system-kpi strong { display: block; margin-top: 10px; font-size: 24px; line-height: 1; color: var(--tx); font-variant-numeric: tabular-nums; }
 .system-kpi span { display: block; margin-top: 8px; color: var(--tx-t); font-size: 12px; font-weight: 700; }
 .system-kpi.warn strong, .system-kpi.warn .system-kpi-label i { color: var(--tx-w); }
 .system-kpi.danger strong, .system-kpi.danger .system-kpi-label i { color: var(--tx-d); }
@@ -26176,10 +26176,10 @@ function _attList() {
   return `
     <div class="metrics attendance-metrics">
       <div class="mc"><div class="mc-lbl"><i class="ti ti-user-check"></i>자동 정상근무</div><div class="mc-val" style="color:var(--tx-ok);">${normal}건</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-clock-exclamation"></i>지각·조퇴</div><div class="mc-val" style="color:var(--tx-w);">${late+early}건</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-clock-exclamation"></i>지각·조퇴</div><div class="mc-val" style="color:${(late+early)>0?'var(--tx-w)':'var(--tx-s)'};">${late+early}건</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-clock-plus"></i>연장근무</div><div class="mc-val">${ot}건</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-calendar-event"></i>휴일근무</div><div class="mc-val">${holiday}건</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-user-x"></i>결근</div><div class="mc-val" style="color:var(--tx-err);">${absent}건</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-user-x"></i>결근</div><div class="mc-val" style="color:${absent>0?'var(--tx-err)':'var(--tx-s)'};">${absent}건</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-clock-hour-9"></i>선택 기간 근무시간</div><div class="mc-val" style="color:var(--tx-i);">${fmtHm(dayMins)}</div></div>
     </div>
     ${_attQuickEditor()}
@@ -26457,7 +26457,7 @@ function renderLeaves() {
 
   const metrics = `
     <div class="metrics" style="grid-template-columns:repeat(3,1fr);">
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-clock-hour-4"></i>승인 대기</div><div class="mc-val" style="color:var(--tx-w);">${pending}건</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-clock-hour-4"></i>승인 대기</div><div class="mc-val" style="color:${pending>0?'var(--tx-w)':'var(--tx-s)'};">${pending}건</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-calendar-check"></i>승인 완료</div><div class="mc-val" style="color:var(--tx-ok);">${approved}건</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-beach"></i>${usedLabel}</div><div class="mc-val">${usedDays}일</div></div>
     </div>`;
@@ -28920,7 +28920,7 @@ function _finPayRequests() {
     ${finFilterBar('payreq',{placeholder:'발주번호·공급처·담당자 검색',statuses:['요청','확인','지급예정','지급완료','반려']})}
     <div class="metrics payreq-approval-metrics">
       <div class="mc"><div class="mc-lbl"><i class="ti ti-send"></i>진행 요청</div><div class="mc-val" style="color:var(--tx-i);">${open.length}</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-checklist"></i>결재대기</div><div class="mc-val" style="color:var(--tx-w);">${pendingApproval.length}</div><div class="mc-sub">작성중 ${draftApproval.length}건</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-checklist"></i>결재대기</div><div class="mc-val" style="color:${pendingApproval.length>0?'var(--tx-w)':'var(--tx-s)'};">${pendingApproval.length}</div><div class="mc-sub">작성중 ${draftApproval.length}건</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-cash-banknote"></i>요청 금액</div><div class="mc-val" style="color:#e8590c;">${fmtW(amount)}</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-check"></i>지급완료</div><div class="mc-val">${financePaymentRequests().filter(r=>canViewRecord(r,'paymentRequest')&&r.status==='지급완료').length}</div></div>
     </div>

@@ -2312,7 +2312,7 @@ function _finPayRequests() {
     ${finFilterBar('payreq',{placeholder:'발주번호·공급처·담당자 검색',statuses:['요청','확인','지급예정','지급완료','반려']})}
     <div class="metrics payreq-approval-metrics">
       <div class="mc"><div class="mc-lbl"><i class="ti ti-send"></i>진행 요청</div><div class="mc-val" style="color:var(--tx-i);">${open.length}</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-checklist"></i>결재대기</div><div class="mc-val" style="color:var(--tx-w);">${pendingApproval.length}</div><div class="mc-sub">작성중 ${draftApproval.length}건</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-checklist"></i>결재대기</div><div class="mc-val" style="color:${pendingApproval.length>0?'var(--tx-w)':'var(--tx-s)'};">${pendingApproval.length}</div><div class="mc-sub">작성중 ${draftApproval.length}건</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-cash-banknote"></i>요청 금액</div><div class="mc-val" style="color:#e8590c;">${fmtW(amount)}</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-check"></i>지급완료</div><div class="mc-val">${financePaymentRequests().filter(r=>canViewRecord(r,'paymentRequest')&&r.status==='지급완료').length}</div></div>
     </div>
