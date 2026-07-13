@@ -5,15 +5,10 @@ function dashRecords(list, entityType) {
 }
 
 function switchDashTab(tab, el) {
+  const changed = currentDashTab !== tab;
   currentDashTab = tab;
-  document.querySelectorAll('#pg-dashboard .dash-tab').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.dash-panel').forEach(p => p.classList.remove('active'));
-  if (el) el.classList.add('active');
-  else {
-    document.querySelectorAll('#pg-dashboard .dash-tab').forEach(b => {
-      if (b.getAttribute('onclick')?.includes(`'${tab}'`)) b.classList.add('active');
-    });
-  }
+  syncCurrentSubRoute('dashboard', tab); // 하위 탭을 #/dashboard/<탭> 로 라우트 동기화(딥링크)
+  document.querySelectorAll('#pg-dashboard .dash-panel').forEach(p => p.classList.remove('active'));
   const panel = inp('dt-' + tab);
   if (panel) panel.classList.add('active');
 
@@ -21,21 +16,22 @@ function switchDashTab(tab, el) {
   const gk = inp('dash-kpi');
   if (gk) gk.style.display = (tab === 'process') ? 'none' : '';
 
-  // 탭 전환 시 스크롤 상단으로
-  const content = inp('pg-dashboard');
-  if (content) content.scrollTop = 0;
+  // 탭이 실제로 바뀔 때만 스크롤을 상단으로(데이터 갱신 시 스크롤 유지).
+  if (changed) { const content = inp('pg-dashboard'); if (content) content.scrollTop = 0; }
 
   // 탭별 필요한 렌더 호출
   if (tab === 'process')   renderProcess();
   if (tab === 'resources') renderDashResources();
 }
 
-function goDashTab(tab, el) {
-  // 사이드바에서 호출 — 대시보드로 이동 후 해당 탭 활성화
-  go('dashboard');
-  document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
-  if (el) el.classList.add('active');
-  setTimeout(() => switchDashTab(tab), 50);
+// 모던 셸 사이드바에서 대시보드 하위 탭으로 직접 이동(재무 goFinanceTab 과 대칭).
+function goDashTab(tab) {
+  currentDashTab = tab || 'overview';
+  if (typeof currentPage !== 'undefined' && currentPage !== 'dashboard') {
+    go('dashboard');
+  } else {
+    switchDashTab(currentDashTab);
+  }
 }
 
 function openProcStagePanel() {
@@ -53,6 +49,12 @@ function toggleProcTable() {
   if (isHidden) renderProcDetail();
 }
 function renderDashboard() {
+  // 직접 URL(#/dashboard/<탭>) 진입 시에도 현재 탭 패널이 보이도록 활성 상태를 맞춘다.
+  document.querySelectorAll('#pg-dashboard .dash-panel').forEach(p => p.classList.remove('active'));
+  const panel = inp('dt-' + currentDashTab);
+  if (panel) panel.classList.add('active');
+  const gk = inp('dash-kpi');
+  if (gk) gk.style.display = (currentDashTab === 'process') ? 'none' : '';
   renderDashOverview();
   if (currentDashTab === 'process')   renderProcess();
   if (currentDashTab === 'resources') renderDashResources();

@@ -446,7 +446,8 @@ let _routeApplying = false;
 let _routeDepth = 0;
 
 const ROUTE_SUBPAGES = {
-  system: ['initial','permissions','company','columns','display','templates','api','drive','alimtalk','alerts','trash'],
+  dashboard: ['overview','process','resources'],
+  system: ['initial','permissions','company','columns','display','templates','backup','api','storage','drive','alimtalk','alerts','trash'],
   workers: ['roster','att','leave'],
   finance: ['dashboard','revenue','purchase','labor','cost','pnl','ar','etc'],
   notes: ['memos','todos','board','report'],
@@ -456,6 +457,7 @@ const ROUTE_SUBPAGES = {
 };
 
 function currentRouteSegment(page) {
+  if (page === 'dashboard') return typeof currentDashTab === 'string' ? currentDashTab : 'overview';
   if (page === 'system') return typeof systemTab === 'string' ? systemTab : 'initial';
   if (page === 'workers') return typeof empTab === 'string' ? empTab : 'roster';
   if (page === 'finance') return typeof financeTab === 'string' ? financeTab : 'dashboard';
@@ -497,7 +499,8 @@ function writeAppRoute(page, segment, mode) {
 }
 
 function applyRouteSubpage(page, segment) {
-  if (page === 'system') systemTab = segment || 'initial';
+  if (page === 'dashboard') currentDashTab = segment || 'overview';
+  else if (page === 'system') systemTab = segment || 'initial';
   else if (page === 'workers') empTab = segment || 'roster';
   else if (page === 'finance') financeTab = segment || 'dashboard';
   else if (page === 'notes') memoTab = segment || 'memos';

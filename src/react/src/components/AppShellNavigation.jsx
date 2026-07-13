@@ -4,7 +4,11 @@ import { g } from '../bridge/globals.js';
 export const APP_MODULES = [
   {
     key: 'home', label: '홈', icon: 'ti-home-2',
-    items: [{ page: 'dashboard', label: '종합 대시보드', icon: 'ti-layout-dashboard' }]
+    items: [
+      { page: 'dashboard', segment: 'overview', label: '종합 현황', icon: 'ti-layout-dashboard' },
+      { page: 'dashboard', segment: 'process', label: '공정 관리', icon: 'ti-layout-kanban' },
+      { page: 'dashboard', segment: 'resources', label: '자재·품질·재고', icon: 'ti-packages' }
+    ]
   },
   {
     key: 'sales', label: '영업', icon: 'ti-building-store',
@@ -113,6 +117,7 @@ function allowed(item) {
 }
 
 function navigate(item) {
+  if (item.page === 'dashboard' && item.segment) return g('goDashTab', item.segment);
   if (item.page === 'inventory') return g('goInventory', item.segment || 'finished', null);
   if (item.page === 'finance') return g('goFinanceTab', item.segment || 'dashboard');
   if (item.page === 'system') return g('goSystemTab', item.segment || 'initial');
@@ -201,7 +206,9 @@ export function AppShellNavigation() {
           <div className="modern-context-section-label">업무 메뉴</div>
           <div className="modern-context-items">
             {(activeModule?.items || []).map((item) => {
-              const active = item.page === route.page && (!item.segment || item.segment === route.segment);
+              // 초기 로드처럼 세그먼트가 비어 있으면 모듈의 첫(기본) 세그먼트로 간주.
+              const effectiveSegment = route.segment || activeModule?.items?.[0]?.segment || '';
+              const active = item.page === route.page && (!item.segment || item.segment === effectiveSegment);
               return (
                 <button
                   type="button"

@@ -2,12 +2,8 @@
   <div class="content active" id="pg-dashboard">
 
     <!-- 고정 헤더: 탭 + KPI 카드 -->
+    <!-- 대시보드 하위 탭(종합 현황·공정 관리·자재·품질·재고)은 좌측 사이드바(홈)로 이동. -->
     <div class="dash-sticky-header">
-      <div class="dash-tabs">
-        <button class="dash-tab active" onclick="switchDashTab('overview',this)"><i class="ti ti-layout-dashboard"></i> 종합 현황</button>
-        <button class="dash-tab" onclick="switchDashTab('process',this)"><i class="ti ti-layout-kanban"></i> 공정 관리</button>
-        <button class="dash-tab" onclick="switchDashTab('resources',this)"><i class="ti ti-packages"></i> 자재·품질·재고</button>
-      </div>
       <div class="metrics" id="dash-kpi">
     <div class="mc clickable" onclick="go('clients')">
       <div class="mc-lbl"><i class="ti ti-box" style="color:var(--tx-i);"></i>진행 중 프로젝트</div>

@@ -16,7 +16,7 @@ describe('AppShellNavigation', () => {
   it('전역 모듈과 현재 업무별 메뉴를 렌더한다', () => {
     render(<AppShellNavigation />);
     expect(screen.getByRole('button', { name: '홈' })).toHaveAttribute('aria-current', 'page');
-    const dashboardItems = screen.getAllByRole('button', { name: '종합 대시보드' });
+    const dashboardItems = screen.getAllByRole('button', { name: '종합 현황' });
     expect(dashboardItems.some((item) => item.classList.contains('modern-context-item') && item.getAttribute('aria-current') === 'page')).toBe(true);
   });
 
@@ -44,9 +44,9 @@ describe('AppShellNavigation', () => {
     const { container } = render(<AppShellNavigation />);
     fireEvent.click(container.querySelector('.modern-rail-collapse'));
     expect(localStorage.getItem('mes_modernContextCollapsed')).toBe('true');
-    expect(screen.getAllByRole('button', { name: '종합 대시보드' })).toHaveLength(1);
+    expect(container.querySelector('.modern-context-nav')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: '업무 메뉴 펼치기' }));
     expect(localStorage.getItem('mes_modernContextCollapsed')).toBe('false');
-    expect(screen.getAllByRole('button', { name: '종합 대시보드' })).toHaveLength(2);
+    expect(container.querySelectorAll('.modern-context-item')).toHaveLength(3);
   });
 });
