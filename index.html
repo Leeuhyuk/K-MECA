@@ -14316,9 +14316,13 @@ function renderOrders() {
   if (summ) {
     const fsCur = v('orders-fs') || '';
     // 클릭 시 orders-fs 필터 토글(같은 값 재클릭 시 전체 복구) + 활성 박스 강조
-    const sbox = (status, label, cnt, color, icon) =>
-      '<div class="sum-box clickable'+(fsCur===status?' kpi-active':'')+'" onclick="kpiFilter(\'orders-fs\',\''+status+'\',\'renderOrders\')">' +
-      '<i class="ti '+icon+' si" style="color:'+color+';"></i><div><div class="sn" style="color:'+color+';">'+cnt+'건</div><div class="sl">'+label+'</div></div></div>';
+    // 0값 색 규칙: 카운트가 0이면 상태색 대신 중립색을 쓴다(색은 값>0일 때만 상태 의미).
+    // 중립색은 --tx-s(대비 6.7:1)를 써서 저대비 --tx-t(2.97:1, AA 미달)를 피한다.
+    const sbox = (status, label, cnt, color, icon) => {
+      const c = cnt > 0 ? color : 'var(--tx-s)';
+      return '<div class="sum-box clickable'+(fsCur===status?' kpi-active':'')+'" onclick="kpiFilter(\'orders-fs\',\''+status+'\',\'renderOrders\')">' +
+      '<i class="ti '+icon+' si" style="color:'+c+';"></i><div><div class="sn" style="color:'+c+';">'+cnt+'건</div><div class="sl">'+label+'</div></div></div>';
+    };
     summ.innerHTML =
       sbox('진행중', '진행중', inProg, '#185FA5', 'ti-loader') +
       sbox('완료', '완료', doneCnt, 'var(--tx-ok)', 'ti-circle-check') +
