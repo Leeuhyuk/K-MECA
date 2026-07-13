@@ -12,11 +12,13 @@ function renderClients() {
   const activeClients = visibleClients.filter(c => !c.closed);
   const closedClients = visibleClients.filter(c => c.closed);
 
-  inp('client-summary').innerHTML = `
-    <div class="sum-box"><i class="ti ti-building-community si" style="color:var(--tx-i);"></i><div><div class="sn">${activeClients.length}</div><div class="sl">진행 고객사</div></div></div>
-    <div class="sum-box"><i class="ti ti-archive si" style="color:#868e96;"></i><div><div class="sn">${closedClients.length}</div><div class="sl">종료 프로젝트</div></div></div>
-    <div class="sum-box"><i class="ti ti-loader si" style="color:#e8590c;"></i><div><div class="sn">${visibleProducts.filter(p=>p.status==='생산중'&&!visibleClients.find(c=>c.id===p.clientId)?.closed).length}</div><div class="sl">실시간 조업</div></div></div>
-    <div class="sum-box"><i class="ti ti-coin si" style="color:var(--tx-i);"></i><div><div class="sn">${fmtW(totAmt)}</div><div class="sl">전체 수주 총계</div></div></div>`;
+  const liveOps = visibleProducts.filter(p => p.status === '생산중' && !visibleClients.find(c => c.id === p.clientId)?.closed).length;
+  // 공통 kpiCardHtml(표준 mc 카드)로 통일. (#client-summary 는 .sum-row 4열 그리드)
+  inp('client-summary').innerHTML =
+    kpiCardHtml({ label: '진행 고객사', value: activeClients.length, tone: 'info', icon: 'ti-building-community' }) +
+    kpiCardHtml({ label: '종료 프로젝트', value: closedClients.length, tone: 'neutral', icon: 'ti-archive' }) +
+    kpiCardHtml({ label: '실시간 조업', value: liveOps, tone: 'warn', icon: 'ti-loader' }) +
+    kpiCardHtml({ label: '전체 수주 총계', value: fmtW(totAmt), tone: 'info', icon: 'ti-coin' });
 
   // 종료 보기 모드에서는 종료된 고객사만, 아니면 진행 중만
   const _cq = (v('clients-q')||'').toLowerCase();

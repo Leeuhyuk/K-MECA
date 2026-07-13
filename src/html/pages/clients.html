@@ -1,10 +1,7 @@
   <!-- ══════ 2. 수주 관리 ══════ -->
   <div class="content" id="pg-clients">
-    <div class="sum-row" id="client-summary">
-    <div class="sum-box"><i class="ti ti-building-community si" style="color:var(--tx-i);"></i><div><div class="sn">3</div><div class="sl">진행 고객사</div></div></div>
-    <div class="sum-box"><i class="ti ti-archive si" style="color:#868e96;"></i><div><div class="sn">0</div><div class="sl">종료 프로젝트</div></div></div>
-    <div class="sum-box"><i class="ti ti-loader si" style="color:#e8590c;"></i><div><div class="sn">11</div><div class="sl">실시간 조업</div></div></div>
-    <div class="sum-box"><i class="ti ti-coin si" style="color:var(--tx-i);"></i><div><div class="sn">₩0</div><div class="sl">전체 수주 총계</div></div></div></div>
+    <!-- KPI 요약 (renderClients 가 공통 kpiCardHtml 로 채운다) -->
+    <div class="sum-row" id="client-summary"></div>
     <div class="sec-lbl"><i class="ti ti-building-community"></i>수주 의뢰 업체 및 상세 품목 현황</div>
     <div class="toolbar">
       <button class="btn" id="btn-show-closed" onclick="toggleClosedView()" style="border-color: var(--br);"><i class="ti ti-archive"></i>종료 프로젝트 (0)</button>
