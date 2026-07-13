@@ -184,7 +184,7 @@
 
 #### 전 모듈 교차 이슈 (9개 화면 전수)
 
-- [ ] **KPI 카드 스타일 3종 혼재** — 대시보드 大카드(20px/850) / 영업·구매·품질·기준정보 컴팩트 아이콘형 / 재무 밀집형. 공통 `KpiCard` 하나로 통일한다.
+- [~] **KPI 카드 스타일 혼재 통일 (2026-07-13 착수)** — 공통 헬퍼 `kpiCardHtml`(`src/js/kpi-card.js`) 신설: 표준 `.mc` 카드 + 0값 색 규칙 + tabular + 필터 연동을 일괄 처리. 첫 이관으로 **생산(sum-box → 공통 mc 카드)** 완료: 4카드 그리드·필터 클릭·활성 하이라이트·0값 중립 브라우저 검증. 남은 것: 대시보드 大카드/재무 밀집형 등 나머지 화면을 `kpiCardHtml`로 점진 이관.
 - [x] **WorkStrip↔KPI 중복 제거 (2026-07-13 완료)** — 재고 KPI `안전재고 미달`(= WorkStrip lowStock, inventory.js 기적용), 구매 KPI `발주 전 대기`(= WorkStrip waiting, materials.js 이번 적용) 모두 `modern-shell`일 때만 숨김 처리. WorkStrip이 해당 지표를 계속 표시함을 브라우저에서 확인(정보 손실 없음, 콘솔 에러 0). 근거: `src/js/inventory.js:56`, `src/js/materials.js:112`, `src/react/src/components/TodayWorkStrip.jsx:24-32`.
 - [x] **0값 색 규칙 (2026-07-13, 생산·인사·재무 적용)** — 상태 카운트가 0이면 상태색 대신 중립색을 쓰도록 수정: 생산 `지연`(orders.js), 인사 `지각·조퇴`/`결근`/`승인 대기`(hr-tabs.js), 재무 `결재대기`(finance.js). 값>0이면 상태색 복귀(지연 1건→빨강), 0이면 중립(결근·지각 0건→회색) 브라우저 검증. 대시보드는 이미 준수. 남은 것: 나머지 상태 카운트 KPI는 공통 KpiCard 이관 시 일괄 적용.
 - [x] **KPI 숫자 대비·tabular (2026-07-13)** — 중립 0값 숫자 색을 `--tx-t`(2.97:1, AA 미달)에서 `--tx-s`(6.73:1)로 상향. KPI 숫자 3종(`.mc-val`·`.sn`·`.system-kpi strong`)에 `font-variant-numeric: tabular-nums` 일괄 적용. 브라우저 실측 검증. 근거: `src/styles/base.css`, `src/styles/components.css`.

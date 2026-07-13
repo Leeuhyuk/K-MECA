@@ -10,19 +10,18 @@ function renderOrders() {
   const summ = inp('orders-summary');
   if (summ) {
     const fsCur = v('orders-fs') || '';
-    // 클릭 시 orders-fs 필터 토글(같은 값 재클릭 시 전체 복구) + 활성 박스 강조
-    // 0값 색 규칙: 카운트가 0이면 상태색 대신 중립색을 쓴다(색은 값>0일 때만 상태 의미).
-    // 중립색은 --tx-s(대비 6.7:1)를 써서 저대비 --tx-t(2.97:1, AA 미달)를 피한다.
-    const sbox = (status, label, cnt, color, icon) => {
-      const c = cnt > 0 ? color : 'var(--tx-s)';
-      return '<div class="sum-box clickable'+(fsCur===status?' kpi-active':'')+'" onclick="kpiFilter(\'orders-fs\',\''+status+'\',\'renderOrders\')">' +
-      '<i class="ti '+icon+' si" style="color:'+c+';"></i><div><div class="sn" style="color:'+c+';">'+cnt+'건</div><div class="sl">'+label+'</div></div></div>';
-    };
+    const rate = totalQty ? Math.round(totalDone / totalQty * 100) : 0;
+    // 공통 KpiCard(kpiCardHtml)로 통일. 0값 색 규칙·tabular·필터 연동은 헬퍼가 처리.
+    const kbox = (status, label, cnt, tone, icon) => kpiCardHtml({
+      label, value: cnt + '건', count: cnt, tone, icon,
+      filterId: 'orders-fs', filterValue: status, renderFn: 'renderOrders', active: fsCur === status
+    });
+    // #orders-summary(.sum-row)는 이미 4열 그리드이므로 mc 카드를 직접 자식으로 넣는다.
     summ.innerHTML =
-      sbox('진행중', '진행중', inProg, '#185FA5', 'ti-loader') +
-      sbox('완료', '완료', doneCnt, 'var(--tx-ok)', 'ti-circle-check') +
-      sbox('지연', '지연', delayCnt, 'var(--tx-d)', 'ti-alert-triangle') +
-      '<div class="sum-box"><i class="ti ti-chart-bar si" style="color:var(--tx-i);"></i><div><div class="sn">'+(totalQty?Math.round(totalDone/totalQty*100):0)+'%</div><div class="sl">전체 진행률</div></div></div>';
+      kbox('진행중', '진행중', inProg, 'info', 'ti-loader') +
+      kbox('완료', '완료', doneCnt, 'ok', 'ti-circle-check') +
+      kbox('지연', '지연', delayCnt, 'danger', 'ti-alert-triangle') +
+      kpiCardHtml({ label: '전체 진행률', value: rate + '%', tone: 'info', icon: 'ti-chart-bar' });
   }
 
   const q=(v('orders-q')||'').toLowerCase(), fs=v('orders-fs')||'';
