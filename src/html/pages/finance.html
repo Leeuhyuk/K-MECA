@@ -1,16 +1,7 @@
   <!-- ══════ 재무 관리 ══════ -->
   <div class="content" id="pg-finance">
-    <div class="toolbar" id="finance-tabs">
-      <button class="btn btn-primary" data-fintab="dashboard" onclick="switchFinTab('dashboard')"><i class="ti ti-chart-pie"></i>요약</button>
-      <button class="btn" data-fintab="ar" onclick="switchFinTab('ar')"><i class="ti ti-receipt"></i>수금/지급</button>
-      <button class="btn" data-fintab="payreq" onclick="switchFinTab('payreq')"><i class="ti ti-cash-banknote"></i>결제요청 <span id="payreqBadge" class="badge" style="display:none;">0</span></button>
-      <button class="btn" data-fintab="fixed" onclick="switchFinTab('fixed')"><i class="ti ti-repeat"></i>고정비</button>
-      <button class="btn" data-fintab="revenue" onclick="switchFinTab('revenue')"><i class="ti ti-trending-up"></i>매출</button>
-      <button class="btn" data-fintab="purchase" onclick="switchFinTab('purchase')"><i class="ti ti-trending-down"></i>매입</button>
-      <button class="btn" data-fintab="labor" onclick="switchFinTab('labor')"><i class="ti ti-cash"></i>급여</button>
-      <button class="btn" data-fintab="cost" onclick="switchFinTab('cost')"><i class="ti ti-calculator"></i>원가</button>
-      <button class="btn" data-fintab="pnl" onclick="switchFinTab('pnl')"><i class="ti ti-report-money"></i>손익</button>
-      <button class="btn" data-fintab="etc" onclick="switchFinTab('etc')"><i class="ti ti-list-details"></i>기타</button>
+    <!-- 재무 하위 탭은 좌측 사이드바(재무 하위 메뉴)로 이동. 여기엔 등록 액션만 둔다. -->
+    <div class="toolbar finance-action-bar" id="finance-toolbar">
       <button class="btn btn-primary" id="finance-primary-action" onclick="openFinancePrimaryAction()" style="margin-left:auto;display:none;" title="기타 항목 등록"><i class="ti ti-plus"></i>기타 등록</button>
     </div>
     <div id="finance-body"></div>

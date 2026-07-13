@@ -1587,6 +1587,19 @@ function switchFinTab(tab) {
   renderFinance();
 }
 
+// 모던 셸 사이드바에서 재무 하위 탭으로 직접 이동(재고의 goInventory 와 대칭).
+// 다른 페이지에 있으면 finance 로 이동하면서 현재 financeTab 세그먼트가 라우트에 실린다.
+function goFinanceTab(tab) {
+  const target = (tab === 'cost' && !financeCostInfoAllowed()) ? 'dashboard' : (tab || 'dashboard');
+  financeTab = target;
+  if (typeof currentPage !== 'undefined' && currentPage !== 'finance') {
+    go('finance');
+  } else {
+    syncCurrentSubRoute('finance', target);
+    renderFinance();
+  }
+}
+
 function updateFinancePrimaryAction() {
   const button = inp('finance-primary-action');
   if (!button) return;
@@ -1611,11 +1624,7 @@ function openFinancePrimaryAction() {
 function renderFinance() {
   const body = inp('finance-body'); if (!body) return;
   if (financeTab === 'cost' && !financeCostInfoAllowed()) financeTab = 'dashboard';
-  document.querySelectorAll('#finance-tabs [data-fintab="cost"]').forEach(b => {
-    b.style.display = financeCostInfoAllowed() ? '' : 'none';
-  });
-  document.querySelectorAll('#finance-tabs [data-fintab]').forEach(b =>
-    b.classList.toggle('btn-primary', b.dataset.fintab === financeTab));
+  // 재무 하위 탭은 사이드바로 이동함. 등록 액션바는 현재 탭이 필요할 때만 노출.
   updatePaymentRequestBadge();
   updateFinancePrimaryAction();
   const map = {

@@ -51,7 +51,18 @@ export const APP_MODULES = [
   },
   {
     key: 'finance', label: '재무', icon: 'ti-coin',
-    items: [{ page: 'finance', label: '재무 관리', icon: 'ti-coin' }]
+    items: [
+      { page: 'finance', segment: 'dashboard', label: '요약', icon: 'ti-chart-pie' },
+      { page: 'finance', segment: 'ar', label: '수금/지급', icon: 'ti-receipt' },
+      { page: 'finance', segment: 'payreq', label: '결제요청', icon: 'ti-cash-banknote' },
+      { page: 'finance', segment: 'fixed', label: '고정비', icon: 'ti-repeat' },
+      { page: 'finance', segment: 'revenue', label: '매출', icon: 'ti-trending-up' },
+      { page: 'finance', segment: 'purchase', label: '매입', icon: 'ti-trending-down' },
+      { page: 'finance', segment: 'labor', label: '급여', icon: 'ti-cash' },
+      { page: 'finance', segment: 'cost', label: '원가', icon: 'ti-calculator' },
+      { page: 'finance', segment: 'pnl', label: '손익', icon: 'ti-report-money' },
+      { page: 'finance', segment: 'etc', label: '기타', icon: 'ti-list-details' }
+    ]
   },
   {
     key: 'master', label: '기준정보', icon: 'ti-address-book',
@@ -83,12 +94,15 @@ function readRoute() {
 
 function allowed(item) {
   if (item.page === 'dashboard') return true;
+  // 원가 탭은 원가 조회 권한이 있을 때만 사이드바에 노출한다.
+  if (item.page === 'finance' && item.segment === 'cost' && g('financeCostInfoAllowed') === false) return false;
   const result = g('pageAllowed', item.page);
   return result !== false;
 }
 
 function navigate(item) {
   if (item.page === 'inventory') return g('goInventory', item.segment || 'finished', null);
+  if (item.page === 'finance') return g('goFinanceTab', item.segment || 'dashboard');
   return g('go', item.page, null);
 }
 
