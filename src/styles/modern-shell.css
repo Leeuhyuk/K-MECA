@@ -357,41 +357,8 @@
     border-bottom: 0;
   }
 
-  body.modern-shell #pg-materials .metrics {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    gap: 0;
-    padding: 6px 8px;
-    margin-bottom: 7px;
-    background: var(--bg-p);
-    border: 1px solid var(--br);
-    border-radius: 8px;
-  }
-
-  body.modern-shell #pg-materials .metrics .mc {
-    min-height: 48px;
-    padding: 5px 14px;
-    border: 0;
-    border-right: 1px solid var(--br);
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-
-  body.modern-shell #pg-materials .metrics .mc:last-child {
-    border-right: 0;
-  }
-
-  body.modern-shell #pg-materials .metrics .mc.clickable:hover,
-  body.modern-shell #pg-materials .metrics .mc.clickable.kpi-active {
-    border-radius: 6px;
-    background: var(--bg-i);
-    box-shadow: none;
-  }
-
-  body.modern-shell #pg-materials .metrics .mc-val {
-    font-size: 18px;
-  }
+  /* 자재 KPI 전용이던 스트립 규칙은 파일 하단의 공통 KPI 스트립으로 대체됐다.
+     (ID 특정성이 높아 공통 규칙을 이겨버리므로 남겨두면 안 된다) */
 
   body.modern-shell #pg-materials .mat-sticky-header > .toolbar {
     min-height: 44px;
@@ -842,4 +809,95 @@
     border: 0 !important;
     border-radius: 0 !important;
   }
+}
+
+/* ════════ 공통 KPI 스트립 — '오늘 처리'(.modern-work-queue)와 같은 형태로 통일 ════════
+   화면마다 제각각 크기의 카드가 그리드로 흩어져 있던 것을, 한 줄짜리 테두리 안에
+   구분선으로 이어붙인 스트립으로 바꾼다. 마지막 로드 파일이라 캐스케이드에서 이긴다.
+
+   구분선을 border-right 로 긋지 않는 이유: .metrics 는 폭에 따라 4열(auto-fit
+   minmax(220px)) ↔ 2열(≤680px)로 열 수가 바뀌고 카드 수도 화면마다 다르다.
+   :last-child / :nth-child 로는 줄 끝을 맞출 수 없다. 대신 gap 1px 을 두고 그 사이로
+   컨테이너 배경(테두리색)이 비치게 하면 몇 열이든, 몇 줄로 접히든 선이 저절로 맞는다. */
+body.modern-shell .metrics,
+body.modern-shell .sum-row {
+  gap: 1px;
+  padding: 0;
+  background: var(--br);
+  border: 1px solid var(--br);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* 카드 내부: '아이콘 | 라벨 | 값' 가로 배치 (.modern-work-queue-item 과 동일한 리듬) */
+body.modern-shell .metrics > .mc,
+body.modern-shell .sum-row > .mc {
+  min-height: 50px;
+  padding: 7px 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 0;
+  background: var(--bg-p);
+  box-shadow: none;
+}
+
+/* 라벨은 block + 인라인 아이콘이라야 말줄임이 걸린다.
+   (flex 로 두면 아이콘 옆 텍스트가 익명 flex 아이템이 되어 ellipsis 가 안 먹는다) */
+/* font-size 에 !important + --ui-font-scale 을 쓰는 이유: base.css 의
+   `.content :where(.mc-lbl, ...)` 가 화면 설정의 글자 크기 배율을 !important 로
+   강제한다. 그 규칙을 이기려면 같은 방식이어야 하고, 배율 기능도 그대로 살아야 한다. */
+body.modern-shell .metrics > .mc .mc-lbl,
+body.modern-shell .sum-row > .mc .mc-lbl {
+  display: block;
+  margin-bottom: 0;
+  font-size: calc(11.5px * var(--ui-font-scale)) !important;
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.modern-shell .metrics > .mc .mc-lbl i,
+body.modern-shell .sum-row > .mc .mc-lbl i {
+  margin-right: 6px;
+  font-size: 17px;
+  vertical-align: -2px;
+}
+
+body.modern-shell .metrics > .mc .mc-val,
+body.modern-shell .sum-row > .mc .mc-val {
+  font-size: calc(15px * var(--ui-font-scale)) !important;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* 보조 텍스트가 있는 카드는 라벨/값 아래 한 줄을 더 쓴다 */
+body.modern-shell .metrics > .mc .mc-sub,
+body.modern-shell .sum-row > .mc .mc-sub {
+  grid-column: 1 / -1;
+  margin-top: 1px;
+}
+
+/* 개별 테두리가 없으므로 hover/활성은 배경과 밑줄로만 표현한다 */
+body.modern-shell .metrics > .mc.clickable:hover,
+body.modern-shell .sum-row > .mc.clickable:hover {
+  border-radius: 0;
+  background: var(--bg-i);
+  box-shadow: none;
+}
+
+body.modern-shell .metrics > .mc.clickable.kpi-active,
+body.modern-shell .sum-row > .mc.clickable.kpi-active {
+  border-radius: 0;
+  background: var(--bg-i);
+  box-shadow: inset 0 -2px 0 var(--tx-i);
+}
+
+/* 활성 표시는 위 밑줄이 담당 — '필터됨' 배지는 좁은 칸에서 라벨을 밀어낸다 */
+body.modern-shell .metrics > .mc.clickable.kpi-active .mc-lbl::after,
+body.modern-shell .sum-row > .mc.clickable.kpi-active .mc-lbl::after {
+  content: none;
 }
