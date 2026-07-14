@@ -1,4 +1,4 @@
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import { useDomainSelection } from '../hooks/useDomainSelection.js';
 
 const INTERACTIVE_SELECTOR = 'button,a,input,select,textarea,label,[contenteditable="true"],[onclick]';
@@ -22,7 +22,14 @@ export function LegacyTableIsland({ domainKey, entityType, sourceSelector, store
   const source = typeof document === 'undefined' ? null : document.querySelector(sourceSelector);
   const html = source?.innerHTML || '';
 
-  useEffect(() => {
+  // useEffect 가 아니라 useLayoutEffect 여야 한다.
+  // useDomainSelection 이 먼저 호출되므로 그 안의 useEffect(→ updateSelectionDetailPanelFromReactDomain)가
+  // 이 컴포넌트의 useEffect 보다 먼저 돈다. 그 함수는 DOM 에서 tbody tr[data-entity-id] 를 찾아
+  // 우측 상세 패널에 행을 물려주는데, 아래에서 data-entity-id 를 붙이기 전에 읽어버려 row 가 null 이 되고
+  // 상태가 변경 드롭다운 대신 정적 배지로 떨어진다.
+  // layout effect 는 모든 passive effect 보다 먼저 실행되므로 순서가 보장된다.
+  // (MaterialsTable 은 data-entity-id 를 JSX 로 직접 렌더해 커밋 시점에 이미 DOM 에 있어서 문제가 없다)
+  useLayoutEffect(() => {
     const root = rootRef.current;
     if (!root) return;
     const ids = [];

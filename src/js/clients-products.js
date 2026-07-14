@@ -153,9 +153,7 @@ function renderClients() {
                           <span class="bd" style="background:${sc}18;color:${sc};border-color:${sc}44;font-size:11px;">${esc(p.processStage)}</span>
                           <span style="font-size:10px;color:var(--tx-t);display:block;margin-top:2px;">→ ${esc(stageToStatus(p.processStage))}</span>
                         ` : `
-                          <select class="stat-sel" style="border-color:${sc};color:${sc};" onchange="changeProdStage('${p.id}',this.value)">
-                            ${processStages.map(s=>`<option${s===p.processStage?' selected':''}>${esc(s)}</option>`).join('')}
-                          </select>
+                          ${readonlyStatusCellHtml(p.processStage, processStages, `changeProdStage('${p.id}',this.value)`)}
                           <div style="margin-top:3px;display:flex;align-items:center;gap:4px;">
                             <i class="ti ti-arrow-right" style="font-size:10px;color:var(--tx-t);"></i>
                             ${statusBadge(p.status)}

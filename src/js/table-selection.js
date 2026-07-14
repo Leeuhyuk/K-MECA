@@ -2408,6 +2408,26 @@ function syncManagedTableRowsAndDetail(table) {
   else syncSelectionDetailPanelVisibility();
 }
 
+/* 표 셀의 '읽기 전용 상태 pill + 숨은 select' 마크업.
+
+   날 select 를 그대로 렌더하면 처음엔 드롭다운이 보이다가, syncReadonlyStatusDisplays 가
+   돌면서 pill 로 바뀌어 화면이 튄다. LegacyTableIsland 는 원본 표의 innerHTML 을 복사해
+   렌더하므로, 원본이 변환되기 전에 복사했는지에 따라 결과가 달라져 더 헷갈린다.
+   처음부터 최종 형태(pill)로 렌더해 이 경쟁을 없앤다.
+
+   숨은 select 는 지우면 안 된다. 우측 상세 패널이 이 select 의 option 을 읽어 상태 변경
+   드롭다운을 만든다(selectionDetailStatusBadge). 지우면 상태가 정적 배지로만 나온다.
+
+   pill 색은 selectionDetailStatusClass 로 낸다 — syncReadonlyStatusDisplays 가 나중에
+   덮어쓸 때 쓰는 것과 같은 함수라야 색이 바뀌지 않는다. */
+function readonlyStatusCellHtml(status, options, onchangeAttr) {
+  const list = Array.isArray(options) ? options : [];
+  const text = String(status == null || status === '' ? (list[0] || '') : status);
+  const opts = list.map(s => `<option${s === text ? ' selected' : ''}>${selectionDetailEsc(s)}</option>`).join('');
+  return `<span class="readonly-status-pill ${selectionDetailStatusClass(text)}" title="상태">${selectionDetailEsc(text)}</span>` +
+    `<select class="stat-sel readonly-status-source" aria-hidden="true" tabindex="-1" onchange="${onchangeAttr}">${opts}</select>`;
+}
+
 function syncReadonlyStatusDisplays(table) {
   if (!table || table.closest('.overlay')) return;
   table.querySelectorAll('tbody select.stat-sel').forEach(select => {

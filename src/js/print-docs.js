@@ -477,9 +477,7 @@ function renderRfq() {
         <td style="font-size:11px;color:var(--tx-t);">${r.spec||'—'}</td>
         <td>${_docQtySummary(r)}</td>
         <td>${r.targetPrice?'₩'+Number(r.targetPrice).toLocaleString('ko-KR'):'—'}</td>
-        <td><select class="stat-sel" onchange="changeRfqStatus('${r.id}',this.value)" style="color:${rfqStatusColor(r.status)}">
-          ${['요청전','요청중','회신완료','채택','미채택'].map(s=>`<option${s===r.status?' selected':''}>${s}</option>`).join('')}
-        </select></td>
+        <td>${readonlyStatusCellHtml(r.status, ['요청전','요청중','회신완료','채택','미채택'], `changeRfqStatus('${r.id}',this.value)`)}</td>
         <td style="font-size:11px;color:var(--tx-t);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.note||''}">${r.note||'—'}</td>
         <td style="white-space:nowrap;">
           <button class="edit-btn" onclick="openRfqEdit('${r.id}')"><i class="ti ti-edit"></i>수정</button>
@@ -916,9 +914,7 @@ function renderPo() {
         <td><span class="bd bd-neu">${esc(p.payMethod || '현금')}</span></td>
         <td><span class="bd bd-info">${esc(p.dlvMethod || '직납')}</span></td>
         <td class="po-payment-td">${typeof poPaymentCell === 'function' ? poPaymentCell(p) : '<span class="bd bd-neu">미요청</span>'}</td>
-        <td><span class="readonly-status-pill ${poStatusPillClass(p.status)}" title="상태">${esc(p.status || '작성중')}</span><select class="stat-sel readonly-status-source" aria-hidden="true" tabindex="-1" onchange="changePoStatus('${p.id}',this.value)" style="color:${poStatusColor(p.status)}">
-          ${['작성중','발송완료','확인완료','입고완료'].map(s=>`<option${s===p.status?' selected':''}>${s}</option>`).join('')}
-        </select></td>
+        <td>${readonlyStatusCellHtml(p.status, ['작성중','발송완료','확인완료','입고완료'], `changePoStatus('${p.id}',this.value)`)}</td>
         <td class="po-note-cell" title="${esc(p.note||'')}">${esc(p.note||'—')}</td>
       </tr>`;
     }).join('')}
@@ -2509,9 +2505,7 @@ function renderSalesDoc(type) {
         <td>₩${sup.toLocaleString('ko-KR')}</td>
         <td style="color:var(--tx-t);">₩${vat.toLocaleString('ko-KR')}</td>
         <td style="font-weight:700;color:var(--tx-i);">₩${grand.toLocaleString('ko-KR')}</td>
-        <td><select class="stat-sel" onchange="changeSalesDocStatus('${type}','${d.id}',this.value)" style="color:${salesStatusColor(type,d.status)}">
-          ${cfg.statuses.map(s=>`<option${s===d.status?' selected':''}>${s}</option>`).join('')}
-        </select></td>
+        <td>${readonlyStatusCellHtml(d.status, cfg.statuses, `changeSalesDocStatus('${type}','${d.id}',this.value)`)}</td>
         <td style="white-space:nowrap;">
           <button class="edit-btn" onclick="openSalesDocEdit('${type}','${d.id}')"><i class="ti ti-edit"></i>수정</button>
           <button class="btn btn-sm" style="margin-left:3px;" onclick="openSalesDocPrint('${type}','${d.id}')" title="PDF 출력"><i class="ti ti-printer"></i></button>
@@ -3029,9 +3023,7 @@ function renderSODoc(type) {
         <td>${d.unitPrice?'₩'+Number(d.unitPrice).toLocaleString('ko-KR'):'—'}</td>
         <td style="font-weight:700;color:var(--tx-i);">₩${sup.toLocaleString('ko-KR')}</td>
         ${extraCell}
-        <td><select class="stat-sel" onchange="changeSODocStatus('${type}','${d.id}',this.value)" style="color:${soDocStatusColor(type,d.status)}">
-          ${cfg.statuses.map(s=>`<option${s===d.status?' selected':''}>${s}</option>`).join('')}
-        </select></td>
+        <td>${readonlyStatusCellHtml(d.status, cfg.statuses, `changeSODocStatus('${type}','${d.id}',this.value)`)}</td>
         <td style="white-space:nowrap;">
           <button class="edit-btn" onclick="openSODocEdit('${type}','${d.id}')"><i class="ti ti-edit"></i>수정</button>
           <button class="btn btn-sm" style="margin-left:3px;" onclick="openSODocPrint('${type}','${d.id}')" title="PDF 출력"><i class="ti ti-printer"></i></button>
