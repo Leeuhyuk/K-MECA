@@ -16,15 +16,15 @@
     <!-- 재고 목록 탭 -->
     <div id="inv-tab-list">
     <div class="toolbar">
-      <select id="inv-filter-type" onchange="renderInventory()" style="min-width:140px;">
+      <select id="inv-filter-type" onchange="clearModernInventoryWorkFilter();renderInventory()" style="min-width:140px;">
         <option value="">전체 세부유형</option>
       </select>
-      <select id="inv-filter-status" onchange="renderInventory()" style="min-width:140px;">
+      <select id="inv-filter-status" onchange="clearModernInventoryWorkFilter();renderInventory()" style="min-width:140px;">
         <option value="">전체 재고 상태</option>
         <option value="normal">정상 수준</option>
         <option value="low">안전재고 미달</option>
       </select>
-      <input type="text" id="inv-q" placeholder="재고명, 보관위치 검색..." style="min-width:200px;" oninput="renderInventory()">
+      <input type="text" id="inv-q" placeholder="재고명, 보관위치 검색..." style="min-width:200px;" oninput="clearModernInventoryWorkFilter();renderInventory()">
       <button class="btn btn-primary btn-icon" onclick="openInvAdd()" title="신규 재고 품목 등록"><i class="ti ti-plus"></i></button>
     </div>
 

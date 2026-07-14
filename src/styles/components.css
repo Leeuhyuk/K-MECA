@@ -31,6 +31,7 @@
 .ff { position: relative; }
 .field-search { position: relative; width: 100%; }
 .field-search input { padding-right: 36px; }
+.material-product-search-field { grid-column: span 2; }
 .field-search select.linked-hidden-select { display: none; }
 .field-search-btn {
   position: absolute;
@@ -1483,7 +1484,7 @@
 .sum-box.clickable:hover { background: var(--bg-s); border-color: var(--br-i); box-shadow: 0 0 0 1px var(--br-i) inset; }
 .sum-box.kpi-active { background: var(--bg-i); border-color: var(--br-i); box-shadow: 0 0 0 1px var(--br-i) inset; }
 .si { font-size: 20px; color: var(--tx-s); }
-.sn { font-size: 17px; font-weight: 700; }
+.sn { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .sl { font-size: 10.5px; color: var(--tx-t); font-weight: 500; }
 
 /* 수주처 카드 & 드래그엔드롭 스타일 */
@@ -1627,6 +1628,8 @@
 /* 시스템 관리 */
 #pg-system { background: var(--bg-t); }
 .system-shell { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 22px; align-items: start; }
+/* 시스템 설정 하위 항목을 좌측 사이드바로 옮긴 뒤: 콘텐츠가 전체 폭을 쓰도록 단일 열. */
+.system-shell.system-shell-single { grid-template-columns: minmax(0, 1fr); }
 .system-sidebar { position: static; align-self: start; margin: 0; background: var(--bg-p); border: 1px solid var(--br); border-radius: var(--rl); padding: 16px 12px 12px; box-shadow: 0 1px 2px rgba(16,24,40,.04); }
 .system-sidebar-title { padding: 0 10px 14px; color: var(--tx-t); font-size: 13px; font-weight: 700; }
 .system-nav { display: flex; flex-direction: column; gap: 8px; }
@@ -1697,7 +1700,7 @@
 .system-kpi { min-height: 104px; padding: 18px 20px; border: 1px solid var(--br); border-radius: var(--rl); background: var(--bg-s); box-shadow: 0 1px 2px rgba(16,24,40,.04); }
 .system-kpi-label { display: flex; align-items: center; gap: 8px; color: var(--tx-s); font-size: 12px; font-weight: 700; }
 .system-kpi-label i { color: var(--tx-i); }
-.system-kpi strong { display: block; margin-top: 10px; font-size: 24px; line-height: 1; color: var(--tx); }
+.system-kpi strong { display: block; margin-top: 10px; font-size: 24px; line-height: 1; color: var(--tx); font-variant-numeric: tabular-nums; }
 .system-kpi span { display: block; margin-top: 8px; color: var(--tx-t); font-size: 12px; font-weight: 700; }
 .system-kpi.warn strong, .system-kpi.warn .system-kpi-label i { color: var(--tx-w); }
 .system-kpi.danger strong, .system-kpi.danger .system-kpi-label i { color: var(--tx-d); }
@@ -1893,8 +1896,12 @@
 }
 .inventory-compact-table .table-row-select-th,
 .inventory-compact-table .table-row-select-td {
-  width: 34px;
-  min-width: 34px;
+  width: 24px;
+  min-width: 24px;
+  max-width: 24px;
+  padding-right: 4px !important;
+  padding-left: 4px !important;
+  text-align: center !important;
 }
 .inventory-compact-table th:nth-child(2),
 .inventory-compact-table td:nth-child(2) {

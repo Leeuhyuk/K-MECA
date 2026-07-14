@@ -1587,6 +1587,19 @@ function switchFinTab(tab) {
   renderFinance();
 }
 
+// 모던 셸 사이드바에서 재무 하위 탭으로 직접 이동(재고의 goInventory 와 대칭).
+// 다른 페이지에 있으면 finance 로 이동하면서 현재 financeTab 세그먼트가 라우트에 실린다.
+function goFinanceTab(tab) {
+  const target = (tab === 'cost' && !financeCostInfoAllowed()) ? 'dashboard' : (tab || 'dashboard');
+  financeTab = target;
+  if (typeof currentPage !== 'undefined' && currentPage !== 'finance') {
+    go('finance');
+  } else {
+    syncCurrentSubRoute('finance', target);
+    renderFinance();
+  }
+}
+
 function updateFinancePrimaryAction() {
   const button = inp('finance-primary-action');
   if (!button) return;
@@ -1611,11 +1624,7 @@ function openFinancePrimaryAction() {
 function renderFinance() {
   const body = inp('finance-body'); if (!body) return;
   if (financeTab === 'cost' && !financeCostInfoAllowed()) financeTab = 'dashboard';
-  document.querySelectorAll('#finance-tabs [data-fintab="cost"]').forEach(b => {
-    b.style.display = financeCostInfoAllowed() ? '' : 'none';
-  });
-  document.querySelectorAll('#finance-tabs [data-fintab]').forEach(b =>
-    b.classList.toggle('btn-primary', b.dataset.fintab === financeTab));
+  // 재무 하위 탭은 사이드바로 이동함. 등록 액션바는 현재 탭이 필요할 때만 노출.
   updatePaymentRequestBadge();
   updateFinancePrimaryAction();
   const map = {
@@ -2189,6 +2198,11 @@ function payreqSubmitSelected() {
 function payreqDecideSelected(nextStatus) {
   const rows = payreqApprovalPendingSelectedRows();
   if (!rows.length) { showToast('승인/반려할 결재대기 건이 없습니다.', 'info'); return; }
+  // 결재 승인/반려는 서버 쓰기 계층(financeData = manager 이상)과 동일하게 제한한다.
+  // canEditRecord 만으로는 부족 — 요청 작성자 본인(staff)도 통과해 자기 결재를 승인하는
+  // 것처럼 보이고, 서버 거부 후 동기화 시점에야 되돌아가 혼란을 준다.
+  if (currentRole !== 'admin' && currentRole !== 'manager') { showToast('결재 승인/반려 권한이 없습니다.', 'error'); return; }
+  if (rows.some(req => !canEditRecord(req, 'paymentRequest'))) { showToast('결재 권한이 없는 결제 요청이 포함되어 있습니다.', 'error'); return; }
   const approved = nextStatus === 'approved';
   const note = approved ? '' : window.prompt('반려 사유를 입력하세요.', '') ;
   if (!approved && note === null) return;
@@ -2312,7 +2326,7 @@ function _finPayRequests() {
     ${finFilterBar('payreq',{placeholder:'발주번호·공급처·담당자 검색',statuses:['요청','확인','지급예정','지급완료','반려']})}
     <div class="metrics payreq-approval-metrics">
       <div class="mc"><div class="mc-lbl"><i class="ti ti-send"></i>진행 요청</div><div class="mc-val" style="color:var(--tx-i);">${open.length}</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-checklist"></i>결재대기</div><div class="mc-val" style="color:var(--tx-w);">${pendingApproval.length}</div><div class="mc-sub">작성중 ${draftApproval.length}건</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-checklist"></i>결재대기</div><div class="mc-val" style="color:${pendingApproval.length>0?'var(--tx-w)':'var(--tx-s)'};">${pendingApproval.length}</div><div class="mc-sub">작성중 ${draftApproval.length}건</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-cash-banknote"></i>요청 금액</div><div class="mc-val" style="color:#e8590c;">${fmtW(amount)}</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-check"></i>지급완료</div><div class="mc-val">${financePaymentRequests().filter(r=>canViewRecord(r,'paymentRequest')&&r.status==='지급완료').length}</div></div>
     </div>

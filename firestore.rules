@@ -21,25 +21,131 @@ service cloud.firestore {
 
     function isActiveUser() {
       return bootstrapAdmin()
-        || (hasUserDoc() && myUser().data.active != false);
+        || (hasUserDoc()
+          && myUser().data.keys().hasAll(['active'])
+          && myUser().data.active == true);
+    }
+
+    function hasRole(role) {
+      return hasUserDoc()
+        && myUser().data.keys().hasAll(['role'])
+        && myUser().data.role == role;
     }
 
     function isAdmin() {
-      return bootstrapAdmin() || (hasUserDoc() && myUser().data.role == 'admin');
+      return bootstrapAdmin()
+        || (isActiveUser() && hasRole('admin'));
     }
 
     function isManagerOrAdmin() {
-      return isAdmin() || (hasUserDoc() && myUser().data.role == 'manager');
+      return isAdmin()
+        || (isActiveUser() && hasRole('manager'));
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function validDisplayName(name) {
+      return name is string && name.size() <= 100;
+    }
+
+    function validSelfRegistration() {
+      return request.resource.data.keys().hasAll([
+          'email', 'name', 'role', 'active', 'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'email', 'name', 'role', 'active', 'createdAt'
+        ])
+        && request.resource.data.email is string
+        && request.resource.data.email == request.auth.token.email
+        && validDisplayName(request.resource.data.name)
+        && request.resource.data.createdAt is int
+        && (
+          (bootstrapAdmin()
+            && request.resource.data.role == 'admin'
+            && request.resource.data.active == true)
+          || (!bootstrapAdmin()
+            && request.resource.data.role == 'staff'
+            && request.resource.data.active == false)
+        );
+    }
+
+    function validSelfProfileUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
+        && request.resource.data.keys().hasAll(['name'])
+        && validDisplayName(request.resource.data.name);
     }
 
     function mesKeyIsAudit(key) {
       return key == 'auditLog';
     }
 
+    function mesKeyRequiresManager(key) {
+      return key in [
+        'financeData',
+        'workers',
+        'attendance',
+        'leaves',
+        'payrollRecords'
+      ];
+    }
+
+    function mesKeyRequiresAdmin(key) {
+      return key in [
+        'companyInfo',
+        'docXlsxTemplates',
+        'driveOAuthSettings',
+        'googleDriveConfig',
+        'firebaseConfig',
+        'geminiConfig',
+        'alimtalkSettings',
+        'emailjsSettings'
+      ];
+    }
+
+    // 급여는 재무·인사 중에서도 가장 민감 — 읽기/쓰기 모두 admin 전용.
+    // mesKeyRequiresAdmin(설정 키)에 넣지 않는 이유: 그 목록은 읽기가 전체
+    // 공개다(회사정보 등을 인쇄·문서 양식이 사용). 급여만 별도로 격리한다.
+    function mesKeyIsPayroll(key) {
+      return key == 'payrollRecords';
+    }
+
+    function canWriteMesKey(key) {
+      return isActiveUser()
+        && !mesKeyIsAudit(key)
+        && (!mesKeyIsPayroll(key) || isAdmin())
+        && (!mesKeyRequiresAdmin(key) || isAdmin())
+        && (!mesKeyRequiresManager(key) || isManagerOrAdmin());
+    }
+
+    // 재무·인사 데이터(급여 포함)는 읽기도 쓰기와 같은 계층으로 제한한다.
+    // UI 숨김만으로는 staff 가 콘솔/직접 쿼리로 열람할 수 있기 때문.
+    function canReadMesKey(key) {
+      return isActiveUser()
+        && (!mesKeyIsAudit(key) || isAdmin())
+        && (!mesKeyIsPayroll(key) || isAdmin())
+        && (!mesKeyRequiresManager(key) || isManagerOrAdmin());
+    }
+
+    function expectedAuditRole() {
+      return bootstrapAdmin() ? 'admin' : myUser().data.role;
+    }
+
+    function validAuditCreate(docId) {
+      return isActiveUser()
+        && (bootstrapAdmin() || myUser().data.keys().hasAll(['role']))
+        && request.resource.data.id == docId
+        && request.resource.data.actorUserId == request.auth.uid
+        && request.resource.data.actorRole == expectedAuditRole()
+        && request.resource.data.serverAt == request.time;
+    }
+
     match /users/{uid} {
-      allow create: if signedIn() && request.auth.uid == uid;
-      allow read: if isActiveUser() && (request.auth.uid == uid || isAdmin());
-      allow update, delete: if isAdmin();
+      allow create: if isSelf(uid) && validSelfRegistration();
+      allow read: if isSelf(uid) || isAdmin();
+      allow update: if isAdmin() || (isSelf(uid) && validSelfProfileUpdate());
+      allow delete: if isAdmin();
     }
 
     match /roles/{docId} {
@@ -53,26 +159,26 @@ service cloud.firestore {
     }
 
     match /audit_logs/{docId} {
-      allow create: if isActiveUser();
+      allow create: if validAuditCreate(docId);
       allow read: if isAdmin();
       allow update, delete: if false;
     }
 
     match /mes_v2/{key} {
-      allow read: if isActiveUser() && (!mesKeyIsAudit(key) || isAdmin());
-      allow create, update: if isActiveUser();
-      allow delete: if isManagerOrAdmin();
+      allow read: if canReadMesKey(key);
+      allow create, update: if canWriteMesKey(key);
+      allow delete: if isManagerOrAdmin() && (!mesKeyIsPayroll(key) || isAdmin());
 
       match /items/{itemId} {
-        allow read: if isActiveUser() && (!mesKeyIsAudit(key) || isAdmin());
-        allow create, update: if isActiveUser();
-        allow delete: if isManagerOrAdmin();
+        allow read: if canReadMesKey(key);
+        allow create, update: if canWriteMesKey(key);
+        allow delete: if isManagerOrAdmin() && (!mesKeyIsPayroll(key) || isAdmin());
       }
 
       match /state/{stateId} {
-        allow read: if isActiveUser() && (!mesKeyIsAudit(key) || isAdmin());
-        allow create, update: if isActiveUser();
-        allow delete: if isManagerOrAdmin();
+        allow read: if canReadMesKey(key);
+        allow create, update: if canWriteMesKey(key);
+        allow delete: if isManagerOrAdmin() && (!mesKeyIsPayroll(key) || isAdmin());
       }
     }
 

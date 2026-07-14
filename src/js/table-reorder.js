@@ -28,6 +28,8 @@
   function processTable(container) {
     const table = container.querySelector('table');
     if (!table) return;
+    // React 소유 테이블 등 opt-out 대상은 컬럼 재정렬 데코레이션을 건너뛴다.
+    if (table.dataset.managedTable === 'false' || table.hasAttribute('data-no-managed-table')) return;
     const headRow = table.querySelector('thead tr');
     if (!headRow) return;
     const N = headRow.children.length;

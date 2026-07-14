@@ -335,6 +335,10 @@ function isSidebarHiddenByUser() {
 }
 
 function togglePrimaryMenu() {
+  if (document.body.classList.contains('modern-shell') && window.innerWidth > 900) {
+    window.dispatchEvent(new CustomEvent('mes:toggle-context-nav'));
+    return;
+  }
   if (window.innerWidth >= SB_WIDE_MIN && isSidebarHiddenByUser()) {
     _sidebarHiddenForSession = false;
     applySidebarMode();
@@ -402,6 +406,7 @@ function closeSelectionDetailOnNavigation() {
 
 function closeFloatingEditorsOnNavigation() {
   closeSelectionDetailOnNavigation();
+  if (typeof closeReactEntryPanels === 'function') closeReactEntryPanels();
   document.querySelectorAll('.add-panel.open').forEach(panel => panel.classList.remove('open'));
   document.querySelectorAll('.overlay.open').forEach(modal => {
     if (modal.id === 'confirmDlg') return;
@@ -441,9 +446,10 @@ let _routeApplying = false;
 let _routeDepth = 0;
 
 const ROUTE_SUBPAGES = {
-  system: ['initial','permissions','company','columns','display','templates','api','drive','alimtalk','alerts','trash'],
+  dashboard: ['overview','process','resources'],
+  system: ['initial','permissions','company','columns','display','templates','backup','api','storage','drive','alimtalk','alerts','trash'],
   workers: ['roster','att','leave'],
-  finance: ['dashboard','revenue','purchase','labor','cost','pnl','ar','etc'],
+  finance: ['dashboard','ar','payreq','fixed','revenue','purchase','labor','cost','pnl','etc'],
   notes: ['memos','todos','board','report'],
   salesdoc: ['quote','order'],
   deliveries: ['list','closed'],
@@ -451,6 +457,7 @@ const ROUTE_SUBPAGES = {
 };
 
 function currentRouteSegment(page) {
+  if (page === 'dashboard') return typeof currentDashTab === 'string' ? currentDashTab : 'overview';
   if (page === 'system') return typeof systemTab === 'string' ? systemTab : 'initial';
   if (page === 'workers') return typeof empTab === 'string' ? empTab : 'roster';
   if (page === 'finance') return typeof financeTab === 'string' ? financeTab : 'dashboard';
@@ -492,7 +499,8 @@ function writeAppRoute(page, segment, mode) {
 }
 
 function applyRouteSubpage(page, segment) {
-  if (page === 'system') systemTab = segment || 'initial';
+  if (page === 'dashboard') currentDashTab = segment || 'overview';
+  else if (page === 'system') systemTab = segment || 'initial';
   else if (page === 'workers') empTab = segment || 'roster';
   else if (page === 'finance') financeTab = segment || 'dashboard';
   else if (page === 'notes') memoTab = segment || 'memos';
@@ -550,6 +558,7 @@ function syncCurrentSubRoute(page, segment) {
   if (_routeApplying || currentPage !== page) return;
   const nextHash = appRouteHash(page, segment);
   if (location.hash !== nextHash) writeAppRoute(page, segment, 'push');
+  window.dispatchEvent(new CustomEvent('mes:navigation', { detail:{ page, segment } }));
 }
 
 function updateTopbarBackButton() {
@@ -640,6 +649,7 @@ function _goTo(id, el) {
   // 모바일: 페이지 이동 시 홈 오버레이 해제 + 하단 탭 동기화
   document.body.classList.remove('mhome');
   if (typeof syncMobileTab === 'function') syncMobileTab();
+  window.dispatchEvent(new CustomEvent('mes:navigation', { detail:{ page:id, segment:currentRouteSegment(id) } }));
   return true;
 }
 
@@ -683,6 +693,7 @@ function _showInventoryPage(key, meta, el) {
   // 모바일 드로어 닫기
   const sb = document.querySelector('.sidebar');
   if (sb && sb.classList.contains('mobile-open')) { sb.classList.remove('mobile-open'); document.getElementById('sidebar-backdrop')?.classList.remove('active'); }
+  window.dispatchEvent(new CustomEvent('mes:navigation', { detail:{ page:'inventory', segment:key } }));
   return true;
 }
 

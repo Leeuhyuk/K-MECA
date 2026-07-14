@@ -12,6 +12,13 @@ const SELECTION_DETAIL_DEFAULT_WIDTH = 402;
 const SELECTION_DETAIL_MIN_WIDTH = 320;
 const SELECTION_DETAIL_MAX_WIDTH = 760;
 
+function publishSelectionDetailReactState(panel, open) {
+  if (typeof document === 'undefined' || !document.getElementById('selection-detail-react-root')) return;
+  if (panel) panel.style.display = 'none';
+  window.__selectionDetailReactState = { open: !!open, html: panel ? panel.innerHTML : '' };
+  window.dispatchEvent(new Event('selection-detail-react-change'));
+}
+
 const BULK_AUDIT_TYPES = {
   rfq:'rfq', materials:'material', inventory:'inventory', orders:'workOrder',
   defects:'defect', checks:'checkRecord', claims:'claim', deliveries:'delivery',
@@ -645,7 +652,7 @@ function selectionDetailStatusClass(status) {
   const s = String(status || '');
   if (/(완료|승인|정상|입고완료|지급완료)/.test(s)) return 'is-ok';
   if (/(지연|오류|불량|실패|삭제)/.test(s)) return 'is-danger';
-  if (/(대기|작성|미요청|보류)/.test(s)) return 'is-muted';
+  if (/(대기|작성|미요청|보류|발주전)/.test(s)) return 'is-muted';
   return 'is-info';
 }
 
@@ -1010,8 +1017,9 @@ function selectionDetailHeaderHtml(context, primary) {
     status = record.status || status || '대기';
   }
   if (type === 'inventory' && record) {
-    title = record.id || record.code || ref.entityId || title;
-    sub = `${record.name || '품목명 없음'} · ${record.type || record.category || '분류 없음'}`;
+    const invCode = record.id || record.code || ref.entityId || '';
+    title = record.name || invCode || title;
+    sub = `${invCode || '코드 없음'} · ${record.type || record.category || '분류 없음'}`;
     status = (Number(record.qty) < Number(record.minQty || record.safeStock || 0)) ? '안전재고 미달' : (record.status || status || '정상');
   }
   if (type === 'workOrder' && record) {
@@ -1372,7 +1380,23 @@ function selectionDetailScheduleRows(primary) {
 }
 
 function selectionDetailWorkActionsHtml(context) {
-  if (!context || context.count !== 1) {
+  if (!context) return '';
+  if (context.source === 'react-domain') {
+    if (context.key === 'po') {
+      const docMenu = selectionDetailPoDocumentMenuHtml();
+      return `<button class="selection-detail-work-btn" onclick="runSelectionDetailPanelAction('edit')">수정</button>
+        <button class="selection-detail-work-btn" onclick="runSelectionDetailPanelAction('clone')">복제</button>
+        ${docMenu}
+        <button class="selection-detail-work-btn" onclick="runSelectionDetailPanelAction('payment')">결제요청</button>
+        <button class="selection-detail-work-btn is-danger" onclick="runSelectionDetailPanelAction('delete')">삭제</button>`;
+    }
+    const actions = typeof bulkActionButtons === 'function' ? bulkActionButtons(context.key, { hideComplete:true }) : '';
+    return actions || '<button class="selection-detail-work-btn" onclick="openSelectionDetailAudit()">세부 이력</button>';
+  }
+  if (context.source === 'react-inventory' && context.count !== 1) {
+    return '<button class="selection-detail-work-btn" onclick="clearSelectionDetailSelection()">해제</button>';
+  }
+  if (context.count !== 1) {
     return `<button class="selection-detail-work-btn" onclick="clearSelectionDetailSelection()">해제</button>
       <button class="selection-detail-work-btn is-danger" onclick="runSelectionDetailDeleteAction()">삭제</button>`;
   }
@@ -1391,6 +1415,9 @@ function selectionDetailWorkActionsHtml(context) {
       return `<button class="selection-detail-work-btn" onclick="runSelectionDetailPanelAction('edit')">수정</button>
         <button class="selection-detail-work-btn is-danger" onclick="runSelectionDetailPanelAction('delete')">삭제</button>`;
     }
+  }
+  if (context.source === 'react-inventory') {
+    return '<button class="selection-detail-work-btn is-primary" onclick="runSelectionDetailPanelAction(&quot;edit&quot;)">수정</button><button class="selection-detail-work-btn is-danger is-icon" title="삭제" aria-label="삭제" onclick="runSelectionDetailPanelAction(&quot;delete&quot;)"><i class="ti ti-trash"></i></button>';
   }
   if (context.source === 'po') {
     const docMenu = selectionDetailPoDocumentMenuHtml();
@@ -1507,10 +1534,9 @@ function selectionDetailBottomActionsHtml(context) {
       </div>`;
   }
   return `
-    <button class="selection-detail-primary-action" type="button" onclick="openSelectionDetailAudit()">이력 전체 보기</button>
     <div class="selection-detail-bottom-row">
       <button class="selection-detail-secondary-action" type="button" onclick="clearSelectionDetailSelection()">선택 해제</button>
-      <button class="selection-detail-secondary-action" type="button" onclick="closeSelectionDetailPanel(true)">닫기</button>
+      <button class="selection-detail-link-action" type="button" onclick="openSelectionDetailAudit()">이력 전체 보기</button>
     </div>`;
 }
 
@@ -1617,7 +1643,11 @@ function refreshSelectionDetailAfterInlineChange(ref) {
     });
     selectionDetailContext = next;
     renderSelectionDetailPanel(next);
-    requestAnimationFrame(() => ensureSelectionDetailPanel().classList.add('open'));
+    requestAnimationFrame(() => {
+      const sourcePanel = ensureSelectionDetailPanel();
+      sourcePanel.classList.add('open');
+      publishSelectionDetailReactState(sourcePanel, true);
+    });
   }, 60);
 }
 
@@ -1738,6 +1768,12 @@ function selectionDetailActionsHtml(context) {
   if (context.source === 'bulk' && typeof bulkActionButtons === 'function') {
     return `${auditBtn}${bulkActionButtons(context.key)}${clearBtn}`;
   }
+  if (context.source === 'react-inventory') {
+    const itemActions = context.count === 1
+      ? '<button class="btn btn-sm" type="button" onclick="runSelectionDetailPanelAction(&quot;edit&quot;)"><i class="ti ti-edit"></i>수정</button><button class="btn btn-sm btn-danger" type="button" onclick="runSelectionDetailPanelAction(&quot;delete&quot;)"><i class="ti ti-trash"></i>삭제</button>'
+      : '';
+    return auditBtn + itemActions + clearBtn;
+  }
   return `${auditBtn}${selectionDetailManagedActionHtml(context)}${clearBtn}`;
 }
 
@@ -1820,11 +1856,15 @@ function ensureSelectionDetailPanel() {
   updateSelectionDetailPanelTop();
   initSelectionDetailPanelWidth();
   let panel = document.getElementById('selection-detail-panel');
-  if (panel) return panel;
+  if (panel) {
+    if (document.getElementById('selection-detail-react-root')) panel.style.display = 'none';
+    return panel;
+  }
   panel = document.createElement('aside');
   panel.id = 'selection-detail-panel';
   panel.className = 'selection-detail-panel';
   panel.setAttribute('aria-live', 'polite');
+  if (document.getElementById('selection-detail-react-root')) panel.style.display = 'none';
   document.body.appendChild(panel);
   return panel;
 }
@@ -1832,6 +1872,7 @@ function ensureSelectionDetailPanel() {
 function closeSelectionDetailPanel(manual) {
   const panel = document.getElementById('selection-detail-panel');
   if (panel) panel.classList.remove('open');
+  publishSelectionDetailReactState(panel, false);
   if (manual) selectionDetailManuallyClosed = true;
   if (!manual) {
     selectionDetailContext = null;
@@ -1864,22 +1905,28 @@ function renderSelectionDetailPanel(context) {
       <button class="icon-btn" type="button" onclick="closeSelectionDetailPanel(true)" title="닫기"><i class="ti ti-x"></i></button>
     </div>
     <div class="selection-detail-body">
-      ${selectionDetailHeaderHtml(context, primary)}
-      <section class="selection-detail-section selection-detail-work-section">
-        <div class="selection-detail-section-title">선택 작업</div>
-        <div class="selection-detail-work-actions">${selectionDetailWorkActionsHtml(context)}</div>
-      </section>
-      ${editHtml}
-      ${infoHtml}
-      ${listHtml}
-      <section class="selection-detail-section">
-        <div class="selection-detail-section-title">최근 이력</div>
-        ${selectionDetailTimelineHtml(refs)}
-      </section>
-      ${selectionDetailEmailPreviewHtml(refs)}
+      <div data-selection-detail-static>
+        ${selectionDetailHeaderHtml(context, primary)}
+        <section class="selection-detail-section selection-detail-work-section">
+          <div class="selection-detail-section-title">선택 작업</div>
+          <div class="selection-detail-work-actions">${selectionDetailWorkActionsHtml(context)}</div>
+        </section>
+      </div>
+      <div data-selection-detail-tab="overview">
+        ${editHtml}
+        ${infoHtml}
+      </div>
+      <div data-selection-detail-tab="items">${listHtml}</div>
+      <div data-selection-detail-tab="history">
+        <section class="selection-detail-section">
+          <div class="selection-detail-section-title">최근 이력</div>
+          ${selectionDetailTimelineHtml(refs)}
+        </section>
+        ${selectionDetailEmailPreviewHtml(refs)}
+      </div>
     </div>
     <div class="selection-detail-actions">${selectionDetailBottomActionsHtml(context)}</div>`;
-  if (context.source === 'bulk') {
+  if (context.source === 'bulk' || context.source === 'react-domain') {
     panel.querySelectorAll('[data-edit]').forEach(el => { el.style.display = context.count === 1 ? '' : 'none'; });
     panel.querySelectorAll('[data-clone]').forEach(el => { el.style.display = context.count === 1 ? '' : 'none'; });
     panel.querySelectorAll('[data-email]').forEach(el => { el.style.display = context.count === 1 ? '' : 'none'; });
@@ -1890,12 +1937,16 @@ function renderSelectionDetailPanel(context) {
     });
   }
   bindSelectionDetailStatusMenu(panel);
+  publishSelectionDetailReactState(panel, panel.classList.contains('open'));
 }
 
 function selectionDetailHasActiveSelection(context) {
   if (!context) return false;
   if (context.source === 'bulk') {
     return typeof bulkSel !== 'undefined' && bulkSel[context.key] && bulkSel[context.key].size > 0;
+  }
+  if (context.source === 'react-domain') {
+    return typeof getReactDomainSelectedIds === 'function' && getReactDomainSelectedIds(context.key).length > 0;
   }
   if (context.source === 'po') {
     return typeof poCheckedIds === 'function' && poCheckedIds().length > 0;
@@ -1941,7 +1992,11 @@ function showSelectionDetailPanel(context) {
   selectionDetailLastSignature = signature;
   selectionDetailManuallyClosed = false;
   renderSelectionDetailPanel(context);
-  requestAnimationFrame(() => ensureSelectionDetailPanel().classList.add('open'));
+  requestAnimationFrame(() => {
+      const sourcePanel = ensureSelectionDetailPanel();
+      sourcePanel.classList.add('open');
+      publishSelectionDetailReactState(sourcePanel, true);
+    });
 }
 
 function updateSelectionDetailPanelFromManagedTable(table) {
@@ -1957,6 +2012,70 @@ function updateSelectionDetailPanelFromManagedTable(table) {
     return selectionDetailItem(ref, row, selectionDetailRecordForRef(ref));
   });
   showSelectionDetailPanel({ source:'managed', token, table, rows, items, count:items.length });
+}
+
+function updateSelectionDetailPanelFromReactInventory(ids) {
+  const cleanIds = Array.from(new Set((Array.isArray(ids) ? ids : [])
+    .map(id => String(id || '').trim())
+    .filter(Boolean)));
+  if (!cleanIds.length) {
+    if (selectionDetailContext && selectionDetailContext.source === 'react-inventory') closeSelectionDetailPanel(false);
+    return;
+  }
+  const items = cleanIds.map(id => {
+    const ref = { entityType:'inventory', entityId:id };
+    return selectionDetailItem(ref, null, selectionDetailRecordForRef(ref));
+  }).filter(item => item.record);
+  if (!items.length) {
+    closeSelectionDetailPanel(false);
+    return;
+  }
+  showSelectionDetailPanel({
+    source:'react-inventory',
+    key:'inventory',
+    ids:items.map(item => item.ref.entityId),
+    items,
+    count:items.length
+  });
+}
+
+function updateSelectionDetailPanelFromReactDomain(key, entityType, ids) {
+  const cleanIds = Array.from(new Set((Array.isArray(ids) ? ids : [])
+    .map(id => String(id || '').trim())
+    .filter(Boolean)));
+  if (!cleanIds.length) {
+    if (selectionDetailContext && selectionDetailContext.source === 'react-domain' && selectionDetailContext.key === key) {
+      closeSelectionDetailPanel(false);
+    }
+    return;
+  }
+  const table = Array.from(document.querySelectorAll('[data-react-domain]'))
+    .find(candidate => candidate.dataset.reactDomain === key);
+  const rowsById = new Map();
+  if (table) {
+    table.querySelectorAll('tbody tr[data-entity-id]').forEach(row => {
+      rowsById.set(String(row.dataset.entityId || ''), row);
+    });
+  }
+  const items = cleanIds.map(id => {
+    const ref = { entityType, entityId:id };
+    const record = typeof bulkRecordById === 'function'
+      ? (bulkRecordById(key, id) || selectionDetailRecordForRef(ref))
+      : selectionDetailRecordForRef(ref);
+    return selectionDetailItem(ref, rowsById.get(id) || null, record);
+  }).filter(item => item.record);
+  if (!items.length) {
+    closeSelectionDetailPanel(false);
+    return;
+  }
+  showSelectionDetailPanel({
+    source:'react-domain',
+    key,
+    entityType,
+    ids:items.map(item => item.ref.entityId),
+    items,
+    count:items.length
+  });
 }
 
 function updateSelectionDetailPanelFromBulk(key) {
@@ -2025,6 +2144,11 @@ function clearSelectionDetailSelection() {
   if (context.source === 'bulk' && typeof bulkToggleAll === 'function') bulkToggleAll(context.key, false);
   else if (context.source === 'po' && typeof poToggleAll === 'function') poToggleAll(false);
   else if (context.source === 'managed') clearManagedTableSelection(context.token);
+  else if (context.source === 'react-inventory' && typeof clearReactInventorySelection === 'function') clearReactInventorySelection();
+  else if (context.source === 'react-domain') {
+    if (typeof clearReactDomainSelection === 'function') clearReactDomainSelection(context.key);
+    if (typeof setBulkSelectionFromReact === 'function') setBulkSelectionFromReact(context.key, []);
+  }
   else if (context.source === 'notes') {
     if (context.key === 'memo' && typeof clearMemoSelection === 'function') clearMemoSelection();
     else if (context.key === 'todo' && typeof clearTodoSelection === 'function') clearTodoSelection();
@@ -2044,6 +2168,30 @@ function runSelectionDetailDocMenuAction(event, action) {
 function runSelectionDetailPanelAction(action, event) {
   const context = selectionDetailContext;
   if (!context || context.count !== 1) return;
+  if (context.source === 'react-inventory') {
+    const primary = context.items && context.items[0];
+    const id = primary && primary.ref && primary.ref.entityId;
+    if (!id) return;
+    if (action === 'edit' && typeof openInvEdit === 'function') {
+      closeSelectionDetailPanel(false);
+      openInvEdit(id);
+    } else if (action === 'delete' && typeof deleteInventory === 'function') {
+      deleteInventory(id);
+    }
+    return;
+  }
+  if (context.source === 'react-domain' && context.key === 'po') {
+    const primary = context.items && context.items[0];
+    const id = primary && primary.ref && primary.ref.entityId;
+    if (!id) return;
+    if (action === 'payment' && typeof openPaymentRequestFromPo === 'function') {
+      openPaymentRequestFromPo(id);
+      return;
+    }
+    const actionMap = { print:'pdf', export:'csv' };
+    if (typeof bulkRun === 'function') bulkRun('po', actionMap[action] || action);
+    return;
+  }
   if (context.source === 'po') {
     if (action === 'edit' && typeof poBulkEdit === 'function') poBulkEdit();
     else if (action === 'clone' && typeof poBulkClone === 'function') poBulkClone();
@@ -2177,6 +2325,7 @@ Object.assign(window, {
   closeSelectionDetailPanel,
   startSelectionDetailResize,
   updateSelectionDetailPanelFromManagedTable,
+  updateSelectionDetailPanelFromReactDomain,
   updateSelectionDetailPanelFromBulk,
   updateSelectionDetailPanelFromPo,
   showSelectionDetailPanel,
@@ -2187,6 +2336,7 @@ Object.assign(window, {
   runSelectionDetailPanelAction,
   runSelectionDetailDeleteAction,
   runSelectionDetailInlineControl,
+  bindSelectionDetailStatusMenu,
   toggleSelectionDetailStatusMenu,
   runSelectionDetailStatusControl,
   runSelectionDetailPrimaryAction,
@@ -2256,6 +2406,26 @@ function syncManagedTableRowsAndDetail(table) {
   syncManagedTableRows(table);
   if (!selectedManagedRows(table).length) closeSelectionDetailPanel(false);
   else syncSelectionDetailPanelVisibility();
+}
+
+/* 표 셀의 '읽기 전용 상태 pill + 숨은 select' 마크업.
+
+   날 select 를 그대로 렌더하면 처음엔 드롭다운이 보이다가, syncReadonlyStatusDisplays 가
+   돌면서 pill 로 바뀌어 화면이 튄다. LegacyTableIsland 는 원본 표의 innerHTML 을 복사해
+   렌더하므로, 원본이 변환되기 전에 복사했는지에 따라 결과가 달라져 더 헷갈린다.
+   처음부터 최종 형태(pill)로 렌더해 이 경쟁을 없앤다.
+
+   숨은 select 는 지우면 안 된다. 우측 상세 패널이 이 select 의 option 을 읽어 상태 변경
+   드롭다운을 만든다(selectionDetailStatusBadge). 지우면 상태가 정적 배지로만 나온다.
+
+   pill 색은 selectionDetailStatusClass 로 낸다 — syncReadonlyStatusDisplays 가 나중에
+   덮어쓸 때 쓰는 것과 같은 함수라야 색이 바뀌지 않는다. */
+function readonlyStatusCellHtml(status, options, onchangeAttr) {
+  const list = Array.isArray(options) ? options : [];
+  const text = String(status == null || status === '' ? (list[0] || '') : status);
+  const opts = list.map(s => `<option${s === text ? ' selected' : ''}>${selectionDetailEsc(s)}</option>`).join('');
+  return `<span class="readonly-status-pill ${selectionDetailStatusClass(text)}" title="상태">${selectionDetailEsc(text)}</span>` +
+    `<select class="stat-sel readonly-status-source" aria-hidden="true" tabindex="-1" onchange="${onchangeAttr}">${opts}</select>`;
 }
 
 function syncReadonlyStatusDisplays(table) {

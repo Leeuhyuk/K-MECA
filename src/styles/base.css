@@ -469,7 +469,7 @@ body.sb-mini .sidebar .nav-lbl.nav-lbl-source { display: none !important; }
 .mc.clickable.kpi-active .mc-lbl::after { content: '필터됨'; margin-left: auto; font-size: 9px; font-weight: 700; color: var(--tx-i); background: var(--bg-i); border: 1px solid var(--br-i); border-radius: 8px; padding: 0 6px; }
 .mc-lbl { font-size: 11px; color: var(--tx-s); margin-bottom: 3px; display: flex; align-items: center; gap: 5px; font-weight: 700; line-height: 1.2; min-width: 0; }
 .mc-lbl i { font-size: 13px; flex: 0 0 auto; }
-.mc-val { font-size: 20px; font-weight: 850; letter-spacing: 0; line-height: 1.05; min-width: 0; overflow-wrap: anywhere; }
+.mc-val { font-size: 20px; font-weight: 850; letter-spacing: 0; line-height: 1.05; min-width: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .mc-sub { font-size: 10.5px; color: var(--tx-t); margin-top: 2px; font-weight: 500; line-height: 1.2; }
 .up { color: var(--tx-ok) !important; }
 .dn { color: var(--tx-d) !important; }
@@ -1221,6 +1221,9 @@ textarea { height: auto; resize: vertical; }
 
 .toolbar { display: flex; gap: 6px; margin-bottom: 5px; align-items: center; flex-wrap: wrap; }
 .content > .toolbar { margin-bottom: 5px !important; }
+/* 재무 등록 액션바: 하위 탭이 사이드바로 이동함. 등록 버튼이 숨겨진 탭에서는 여백을 만들지 않는다. */
+#pg-finance .finance-action-bar { margin-bottom: 0 !important; min-height: 0; }
+#pg-finance #finance-primary-action { margin: 2px 0 8px auto !important; }
 .btn { padding: 6px 14px; border-radius: var(--rm); font-size: 12px; cursor: pointer; border: 1px solid var(--br); background: var(--bg-p); color: var(--tx); height: 32px; display: inline-flex; align-items: center; gap: 6px; font-family: var(--f); font-weight: 750; box-shadow: 0 1px 2px rgba(16,24,40,.06), inset 0 1px 0 rgba(255,255,255,.05); transition: background .15s, border-color .15s, color .15s, box-shadow .15s, transform .08s; white-space: nowrap; }
 .btn:hover { background: var(--bg-s); border-color: var(--br-s); box-shadow: 0 2px 6px rgba(16,24,40,.10), inset 0 1px 0 rgba(255,255,255,.06); }
 .btn:active { transform: translateY(1px); }
@@ -1370,7 +1373,14 @@ textarea { height: auto; resize: vertical; }
 .restore-btn { border-color: var(--br-ok); color: var(--tx-ok); }
 .restore-btn:hover { background: var(--bg-ok); }
 .table-row-select-th,
-.table-row-select-td { width: 34px; min-width: 34px; text-align: center !important; }
+.table-row-select-td {
+  width: 24px;
+  min-width: 24px;
+  max-width: 24px;
+  padding-right: 4px !important;
+  padding-left: 4px !important;
+  text-align: center !important;
+}
 .table-row-select,
 .table-check-all { width: 16px; height: 16px; padding: 0; cursor: pointer; accent-color: #3267e3; }
 .content tbody tr.table-row-selected td { background: var(--tbl-selected) !important; }
@@ -1684,6 +1694,39 @@ body.selection-detail-resizing {
   color: var(--tx-d);
   border-color: var(--br-d);
   background: var(--bg-d);
+}
+/* 아이콘 전용 ghost 버튼(예: 삭제) — 채움 없이 아이콘만, 위계를 낮춘다. */
+.selection-detail-work-btn.is-icon {
+  min-width: 32px;
+  width: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.selection-detail-work-btn.is-danger.is-icon {
+  background: transparent;
+  border-color: var(--detail-panel-action-border);
+  color: var(--tx-d);
+}
+.selection-detail-work-btn.is-danger.is-icon:hover {
+  background: var(--bg-d);
+  border-color: var(--br-d);
+}
+/* 보조 액션을 텍스트 링크로 표시(예: 이력 전체 보기) — 주 작업을 압도하지 않게. */
+.selection-detail-link-action {
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  color: var(--tx-i, #2f6feb);
+  font-family: var(--f);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.selection-detail-link-action:hover {
+  opacity: 0.8;
 }
 .selection-detail-edit-section {
   padding-top: 13px;

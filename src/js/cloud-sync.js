@@ -126,7 +126,8 @@ function cloudSubscribe(){
   if (!_cloudActive || _cloudUnsub || !_fbDb) return;
   const unsubs = [];
   const v2SnapshotReady = {};
-  const v2Unsubs = CLOUD_KEYS.map(key => _fbDb.collection('mes_v2').doc(key).onSnapshot(doc=>{
+  // 재무·인사 키는 staff 읽기가 서버 규칙에서 거부되므로 구독 자체를 건너뛴다(rbac.js cloudKeyAccessAllowed)
+  const v2Unsubs = CLOUD_KEYS.filter(key => typeof cloudKeyAccessAllowed !== 'function' || cloudKeyAccessAllowed(key)).map(key => _fbDb.collection('mes_v2').doc(key).onSnapshot(doc=>{
     const ver = cloudSnapshotVersionMillis(doc);
     if (!v2SnapshotReady[key]) {
       v2SnapshotReady[key] = true;
@@ -135,8 +136,13 @@ function cloudSubscribe(){
     if (doc.metadata.hasPendingWrites) return;     // 내가 쓴 변경(로컬 에코)은 무시
     // 아직 서버로 보내지 않은 로컬 편집이 대기 중인 키는 원격값으로 덮어쓰지 않음
     // (비순차 원격 읽기가 최신 로컬 데이터를 되돌리는 것을 방지 — 편집 중 키는 로컬 우선)
-    if (typeof _cloudQueue !== 'undefined' && _cloudQueue && _cloudQueue.has(key)) return;
-    if (typeof _cloudSavingKeys !== 'undefined' && _cloudSavingKeys && _cloudSavingKeys.has(key)) return;
+    // 단, 흘려보냈다는 사실은 반드시 남긴다. 그냥 버리면 재시도가 없어 영영 못 받는다.
+    const busy = (typeof _cloudQueue !== 'undefined' && _cloudQueue && _cloudQueue.has(key))
+      || (typeof _cloudSavingKeys !== 'undefined' && _cloudSavingKeys && _cloudSavingKeys.has(key));
+    if (busy) {
+      if (typeof _cloudPendingRemote !== 'undefined' && _cloudPendingRemote) _cloudPendingRemote.add(key);
+      return;
+    }
     if (typeof cloudLoadV2Key !== 'function') return;
     cloudLoadV2Key(key)
       .then(loaded => { if (loaded) cloudScheduleRemoteRefresh(key); })
@@ -244,14 +250,19 @@ function _cloudChip(state){
 
 /* ════════ 권한 관리 화면 ════════ */
 let systemTab = 'initial';
+// 모던 셸 사이드바에서 시스템 하위 탭으로 직접 이동(재무 goFinanceTab 과 대칭).
+function goSystemTab(tab) {
+  systemTab = tab || 'initial';
+  if (typeof currentPage !== 'undefined' && currentPage !== 'system') {
+    go('system');
+  } else {
+    switchSystemTab(systemTab);
+  }
+}
+
 function switchSystemTab(tab) {
   systemTab = tab || 'initial';
   syncCurrentSubRoute('system', systemTab);
-  document.querySelectorAll('#system-tabs [data-systab]').forEach(btn => {
-    const active = btn.dataset.systab === systemTab;
-    btn.classList.toggle('btn-primary', active);
-    btn.classList.toggle('active', active);
-  });
   document.querySelectorAll('#pg-system .system-panel').forEach(panel => {
     panel.style.display = panel.id === 'system-panel-' + systemTab ? '' : 'none';
   });
@@ -349,9 +360,19 @@ function tableDisplayConfig(){ return loadStorage('tableDisplayConfig', {}); }
 function saveTableDisplayConfig(cfg){
   saveStorage('tableDisplayConfig', cfg || {});
   applyTableDisplaySettings();
+  // React 소유 표(재고·자재)는 라벨을 직접 렌더하므로 리렌더 신호가 필요하다.
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('mes:tabledisplay'));
 }
 function _tableDisplayTables(){
   return (typeof COLUMN_TABLES !== 'undefined') ? COLUMN_TABLES : {};
+}
+/* React 소유 표(재고·자재)가 헤더 라벨을 직접 렌더할 때 쓰는 조회 함수.
+   COLUMN_TABLES 는 const 라 window 속성이 아니므로 번들에서 직접 읽을 수 없다. */
+function tableDisplayLabel(tableKey, index, fallback){
+  const table = _tableDisplayTables()[tableKey];
+  const col = table && table.cols ? table.cols[index] : '';
+  const labels = (tableDisplayConfig()[tableKey] || {}).labels || {};
+  return (col && labels[col]) || fallback;
 }
 function renderTableDisplaySettings(){
   const body = inp('table-display-settings-body');
@@ -450,7 +471,7 @@ function applyTableDisplaySettings(root){
     _markTableDisplayCells(tableKey, table, root);
     (table.cols || []).forEach((col, index) => {
       if (!hidden[col]) return;
-      css += `${table.sel} [data-table-display-col="${tableKey}-${index}"]{display:none!important;visibility:collapse!important;}\n`;
+      css += columnHideCss(table.sel, `${tableKey}-${index}`);
     });
   });
   let st = document.getElementById('table-display-style');
@@ -533,6 +554,9 @@ function _markTableDisplayCells(tableKey, table, root){
   if (!wrap) return null;
   const tableEl = wrap.matches && wrap.matches('table') ? wrap : wrap.querySelector('table');
   if (!tableEl || !tableEl.tHead || !tableEl.tHead.rows.length) return null;
+  // React 소유 테이블 등 opt-out 대상은 셀 재마킹을 건너뛴다(React 가 렌더한
+  // data-table-display-col 을 보존 → rbac.js CSS 게이팅은 그대로 작동).
+  if (tableEl.dataset.managedTable === 'false' || tableEl.hasAttribute('data-no-managed-table')) return null;
   tableEl.classList.add('table-display-fluid');
   const head = tableEl.tHead.rows[0];
   const cols = table.cols || [];
@@ -1119,6 +1143,7 @@ async function permToggleRolePage(role, pageId, on){
    각 표의 행 삭제 버튼 onclick에서 id를 추출하므로 렌더 함수 수정 불필요. */
 const BULK_CFG = {
   rfq:        {sel:'#rfq-table',        del:'deleteRfq',       edit:'openRfqEdit',    clone:'cloneRfq', pdf:'openRfqPrint', csv:'exportRfqXLS', email:'openEmailModal', drive:true, toPo:true},
+  po:         {sel:'#po-table',         del:'deletePo',        edit:'openPoEdit',     clone:'clonePo',  pdf:'openPoPrint',  csv:'exportPoXLS', email:'openEmailModal', drive:true, complete:'입고완료'},
   materials:  {sel:'#mat-table',        del:'deleteMat',       edit:'openMatEdit',    clone:'cloneMat', complete:'입고완료'},
   inventory:  {sel:'#inventory-table',  del:'deleteInventory', edit:'openInvEdit'},
   orders:     {sel:'#orders-table',     del:'deleteOrder',     edit:'openOrderEdit',  clone:'cloneOrder', complete:'완료'},
@@ -1137,10 +1162,19 @@ const BULK_CFG = {
   bom:        {sel:'#bom-body',          del:'deleteBom',       edit:'openBomEdit',    clone:'cloneBom'}
 };
 const bulkSel = {};
+
+function setBulkSelectionFromReact(key, ids) {
+  if (!BULK_CFG[key]) return;
+  const cleanIds = (Array.isArray(ids) ? ids : [])
+    .map(id => String(id || '').trim())
+    .filter(Boolean);
+  bulkSel[key] = new Set(cleanIds);
+  if (typeof updateBulkBar === 'function') updateBulkBar(key);
+}
 let _bulkDateViewClearersRegistered = false;
 function bulkEntityType(key) {
   const map = {
-    rfq:'rfq', materials:'material', inventory:'inventory', orders:'workOrder',
+    rfq:'rfq', po:'po', materials:'material', inventory:'inventory', orders:'workOrder',
     defects:'defect', checks:'checkRecord', claims:'claim', deliveries:'delivery',
     workers:'worker', as:'as', partners:'partners', statement:'statement',
     tax:'tax', quote:'quote', order:'order', products:'products', bom:'bom'
@@ -1150,6 +1184,7 @@ function bulkEntityType(key) {
 function bulkAllRecords(key) {
   const map = {
     rfq: typeof rfqList !== 'undefined' ? rfqList : [],
+    po: typeof poList !== 'undefined' ? poList : [],
     materials: typeof materials !== 'undefined' ? materials : [],
     inventory: typeof inventory !== 'undefined' ? inventory : [],
     orders: typeof workOrders !== 'undefined' ? workOrders : [],
@@ -1343,7 +1378,9 @@ function _escRe(s){ return String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
 function enhanceBulk(key){
   const c=BULK_CFG[key]; if(!c) return;
   const cont=document.querySelector(c.sel); if(!cont) return;
-  const tables=[...cont.querySelectorAll('table')]; if(!tables.length) return;
+  // React 소유 테이블 등 opt-out 대상은 일괄선택 체크박스 컬럼 주입에서 제외한다.
+  const tables=[...cont.querySelectorAll('table')].filter(t=>!(t.dataset.managedTable==='false'||t.hasAttribute('data-no-managed-table')));
+  if(!tables.length) return;
   if(!bulkSel[key] || tables.some(table=>!table.dataset.bulk)) bulkSel[key]=new Set();
   // (type,id) 시그니처 함수는 두 번째 인자가 id
   const delRe = c.type

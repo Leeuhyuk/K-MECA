@@ -759,6 +759,23 @@ function openProductFieldSearch(selectId, inputId, resultsId, clientSelectId, ch
   renderProductFieldMatches(selectId, inputId, resultsId, clientSelectId, changeFnName);
 }
 
+function getClientSearchCandidatesReact(query) {
+  return _clientSearchCandidates(query, 8, false).map(c => ({
+    id: c.id,
+    name: c.name || c.id,
+    meta: `${c.id} · 담당 ${c.manager || '미지정'} · ${c.tel || c.email || '연락처 미지정'}`
+  }));
+}
+function ensureClientForReact(id) {
+  return ensureClientFromAnyPartner(id);
+}
+function getProductSearchCandidatesReact(query, clientId) {
+  return _productFieldMatches(query, clientId).map(p => ({
+    id: p.id,
+    name: p.name || p.id,
+    meta: `${p.id} · ${getClientName(p.clientId) || '고객사 미지정'}${p.spec ? ' · ' + p.spec : ''}`
+  }));
+}
 function openPartnerModalFromPicker() {
   closeModal('partner-picker-modal');
   openPartnerModal();
@@ -774,3 +791,9 @@ function openPartnerModalFromPicker() {
     }
   };
 }
+Object.assign(window, {
+  openClientPicker,
+  getClientSearchCandidatesReact,
+  ensureClientForReact,
+  getProductSearchCandidatesReact
+});

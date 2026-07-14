@@ -526,10 +526,10 @@ function _attList() {
   return `
     <div class="metrics attendance-metrics">
       <div class="mc"><div class="mc-lbl"><i class="ti ti-user-check"></i>자동 정상근무</div><div class="mc-val" style="color:var(--tx-ok);">${normal}건</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-clock-exclamation"></i>지각·조퇴</div><div class="mc-val" style="color:var(--tx-w);">${late+early}건</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-clock-exclamation"></i>지각·조퇴</div><div class="mc-val" style="color:${(late+early)>0?'var(--tx-w)':'var(--tx-s)'};">${late+early}건</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-clock-plus"></i>연장근무</div><div class="mc-val">${ot}건</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-calendar-event"></i>휴일근무</div><div class="mc-val">${holiday}건</div></div>
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-user-x"></i>결근</div><div class="mc-val" style="color:var(--tx-err);">${absent}건</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-user-x"></i>결근</div><div class="mc-val" style="color:${absent>0?'var(--tx-err)':'var(--tx-s)'};">${absent}건</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-clock-hour-9"></i>선택 기간 근무시간</div><div class="mc-val" style="color:var(--tx-i);">${fmtHm(dayMins)}</div></div>
     </div>
     ${_attQuickEditor()}
@@ -807,7 +807,7 @@ function renderLeaves() {
 
   const metrics = `
     <div class="metrics" style="grid-template-columns:repeat(3,1fr);">
-      <div class="mc"><div class="mc-lbl"><i class="ti ti-clock-hour-4"></i>승인 대기</div><div class="mc-val" style="color:var(--tx-w);">${pending}건</div></div>
+      <div class="mc"><div class="mc-lbl"><i class="ti ti-clock-hour-4"></i>승인 대기</div><div class="mc-val" style="color:${pending>0?'var(--tx-w)':'var(--tx-s)'};">${pending}건</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-calendar-check"></i>승인 완료</div><div class="mc-val" style="color:var(--tx-ok);">${approved}건</div></div>
       <div class="mc"><div class="mc-lbl"><i class="ti ti-beach"></i>${usedLabel}</div><div class="mc-val">${usedDays}일</div></div>
     </div>`;

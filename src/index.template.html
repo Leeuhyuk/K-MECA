@@ -26,6 +26,7 @@
 <!--#include styles/components.css-->
 <!--#include styles/responsive.css-->
 <!--#include styles/mobile.css-->
+<!--#include styles/modern-shell.css-->
 </style>
 </head>
 <body>
@@ -48,6 +49,7 @@
 <!--#include html/pages/popbill.html-->
 <script>
 <!--#include js/data-storage.js-->
+<!--#include js/kpi-card.js-->
 <!--#include js/state-search.js-->
 <!--#include js/helpers-auth.js-->
 <!--#include js/navigation.js-->
@@ -66,6 +68,7 @@
 <!--#include js/workers-attendance.js-->
 <!--#include js/alerts.js-->
 <!--#include js/trash.js-->
+<!--#include js-dist/inventory-react.js-->
 <!--#include js/shortcuts-theme-boot.js-->
 <!--#include js/rbac.js-->
 <!--#include js/cloud-sync.js-->
@@ -553,43 +556,8 @@
 </div>
 
 <!-- ══ 재고 등록 모달 ══ -->
-<div class="overlay" id="inv-modal">
-  <div class="dlg bulk-entry-dialog" style="max-width:1040px;width:96%;">
-    <div class="dlg-title" id="inv-modal-ttl"><i class="ti ti-package" style="color:var(--tx-i);"></i>재고 품목 등록</div>
-    <div class="entry-mode-switch" id="inv-mode-switch">
-      <button type="button" id="inv-mode-single" onclick="setInventoryEntryMode('single')">단건 입력</button>
-      <button type="button" id="inv-mode-bulk" onclick="setInventoryEntryMode('bulk')">일괄 입력</button>
-    </div>
-    <div class="fg fg4" id="inv-single-fields" style="gap:10px;margin-bottom:14px;">
-      <div class="ff"><label>재고 코드</label><input id="inva-id" readonly></div>
-      <div class="ff" style="grid-column:span 3;"><label>품목명 *</label><input id="inva-name" placeholder="예: LM 가이드 레일"></div>
-      <div class="ff"><label>재고 구분 *</label>
-        <select id="inva-category"><option>완제품</option><option>생산부품</option><option>사무비품</option></select>
-      </div>
-      <div class="ff"><label>세부 유형</label>
-        <select id="inva-type"><option>자재</option><option>반제품</option><option>완제품</option><option>비품</option><option>소모품</option><option>기타</option></select>
-      </div>
-      <div class="ff"><label>단위 *</label>
-        <select id="inva-unit"><option>EA</option><option>대</option><option>SET</option><option>kg</option><option>M</option><option>L</option><option>BOX</option><option>ton</option></select>
-      </div>
-      <div class="ff"><label>현재고 수량 *</label><input id="inva-qty" type="number" value="0" min="0"></div>
-      <div class="ff"><label>최소 안전 재고 *</label><input id="inva-minQty" type="number" value="10" min="0"></div>
-      <div class="ff" style="grid-column:span 2;"><label>보관 위치</label><input id="inva-location" placeholder="예: A-4 선반"></div>
-      <div class="ff" style="grid-column:span 2;"><label>참고사항</label><input id="inva-note" placeholder="기타 메모"></div>
-    </div>
-    <div class="batch-entry-grid" id="inv-bulk-panel" style="display:none;">
-      <div class="batch-entry-label"><i class="ti ti-table"></i>재고 품목 일괄 입력</div>
-      <table>
-        <thead><tr><th>품목명 *</th><th>재고 구분</th><th>세부 유형</th><th>현재고 *</th><th>단위</th><th>안전재고</th><th>보관 위치</th><th>참고</th><th></th></tr></thead>
-        <tbody id="inv-bulk-body" data-bulk-key="inv"></tbody>
-      </table>
-    </div>
-    <div class="dlg-actions">
-      <button class="btn" onclick="closeModal('inv-modal')">취소</button>
-      <button class="btn btn-primary" id="inv-save-btn" onclick="saveInventoryForm()"><i class="ti ti-check"></i>저장</button>
-    </div>
-  </div>
-</div>
+<!-- React 파일럿: 재고 등록/수정 모달은 InventoryModal(React)이 #inv-modal-react-root 에 렌더.
+     롤백 시 이 블록을 git 이력에서 복원하고 js-dist/inventory-react.js include 를 제거한다. -->
 
 <!-- ══ 생산 지시 등록 모달 ══ -->
 <div class="overlay" id="order-modal">

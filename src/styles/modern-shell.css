@@ -1,0 +1,903 @@
+:root {
+  --control-height: 34px;
+  --table-row-height: 42px;
+  --drawer-width: 440px;
+  --bulk-drawer-width: 760px;
+  --modern-rail-width: 64px;
+  --modern-context-width: 196px;
+  --modern-shell-top-height: 56px;
+  --modern-rail-bg: #08254b;
+  --modern-rail-border: rgba(255, 255, 255, .10);
+  --modern-rail-text: rgba(226, 237, 249, .76);
+  --modern-rail-active: #ffffff;
+  --modern-rail-active-bg: rgba(45, 139, 213, .28);
+}
+
+#modern-app-nav-root {
+  display: none;
+  flex: 0 0 auto;
+  min-width: 0;
+  height: 100vh;
+}
+
+@media (min-width: 901px) {
+  body.modern-shell {
+    font-size: calc(13px * var(--ui-font-scale));
+  }
+
+  body.modern-shell > .sidebar {
+    display: none !important;
+  }
+
+  body.modern-shell #modern-app-nav-root {
+    display: block;
+  }
+
+  .modern-app-navigation {
+    display: flex;
+    width: calc(var(--modern-rail-width) + var(--modern-context-width));
+    height: 100%;
+    min-height: 0;
+    flex: 0 0 auto;
+    overflow: hidden;
+    background: var(--bg-p);
+    border-right: 1px solid var(--br);
+    transition: width .18s ease;
+  }
+
+  .modern-app-navigation.is-context-collapsed {
+    width: var(--modern-rail-width);
+  }
+
+  .modern-global-rail {
+    width: var(--modern-rail-width);
+    flex: 0 0 var(--modern-rail-width);
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    color: var(--modern-rail-text);
+    background: var(--modern-rail-bg);
+    border-right: 1px solid var(--modern-rail-border);
+  }
+
+  .modern-rail-logo,
+  .modern-rail-button,
+  .modern-rail-collapse {
+    appearance: none;
+    border: 0;
+    color: inherit;
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+  }
+
+  .modern-rail-logo {
+    height: var(--modern-shell-top-height);
+    flex: 0 0 var(--modern-shell-top-height);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid var(--modern-rail-border);
+  }
+
+  .modern-rail-logo i {
+    font-size: 25px;
+    color: #65d7d2;
+  }
+
+  .modern-rail-logo:hover,
+  .modern-rail-logo:focus-visible {
+    color: var(--modern-rail-active);
+    background: rgba(255, 255, 255, .07);
+  }
+
+  .modern-rail-modules {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 6px 4px;
+    scrollbar-width: none;
+  }
+
+  .modern-rail-modules::-webkit-scrollbar {
+    display: none;
+  }
+
+  .modern-rail-button {
+    position: relative;
+    width: 56px;
+    min-height: 49px;
+    margin: 1px 0;
+    padding: 5px 2px 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border-radius: 6px;
+    line-height: 1.05;
+  }
+
+  .modern-rail-button i {
+    font-size: 19px;
+  }
+
+  .modern-rail-button span {
+    max-width: 52px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 10.5px;
+    font-weight: 650;
+    letter-spacing: 0;
+  }
+
+  .modern-rail-button:hover,
+  .modern-rail-button:focus-visible {
+    color: var(--modern-rail-active);
+    background: rgba(255, 255, 255, .075);
+  }
+
+  .modern-rail-button[aria-current="page"] {
+    color: var(--modern-rail-active);
+    background: var(--modern-rail-active-bg);
+    box-shadow: inset 3px 0 0 #5ec9c5;
+  }
+
+  .modern-rail-collapse {
+    width: 100%;
+    height: 46px;
+    flex: 0 0 46px;
+    border-top: 1px solid var(--modern-rail-border);
+  }
+
+  .modern-rail-collapse:hover,
+  .modern-rail-collapse:focus-visible {
+    color: #ffffff;
+    background: rgba(255, 255, 255, .07);
+  }
+
+  .modern-rail-collapse i {
+    font-size: 19px;
+  }
+
+  .modern-context-nav {
+    width: var(--modern-context-width);
+    flex: 0 0 var(--modern-context-width);
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    color: var(--tx);
+    background: var(--bg-p);
+    opacity: 1;
+    transition: width .18s ease, flex-basis .18s ease, opacity .14s ease;
+  }
+
+  .is-context-collapsed .modern-context-nav {
+    width: 0;
+    flex-basis: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .modern-context-head {
+    height: var(--modern-shell-top-height);
+    min-width: var(--modern-context-width);
+    flex: 0 0 var(--modern-shell-top-height);
+    padding: 0 10px 0 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--br);
+  }
+
+  .modern-context-head strong {
+    font-size: 14px;
+    font-weight: 800;
+  }
+
+  .modern-context-head button {
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 6px;
+    color: var(--tx-t);
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .modern-context-head button:hover,
+  .modern-context-head button:focus-visible {
+    color: var(--tx-i);
+    background: var(--bg-i);
+  }
+
+  .modern-context-section-label {
+    min-width: var(--modern-context-width);
+    padding: 16px 14px 6px;
+    color: var(--tx-t);
+    font-size: 10.5px;
+    font-weight: 750;
+  }
+
+  .modern-context-items {
+    min-width: var(--modern-context-width);
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 8px 12px;
+  }
+
+  .modern-context-item {
+    width: 100%;
+    min-height: 36px;
+    margin: 2px 0;
+    padding: 0 9px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--tx-s);
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    text-align: left;
+  }
+
+  .modern-context-item i {
+    flex: 0 0 auto;
+    color: var(--tx-t);
+    font-size: 16px;
+  }
+
+  .modern-context-item span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .modern-context-item:hover,
+  .modern-context-item:focus-visible {
+    color: var(--tx);
+    background: var(--bg-s);
+  }
+
+  .modern-context-item[aria-current="page"] {
+    color: var(--tx-i);
+    background: var(--bg-i);
+    border-color: var(--br-i);
+    font-weight: 800;
+  }
+
+  .modern-context-item[aria-current="page"] i {
+    color: var(--tx-i);
+  }
+
+  body.modern-shell .main {
+    min-width: 0;
+    margin-left: 0 !important;
+  }
+
+  body.modern-shell .topbar {
+    min-height: var(--modern-shell-top-height);
+    padding: 6px 14px;
+    border-bottom-color: var(--br);
+    box-shadow: none;
+  }
+
+  body.modern-shell .tb-title {
+    font-size: 17px;
+    font-weight: 750;
+  }
+
+  body.modern-shell.wide-sidebar #menu-toggle-btn {
+    display: inline-flex !important;
+  }
+
+  body.modern-shell .topnav-back,
+  body.modern-shell .topnav-home {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+    border-radius: 6px;
+    box-shadow: none;
+  }
+
+  body.modern-shell .topnav-back i,
+  body.modern-shell .topnav-home i {
+    font-size: 20px;
+  }
+
+  body.modern-shell .topbar-search-compact input {
+    height: var(--control-height);
+  }
+
+  body.modern-shell .selection-detail-panel {
+    width: min(var(--drawer-width), calc(100vw - var(--modern-rail-width) - 40px));
+  }
+
+  body.modern-shell .add-panel.bulk-entry-mode,
+  body.modern-shell .side-entry-panel.bulk-entry-mode {
+    width: min(var(--bulk-drawer-width), calc(100vw - var(--modern-rail-width) - 32px));
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1180px) {
+  :root {
+    --modern-context-width: 176px;
+  }
+}
+
+@media (max-width: 900px) {
+  #modern-app-nav-root {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modern-app-navigation,
+  .modern-context-nav {
+    transition: none !important;
+  }
+}
+
+
+@media (min-width: 901px) {
+  body.modern-shell #pg-materials .mat-sticky-header {
+    background: var(--bg-t);
+    border-bottom: 0;
+  }
+
+  /* 자재 KPI 전용이던 스트립 규칙은 파일 하단의 공통 KPI 스트립으로 대체됐다.
+     (ID 특정성이 높아 공통 규칙을 이겨버리므로 남겨두면 안 된다) */
+
+  body.modern-shell #pg-materials .mat-sticky-header > .toolbar {
+    min-height: 44px;
+    padding: 5px 7px;
+    flex-wrap: nowrap;
+    background: var(--bg-p);
+    border: 1px solid var(--br);
+    border-radius: 8px;
+  }
+
+  body.modern-shell #pg-materials .mat-sticky-header > .toolbar select,
+  body.modern-shell #pg-materials .mat-sticky-header > .toolbar input {
+    height: var(--control-height);
+  }
+
+  body.modern-shell #pg-materials > .card {
+    padding: 0;
+    border-radius: 8px;
+    box-shadow: none;
+    overflow: hidden;
+  }
+
+  body.modern-shell #pg-materials .materials-react-table th,
+  body.modern-shell #pg-materials .materials-react-table td {
+    height: var(--table-row-height);
+  }
+}
+
+/* React common UI */
+.modern-icon-button {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--br);
+  border-radius: 6px;
+  color: var(--tx-s);
+  background: var(--bg-p);
+  box-shadow: none;
+  cursor: pointer;
+  font: inherit;
+}
+
+.modern-icon-button.is-small {
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+}
+
+.modern-icon-button i {
+  font-size: 16px;
+}
+
+.modern-icon-button:hover,
+.modern-icon-button:focus-visible {
+  color: var(--tx-i);
+  border-color: var(--br-i);
+  background: var(--bg-i);
+}
+
+.modern-icon-button.is-danger {
+  color: var(--tx-d);
+  border-color: color-mix(in srgb, var(--tx-d) 28%, var(--br));
+}
+
+.modern-icon-button.is-danger:hover,
+.modern-icon-button.is-danger:focus-visible {
+  color: var(--tx-d);
+  border-color: color-mix(in srgb, var(--tx-d) 48%, var(--br));
+  background: color-mix(in srgb, var(--tx-d) 8%, var(--bg-p));
+}
+
+.modern-status-pill {
+  min-height: 25px;
+  padding: 2px 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--br);
+  border-radius: 999px;
+  color: var(--tx-s);
+  background: var(--bg-s);
+  font-size: 11.5px;
+  font-weight: 750;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.modern-status-pill.is-info {
+  color: var(--tx-i);
+  border-color: var(--br-i);
+  background: var(--bg-i);
+}
+
+.modern-status-pill.is-success {
+  color: var(--tx-ok);
+  border-color: color-mix(in srgb, var(--tx-ok) 30%, var(--br));
+  background: color-mix(in srgb, var(--tx-ok) 8%, var(--bg-p));
+}
+
+.modern-status-pill.is-warning {
+  color: #9a5b00;
+  border-color: #ead3a6;
+  background: #fff8e8;
+}
+
+.modern-status-pill.is-danger {
+  color: var(--tx-d);
+  border-color: color-mix(in srgb, var(--tx-d) 30%, var(--br));
+  background: color-mix(in srgb, var(--tx-d) 8%, var(--bg-p));
+}
+
+.modern-empty-state {
+  min-height: 220px;
+  padding: 32px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: var(--tx-t);
+  text-align: center;
+}
+
+.modern-empty-state > i {
+  margin-bottom: 4px;
+  color: var(--tx-t);
+  font-size: 30px;
+}
+
+.modern-empty-state > strong {
+  color: var(--tx);
+  font-size: 14px;
+}
+
+.modern-empty-state > span {
+  max-width: 420px;
+  font-size: 12px;
+}
+
+.modern-quantity-stepper {
+  min-width: 134px;
+  display: inline-grid;
+  grid-template-columns: 26px minmax(56px, auto) 26px 16px;
+  align-items: center;
+  gap: 4px;
+}
+
+.modern-quantity-stepper:not(.is-low) {
+  grid-template-columns: 26px minmax(56px, auto) 26px;
+}
+
+.modern-quantity-value {
+  min-width: 0;
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  color: var(--tx);
+  white-space: nowrap;
+}
+
+.modern-quantity-value b {
+  font-size: 12.5px;
+}
+
+.modern-quantity-value small {
+  color: var(--tx-t);
+  font-size: 10.5px;
+}
+
+.modern-quantity-stepper.is-low .modern-quantity-value,
+.modern-quantity-alert {
+  color: var(--tx-d);
+}
+
+.modern-quantity-alert {
+  font-size: 15px;
+}
+
+.modern-data-table {
+  width: max-content;
+  min-width: 100%;
+  table-layout: fixed;
+}
+
+.modern-data-table .modern-col-select { width: 38px; }
+.modern-data-table .modern-col-code { width: 94px; }
+.modern-data-table .modern-col-name { width: 180px; }
+.modern-data-table .modern-col-type { width: 86px; }
+.modern-data-table .modern-col-quantity { width: 158px; }
+.modern-data-table .modern-col-safe-stock { width: 82px; }
+.modern-data-table .modern-col-location { width: 112px; }
+.modern-data-table .modern-col-client { width: 124px; }
+.modern-data-table .modern-col-product { width: 158px; }
+.modern-data-table .modern-col-material { width: 178px; }
+.modern-data-table .modern-col-supplier { width: 126px; }
+.modern-data-table .modern-col-money { width: 102px; }
+.modern-data-table .modern-col-unit-quantity { width: 84px; }
+.modern-data-table .modern-col-total { width: 112px; }
+.modern-data-table .modern-col-date { width: 104px; }
+.modern-data-table .modern-col-status { width: 94px; }
+.modern-data-table .modern-col-note { width: 160px; }
+.modern-data-table .modern-col-actions { width: 78px; }
+
+.modern-data-table th,
+.modern-data-table td {
+  min-width: 0;
+  vertical-align: middle;
+}
+
+.modern-cell-code,
+.modern-cell-secondary,
+.modern-cell-note {
+  color: var(--tx-t);
+  font-size: 11px;
+}
+
+.modern-cell-primary,
+.modern-cell-money,
+.modern-cell-total {
+  font-weight: 700;
+}
+
+.modern-cell-total {
+  color: var(--tx-i);
+}
+
+.modern-cell-sub {
+  margin-top: 2px;
+  display: block;
+  color: var(--tx-t);
+  font-size: 10.5px;
+  font-weight: 500;
+}
+
+.modern-cell-note {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modern-cell-actions {
+  white-space: nowrap;
+}
+
+.modern-cell-actions .modern-icon-button + .modern-icon-button {
+  margin-left: 4px;
+}
+
+.modern-icon-button.edit-btn,
+.modern-icon-button.del-btn {
+  padding: 0;
+  font-size: 0;
+}
+
+.modern-table-summary-row {
+  background: var(--bg-s);
+}
+
+.modern-table-summary-row td:first-child {
+  font-size: 11px;
+  font-weight: 700;
+}
+/* React detail inspector */
+.selection-detail-panel-react .modern-inspector-body {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modern-inspector-static {
+  padding: 0 20px;
+}
+
+.modern-inspector-tabs {
+  min-height: 42px;
+  margin-top: 14px;
+  padding: 0 20px;
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  border-bottom: 1px solid var(--detail-panel-border);
+}
+
+.modern-inspector-tab {
+  min-height: 41px;
+  padding: 0 1px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--detail-panel-muted);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.modern-inspector-tab:hover,
+.modern-inspector-tab:focus-visible {
+  color: var(--detail-panel-text);
+}
+
+.modern-inspector-tab[aria-selected="true"] {
+  color: var(--tx-i);
+  border-bottom-color: var(--tx-i);
+}
+
+.modern-inspector-tab-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0 20px 18px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.modern-inspector-tab-panel[hidden] {
+  display: none;
+}
+/* Today work queue */
+.modern-work-queue-root {
+  display: none;
+}
+
+@media (min-width: 901px) {
+  body.modern-shell .modern-work-queue-root {
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .modern-work-queue {
+    min-height: 52px;
+    display: flex;
+    align-items: stretch;
+    overflow: hidden;
+    border: 1px solid var(--br);
+    border-radius: 8px;
+    background: var(--bg-p);
+  }
+
+  .modern-work-queue-title {
+    width: 128px;
+    flex: 0 0 128px;
+    padding: 8px 13px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-right: 1px solid var(--br);
+  }
+
+  .modern-work-queue-title span {
+    color: var(--tx);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .modern-work-queue-title small {
+    margin-top: 2px;
+    color: var(--tx-t);
+    font-size: 10px;
+  }
+
+  .modern-work-queue-items {
+    min-width: 0;
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(120px, 1fr));
+    overflow-x: auto;
+  }
+
+  .modern-work-queue-item {
+    min-width: 120px;
+    min-height: 50px;
+    padding: 7px 12px;
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 7px;
+    border: 0;
+    border-right: 1px solid var(--br);
+    color: var(--tx-s);
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+  }
+
+  .modern-work-queue-item:last-child {
+    border-right: 0;
+  }
+
+  .modern-work-queue-item i {
+    font-size: 17px;
+  }
+
+  .modern-work-queue-item span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11.5px;
+    font-weight: 650;
+  }
+
+  .modern-work-queue-item strong {
+    color: var(--tx);
+    font-size: 15px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .modern-work-queue-item.is-info i,
+  .modern-work-queue-item.is-info strong { color: var(--tx-i); }
+  .modern-work-queue-item.is-warning i,
+  .modern-work-queue-item.is-warning strong { color: #9a5b00; }
+  .modern-work-queue-item.is-danger i,
+  .modern-work-queue-item.is-danger strong { color: var(--tx-d); }
+
+  .modern-work-queue-item:hover,
+  .modern-work-queue-item:focus-visible,
+  .modern-work-queue-item.is-active {
+    background: var(--bg-i);
+  }
+
+  .modern-work-queue-item.is-active {
+    box-shadow: inset 0 -2px 0 var(--tx-i);
+  }
+}
+
+/* 모바일(≤560px): 등록/상세 사이드 드로어를 전체 화면으로 표시.
+   좁은 폭에서 드로어가 좌측 자투리만 남기고 화면을 덮던 문제를 없앤다.
+   레거시 .dlg 중앙정렬 잔재(transform/max-height)까지 리셋하며, 마지막 로드
+   파일이라 캐스케이드에서 확실히 적용된다. */
+@media (max-width: 560px) {
+  .overlay.side-entry-overlay > .side-entry-dialog {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    transform: none !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+  }
+}
+
+/* ════════ 공통 KPI 스트립 — '오늘 처리'(.modern-work-queue)와 같은 형태로 통일 ════════
+   화면마다 제각각 크기의 카드가 그리드로 흩어져 있던 것을, 한 줄짜리 테두리 안에
+   구분선으로 이어붙인 스트립으로 바꾼다. 마지막 로드 파일이라 캐스케이드에서 이긴다.
+
+   구분선을 border-right 로 긋지 않는 이유: .metrics 는 폭에 따라 4열(auto-fit
+   minmax(220px)) ↔ 2열(≤680px)로 열 수가 바뀌고 카드 수도 화면마다 다르다.
+   :last-child / :nth-child 로는 줄 끝을 맞출 수 없다. 대신 gap 1px 을 두고 그 사이로
+   컨테이너 배경(테두리색)이 비치게 하면 몇 열이든, 몇 줄로 접히든 선이 저절로 맞는다. */
+body.modern-shell .metrics,
+body.modern-shell .sum-row {
+  gap: 1px;
+  padding: 0;
+  background: var(--br);
+  border: 1px solid var(--br);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* 카드 내부: '아이콘 | 라벨 | 값' 가로 배치 (.modern-work-queue-item 과 동일한 리듬) */
+body.modern-shell .metrics > .mc,
+body.modern-shell .sum-row > .mc {
+  min-height: 50px;
+  padding: 7px 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 0;
+  background: var(--bg-p);
+  box-shadow: none;
+}
+
+/* 라벨은 block + 인라인 아이콘이라야 말줄임이 걸린다.
+   (flex 로 두면 아이콘 옆 텍스트가 익명 flex 아이템이 되어 ellipsis 가 안 먹는다) */
+/* font-size 에 !important + --ui-font-scale 을 쓰는 이유: base.css 의
+   `.content :where(.mc-lbl, ...)` 가 화면 설정의 글자 크기 배율을 !important 로
+   강제한다. 그 규칙을 이기려면 같은 방식이어야 하고, 배율 기능도 그대로 살아야 한다. */
+body.modern-shell .metrics > .mc .mc-lbl,
+body.modern-shell .sum-row > .mc .mc-lbl {
+  display: block;
+  margin-bottom: 0;
+  font-size: calc(11.5px * var(--ui-font-scale)) !important;
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.modern-shell .metrics > .mc .mc-lbl i,
+body.modern-shell .sum-row > .mc .mc-lbl i {
+  margin-right: 6px;
+  font-size: 17px;
+  vertical-align: -2px;
+}
+
+body.modern-shell .metrics > .mc .mc-val,
+body.modern-shell .sum-row > .mc .mc-val {
+  font-size: calc(15px * var(--ui-font-scale)) !important;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* 보조 텍스트가 있는 카드는 라벨/값 아래 한 줄을 더 쓴다 */
+body.modern-shell .metrics > .mc .mc-sub,
+body.modern-shell .sum-row > .mc .mc-sub {
+  grid-column: 1 / -1;
+  margin-top: 1px;
+}
+
+/* 개별 테두리가 없으므로 hover/활성은 배경과 밑줄로만 표현한다 */
+body.modern-shell .metrics > .mc.clickable:hover,
+body.modern-shell .sum-row > .mc.clickable:hover {
+  border-radius: 0;
+  background: var(--bg-i);
+  box-shadow: none;
+}
+
+body.modern-shell .metrics > .mc.clickable.kpi-active,
+body.modern-shell .sum-row > .mc.clickable.kpi-active {
+  border-radius: 0;
+  background: var(--bg-i);
+  box-shadow: inset 0 -2px 0 var(--tx-i);
+}
+
+/* 활성 표시는 위 밑줄이 담당 — '필터됨' 배지는 좁은 칸에서 라벨을 밀어낸다 */
+body.modern-shell .metrics > .mc.clickable.kpi-active .mc-lbl::after,
+body.modern-shell .sum-row > .mc.clickable.kpi-active .mc-lbl::after {
+  content: none;
+}

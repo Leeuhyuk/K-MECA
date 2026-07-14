@@ -1,28 +1,8 @@
   <!-- ══════ 4. 생산 지시 등록 ══════ -->
   <div class="content list-page" id="pg-orders">
 
-    <!-- KPI 요약 -->
-    <div class="sum-row" id="orders-summary">
-    <div class="sum-box" style="cursor:pointer;" onclick="document.getElementById('orders-fs').value='진행중'; renderOrders();">
-      <i class="ti ti-loader si" style="color:#185FA5;"></i>
-      <div><div class="sn" style="color:#185FA5;">0건</div><div class="sl">진행중</div></div>
-    </div>
-    <div class="sum-box" style="cursor:pointer;" onclick="document.getElementById('orders-fs').value='대기'; renderOrders();">
-      <i class="ti ti-clock si" style="color:#868e96;"></i>
-      <div><div class="sn" style="color:#868e96;">0건</div><div class="sl">대기</div></div>
-    </div>
-    <div class="sum-box" style="cursor:pointer;" onclick="document.getElementById('orders-fs').value='지연'; renderOrders();">
-      <i class="ti ti-alert-triangle si" style="color:#e03131;"></i>
-      <div><div class="sn" style="color:#e03131;">0건</div><div class="sl">지연</div></div>
-    </div>
-    <div class="sum-box" style="cursor:pointer;" onclick="document.getElementById('orders-fs').value='완료'; renderOrders();">
-      <i class="ti ti-circle-check si" style="color:#37b24d;"></i>
-      <div><div class="sn" style="color:#37b24d;">0건</div><div class="sl">완료</div></div>
-    </div>
-    <div class="sum-box">
-      <i class="ti ti-chart-bar si" style="color:var(--tx-i);"></i>
-      <div><div class="sn">0%</div><div class="sl">전체 진행률</div></div>
-    </div></div>
+    <!-- KPI 요약 (renderOrders 가 공통 kpiCardHtml 로 채운다) -->
+    <div class="sum-row" id="orders-summary"></div>
 
     <!-- 툴바 -->
     <div class="toolbar">

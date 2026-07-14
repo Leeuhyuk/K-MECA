@@ -28,6 +28,53 @@ function setInventoryEntryMode(mode) {
   const saveBtn = inp('inv-save-btn');
   if (saveBtn && !editInvId) saveBtn.innerHTML = bulk ? '<i class="ti ti-check"></i>일괄 등록' : '<i class="ti ti-check"></i>저장';
 }
+/* React 번들은 classic script의 top-level let/const에 직접 접근할 수 없다.
+   함수 호출 시점의 최신 lexical 상태를 반환해 클라우드 재동기화 후 배열 교체도 반영한다. */
+function getInventoryReactState() {
+  return {
+    inventory,
+    invCategory,
+    sortState: sortState.inventory
+  };
+}
+/* KPI·분류 라벨·세부유형 필터 옵션·이력 드롭다운 갱신만 담당(테이블 렌더 제외).
+   React 파일럿에서 window.renderInventory 는 이 함수 + inventoryStore.emit() 로 대체된다.
+   vanilla renderInventory() 는 롤백 경로로 그대로 보존한다(테이블 HTML 조립 포함). */
+function renderInventoryKpi() {
+  const catItems = inventory.filter(i => canViewRecord(i, 'inventory') && (i.category || '생산부품') === invCategory);
+  const total = catItems.length;
+  const below = catItems.filter(i => i.qty < (i.minQty||0)).length;
+  const totalQty = catItems.reduce((s,i) => s + (Number(i.qty)||0), 0);
+  const okRate = total > 0 ? Math.round((total - below) / total * 100) : 100;
+  const catIcon = invCategory==='완제품' ? 'ti-building-factory' : invCategory==='사무비품' ? 'ti-printer' : 'ti-tools';
+  const secLbl = inp('inv-sec-lbl');
+  if (secLbl) secLbl.innerHTML = `<i class="ti ${catIcon}"></i>${invCategory} 재고 목록`;
+  const stCur = v('inv-filter-status') || '';
+  const kpi = inp('inv-kpi');
+  if (kpi) kpi.innerHTML =
+    '<div class="mc"><div class="mc-lbl"><i class="ti '+catIcon+'"></i>'+invCategory+' 품목수</div><div class="mc-val">'+total+'개 종</div></div>' +
+    (document.body.classList.contains('modern-shell') ? '' : '<div class="mc clickable'+(stCur==='low'?' kpi-active':'')+'" onclick="kpiFilter(\'inv-filter-status\',\'low\',\'renderInventory\')"><div class="mc-lbl"><i class="ti ti-package-off" style="color:var(--tx-d);"></i>안전재고 미달</div><div class="mc-val" style="color:var(--tx-d);">'+below+'개 품목</div></div>') +
+    '<div class="mc"><div class="mc-lbl"><i class="ti ti-stack-2" style="color:var(--tx-i);"></i>총 보유 수량</div><div class="mc-val" style="color:var(--tx-i);">'+totalQty+'</div></div>' +
+    '<div class="mc"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>안전재고 충족률</div><div class="mc-val" style="color:var(--tx-ok);">'+okRate+'%</div></div>';
+  const typeSel = inp('inv-filter-type');
+  let ft = typeSel ? typeSel.value : '';
+  if (typeSel) {
+    const types = [...new Set(catItems.map(i => i.type).filter(Boolean))];
+    if (ft && !types.includes(ft)) ft = '';
+    typeSel.innerHTML = '<option value="">전체 세부유형</option>' +
+      types.map(t => `<option value="${esc(t)}"${t===ft?' selected':''}>${esc(t)}</option>`).join('');
+  }
+  const invLedgerSel = document.getElementById('inv-ledger-inv');
+  if (invLedgerSel) {
+    const curVal = invLedgerSel.value;
+    invLedgerSel.innerHTML = '<option value="">전체 품목</option>' +
+      (typeof visibleRecords === 'function' ? visibleRecords(inventory, 'inventory') : inventory).map(function(i) {
+        return '<option value="' + esc(i.id) + '"' + (i.id === curVal ? ' selected' : '') + '>' + esc(i.name) + '</option>';
+      }).join('');
+  }
+  const ledgerPanel = document.getElementById('inv-tab-ledger');
+  if (ledgerPanel && ledgerPanel.style.display !== 'none') renderInventoryLedger();
+}
 function renderInventory() {
   // 현재 분류 한정 집합
   const catItems = inventory.filter(i => canViewRecord(i, 'inventory') && (i.category || '생산부품') === invCategory);
@@ -44,7 +91,7 @@ function renderInventory() {
   const kpi = inp('inv-kpi');
   if (kpi) kpi.innerHTML =
     '<div class="mc"><div class="mc-lbl"><i class="ti '+catIcon+'"></i>'+invCategory+' 품목수</div><div class="mc-val">'+total+'개 종</div></div>' +
-    '<div class="mc clickable'+(stCur==='low'?' kpi-active':'')+'" onclick="kpiFilter(\'inv-filter-status\',\'low\',\'renderInventory\')"><div class="mc-lbl"><i class="ti ti-package-off" style="color:var(--tx-d);"></i>안전재고 미달</div><div class="mc-val" style="color:var(--tx-d);">'+below+'개 품목</div></div>' +
+    (document.body.classList.contains('modern-shell') ? '' : '<div class="mc clickable'+(stCur==='low'?' kpi-active':'')+'" onclick="kpiFilter(\'inv-filter-status\',\'low\',\'renderInventory\')"><div class="mc-lbl"><i class="ti ti-package-off" style="color:var(--tx-d);"></i>안전재고 미달</div><div class="mc-val" style="color:var(--tx-d);">'+below+'개 품목</div></div>') +
     '<div class="mc"><div class="mc-lbl"><i class="ti ti-stack-2" style="color:var(--tx-i);"></i>총 보유 수량</div><div class="mc-val" style="color:var(--tx-i);">'+totalQty+'</div></div>' +
     '<div class="mc"><div class="mc-lbl"><i class="ti ti-circle-check" style="color:var(--tx-ok);"></i>안전재고 충족률</div><div class="mc-val" style="color:var(--tx-ok);">'+okRate+'%</div></div>';
 

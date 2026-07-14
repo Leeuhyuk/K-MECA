@@ -2,6 +2,8 @@
 
 작성일: 2026-06-18
 
+> 관련 문서: 시스템 전반 검토는 [erp-system-review-checklist.md](erp-system-review-checklist.md), 접근 제어·이력은 [audit-access-control-goal-plan.md](audit-access-control-goal-plan.md) 참조.
+
 ## 검토 목적
 
 Popbill Developers 문서를 기준으로 MES Pro에 추가 가능한 API 범위를 정리한다. 이번 단계에서는 기존 업무 화면과 직접 연동하지 않고, 사이드바에 별도 항목을 만들어 테스트와 운영 준비를 분리한다.

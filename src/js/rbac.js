@@ -90,6 +90,7 @@ function applyRoleGating(){
     group.style.display = items.some(item => item.style.display !== 'none') ? '' : 'none';
   });
   if (typeof syncSidebarExpandableGroups === 'function') syncSidebarExpandableGroups();
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('mes:permissions'));
 }
 /* ════════ 열(컬럼) 단위 권한 ════════
    각 표의 컬럼을 역할별로 숨길 수 있음. 표시 설정과 같은 컬럼 표식 방식이라 재렌더에도 자동 적용. */
@@ -101,7 +102,7 @@ const COLUMN_TABLES = {
   checks:     { sel:'#check-table',       label:'출하 검사(품질)',   addBtn:'openCheckAdd',  cols:['검사일','의뢰처','완료제품','검사원','외관','치수','테스트','종합판정','관리 작업'] },
   claims:     { sel:'#claims-table-full', label:'고객 클레임',       addBtn:'openClaimAdd',  cols:['인입일','유형','의뢰 고객사','해당 제품','클레임 사양','내용','조치 방안','상태','관리'] },
   as:         { sel:'#as-body',           label:'고객 A/S',         addBtn:'openAsAdd',     cols:['접수번호','접수일','고객사','제품','증상','보증','상태','담당자','수리비','관리'] },
-  materials:  { sel:'#mat-table',         label:'자재 수급/발주',    addBtn:'openMatAdd',    cols:['자재코드','고객사','매칭제품','자재명','공급처','구매단가','수량','매입총액','주문일자','입고예정일','진행상황','참고','관리'] },
+  materials:  { sel:'#mat-table, #materials-react-root', label:'자재 수급/발주', addBtn:'openMatAdd',    cols:['자재코드','고객사','매칭제품','자재명','공급처','구매단가','수량','매입총액','주문일자','입고예정일','진행상황','참고','관리'] },
   rfq:        { sel:'#rfq-table',         label:'견적요청서',        addBtn:'openRfqAdd',    cols:['문서번호','요청일','고객사','연결제품','공급처','품목명','규격','수량','희망단가','상태','비고','관리'] },
   po:         { sel:'#po-table',          label:'구매발주서',        addBtn:'openPoAdd',     cols:['발주번호','발행일','고객사','연결제품','공급처','품목명','규격','수량','단가','금액','결제조건','납품방법','결제','상태','비고'] },
   quote:      { sel:'#qt-table',          label:'견적/수주-견적서',   addBtn:'openSODocAdd',  cols:['견적번호','일자','고객사','품목명','규격','수량','단가','공급가액','납기','상태','관리'] },
@@ -112,6 +113,13 @@ const COLUMN_TABLES = {
   deliveries: { sel:'#dlv-table',         label:'납품 현황',        cols:['납품번호','납품일자','고객사','제품명','규격','수량','단가','납품금액','비고','삭제'] },
   inventory:  { sel:'#inventory-table',   label:'재고',             addBtn:'openInvAdd',    cols:['재고코드','품목명','분류','현재고','안전재고','보관위치','참고','관리'] }
 };
+/* sel 은 콤마로 여러 셀렉터를 가질 수 있다(React 표는 레거시 호스트가 아닌 별도 루트에 렌더).
+   `a, b [x]` 는 a 전체를 숨기므로, 각 셀렉터에 하위 셀렉터를 따로 붙여야 한다. */
+function columnHideCss(sel, key){
+  return String(sel).split(',').map(s => s.trim()).filter(Boolean)
+    .map(s => `${s} [data-table-display-col="${key}"]{display:none!important;visibility:collapse!important;}`)
+    .join('\n') + '\n';
+}
 function roleColumnsConfig(){ return loadStorage('roleColumns', {}); }   // { 역할:{ 테이블:[숨길컬럼...] } }
 function tableActionAllowed(tableKey, action = 'create') {
   if (!tableKey) return true;
@@ -137,7 +145,7 @@ function applyColumnGating(){
       hidden.forEach(col=>{
         if (col===ADD_KEY){ if(t.addBtn) t.addBtn.split(',').forEach(fn=>{ css += `[onclick^="${fn.trim()}"]{display:none!important;}\n`; }); return; }  // 등록 버튼 숨김(콤마로 여러 개 지원)
         const idx=t.cols.indexOf(col); if(idx<0) return;
-        css += `${t.sel} [data-table-display-col="${tk}-${idx}"]{display:none!important;visibility:collapse!important;}\n`;
+        css += columnHideCss(t.sel, `${tk}-${idx}`);
       });
     });
   }
@@ -213,7 +221,7 @@ async function cloudLoadRole(){
     if (usnap.exists){
       const d=usnap.data();
       role = isBoot ? 'admin' : (d.role||'staff');         // 부트스트랩은 항상 admin
-      active = isBoot ? true : (d.active!==false);
+      active = isBoot ? true : (d.active===true);
       name = d.name || signupName;
       if (signupName && !d.name) { try { await uref.update({ name:signupName }); } catch(e){} }  // 이름 보강
     } else {
@@ -273,6 +281,7 @@ function cloudBootstrap(){
         _cloudActive = true; _hideLogin(); _cloudChip('online');
         if (typeof queueScreenSettingsCloudSave === 'function') queueScreenSettingsCloudSave();
         if (typeof flushClientMasterMigrationSync === 'function') flushClientMasterMigrationSync();
+        purgeRestrictedLocalData();   // 재로그인 세션: localStorage 에 남은 재무·인사 데이터 제거(staff)
         updateAdminUI(); applyRoleGating(); applyColumnGating(); applyFeatureGating(); cloudSubscribe();   // 역할 UI/컬럼/기능 반영 + 실시간 동기화 시작
         if (currentPage !== 'dashboard' && !pageAllowed(currentPage)) {
           showToast('이 페이지에 접근할 권한이 없습니다.', 'error');
@@ -329,6 +338,12 @@ function cloudMergeProtectedMapValue(key, remoteValue){
 }
 const _cloudKeyApplied = {};   // key -> 마지막으로 로컬에 반영한 sourceUpdatedAt(ms). 비순차 원격 읽기 거부용
 const _cloudSavingKeys = new Set(); // 저장 중인 키는 이전 원격 스냅샷으로 덮지 않음
+/* 큐/저장중 가드에 걸려 흘려보낸 원격 업데이트가 있는 키.
+   그냥 버리면 영영 다시 받지 않아 다른 PC 가 등록한 데이터가 안 보이고,
+   게다가 오래된 로컬 배열을 그대로 올리면 cloudMirrorV2Key 의 delete-by-absence 가
+   그 데이터를 서버에서 지운다. 표시해 두고 (1) 올리기 전에 먼저 받고
+   (2) 플러시 후 다시 받는다. */
+const _cloudPendingRemote = new Set();
 const CLOUD_DELETE_TOMBSTONES_KEY = 'cloudDeleteTombstones';
 const CLOUD_DELETE_TOMBSTONE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const CLOUD_ARRAY_ID_FIELDS = ['id','code','no','number','docNo','quoteNo','orderNo','poNo','rfqNo','statementNo','taxNo'];
@@ -453,9 +468,13 @@ function cloudFlushSoon(){
     _cloudTimer = setTimeout(() => { cloudFlush().catch(e => console.warn('cloud flush failed:', e)); }, 0);
   } catch(e){}
 }
-async function cloudLoadV2Key(key){
-  if (typeof _cloudQueue !== 'undefined' && _cloudQueue && _cloudQueue.has(key)) return false;
-  if (_cloudSavingKeys.has(key)) return false;
+/* opts.force: 큐/저장중 가드를 무시하고 원격을 읽는다.
+   cloudFlush 가 '올리기 전에 먼저 받기'(B-2)를 할 때만 쓴다 — 그 시점엔 이미 큐를 비우고
+   _cloudSavingKeys 에 넣은 상태라 가드에 스스로 걸리기 때문. */
+async function cloudLoadV2Key(key, opts){
+  const force = !!(opts && opts.force);
+  if (!force && typeof _cloudQueue !== 'undefined' && _cloudQueue && _cloudQueue.has(key)) return false;
+  if (!force && _cloudSavingKeys.has(key)) return false;
   const entityRef = _fbDb.collection('mes_v2').doc(key);
   const metaSnap = await entityRef.get();
   if (!metaSnap.exists) return false;
@@ -492,10 +511,29 @@ async function cloudLoadV2Key(key){
   }
   return true;
 }
+/* ── 재무·인사 키 접근 계층 ──
+   firestore.rules 의 mesKeyRequiresManager 와 반드시 같은 목록이어야 한다.
+   서버가 manager 미만의 읽기/쓰기를 거부하므로, staff 세션은 로드·구독·저장 큐를
+   아예 건너뛰어 permission-denied 오류와 로컬 메모리 노출을 함께 없앤다. */
+const MANAGER_ONLY_KEYS = ['financeData','workers','attendance','leaves','payrollRecords'];
+const ADMIN_ONLY_KEYS = ['payrollRecords'];   // 급여는 manager 도 열람 불가 (firestore.rules mesKeyIsPayroll)
+function cloudKeyAccessAllowed(key){
+  if (ADMIN_ONLY_KEYS.includes(key)) return currentRole === 'admin';
+  if (!MANAGER_ONLY_KEYS.includes(key)) return true;
+  return currentRole === 'admin' || currentRole === 'manager';
+}
+/* 현재 역할이 읽을 수 없는 키의 로컬 잔존 민감 데이터 제거.
+   (제한 도입 전 동기화됐거나, 강등된 계정의 localStorage 에 남은 값) */
+function purgeRestrictedLocalData(){
+  MANAGER_ONLY_KEYS.forEach(key => {
+    if (!cloudKeyAccessAllowed(key)) localStorage.removeItem('mes_' + key);
+  });
+}
 async function cloudLoadAll(){
   await cloudLoadRole();   // 내 역할/권한 먼저 로드(승인 대기 판정 포함)
+  purgeRestrictedLocalData();
   let n=0;
-  await Promise.all(CLOUD_KEYS.map(async key => {
+  await Promise.all(CLOUD_KEYS.filter(cloudKeyAccessAllowed).map(async key => {
     try {
       if (await cloudLoadV2Key(key)) n++;
     } catch(e) {
@@ -509,6 +547,7 @@ async function cloudLoadAll(){
 function cloudQueueSave(key){
   try {
     if (!_cloudActive || !CLOUD_KEYS.includes(key)) return;   // 클라우드 모듈 초기화 전 호출 시 TDZ → catch에서 무시
+    if (!cloudKeyAccessAllowed(key)) return;   // staff 는 재무·인사 키 쓰기가 서버에서 거부됨 — 큐에 넣지 않아 오류 소음 방지
     _cloudQueue.add(key);
     clearTimeout(_cloudTimer);
     _cloudTimer = setTimeout(cloudFlush, 800);
@@ -639,16 +678,74 @@ async function cloudMirrorV2Keys(keys){
   }
   return failed;
 }
+/* 원격을 받은 뒤, 아직 서버로 못 올린 로컬 편집을 다시 얹는다(같은 레코드는 로컬 우선).
+   이게 없으면 선반영이 방금 저장한 내 편집을 지워버린다.
+   로컬에서 지운 레코드는 cloudLoadV2Key 가 tombstone 으로 이미 걸러낸 뒤라 되살아나지 않는다. */
+function cloudKeepLocalEditsOverRemote(key, localBefore){
+  if (!Array.isArray(localBefore)) return;
+  let remote;
+  try {
+    const raw = localStorage.getItem('mes_' + key);
+    remote = raw ? JSON.parse(raw) : null;
+  } catch(e){ return; }
+  if (!Array.isArray(remote)) return;
+  const merged = new Map();
+  remote.forEach((item, i) => merged.set(cloudV2StableRecordId(item, i), item));
+  localBefore.forEach((item, i) => merged.set(cloudV2StableRecordId(item, i), item));
+  localStorage.setItem('mes_' + key, JSON.stringify(Array.from(merged.values())));
+}
+/* 흘려보낸 원격 업데이트를 올리기 전에 먼저 받는다(B-2).
+   배열 키만 대상으로 한다 — 남의 데이터를 지우는 delete-by-absence 는 배열 미러링에만 있고,
+   map 키(financeData 등)는 state 문서를 통째 교체하므로 원격 항목을 지우지 않는다.
+   map 을 선반영하면 아직 못 올린 로컬 편집만 잃으므로 건드리지 않고, 플러시 후 재조회에 맡긴다.
+   clients/partners 는 cloudResyncGlobals 안에서 마이그레이션이 다시 돌아 파생값이 재계산된다.
+
+   opts.preUpload=true 면 올리기 직전 단계라 로컬 편집을 병합해 지켜야 하고, 배열 키만 다룬다.
+   false 면 플러시 후라 내 편집은 이미 서버에 있으므로 모든 키를 그대로 받으면 된다. */
+async function cloudPullPendingRemote(keys, opts){
+  const preUpload = !!(opts && opts.preUpload);
+  const pulled = [];
+  for (const key of keys) {
+    if (!_cloudPendingRemote.has(key)) continue;
+    let localBefore = null;
+    if (preUpload) {
+      try {
+        const raw = localStorage.getItem('mes_' + key);
+        localBefore = raw ? JSON.parse(raw) : null;
+      } catch(e){ localBefore = null; }
+      if (!Array.isArray(localBefore)) continue;   // map 키는 플러시 후 재조회 경로에 맡긴다
+    }
+    _cloudPendingRemote.delete(key);
+    try {
+      if (!(await cloudLoadV2Key(key, { force:true }))) continue;
+      if (preUpload) cloudKeepLocalEditsOverRemote(key, localBefore);
+      pulled.push(key);
+    } catch(e){ console.warn('원격 선반영 실패:', key, e); }
+  }
+  if (pulled.length && typeof cloudResyncGlobals === 'function') cloudResyncGlobals(pulled);
+  return pulled;
+}
 async function cloudFlush(){
   if (!_cloudActive || !_cloudQueue.size) return;
   const keys=[..._cloudQueue]; _cloudQueue.clear();
   keys.forEach(k=>_cloudSavingKeys.add(k));
   _cloudChip('saving');
+  // 올리기 전에 먼저 받는다. 이 단계가 없으면 아직 못 받은 원격 항목(다른 PC 등록분)이
+  // cloudMirrorV2Key 의 delete-by-absence 로 서버에서 삭제된다.
+  try { await cloudPullPendingRemote(keys, { preUpload:true }); } catch(e){ console.warn('원격 선반영 단계 실패:', e); }
   const failed = await cloudMirrorV2Keys(keys);
   const failedSet = new Set(failed);
   keys.filter(k=>!failedSet.has(k)).forEach(k=>{
     setTimeout(()=>{
       _cloudSavingKeys.delete(k);
+      // 저장 중에 도착해 흘려보낸 원격 업데이트가 있으면 지금 받는다(재시도 경로).
+      // cloudScheduleRemoteRefresh 가 전역 반영·화면 새로고침·배지까지 처리한다.
+      if (_cloudPendingRemote.has(k)) {
+        cloudPullPendingRemote([k])
+          .then(pulled => { if (pulled.length && typeof cloudScheduleRemoteRefresh === 'function') cloudScheduleRemoteRefresh(k); })
+          .catch(e => console.warn('원격 재조회 실패:', k, e));
+        return;
+      }
       if (k === 'trash' && typeof cloudLoadV2Key === 'function') {
         cloudLoadV2Key(k).then(loaded => {
           if (!loaded) return;

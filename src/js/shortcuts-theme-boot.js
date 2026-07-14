@@ -888,15 +888,8 @@ window.addEventListener('resize', () => {
      1) https://console.firebase.google.com 에서 프로젝트 생성
      2) 빌드 > Authentication > 시작하기 > '이메일/비밀번호' 사용 설정
      3) 빌드 > Firestore Database > 데이터베이스 만들기(프로덕션 모드)
-        규칙(Rules) 탭에 아래 입력 후 게시:
-          rules_version = '2';
-          service cloud.firestore {
-            match /databases/{db}/documents {
-             match /mes_v2/{doc=**} {
-               allow read, write: if request.auth != null;
-             }
-           }
-         }
+        프로젝트 루트의 firestore.rules를 Firebase CLI로 배포:
+          firebase deploy --only firestore:rules
      4) 프로젝트 설정(⚙) > '내 앱' > 웹앱(</>) 추가 > firebaseConfig 값 복사
      5) 아래 FIREBASE_CONFIG 에 붙여넣기 → 저장 후 새로고침
    ※ apiKey/projectId 가 비어 있으면 자동으로 '로컬 전용 모드'로 동작합니다.
