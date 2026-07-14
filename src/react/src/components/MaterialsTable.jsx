@@ -1,5 +1,6 @@
-import { useSyncExternalStore } from 'react';
+import { Fragment, useSyncExternalStore } from 'react';
 import { materialsStore } from '../bridge/store.js';
+import { useColumnReorder } from '../bridge/columnOrder.js';
 import { getClients, getMaterials, getMaterialsSortState, getProducts, displayLabel, g } from '../bridge/globals.js';
 import { SelectAllCheckbox, isInteractiveTableTarget } from './TableSelection.jsx';
 import { SortableTh } from './SortableTh.jsx';
@@ -92,6 +93,8 @@ function materialViewState() {
 
 export function MaterialsTable({ selectable = false, selectedIds = null, onToggleRow = null, onToggleAll = null }) {
   useMaterialsSnapshot();
+  // 훅은 조기 반환(EmptyState)보다 먼저 — 0건↔n건 전환 시 훅 개수가 달라지면 안 된다.
+  const { order, thProps } = useColumnReorder('mat-table', (selectable ? 1 : 0) + COLS.length + 1, () => materialsStore.emit());
   const { rows, clientById, productById } = materialViewState();
 
   if (!rows.length) {
@@ -106,6 +109,110 @@ export function MaterialsTable({ selectable = false, selectedIds = null, onToggl
 
   const visibleTotal = rows.reduce((sum, material) => sum + materialAmount(material), 0);
 
+  // 열 서술자 — 순서 변경은 이 배열을 재배열해 렌더한다(DOM 직접 이동 없음).
+  const cells = [];
+  if (selectable) {
+    cells.push({
+      id: 'select',
+      draggable: false,
+      col: <col className="modern-col-select" />,
+      th: () => (
+        <th className="table-row-select-th" data-col="select">
+          <SelectAllCheckbox
+            ids={rows.map((row) => row.id)}
+            selectedIds={selectedIds}
+            onToggleAll={onToggleAll}
+            ariaLabel="현재 표시 자재 전체 선택"
+          />
+        </th>
+      ),
+      td: (material, ctx) => (
+        <td className="table-row-select-td" data-col="select">
+          <input
+            type="checkbox"
+            className="table-row-select"
+            aria-label={material.name + ' 선택'}
+            checked={ctx.selected}
+            onChange={() => onToggleRow?.(material.id)}
+            onClick={(event) => event.stopPropagation()}
+          />
+        </td>
+      )
+    });
+  }
+  const COL_CLASS = ['modern-col-code', 'modern-col-client', 'modern-col-product', 'modern-col-material', 'modern-col-supplier', 'modern-col-money', 'modern-col-unit-quantity', 'modern-col-total', 'modern-col-date', 'modern-col-date', 'modern-col-status', 'modern-col-note'];
+  const CELL = [
+    (m) => <td data-table-display-col="materials-0" className="modern-cell-code">{m.id}</td>,
+    (m, ctx) => <td data-table-display-col="materials-1">{ctx.client?.name || '—'}</td>,
+    (m, ctx) => <td data-table-display-col="materials-2" className="modern-cell-secondary">{ctx.product?.name || '—'}</td>,
+    (m) => (
+      <td data-table-display-col="materials-3" className="modern-cell-primary">
+        {m.name}
+        {m.spec && <span className="modern-cell-sub">{m.spec}</span>}
+      </td>
+    ),
+    (m) => <td data-table-display-col="materials-4">{m.supplier || '—'}</td>,
+    (m) => <td data-table-display-col="materials-5" className="modern-cell-money">{formatWon(m.unitPrice)}</td>,
+    (m) => <td data-table-display-col="materials-6">{m.qty} {m.unit}</td>,
+    (m) => <td data-table-display-col="materials-7" className="modern-cell-total">{formatWon(materialAmount(m))}</td>,
+    (m) => <td data-table-display-col="materials-8">{m.orderDate || '—'}</td>,
+    (m) => <td data-table-display-col="materials-9">{m.expectedDate || '—'}</td>,
+    (m, ctx) => (
+      <td data-table-display-col="materials-10">
+        <StatusPill
+          status={m.status || '—'}
+          tone={STATUS_TONE[m.status]}
+          className={`readonly-status-pill ${ctx.statusClass}`}
+        />
+        <select
+          className="stat-sel readonly-status-source"
+          aria-label={m.name + ' 상태'}
+          aria-hidden="true"
+          tabIndex="-1"
+          value={m.status || '발주전'}
+          onChange={(event) => g('changeMatStatus', m.id, event.target.value)}
+        >
+          {STATUSES.map((status) => <option key={status}>{status}</option>)}
+        </select>
+      </td>
+    ),
+    (m) => <td data-table-display-col="materials-11" className="modern-cell-note" title={m.note || ''}>{m.note || '—'}</td>
+  ];
+  COLS.forEach((column, index) => {
+    cells.push({
+      id: column.key,
+      draggable: true,
+      col: <col className={COL_CLASS[index]} />,
+      th: (props) => (
+        <SortableTh
+          label={displayLabel('materials', index, column.label)}
+          sortKey={column.key}
+          scope="materials"
+          displayCol={'materials-' + index}
+          {...props}
+        />
+      ),
+      td: CELL[index]
+    });
+  });
+  cells.push({
+    id: 'actions',
+    draggable: true,
+    col: <col className="modern-col-actions" />,
+    th: (props) => <th data-table-display-col="materials-12" {...props}>{displayLabel('materials', 12, '관리')}</th>,
+    td: (material) => (
+      <td data-table-display-col="materials-12" className="modern-cell-actions">
+        <IconButton icon="ti-edit" label={`${material.name} 수정`} className="edit-btn" onClick={() => g('openMatEdit', material.id)} />
+        <IconButton icon="ti-trash" label={`${material.name} 삭제`} tone="danger" className="del-btn" onClick={() => g('deleteMat', material.id)} />
+      </td>
+    )
+  });
+
+  const ordered = order.map((index) => cells[index]);
+  // 합계 행은 '매입총액' 열 위치에 맞춰야 한다 — 열을 옮기면 그 위치도 따라간다.
+  const totalIndex = ordered.findIndex((cell) => cell.id === 'totalAmt');
+  const tailSpan = ordered.length - totalIndex - 1;
+
   return (
     <table
       className="materials-react-table modern-data-table"
@@ -113,43 +220,13 @@ export function MaterialsTable({ selectable = false, selectedIds = null, onToggl
       data-react-domain="materials"
     >
       <colgroup>
-        {selectable && <col className="modern-col-select" />}
-        <col className="modern-col-code" />
-        <col className="modern-col-client" />
-        <col className="modern-col-product" />
-        <col className="modern-col-material" />
-        <col className="modern-col-supplier" />
-        <col className="modern-col-money" />
-        <col className="modern-col-unit-quantity" />
-        <col className="modern-col-total" />
-        <col className="modern-col-date" />
-        <col className="modern-col-date" />
-        <col className="modern-col-status" />
-        <col className="modern-col-note" />
-        <col className="modern-col-actions" />
+        {ordered.map((cell) => <Fragment key={cell.id}>{cell.col}</Fragment>)}
       </colgroup>
       <thead>
         <tr>
-          {selectable && (
-            <th className="table-row-select-th" data-col="select">
-              <SelectAllCheckbox
-                ids={rows.map((row) => row.id)}
-                selectedIds={selectedIds}
-                onToggleAll={onToggleAll}
-                ariaLabel="현재 표시 자재 전체 선택"
-              />
-            </th>
-          )}
-          {COLS.map((column, index) => (
-            <SortableTh
-              key={column.key}
-              label={displayLabel('materials', index, column.label)}
-              sortKey={column.key}
-              scope="materials"
-              displayCol={'materials-' + index}
-            />
+          {ordered.map((cell, visualIndex) => (
+            <Fragment key={cell.id}>{cell.th(thProps(visualIndex, cell.draggable))}</Fragment>
           ))}
-          <th data-table-display-col="materials-12">{displayLabel('materials', 12, '관리')}</th>
         </tr>
       </thead>
       <tbody>
@@ -158,6 +235,7 @@ export function MaterialsTable({ selectable = false, selectedIds = null, onToggl
           const client = product ? clientById.get(product.clientId) : null;
           const selected = !!selectedIds?.has?.(material.id);
           const statusClass = g('selectionDetailStatusClass', material.status) || STATUS_CLASS[material.status] || '';
+          const ctx = { product, client, selected, statusClass };
           return (
             <tr
               key={material.id}
@@ -167,64 +245,16 @@ export function MaterialsTable({ selectable = false, selectedIds = null, onToggl
                 if (!isInteractiveTableTarget(event.target)) onToggleRow?.(material.id);
               }}
             >
-              {selectable && (
-                <td className="table-row-select-td" data-col="select">
-                  <input
-                    type="checkbox"
-                    className="table-row-select"
-                    aria-label={material.name + ' 선택'}
-                    checked={selected}
-                    onChange={() => onToggleRow?.(material.id)}
-                    onClick={(event) => event.stopPropagation()}
-                  />
-                </td>
-              )}
-              <td data-table-display-col="materials-0" className="modern-cell-code">{material.id}</td>
-              <td data-table-display-col="materials-1">{client?.name || '—'}</td>
-              <td data-table-display-col="materials-2" className="modern-cell-secondary">{product?.name || '—'}</td>
-              <td data-table-display-col="materials-3" className="modern-cell-primary">
-                {material.name}
-                {material.spec && <span className="modern-cell-sub">{material.spec}</span>}
-              </td>
-              <td data-table-display-col="materials-4">{material.supplier || '—'}</td>
-              <td data-table-display-col="materials-5" className="modern-cell-money">{formatWon(material.unitPrice)}</td>
-              <td data-table-display-col="materials-6">{material.qty} {material.unit}</td>
-              <td data-table-display-col="materials-7" className="modern-cell-total">{formatWon(materialAmount(material))}</td>
-              <td data-table-display-col="materials-8">{material.orderDate || '—'}</td>
-              <td data-table-display-col="materials-9">{material.expectedDate || '—'}</td>
-              <td data-table-display-col="materials-10">
-                <StatusPill
-                  status={material.status || '—'}
-                  tone={STATUS_TONE[material.status]}
-                  className={`readonly-status-pill ${statusClass}`}
-                />
-                <select
-                  className="stat-sel readonly-status-source"
-                  aria-label={material.name + ' 상태'}
-                  aria-hidden="true"
-                  tabIndex="-1"
-                  value={material.status || '발주전'}
-                  onChange={(event) => g('changeMatStatus', material.id, event.target.value)}
-                >
-                  {STATUSES.map((status) => <option key={status}>{status}</option>)}
-                </select>
-              </td>
-              <td data-table-display-col="materials-11" className="modern-cell-note" title={material.note || ''}>
-                {material.note || '—'}
-              </td>
-              <td data-table-display-col="materials-12" className="modern-cell-actions">
-                <IconButton icon="ti-edit" label={`${material.name} 수정`} className="edit-btn" onClick={() => g('openMatEdit', material.id)} />
-                <IconButton icon="ti-trash" label={`${material.name} 삭제`} tone="danger" className="del-btn" onClick={() => g('deleteMat', material.id)} />
-              </td>
+              {ordered.map((cell) => <Fragment key={cell.id}>{cell.td(material, ctx)}</Fragment>)}
             </tr>
           );
         })}
       </tbody>
       <tfoot>
         <tr className="modern-table-summary-row">
-          <td colSpan={selectable ? 8 : 7}>조건부 합계 건수: {rows.length}건</td>
+          {totalIndex > 0 && <td colSpan={totalIndex}>조건부 합계 건수: {rows.length}건</td>}
           <td className="modern-cell-total">{formatWon(visibleTotal)}</td>
-          <td colSpan="5" />
+          {tailSpan > 0 && <td colSpan={tailSpan} />}
         </tr>
       </tfoot>
     </table>
