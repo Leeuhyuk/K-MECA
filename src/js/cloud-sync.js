@@ -136,8 +136,13 @@ function cloudSubscribe(){
     if (doc.metadata.hasPendingWrites) return;     // 내가 쓴 변경(로컬 에코)은 무시
     // 아직 서버로 보내지 않은 로컬 편집이 대기 중인 키는 원격값으로 덮어쓰지 않음
     // (비순차 원격 읽기가 최신 로컬 데이터를 되돌리는 것을 방지 — 편집 중 키는 로컬 우선)
-    if (typeof _cloudQueue !== 'undefined' && _cloudQueue && _cloudQueue.has(key)) return;
-    if (typeof _cloudSavingKeys !== 'undefined' && _cloudSavingKeys && _cloudSavingKeys.has(key)) return;
+    // 단, 흘려보냈다는 사실은 반드시 남긴다. 그냥 버리면 재시도가 없어 영영 못 받는다.
+    const busy = (typeof _cloudQueue !== 'undefined' && _cloudQueue && _cloudQueue.has(key))
+      || (typeof _cloudSavingKeys !== 'undefined' && _cloudSavingKeys && _cloudSavingKeys.has(key));
+    if (busy) {
+      if (typeof _cloudPendingRemote !== 'undefined' && _cloudPendingRemote) _cloudPendingRemote.add(key);
+      return;
+    }
     if (typeof cloudLoadV2Key !== 'function') return;
     cloudLoadV2Key(key)
       .then(loaded => { if (loaded) cloudScheduleRemoteRefresh(key); })

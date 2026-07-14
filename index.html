@@ -18779,6 +18779,12 @@ function cloudMergeProtectedMapValue(key, remoteValue){
 }
 const _cloudKeyApplied = {};   // key -> 마지막으로 로컬에 반영한 sourceUpdatedAt(ms). 비순차 원격 읽기 거부용
 const _cloudSavingKeys = new Set(); // 저장 중인 키는 이전 원격 스냅샷으로 덮지 않음
+/* 큐/저장중 가드에 걸려 흘려보낸 원격 업데이트가 있는 키.
+   그냥 버리면 영영 다시 받지 않아 다른 PC 가 등록한 데이터가 안 보이고,
+   게다가 오래된 로컬 배열을 그대로 올리면 cloudMirrorV2Key 의 delete-by-absence 가
+   그 데이터를 서버에서 지운다. 표시해 두고 (1) 올리기 전에 먼저 받고
+   (2) 플러시 후 다시 받는다. */
+const _cloudPendingRemote = new Set();
 const CLOUD_DELETE_TOMBSTONES_KEY = 'cloudDeleteTombstones';
 const CLOUD_DELETE_TOMBSTONE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const CLOUD_ARRAY_ID_FIELDS = ['id','code','no','number','docNo','quoteNo','orderNo','poNo','rfqNo','statementNo','taxNo'];
@@ -18903,9 +18909,13 @@ function cloudFlushSoon(){
     _cloudTimer = setTimeout(() => { cloudFlush().catch(e => console.warn('cloud flush failed:', e)); }, 0);
   } catch(e){}
 }
-async function cloudLoadV2Key(key){
-  if (typeof _cloudQueue !== 'undefined' && _cloudQueue && _cloudQueue.has(key)) return false;
-  if (_cloudSavingKeys.has(key)) return false;
+/* opts.force: 큐/저장중 가드를 무시하고 원격을 읽는다.
+   cloudFlush 가 '올리기 전에 먼저 받기'(B-2)를 할 때만 쓴다 — 그 시점엔 이미 큐를 비우고
+   _cloudSavingKeys 에 넣은 상태라 가드에 스스로 걸리기 때문. */
+async function cloudLoadV2Key(key, opts){
+  const force = !!(opts && opts.force);
+  if (!force && typeof _cloudQueue !== 'undefined' && _cloudQueue && _cloudQueue.has(key)) return false;
+  if (!force && _cloudSavingKeys.has(key)) return false;
   const entityRef = _fbDb.collection('mes_v2').doc(key);
   const metaSnap = await entityRef.get();
   if (!metaSnap.exists) return false;
@@ -19109,16 +19119,74 @@ async function cloudMirrorV2Keys(keys){
   }
   return failed;
 }
+/* 원격을 받은 뒤, 아직 서버로 못 올린 로컬 편집을 다시 얹는다(같은 레코드는 로컬 우선).
+   이게 없으면 선반영이 방금 저장한 내 편집을 지워버린다.
+   로컬에서 지운 레코드는 cloudLoadV2Key 가 tombstone 으로 이미 걸러낸 뒤라 되살아나지 않는다. */
+function cloudKeepLocalEditsOverRemote(key, localBefore){
+  if (!Array.isArray(localBefore)) return;
+  let remote;
+  try {
+    const raw = localStorage.getItem('mes_' + key);
+    remote = raw ? JSON.parse(raw) : null;
+  } catch(e){ return; }
+  if (!Array.isArray(remote)) return;
+  const merged = new Map();
+  remote.forEach((item, i) => merged.set(cloudV2StableRecordId(item, i), item));
+  localBefore.forEach((item, i) => merged.set(cloudV2StableRecordId(item, i), item));
+  localStorage.setItem('mes_' + key, JSON.stringify(Array.from(merged.values())));
+}
+/* 흘려보낸 원격 업데이트를 올리기 전에 먼저 받는다(B-2).
+   배열 키만 대상으로 한다 — 남의 데이터를 지우는 delete-by-absence 는 배열 미러링에만 있고,
+   map 키(financeData 등)는 state 문서를 통째 교체하므로 원격 항목을 지우지 않는다.
+   map 을 선반영하면 아직 못 올린 로컬 편집만 잃으므로 건드리지 않고, 플러시 후 재조회에 맡긴다.
+   clients/partners 는 cloudResyncGlobals 안에서 마이그레이션이 다시 돌아 파생값이 재계산된다.
+
+   opts.preUpload=true 면 올리기 직전 단계라 로컬 편집을 병합해 지켜야 하고, 배열 키만 다룬다.
+   false 면 플러시 후라 내 편집은 이미 서버에 있으므로 모든 키를 그대로 받으면 된다. */
+async function cloudPullPendingRemote(keys, opts){
+  const preUpload = !!(opts && opts.preUpload);
+  const pulled = [];
+  for (const key of keys) {
+    if (!_cloudPendingRemote.has(key)) continue;
+    let localBefore = null;
+    if (preUpload) {
+      try {
+        const raw = localStorage.getItem('mes_' + key);
+        localBefore = raw ? JSON.parse(raw) : null;
+      } catch(e){ localBefore = null; }
+      if (!Array.isArray(localBefore)) continue;   // map 키는 플러시 후 재조회 경로에 맡긴다
+    }
+    _cloudPendingRemote.delete(key);
+    try {
+      if (!(await cloudLoadV2Key(key, { force:true }))) continue;
+      if (preUpload) cloudKeepLocalEditsOverRemote(key, localBefore);
+      pulled.push(key);
+    } catch(e){ console.warn('원격 선반영 실패:', key, e); }
+  }
+  if (pulled.length && typeof cloudResyncGlobals === 'function') cloudResyncGlobals(pulled);
+  return pulled;
+}
 async function cloudFlush(){
   if (!_cloudActive || !_cloudQueue.size) return;
   const keys=[..._cloudQueue]; _cloudQueue.clear();
   keys.forEach(k=>_cloudSavingKeys.add(k));
   _cloudChip('saving');
+  // 올리기 전에 먼저 받는다. 이 단계가 없으면 아직 못 받은 원격 항목(다른 PC 등록분)이
+  // cloudMirrorV2Key 의 delete-by-absence 로 서버에서 삭제된다.
+  try { await cloudPullPendingRemote(keys, { preUpload:true }); } catch(e){ console.warn('원격 선반영 단계 실패:', e); }
   const failed = await cloudMirrorV2Keys(keys);
   const failedSet = new Set(failed);
   keys.filter(k=>!failedSet.has(k)).forEach(k=>{
     setTimeout(()=>{
       _cloudSavingKeys.delete(k);
+      // 저장 중에 도착해 흘려보낸 원격 업데이트가 있으면 지금 받는다(재시도 경로).
+      // cloudScheduleRemoteRefresh 가 전역 반영·화면 새로고침·배지까지 처리한다.
+      if (_cloudPendingRemote.has(k)) {
+        cloudPullPendingRemote([k])
+          .then(pulled => { if (pulled.length && typeof cloudScheduleRemoteRefresh === 'function') cloudScheduleRemoteRefresh(k); })
+          .catch(e => console.warn('원격 재조회 실패:', k, e));
+        return;
+      }
       if (k === 'trash' && typeof cloudLoadV2Key === 'function') {
         cloudLoadV2Key(k).then(loaded => {
           if (!loaded) return;
@@ -19280,8 +19348,13 @@ function cloudSubscribe(){
     if (doc.metadata.hasPendingWrites) return;     // 내가 쓴 변경(로컬 에코)은 무시
     // 아직 서버로 보내지 않은 로컬 편집이 대기 중인 키는 원격값으로 덮어쓰지 않음
     // (비순차 원격 읽기가 최신 로컬 데이터를 되돌리는 것을 방지 — 편집 중 키는 로컬 우선)
-    if (typeof _cloudQueue !== 'undefined' && _cloudQueue && _cloudQueue.has(key)) return;
-    if (typeof _cloudSavingKeys !== 'undefined' && _cloudSavingKeys && _cloudSavingKeys.has(key)) return;
+    // 단, 흘려보냈다는 사실은 반드시 남긴다. 그냥 버리면 재시도가 없어 영영 못 받는다.
+    const busy = (typeof _cloudQueue !== 'undefined' && _cloudQueue && _cloudQueue.has(key))
+      || (typeof _cloudSavingKeys !== 'undefined' && _cloudSavingKeys && _cloudSavingKeys.has(key));
+    if (busy) {
+      if (typeof _cloudPendingRemote !== 'undefined' && _cloudPendingRemote) _cloudPendingRemote.add(key);
+      return;
+    }
     if (typeof cloudLoadV2Key !== 'function') return;
     cloudLoadV2Key(key)
       .then(loaded => { if (loaded) cloudScheduleRemoteRefresh(key); })
