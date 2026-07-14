@@ -104,9 +104,17 @@ service cloud.firestore {
       ];
     }
 
+    // 급여는 재무·인사 중에서도 가장 민감 — 읽기/쓰기 모두 admin 전용.
+    // mesKeyRequiresAdmin(설정 키)에 넣지 않는 이유: 그 목록은 읽기가 전체
+    // 공개다(회사정보 등을 인쇄·문서 양식이 사용). 급여만 별도로 격리한다.
+    function mesKeyIsPayroll(key) {
+      return key == 'payrollRecords';
+    }
+
     function canWriteMesKey(key) {
       return isActiveUser()
         && !mesKeyIsAudit(key)
+        && (!mesKeyIsPayroll(key) || isAdmin())
         && (!mesKeyRequiresAdmin(key) || isAdmin())
         && (!mesKeyRequiresManager(key) || isManagerOrAdmin());
     }
@@ -116,6 +124,7 @@ service cloud.firestore {
     function canReadMesKey(key) {
       return isActiveUser()
         && (!mesKeyIsAudit(key) || isAdmin())
+        && (!mesKeyIsPayroll(key) || isAdmin())
         && (!mesKeyRequiresManager(key) || isManagerOrAdmin());
     }
 
@@ -158,18 +167,18 @@ service cloud.firestore {
     match /mes_v2/{key} {
       allow read: if canReadMesKey(key);
       allow create, update: if canWriteMesKey(key);
-      allow delete: if isManagerOrAdmin();
+      allow delete: if isManagerOrAdmin() && (!mesKeyIsPayroll(key) || isAdmin());
 
       match /items/{itemId} {
         allow read: if canReadMesKey(key);
         allow create, update: if canWriteMesKey(key);
-        allow delete: if isManagerOrAdmin();
+        allow delete: if isManagerOrAdmin() && (!mesKeyIsPayroll(key) || isAdmin());
       }
 
       match /state/{stateId} {
         allow read: if canReadMesKey(key);
         allow create, update: if canWriteMesKey(key);
-        allow delete: if isManagerOrAdmin();
+        allow delete: if isManagerOrAdmin() && (!mesKeyIsPayroll(key) || isAdmin());
       }
     }
 

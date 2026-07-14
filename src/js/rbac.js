@@ -506,15 +506,18 @@ async function cloudLoadV2Key(key){
    서버가 manager 미만의 읽기/쓰기를 거부하므로, staff 세션은 로드·구독·저장 큐를
    아예 건너뛰어 permission-denied 오류와 로컬 메모리 노출을 함께 없앤다. */
 const MANAGER_ONLY_KEYS = ['financeData','workers','attendance','leaves','payrollRecords'];
+const ADMIN_ONLY_KEYS = ['payrollRecords'];   // 급여는 manager 도 열람 불가 (firestore.rules mesKeyIsPayroll)
 function cloudKeyAccessAllowed(key){
+  if (ADMIN_ONLY_KEYS.includes(key)) return currentRole === 'admin';
   if (!MANAGER_ONLY_KEYS.includes(key)) return true;
   return currentRole === 'admin' || currentRole === 'manager';
 }
-/* staff 로 판정된 세션의 로컬 잔존 민감 데이터 제거.
-   (제한 도입 전 동기화됐거나, manager 에서 강등된 계정의 localStorage 에 남은 값) */
+/* 현재 역할이 읽을 수 없는 키의 로컬 잔존 민감 데이터 제거.
+   (제한 도입 전 동기화됐거나, 강등된 계정의 localStorage 에 남은 값) */
 function purgeRestrictedLocalData(){
-  if (currentRole === 'admin' || currentRole === 'manager') return;
-  MANAGER_ONLY_KEYS.forEach(key => localStorage.removeItem('mes_' + key));
+  MANAGER_ONLY_KEYS.forEach(key => {
+    if (!cloudKeyAccessAllowed(key)) localStorage.removeItem('mes_' + key);
+  });
 }
 async function cloudLoadAll(){
   await cloudLoadRole();   // 내 역할/권한 먼저 로드(승인 대기 판정 포함)
