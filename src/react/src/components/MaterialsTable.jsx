@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { materialsStore } from '../bridge/store.js';
-import { getClients, getMaterials, getMaterialsSortState, getProducts, g } from '../bridge/globals.js';
+import { getClients, getMaterials, getMaterialsSortState, getProducts, displayLabel, g } from '../bridge/globals.js';
 import { SelectAllCheckbox, isInteractiveTableTarget } from './TableSelection.jsx';
 import { SortableTh } from './SortableTh.jsx';
 import { EmptyState } from './ui/EmptyState.jsx';
@@ -143,13 +143,13 @@ export function MaterialsTable({ selectable = false, selectedIds = null, onToggl
           {COLS.map((column, index) => (
             <SortableTh
               key={column.key}
-              label={column.label}
+              label={displayLabel('materials', index, column.label)}
               sortKey={column.key}
               scope="materials"
               displayCol={'materials-' + index}
             />
           ))}
-          <th data-table-display-col="materials-12">관리</th>
+          <th data-table-display-col="materials-12">{displayLabel('materials', 12, '관리')}</th>
         </tr>
       </thead>
       <tbody>

@@ -354,9 +354,19 @@ function tableDisplayConfig(){ return loadStorage('tableDisplayConfig', {}); }
 function saveTableDisplayConfig(cfg){
   saveStorage('tableDisplayConfig', cfg || {});
   applyTableDisplaySettings();
+  // React 소유 표(재고·자재)는 라벨을 직접 렌더하므로 리렌더 신호가 필요하다.
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('mes:tabledisplay'));
 }
 function _tableDisplayTables(){
   return (typeof COLUMN_TABLES !== 'undefined') ? COLUMN_TABLES : {};
+}
+/* React 소유 표(재고·자재)가 헤더 라벨을 직접 렌더할 때 쓰는 조회 함수.
+   COLUMN_TABLES 는 const 라 window 속성이 아니므로 번들에서 직접 읽을 수 없다. */
+function tableDisplayLabel(tableKey, index, fallback){
+  const table = _tableDisplayTables()[tableKey];
+  const col = table && table.cols ? table.cols[index] : '';
+  const labels = (tableDisplayConfig()[tableKey] || {}).labels || {};
+  return (col && labels[col]) || fallback;
 }
 function renderTableDisplaySettings(){
   const body = inp('table-display-settings-body');
@@ -455,7 +465,7 @@ function applyTableDisplaySettings(root){
     _markTableDisplayCells(tableKey, table, root);
     (table.cols || []).forEach((col, index) => {
       if (!hidden[col]) return;
-      css += `${table.sel} [data-table-display-col="${tableKey}-${index}"]{display:none!important;visibility:collapse!important;}\n`;
+      css += columnHideCss(table.sel, `${tableKey}-${index}`);
     });
   });
   let st = document.getElementById('table-display-style');

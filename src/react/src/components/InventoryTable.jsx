@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { inventoryStore } from '../bridge/store.js';
-import { getInventory, getInvCategory, getSortState, g } from '../bridge/globals.js';
+import { getInventory, getInvCategory, getSortState, displayLabel, g } from '../bridge/globals.js';
 import { SortableTh } from './SortableTh.jsx';
 import { SelectAllCheckbox, isInteractiveTableTarget } from './TableSelection.jsx';
 import { EmptyState } from './ui/EmptyState.jsx';
@@ -86,9 +86,9 @@ export function InventoryTable({ selectable = false, selectedIds = null, onToggl
             </th>
           )}
           {COLS.map((column, index) => (
-            <SortableTh key={column.key} label={column.label} sortKey={column.key} displayCol={`inventory-${index}`} />
+            <SortableTh key={column.key} label={displayLabel('inventory', index, column.label)} sortKey={column.key} displayCol={`inventory-${index}`} />
           ))}
-          <th data-table-display-col="inventory-7">관리</th>
+          <th data-table-display-col="inventory-7">{displayLabel('inventory', 7, '관리')}</th>
         </tr>
       </thead>
       <tbody>

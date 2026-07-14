@@ -294,8 +294,17 @@ function mount() {
   createRoot(selectionDetailHost).render(<SelectionDetailPanel />);
 }
 
+// 시스템 > 표시 설정에서 라벨/표시가 바뀌면 React 소유 표를 다시 그린다.
+function wireTableDisplaySync() {
+  globalThis.addEventListener?.('mes:tabledisplay', () => {
+    inventoryStore.emit();
+    materialsStore.emit();
+  });
+}
+
 function boot() {
   wireGlobals();
+  wireTableDisplaySync();
   mount();
   inventoryStore.emit();
   if (typeof globalThis.renderMaterials === 'function') globalThis.renderMaterials();

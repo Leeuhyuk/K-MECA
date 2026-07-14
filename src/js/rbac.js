@@ -102,7 +102,7 @@ const COLUMN_TABLES = {
   checks:     { sel:'#check-table',       label:'출하 검사(품질)',   addBtn:'openCheckAdd',  cols:['검사일','의뢰처','완료제품','검사원','외관','치수','테스트','종합판정','관리 작업'] },
   claims:     { sel:'#claims-table-full', label:'고객 클레임',       addBtn:'openClaimAdd',  cols:['인입일','유형','의뢰 고객사','해당 제품','클레임 사양','내용','조치 방안','상태','관리'] },
   as:         { sel:'#as-body',           label:'고객 A/S',         addBtn:'openAsAdd',     cols:['접수번호','접수일','고객사','제품','증상','보증','상태','담당자','수리비','관리'] },
-  materials:  { sel:'#mat-table',         label:'자재 수급/발주',    addBtn:'openMatAdd',    cols:['자재코드','고객사','매칭제품','자재명','공급처','구매단가','수량','매입총액','주문일자','입고예정일','진행상황','참고','관리'] },
+  materials:  { sel:'#mat-table, #materials-react-root', label:'자재 수급/발주', addBtn:'openMatAdd',    cols:['자재코드','고객사','매칭제품','자재명','공급처','구매단가','수량','매입총액','주문일자','입고예정일','진행상황','참고','관리'] },
   rfq:        { sel:'#rfq-table',         label:'견적요청서',        addBtn:'openRfqAdd',    cols:['문서번호','요청일','고객사','연결제품','공급처','품목명','규격','수량','희망단가','상태','비고','관리'] },
   po:         { sel:'#po-table',          label:'구매발주서',        addBtn:'openPoAdd',     cols:['발주번호','발행일','고객사','연결제품','공급처','품목명','규격','수량','단가','금액','결제조건','납품방법','결제','상태','비고'] },
   quote:      { sel:'#qt-table',          label:'견적/수주-견적서',   addBtn:'openSODocAdd',  cols:['견적번호','일자','고객사','품목명','규격','수량','단가','공급가액','납기','상태','관리'] },
@@ -113,6 +113,13 @@ const COLUMN_TABLES = {
   deliveries: { sel:'#dlv-table',         label:'납품 현황',        cols:['납품번호','납품일자','고객사','제품명','규격','수량','단가','납품금액','비고','삭제'] },
   inventory:  { sel:'#inventory-table',   label:'재고',             addBtn:'openInvAdd',    cols:['재고코드','품목명','분류','현재고','안전재고','보관위치','참고','관리'] }
 };
+/* sel 은 콤마로 여러 셀렉터를 가질 수 있다(React 표는 레거시 호스트가 아닌 별도 루트에 렌더).
+   `a, b [x]` 는 a 전체를 숨기므로, 각 셀렉터에 하위 셀렉터를 따로 붙여야 한다. */
+function columnHideCss(sel, key){
+  return String(sel).split(',').map(s => s.trim()).filter(Boolean)
+    .map(s => `${s} [data-table-display-col="${key}"]{display:none!important;visibility:collapse!important;}`)
+    .join('\n') + '\n';
+}
 function roleColumnsConfig(){ return loadStorage('roleColumns', {}); }   // { 역할:{ 테이블:[숨길컬럼...] } }
 function tableActionAllowed(tableKey, action = 'create') {
   if (!tableKey) return true;
@@ -138,7 +145,7 @@ function applyColumnGating(){
       hidden.forEach(col=>{
         if (col===ADD_KEY){ if(t.addBtn) t.addBtn.split(',').forEach(fn=>{ css += `[onclick^="${fn.trim()}"]{display:none!important;}\n`; }); return; }  // 등록 버튼 숨김(콤마로 여러 개 지원)
         const idx=t.cols.indexOf(col); if(idx<0) return;
-        css += `${t.sel} [data-table-display-col="${tk}-${idx}"]{display:none!important;visibility:collapse!important;}\n`;
+        css += columnHideCss(t.sel, `${tk}-${idx}`);
       });
     });
   }
