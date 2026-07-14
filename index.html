@@ -18722,6 +18722,7 @@ function cloudBootstrap(){
         _cloudActive = true; _hideLogin(); _cloudChip('online');
         if (typeof queueScreenSettingsCloudSave === 'function') queueScreenSettingsCloudSave();
         if (typeof flushClientMasterMigrationSync === 'function') flushClientMasterMigrationSync();
+        purgeRestrictedLocalData();   // 재로그인 세션: localStorage 에 남은 재무·인사 데이터 제거(staff)
         updateAdminUI(); applyRoleGating(); applyColumnGating(); applyFeatureGating(); cloudSubscribe();   // 역할 UI/컬럼/기능 반영 + 실시간 동기화 시작
         if (currentPage !== 'dashboard' && !pageAllowed(currentPage)) {
           showToast('이 페이지에 접근할 권한이 없습니다.', 'error');
@@ -18941,10 +18942,26 @@ async function cloudLoadV2Key(key){
   }
   return true;
 }
+/* ── 재무·인사 키 접근 계층 ──
+   firestore.rules 의 mesKeyRequiresManager 와 반드시 같은 목록이어야 한다.
+   서버가 manager 미만의 읽기/쓰기를 거부하므로, staff 세션은 로드·구독·저장 큐를
+   아예 건너뛰어 permission-denied 오류와 로컬 메모리 노출을 함께 없앤다. */
+const MANAGER_ONLY_KEYS = ['financeData','workers','attendance','leaves','payrollRecords'];
+function cloudKeyAccessAllowed(key){
+  if (!MANAGER_ONLY_KEYS.includes(key)) return true;
+  return currentRole === 'admin' || currentRole === 'manager';
+}
+/* staff 로 판정된 세션의 로컬 잔존 민감 데이터 제거.
+   (제한 도입 전 동기화됐거나, manager 에서 강등된 계정의 localStorage 에 남은 값) */
+function purgeRestrictedLocalData(){
+  if (currentRole === 'admin' || currentRole === 'manager') return;
+  MANAGER_ONLY_KEYS.forEach(key => localStorage.removeItem('mes_' + key));
+}
 async function cloudLoadAll(){
   await cloudLoadRole();   // 내 역할/권한 먼저 로드(승인 대기 판정 포함)
+  purgeRestrictedLocalData();
   let n=0;
-  await Promise.all(CLOUD_KEYS.map(async key => {
+  await Promise.all(CLOUD_KEYS.filter(cloudKeyAccessAllowed).map(async key => {
     try {
       if (await cloudLoadV2Key(key)) n++;
     } catch(e) {
@@ -18958,6 +18975,7 @@ async function cloudLoadAll(){
 function cloudQueueSave(key){
   try {
     if (!_cloudActive || !CLOUD_KEYS.includes(key)) return;   // 클라우드 모듈 초기화 전 호출 시 TDZ → catch에서 무시
+    if (!cloudKeyAccessAllowed(key)) return;   // staff 는 재무·인사 키 쓰기가 서버에서 거부됨 — 큐에 넣지 않아 오류 소음 방지
     _cloudQueue.add(key);
     clearTimeout(_cloudTimer);
     _cloudTimer = setTimeout(cloudFlush, 800);
@@ -19249,7 +19267,8 @@ function cloudSubscribe(){
   if (!_cloudActive || _cloudUnsub || !_fbDb) return;
   const unsubs = [];
   const v2SnapshotReady = {};
-  const v2Unsubs = CLOUD_KEYS.map(key => _fbDb.collection('mes_v2').doc(key).onSnapshot(doc=>{
+  // 재무·인사 키는 staff 읽기가 서버 규칙에서 거부되므로 구독 자체를 건너뛴다(rbac.js cloudKeyAccessAllowed)
+  const v2Unsubs = CLOUD_KEYS.filter(key => typeof cloudKeyAccessAllowed !== 'function' || cloudKeyAccessAllowed(key)).map(key => _fbDb.collection('mes_v2').doc(key).onSnapshot(doc=>{
     const ver = cloudSnapshotVersionMillis(doc);
     if (!v2SnapshotReady[key]) {
       v2SnapshotReady[key] = true;
@@ -28902,6 +28921,11 @@ function payreqSubmitSelected() {
 function payreqDecideSelected(nextStatus) {
   const rows = payreqApprovalPendingSelectedRows();
   if (!rows.length) { showToast('승인/반려할 결재대기 건이 없습니다.', 'info'); return; }
+  // 결재 승인/반려는 서버 쓰기 계층(financeData = manager 이상)과 동일하게 제한한다.
+  // canEditRecord 만으로는 부족 — 요청 작성자 본인(staff)도 통과해 자기 결재를 승인하는
+  // 것처럼 보이고, 서버 거부 후 동기화 시점에야 되돌아가 혼란을 준다.
+  if (currentRole !== 'admin' && currentRole !== 'manager') { showToast('결재 승인/반려 권한이 없습니다.', 'error'); return; }
+  if (rows.some(req => !canEditRecord(req, 'paymentRequest'))) { showToast('결재 권한이 없는 결제 요청이 포함되어 있습니다.', 'error'); return; }
   const approved = nextStatus === 'approved';
   const note = approved ? '' : window.prompt('반려 사유를 입력하세요.', '') ;
   if (!approved && note === null) return;

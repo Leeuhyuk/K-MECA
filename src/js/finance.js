@@ -2198,6 +2198,11 @@ function payreqSubmitSelected() {
 function payreqDecideSelected(nextStatus) {
   const rows = payreqApprovalPendingSelectedRows();
   if (!rows.length) { showToast('승인/반려할 결재대기 건이 없습니다.', 'info'); return; }
+  // 결재 승인/반려는 서버 쓰기 계층(financeData = manager 이상)과 동일하게 제한한다.
+  // canEditRecord 만으로는 부족 — 요청 작성자 본인(staff)도 통과해 자기 결재를 승인하는
+  // 것처럼 보이고, 서버 거부 후 동기화 시점에야 되돌아가 혼란을 준다.
+  if (currentRole !== 'admin' && currentRole !== 'manager') { showToast('결재 승인/반려 권한이 없습니다.', 'error'); return; }
+  if (rows.some(req => !canEditRecord(req, 'paymentRequest'))) { showToast('결재 권한이 없는 결제 요청이 포함되어 있습니다.', 'error'); return; }
   const approved = nextStatus === 'approved';
   const note = approved ? '' : window.prompt('반려 사유를 입력하세요.', '') ;
   if (!approved && note === null) return;

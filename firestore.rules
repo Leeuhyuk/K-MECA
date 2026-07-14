@@ -111,6 +111,14 @@ service cloud.firestore {
         && (!mesKeyRequiresManager(key) || isManagerOrAdmin());
     }
 
+    // 재무·인사 데이터(급여 포함)는 읽기도 쓰기와 같은 계층으로 제한한다.
+    // UI 숨김만으로는 staff 가 콘솔/직접 쿼리로 열람할 수 있기 때문.
+    function canReadMesKey(key) {
+      return isActiveUser()
+        && (!mesKeyIsAudit(key) || isAdmin())
+        && (!mesKeyRequiresManager(key) || isManagerOrAdmin());
+    }
+
     function expectedAuditRole() {
       return bootstrapAdmin() ? 'admin' : myUser().data.role;
     }
@@ -148,18 +156,18 @@ service cloud.firestore {
     }
 
     match /mes_v2/{key} {
-      allow read: if isActiveUser() && (!mesKeyIsAudit(key) || isAdmin());
+      allow read: if canReadMesKey(key);
       allow create, update: if canWriteMesKey(key);
       allow delete: if isManagerOrAdmin();
 
       match /items/{itemId} {
-        allow read: if isActiveUser() && (!mesKeyIsAudit(key) || isAdmin());
+        allow read: if canReadMesKey(key);
         allow create, update: if canWriteMesKey(key);
         allow delete: if isManagerOrAdmin();
       }
 
       match /state/{stateId} {
-        allow read: if isActiveUser() && (!mesKeyIsAudit(key) || isAdmin());
+        allow read: if canReadMesKey(key);
         allow create, update: if canWriteMesKey(key);
         allow delete: if isManagerOrAdmin();
       }

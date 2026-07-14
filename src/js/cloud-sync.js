@@ -126,7 +126,8 @@ function cloudSubscribe(){
   if (!_cloudActive || _cloudUnsub || !_fbDb) return;
   const unsubs = [];
   const v2SnapshotReady = {};
-  const v2Unsubs = CLOUD_KEYS.map(key => _fbDb.collection('mes_v2').doc(key).onSnapshot(doc=>{
+  // 재무·인사 키는 staff 읽기가 서버 규칙에서 거부되므로 구독 자체를 건너뛴다(rbac.js cloudKeyAccessAllowed)
+  const v2Unsubs = CLOUD_KEYS.filter(key => typeof cloudKeyAccessAllowed !== 'function' || cloudKeyAccessAllowed(key)).map(key => _fbDb.collection('mes_v2').doc(key).onSnapshot(doc=>{
     const ver = cloudSnapshotVersionMillis(doc);
     if (!v2SnapshotReady[key]) {
       v2SnapshotReady[key] = true;

@@ -131,6 +131,30 @@ test('active staff can write operational data but not finance or direct audit da
   await assertFails(setDoc(doc(db, 'mes_v2', 'auditLog'), { mode: 'spoof' }));
 });
 
+test('staff cannot read finance or HR data, but operational data stays readable', async () => {
+  await testEnv.withSecurityRulesDisabled(async context => {
+    const db = context.firestore();
+    await setDoc(doc(db, 'mes_v2', 'inventory'), { seeded: true });
+    for (const key of ['financeData', 'workers', 'attendance', 'leaves', 'payrollRecords']) {
+      await setDoc(doc(db, 'mes_v2', key), { seeded: true });
+      await setDoc(doc(db, 'mes_v2', key, 'state', 'current'), { seeded: true });
+      await setDoc(doc(db, 'mes_v2', key, 'items', 'row-1'), { seeded: true });
+    }
+  });
+
+  const staffDb = authDb(users.staff);
+  await assertSucceeds(getDoc(doc(staffDb, 'mes_v2', 'inventory')));
+  for (const key of ['financeData', 'workers', 'attendance', 'leaves', 'payrollRecords']) {
+    await assertFails(getDoc(doc(staffDb, 'mes_v2', key)));
+    await assertFails(getDoc(doc(staffDb, 'mes_v2', key, 'state', 'current')));
+    await assertFails(getDoc(doc(staffDb, 'mes_v2', key, 'items', 'row-1')));
+  }
+
+  const managerDb = authDb(users.manager);
+  await assertSucceeds(getDoc(doc(managerDb, 'mes_v2', 'payrollRecords')));
+  await assertSucceeds(getDoc(doc(managerDb, 'mes_v2', 'financeData', 'state', 'current')));
+});
+
 test('manager can write finance data but admin-only settings stay protected', async () => {
   const managerDb = authDb(users.manager);
   const adminDb = authDb(users.admin);
