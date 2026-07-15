@@ -252,3 +252,133 @@ async function aiNaturalSearch(query, event) {
     _aiBusy(button, false);
   }
 }
+
+/* ── AI 검색 UI ──
+   AI 는 질문을 필터 조건으로 바꾸기만 하고, 실제 조회는 여기서 한다.
+   데이터를 AI 에 보내지 않으므로 개인정보·원가가 새지 않는다.
+   통합 검색(타이핑마다 즉시 키워드 검색)과 분리한 이유는 AI 호출이 과금이라
+   Enter/버튼으로만 실행해야 하기 때문. */
+
+function _aiEsc(v) {
+  if (typeof esc === 'function') return esc(v);
+  return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function openAiSearch() {
+  if (typeof getGeminiConfig === 'function' && !getGeminiConfig().enabled) {
+    showToast('AI 기능이 꺼져 있습니다. 시스템 관리 → API 관리에서 켜세요.', 'error');
+    return;
+  }
+  const dlg = inp('ai-search-dlg'); if (!dlg) return;
+  const box = inp('ai-search-result'); if (box) box.innerHTML = '';
+  dlg.classList.add('open');
+  setTimeout(function() { const i = inp('ai-search-input'); if (i) i.focus(); }, 50);
+}
+function closeAiSearch() { const d = inp('ai-search-dlg'); if (d) d.classList.remove('open'); }
+
+/* 검색 대상별 행 목록·값 접근·표시. AI 에는 fields 이름만 알려주고(AI_SEARCH_ENTITIES)
+   실제 값은 여기서 푼다 — 예: 납품의 거래처는 clientId 라 이름을 따로 조회해야 한다.
+   rows() 는 visibleRecords 를 거쳐 권한 밖 데이터가 결과에 섞이지 않게 한다. */
+const AI_SEARCH_SOURCES = {
+  deliveries: {
+    label: '납품 현황', page: 'deliveries',
+    rows: function() { return typeof visibleRecords === 'function' ? visibleRecords(deliveries || [], 'delivery') : (deliveries || []); },
+    value: function(d, f) {
+      return ({
+        deliveredAt: d.deliveredAt || '',
+        clientName: typeof getClientName === 'function' ? getClientName(d.clientId) : '',
+        productName: d.productName || '',
+        qty: Number(d.qty) || 0,
+        price: Number(d.price) || 0
+      })[f];
+    },
+    line: function(d) {
+      const name = typeof getClientName === 'function' ? getClientName(d.clientId) : '';
+      return (d.deliveredAt || '-') + ' · ' + name + ' · ' + (d.productName || '') + ' · ' + fmtW((Number(d.price)||0)*(Number(d.qty)||0));
+    }
+  },
+  poList: {
+    label: '구매발주서', page: 'po',
+    rows: function() { return typeof visiblePurchaseOrderList === 'function' ? visiblePurchaseOrderList() : (poList || []); },
+    value: function(p, f) {
+      return ({ date: p.date || '', supplier: p.supplier || '', itemName: p.itemName || '', status: p.status || '', unitPrice: Number(p.unitPrice) || 0 })[f];
+    },
+    line: function(p) { return (p.date || '-') + ' · ' + (p.supplier || '') + ' · ' + (p.itemName || '') + ' · ' + (p.status || ''); }
+  },
+  claims: {
+    label: '고객 클레임', page: 'claims',
+    rows: function() { return typeof visibleRecords === 'function' ? visibleRecords(claims || [], 'claims') : (claims || []); },
+    value: function(c, f) {
+      return ({ date: c.date || '', kind: c.kind || '', content: c.content || '', status: c.status || '' })[f];
+    },
+    line: function(c) { return (c.date || '-') + ' · ' + (c.kind || '') + ' · ' + String(c.content || '').slice(0, 40) + ' · ' + (c.status || ''); }
+  },
+  inventory: {
+    label: '재고', page: 'inventory',
+    rows: function() { return typeof visibleRecords === 'function' ? visibleRecords(inventory || [], 'inventory') : (inventory || []); },
+    value: function(i, f) {
+      return ({ name: i.name || '', type: i.type || '', qty: Number(i.qty) || 0, minQty: Number(i.minQty) || 0, location: i.location || '' })[f];
+    },
+    line: function(i) { return (i.id || '') + ' · ' + (i.name || '') + ' · ' + (i.type || '') + ' · 재고 ' + (i.qty != null ? i.qty : 0); }
+  }
+};
+
+function _aiFilterMatch(actual, op, expected) {
+  const a = actual == null ? '' : actual;
+  const isNum = typeof a === 'number';
+  const e = isNum ? Number(String(expected).replace(/[^0-9.-]/g, '')) : String(expected == null ? '' : expected).toLowerCase();
+  switch (String(op)) {
+    case '>=': return isNum ? a >= e : String(a) >= String(expected);
+    case '<=': return isNum ? a <= e : String(a) <= String(expected);
+    case '>':  return isNum ? a > e  : String(a) > String(expected);
+    case '<':  return isNum ? a < e  : String(a) < String(expected);
+    case '!=': return isNum ? a !== e : String(a).toLowerCase() !== e;
+    case 'contains': return String(a).toLowerCase().includes(e);
+    default:   // '=' 및 미지의 연산자 — 문자열은 부분일치로 관대하게 본다(AI 표기가 흔들려도 결과가 나오게)
+      return isNum ? a === e : String(a).toLowerCase().includes(e);
+  }
+}
+
+async function runAiSearch(event) {
+  const field = inp('ai-search-input');
+  const q = field ? String(field.value || '').trim() : '';
+  if (!q) { showToast('찾을 내용을 입력하세요.', 'error'); return; }
+  const box = inp('ai-search-result');
+  const button = inp('ai-search-run');
+  const prev = button ? button.innerHTML : '';
+  if (button) { button.disabled = true; button.innerHTML = '<i class="ti ti-loader animate-spin"></i>해석 중'; }
+  if (box) box.innerHTML = '';
+  try {
+    const parsed = await aiNaturalSearch(q, null);
+    if (!parsed) return;                       // 실패 시 aiNaturalSearch 가 토스트를 띄운다
+    const src = AI_SEARCH_SOURCES[parsed.entity];
+    if (!src) {
+      box.innerHTML = '<div class="empty" style="font-size:12px;">해석하지 못했습니다. ' + _aiEsc(parsed.reason || '') + '</div>';
+      return;
+    }
+    const filters = Array.isArray(parsed.filters) ? parsed.filters : [];
+    const rows = src.rows().filter(function(r) {
+      return filters.every(function(f) { return _aiFilterMatch(src.value(r, f.field), f.op, f.value); });
+    });
+    const cond = filters.length
+      ? filters.map(function(f) { return _aiEsc(f.field) + ' ' + _aiEsc(f.op) + ' ' + _aiEsc(f.value); }).join(', ')
+      : '조건 없음(전체)';
+    let html = '<div style="font-size:11.5px;color:var(--tx-t);margin-bottom:6px;"><b>' + _aiEsc(src.label) +
+      '</b> 에서 ' + rows.length + '건 · 해석: ' + cond + '</div>';
+    if (rows.length) {
+      html += '<div style="max-height:240px;overflow:auto;border:1px solid var(--br);border-radius:6px;">' +
+        rows.slice(0, 50).map(function(r) {
+          return '<div style="padding:6px 9px;border-bottom:1px solid var(--br);font-size:12px;">' + _aiEsc(src.line(r)) + '</div>';
+        }).join('') +
+        (rows.length > 50 ? '<div style="padding:6px 9px;font-size:11px;color:var(--tx-t);">외 ' + (rows.length - 50) + '건</div>' : '') +
+        '</div>' +
+        '<div style="margin-top:8px;"><button class="btn btn-sm" onclick="closeAiSearch(); _goTo(\'' + src.page + '\', null);">' +
+        '<i class="ti ti-arrow-right"></i>' + _aiEsc(src.label) + ' 화면에서 보기</button></div>';
+    } else {
+      html += '<div class="empty" style="font-size:12px;">조건에 맞는 항목이 없습니다.</div>';
+    }
+    box.innerHTML = html;
+  } finally {
+    if (button) { button.disabled = false; button.innerHTML = prev; }
+  }
+}
