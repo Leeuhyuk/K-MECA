@@ -190,6 +190,12 @@ export function AppShellNavigation() {
             </button>
           ))}
         </div>
+        {/* AI 검색 — 페이지가 아니라 팝업이라 APP_MODULES(page/segment 라우팅)에 넣지 않고
+            레일 하단에 별도 액션으로 둔다. AI 기능이 꺼져 있으면 g() 가 토스트로 안내한다. */}
+        <button className="modern-rail-button modern-rail-ai" type="button" onClick={() => g('openAiSearch')} title="AI 검색" aria-label="AI 검색">
+          <i className="ti ti-sparkles" aria-hidden="true" />
+          <span>AI 검색</span>
+        </button>
         <button className="modern-rail-collapse" type="button" onClick={toggleCollapsed} title={collapsed ? '업무 메뉴 펼치기' : '업무 메뉴 접기'} aria-label={collapsed ? '업무 메뉴 펼치기' : '업무 메뉴 접기'}>
           <i className={`ti ${collapsed ? 'ti-chevrons-right' : 'ti-chevrons-left'}`} aria-hidden="true" />
         </button>
