@@ -328,11 +328,25 @@ const AI_SEARCH_SOURCES = {
   }
 };
 
+/* AI 가 주는 연산자 표기를 우리가 아는 것으로 맞춘다.
+   서버 스키마가 enum 으로 막고 있지만, 함수 배포가 늦거나 모델이 흔들리면 from/to·gte 같은
+   표기가 올 수 있다. 그때 미지의 연산자로 떨어지면 날짜 비교가 전부 불일치가 되어
+   "결과 0건"이 된다(실제로 그렇게 터졌다). 여기서 흡수해 클라이언트만으로도 동작하게 한다. */
+const _AI_OP_ALIASES = {
+  from: '>=', since: '>=', after: '>=', gte: '>=', ge: '>=', '≥': '>=',
+  to: '<=', until: '<=', before: '<=', lte: '<=', le: '<=', '≤': '<=',
+  gt: '>', lt: '<', eq: '=', '==': '=', ne: '!=', neq: '!=',
+  like: 'contains', includes: 'contains', has: 'contains'
+};
+function _aiNormalizeOp(op) {
+  const raw = String(op == null ? '' : op).trim();
+  return _AI_OP_ALIASES[raw.toLowerCase()] || raw;
+}
 function _aiFilterMatch(actual, op, expected) {
   const a = actual == null ? '' : actual;
   const isNum = typeof a === 'number';
   const e = isNum ? Number(String(expected).replace(/[^0-9.-]/g, '')) : String(expected == null ? '' : expected).toLowerCase();
-  switch (String(op)) {
+  switch (_aiNormalizeOp(op)) {
     case '>=': return isNum ? a >= e : String(a) >= String(expected);
     case '<=': return isNum ? a <= e : String(a) <= String(expected);
     case '>':  return isNum ? a > e  : String(a) > String(expected);
@@ -370,7 +384,8 @@ async function runAiSearch(event) {
       return filters.every(function(f) { return _aiFilterMatch(src.value(r, f.field), f.op, f.value); });
     });
     const cond = filters.length
-      ? filters.map(function(f) { return _aiEsc(f.field) + ' ' + _aiEsc(f.op) + ' ' + _aiEsc(f.value); }).join(', ')
+      // 실제 적용한 연산자(정규화 후)를 보여준다 — AI 표기 그대로 보이면 화면과 동작이 어긋난다
+      ? filters.map(function(f) { return _aiEsc(f.field) + ' ' + _aiEsc(_aiNormalizeOp(f.op)) + ' ' + _aiEsc(f.value); }).join(', ')
       : '조건 없음(전체)';
     let html = '<div style="font-size:11.5px;color:var(--tx-t);margin-bottom:6px;"><b>' + _aiEsc(src.label) +
       '</b> 에서 ' + rows.length + '건 · 해석: ' + cond + '</div>';
