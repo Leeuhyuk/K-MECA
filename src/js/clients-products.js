@@ -626,6 +626,8 @@ function saveProdEdit(clientId, productId) {
     const linkedDelivery = typeof deliveryRecordForProduct === 'function' ? deliveryRecordForProduct(productId) : null;
     if (!guardFinanceMonth(linkedDelivery?.deliveredAt || today())) return;
   }
+  // 납품 → 다른 단계: 자동 등록됐던 납품 기록도 함께 되돌린다(제품을 바꾸기 전에 확인).
+  if (before.processStage === '납품' && stage !== '납품' && typeof onStageUndelivered === 'function' && !onStageUndelivered(p)) return;
   const costFields = readProductCostFields(p);
   p.name = name; p.spec = v('pra-spec');
   p.qty = parseInt(v('pra-qty'))||1; p.unit = v('pra-unit')||'대';
@@ -648,6 +650,8 @@ function changeProdStage(productId, stage) {
     const linkedDelivery = typeof deliveryRecordForProduct === 'function' ? deliveryRecordForProduct(productId) : null;
     if (!guardFinanceMonth(linkedDelivery?.deliveredAt || today())) return;
   }
+  // 납품 → 다른 단계: 자동 등록됐던 납품 기록도 함께 되돌린다(제품을 바꾸기 전에 확인해 실패 시 단계 유지).
+  if (p.processStage === '납품' && stage !== '납품' && typeof onStageUndelivered === 'function' && !onStageUndelivered(p)) return;
   const before = _safeJsonClone(p);
   p.processStage = stage; p.status = stageToStatus(stage);
   if (p.processStage === '완료' && before.processStage !== '완료' && typeof onStageComplete === 'function') onStageComplete(p);
