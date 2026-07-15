@@ -8,12 +8,12 @@ function _apiEsc(value) {
     .replace(/"/g, '&quot;');
 }
 
+/* AI 설정. apiKey/model 은 더 이상 여기 없다 — 서버(Secret Manager)가 키를 갖고
+   모델도 서버가 정한다. 클라이언트에 키를 두면 활성 사용자 누구나 꺼낼 수 있었다.
+   기존 문서에 apiKey 가 남아 있어도 읽지 않는다(마이그레이션 불필요, 사용만 중단). */
 function getGeminiConfig() {
-  return loadStorage('geminiConfig', {
-    enabled: true,
-    apiKey: '',
-    model: 'gemini-3.1-flash-lite'
-  });
+  var saved = loadStorage('geminiConfig', {});
+  return { enabled: saved.enabled !== false };
 }
 
 function _saveApiLocal(key, value) {
@@ -59,20 +59,19 @@ function renderApiSettings() {
     '</div>' +
 
     '<div class="card" id="api-card-gemini" style="margin-bottom:16px;">' +
-      '<div class="card-hd"><span class="card-ttl"><i class="ti ti-sparkles"></i>Gemini - 메모 AI 요약</span>' +
-        _apiStatus(!!gemini.apiKey, gemini.model) + '</div>' +
+      '<div class="card-hd"><span class="card-ttl"><i class="ti ti-sparkles"></i>AI 기능 (Gemini)</span>' +
+        _apiStatus(gemini.enabled, gemini.enabled ? '사용 중' : '중지') + '</div>' +
       '<div style="display:grid;gap:12px;max-width:720px;">' +
         '<label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;">' +
-          '<input type="checkbox" id="api-gemini-enabled" ' + (gemini.enabled !== false ? 'checked' : '') + '>메모 AI 요약 사용</label>' +
-        '<div class="form-row"><label class="form-lbl">Gemini API Key</label>' +
-          _apiSecretInput('api-gemini-key', gemini.apiKey, 'AIza...') + '</div>' +
-        '<div class="form-row"><label class="form-lbl">모델</label>' +
-          '<input class="form-inp" id="api-gemini-model" value="' + _apiEsc(gemini.model) + '" placeholder="gemini-3.1-flash-lite"></div>' +
-        '<div style="font-size:11px;color:var(--tx-t);line-height:1.6;">Google AI Studio에서 API 키를 발급합니다. 무료 티어 데이터는 서비스 개선에 사용될 수 있으므로 민감한 개인정보·원가 정보는 요약 전에 제외하는 것을 권장합니다.</div>' +
+          '<input type="checkbox" id="api-gemini-enabled" ' + (gemini.enabled ? 'checked' : '') + '>AI 기능 사용 (메모 요약 · 견적 초안 · 클레임 분류 · 자연어 검색)</label>' +
+        '<div style="font-size:11px;color:var(--tx-t);line-height:1.6;">' +
+          'API 키는 서버(Secret Manager)에만 보관되며 브라우저로 내려오지 않습니다. 키 등록은 배포 담당자가 <code>firebase functions:secrets:set GEMINI_API_KEY</code> 로 수행합니다.<br>' +
+          'AI 는 초안·분류·검색까지만 수행하며 금액 확정이나 승인은 하지 않습니다. 요약·초안 결과는 반드시 사람이 검토한 뒤 사용하세요.<br>' +
+          '무료 티어 데이터는 서비스 개선에 사용될 수 있으므로 민감한 개인정보·원가 정보는 AI 에 보내기 전에 제외하는 것을 권장합니다.' +
+        '</div>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
           '<button class="btn btn-primary" onclick="saveGeminiApiSettings()"><i class="ti ti-device-floppy"></i>저장</button>' +
           '<button class="btn" onclick="testGeminiApi(event)"><i class="ti ti-plug-connected"></i>연결 테스트</button>' +
-          '<a class="btn" href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener"><i class="ti ti-external-link"></i>키 발급 페이지</a>' +
         '</div>' +
       '</div>' +
     '</div>' +
@@ -138,13 +137,9 @@ function openApiSettings(provider) {
 }
 
 function saveGeminiApiSettings() {
-  var config = {
-    enabled: !!(inp('api-gemini-enabled') && inp('api-gemini-enabled').checked),
-    apiKey: v('api-gemini-key').trim(),
-    model: v('api-gemini-model').trim() || 'gemini-3.1-flash-lite'
-  };
-  _saveApiLocal('geminiConfig', config);
-  showToast('Gemini 메모 요약 설정이 저장되었습니다.', 'success');
+  // enabled 만 저장한다. 키는 서버에 있고, 예전 문서에 남은 apiKey 는 여기서 지워 흔적을 없앤다.
+  _saveApiLocal('geminiConfig', { enabled: !!(inp('api-gemini-enabled') && inp('api-gemini-enabled').checked) });
+  showToast('AI 기능 설정이 저장되었습니다.', 'success');
   renderApiSettings();
 }
 
@@ -189,61 +184,39 @@ function resetFirebaseApiSettings() {
   location.reload();
 }
 
-function _geminiText(response) {
-  var candidates = response && response.candidates;
-  var parts = candidates && candidates[0] && candidates[0].content && candidates[0].content.parts;
-  return Array.isArray(parts) ? parts.map(function(part) { return part.text || ''; }).join('') : '';
+/* ── AI 호출 (서버 프록시) ──────────────────────────────────────
+   Gemini 를 브라우저에서 직접 부르지 않는다. 예전에는 geminiConfig 에 저장한 API 키를
+   URL 에 실어 호출했는데, 그 문서는 읽기가 활성 사용자 전체에 열려 있어 staff 도 콘솔에서
+   키를 꺼낼 수 있었다(사용량 기반 과금이라 유출 = 청구). 키는 이제 서버 Secret Manager 에만 있다.
+   프롬프트도 서버(functions/index.js 의 AI_TASKS)가 소유한다 — 임의 프롬프트를 받으면
+   남의 키로 아무 질문이나 돌리는 통로가 되기 때문. 클라이언트는 task 이름과 데이터만 보낸다. */
+const AI_FN_REGION = 'asia-northeast3';
+
+function _aiCallable() {
+  if (typeof firebase === 'undefined' || !firebase.app) throw new Error('클라우드에 연결되지 않았습니다.');
+  return firebase.app().functions(AI_FN_REGION).httpsCallable('aiGenerate');
 }
 
-async function callGeminiForMemo(prompt) {
-  var config = getGeminiConfig();
-  if (!config.enabled) throw new Error('Gemini 메모 요약 기능이 비활성화되어 있습니다.');
-  if (!config.apiKey) throw new Error('시스템 관리의 API 관리에서 Gemini API 키를 설정하세요.');
-
-  var url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
-    encodeURIComponent(config.model || 'gemini-3.1-flash-lite') +
-    ':generateContent?key=' + encodeURIComponent(config.apiKey);
-  var response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.2,
-        responseMimeType: 'application/json'
-      }
-    })
-  });
-  var data = await response.json().catch(function() { return {}; });
-  if (!response.ok) {
-    throw new Error((data.error && data.error.message) || ('Gemini API 오류 (' + response.status + ')'));
+/* task: functions 의 AI_TASKS 키 / payload: 그 task 가 받는 입력 JSON */
+async function callAiTask(task, payload) {
+  if (!getGeminiConfig().enabled) throw new Error('AI 기능이 꺼져 있습니다. 시스템 관리 → API 관리에서 켜세요.');
+  if (typeof cloudConfigured === 'function' && !cloudConfigured()) {
+    throw new Error('AI 기능은 클라우드 로그인 후 사용할 수 있습니다.');
   }
-  var text = _geminiText(data);
-  if (!text) throw new Error('Gemini에서 결과를 받지 못했습니다.');
+  let res;
   try {
-    return JSON.parse(text);
+    res = await _aiCallable()({ task: task, payload: payload || {} });
   } catch (error) {
-    return { summary: text, keyPoints: [], actionItems: [], risks: [], suggestedTags: [] };
+    // onCall 은 HttpsError 의 message 를 그대로 전달한다(서버에서 이미 안전하게 다듬음).
+    throw new Error((error && error.message) || 'AI 호출에 실패했습니다.');
   }
+  return (res && res.data && res.data.result) || {};
 }
 
 async function summarizeMemoWithGemini(text) {
   var source = String(text || '').trim();
   if (!source) throw new Error('요약할 메모가 없습니다.');
-  var now = new Date();
-  var currentDate = [
-    now.getFullYear(),
-    String(now.getMonth() + 1).padStart(2, '0'),
-    String(now.getDate()).padStart(2, '0')
-  ].join('-');
-  return callGeminiForMemo(
-    '다음 업무 메모를 한국어로 정리하세요. 현재 한국 날짜는 ' + currentDate + '입니다. ' +
-    '반드시 JSON 객체만 반환하세요. 메모에 연도 없이 월과 일만 있으면 현재 날짜를 기준으로 가장 가까운 미래 날짜로 해석하고, ' +
-    'dueDate는 반드시 YYYY-MM-DD 형식으로 작성하세요. 날짜를 알 수 없으면 빈 문자열을 사용하세요. ' +
-    '형식: {"summary":"3문장 이내 요약","keyPoints":["핵심 내용"],' +
-    '"actionItems":[{"text":"할 일","owner":"","dueDate":""}],' +
-    '"risks":["위험 또는 확인사항"],"suggestedTags":["태그"]}\n\n메모:\n' + source.substring(0, 20000)
-  );
+  return callAiTask('memoSummary', { text: source.substring(0, 20000), today: today() });
 }
 
 async function testGeminiApi(ev) {
@@ -254,12 +227,11 @@ async function testGeminiApi(ev) {
     button.innerHTML = '<i class="ti ti-loader animate-spin"></i>테스트 중';
   }
   try {
-    var result = await callGeminiForMemo(
-      '연결 테스트입니다. 반드시 {"summary":"Gemini 연결 성공","keyPoints":[],"actionItems":[],"risks":[],"suggestedTags":[]} JSON만 반환하세요.'
-    );
-    showToast(result.summary || 'Gemini 연결에 성공했습니다.', 'success');
+    // 서버 프록시까지 실제로 왕복해 본다(키 설정 여부는 서버가 판단해 알려준다).
+    var result = await summarizeMemoWithGemini('연결 테스트용 메모입니다. 내일까지 견적서를 발송해야 합니다.');
+    showToast(result && result.summary ? 'AI 연결에 성공했습니다.' : 'AI 응답이 비어 있습니다.', result && result.summary ? 'success' : 'error');
   } catch (error) {
-    showToast(error.message || 'Gemini 연결에 실패했습니다.', 'error');
+    showToast(error.message || 'AI 연결에 실패했습니다.', 'error');
   } finally {
     renderApiSettings();
   }

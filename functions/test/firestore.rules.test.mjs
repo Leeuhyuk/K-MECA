@@ -212,6 +212,21 @@ test('audit entries require the authenticated uid, trusted role, and server time
   }));
 });
 
+test('ai logs are admin-readable and never client-writable', async () => {
+  await testEnv.withSecurityRulesDisabled(async context => {
+    await setDoc(doc(context.firestore(), 'ai_logs', 'LOG-1'), { task: 'quoteDraft', ok: true });
+  });
+
+  const staffDb = authDb(users.staff);
+  await assertFails(getDoc(doc(staffDb, 'ai_logs', 'LOG-1')));
+  await assertFails(setDoc(doc(staffDb, 'ai_logs', 'LOG-2'), { task: 'spoof' }));
+
+  const adminDb = authDb(users.admin);
+  await assertSucceeds(getDoc(doc(adminDb, 'ai_logs', 'LOG-1')));
+  // 서버(admin SDK)만 기록한다 — admin 계정도 클라이언트에서는 쓸 수 없다.
+  await assertFails(setDoc(doc(adminDb, 'ai_logs', 'LOG-3'), { task: 'spoof' }));
+});
+
 test('rule test environment is connected to the expected demo project', () => {
   assert.equal(testEnv.projectId, projectId);
 });

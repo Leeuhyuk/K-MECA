@@ -30411,12 +30411,12 @@ function _apiEsc(value) {
     .replace(/"/g, '&quot;');
 }
 
+/* AI 설정. apiKey/model 은 더 이상 여기 없다 — 서버(Secret Manager)가 키를 갖고
+   모델도 서버가 정한다. 클라이언트에 키를 두면 활성 사용자 누구나 꺼낼 수 있었다.
+   기존 문서에 apiKey 가 남아 있어도 읽지 않는다(마이그레이션 불필요, 사용만 중단). */
 function getGeminiConfig() {
-  return loadStorage('geminiConfig', {
-    enabled: true,
-    apiKey: '',
-    model: 'gemini-3.1-flash-lite'
-  });
+  var saved = loadStorage('geminiConfig', {});
+  return { enabled: saved.enabled !== false };
 }
 
 function _saveApiLocal(key, value) {
@@ -30462,20 +30462,19 @@ function renderApiSettings() {
     '</div>' +
 
     '<div class="card" id="api-card-gemini" style="margin-bottom:16px;">' +
-      '<div class="card-hd"><span class="card-ttl"><i class="ti ti-sparkles"></i>Gemini - 메모 AI 요약</span>' +
-        _apiStatus(!!gemini.apiKey, gemini.model) + '</div>' +
+      '<div class="card-hd"><span class="card-ttl"><i class="ti ti-sparkles"></i>AI 기능 (Gemini)</span>' +
+        _apiStatus(gemini.enabled, gemini.enabled ? '사용 중' : '중지') + '</div>' +
       '<div style="display:grid;gap:12px;max-width:720px;">' +
         '<label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;">' +
-          '<input type="checkbox" id="api-gemini-enabled" ' + (gemini.enabled !== false ? 'checked' : '') + '>메모 AI 요약 사용</label>' +
-        '<div class="form-row"><label class="form-lbl">Gemini API Key</label>' +
-          _apiSecretInput('api-gemini-key', gemini.apiKey, 'AIza...') + '</div>' +
-        '<div class="form-row"><label class="form-lbl">모델</label>' +
-          '<input class="form-inp" id="api-gemini-model" value="' + _apiEsc(gemini.model) + '" placeholder="gemini-3.1-flash-lite"></div>' +
-        '<div style="font-size:11px;color:var(--tx-t);line-height:1.6;">Google AI Studio에서 API 키를 발급합니다. 무료 티어 데이터는 서비스 개선에 사용될 수 있으므로 민감한 개인정보·원가 정보는 요약 전에 제외하는 것을 권장합니다.</div>' +
+          '<input type="checkbox" id="api-gemini-enabled" ' + (gemini.enabled ? 'checked' : '') + '>AI 기능 사용 (메모 요약 · 견적 초안 · 클레임 분류 · 자연어 검색)</label>' +
+        '<div style="font-size:11px;color:var(--tx-t);line-height:1.6;">' +
+          'API 키는 서버(Secret Manager)에만 보관되며 브라우저로 내려오지 않습니다. 키 등록은 배포 담당자가 <code>firebase functions:secrets:set GEMINI_API_KEY</code> 로 수행합니다.<br>' +
+          'AI 는 초안·분류·검색까지만 수행하며 금액 확정이나 승인은 하지 않습니다. 요약·초안 결과는 반드시 사람이 검토한 뒤 사용하세요.<br>' +
+          '무료 티어 데이터는 서비스 개선에 사용될 수 있으므로 민감한 개인정보·원가 정보는 AI 에 보내기 전에 제외하는 것을 권장합니다.' +
+        '</div>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
           '<button class="btn btn-primary" onclick="saveGeminiApiSettings()"><i class="ti ti-device-floppy"></i>저장</button>' +
           '<button class="btn" onclick="testGeminiApi(event)"><i class="ti ti-plug-connected"></i>연결 테스트</button>' +
-          '<a class="btn" href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener"><i class="ti ti-external-link"></i>키 발급 페이지</a>' +
         '</div>' +
       '</div>' +
     '</div>' +
@@ -30541,13 +30540,9 @@ function openApiSettings(provider) {
 }
 
 function saveGeminiApiSettings() {
-  var config = {
-    enabled: !!(inp('api-gemini-enabled') && inp('api-gemini-enabled').checked),
-    apiKey: v('api-gemini-key').trim(),
-    model: v('api-gemini-model').trim() || 'gemini-3.1-flash-lite'
-  };
-  _saveApiLocal('geminiConfig', config);
-  showToast('Gemini 메모 요약 설정이 저장되었습니다.', 'success');
+  // enabled 만 저장한다. 키는 서버에 있고, 예전 문서에 남은 apiKey 는 여기서 지워 흔적을 없앤다.
+  _saveApiLocal('geminiConfig', { enabled: !!(inp('api-gemini-enabled') && inp('api-gemini-enabled').checked) });
+  showToast('AI 기능 설정이 저장되었습니다.', 'success');
   renderApiSettings();
 }
 
@@ -30592,61 +30587,39 @@ function resetFirebaseApiSettings() {
   location.reload();
 }
 
-function _geminiText(response) {
-  var candidates = response && response.candidates;
-  var parts = candidates && candidates[0] && candidates[0].content && candidates[0].content.parts;
-  return Array.isArray(parts) ? parts.map(function(part) { return part.text || ''; }).join('') : '';
+/* ── AI 호출 (서버 프록시) ──────────────────────────────────────
+   Gemini 를 브라우저에서 직접 부르지 않는다. 예전에는 geminiConfig 에 저장한 API 키를
+   URL 에 실어 호출했는데, 그 문서는 읽기가 활성 사용자 전체에 열려 있어 staff 도 콘솔에서
+   키를 꺼낼 수 있었다(사용량 기반 과금이라 유출 = 청구). 키는 이제 서버 Secret Manager 에만 있다.
+   프롬프트도 서버(functions/index.js 의 AI_TASKS)가 소유한다 — 임의 프롬프트를 받으면
+   남의 키로 아무 질문이나 돌리는 통로가 되기 때문. 클라이언트는 task 이름과 데이터만 보낸다. */
+const AI_FN_REGION = 'asia-northeast3';
+
+function _aiCallable() {
+  if (typeof firebase === 'undefined' || !firebase.app) throw new Error('클라우드에 연결되지 않았습니다.');
+  return firebase.app().functions(AI_FN_REGION).httpsCallable('aiGenerate');
 }
 
-async function callGeminiForMemo(prompt) {
-  var config = getGeminiConfig();
-  if (!config.enabled) throw new Error('Gemini 메모 요약 기능이 비활성화되어 있습니다.');
-  if (!config.apiKey) throw new Error('시스템 관리의 API 관리에서 Gemini API 키를 설정하세요.');
-
-  var url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
-    encodeURIComponent(config.model || 'gemini-3.1-flash-lite') +
-    ':generateContent?key=' + encodeURIComponent(config.apiKey);
-  var response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.2,
-        responseMimeType: 'application/json'
-      }
-    })
-  });
-  var data = await response.json().catch(function() { return {}; });
-  if (!response.ok) {
-    throw new Error((data.error && data.error.message) || ('Gemini API 오류 (' + response.status + ')'));
+/* task: functions 의 AI_TASKS 키 / payload: 그 task 가 받는 입력 JSON */
+async function callAiTask(task, payload) {
+  if (!getGeminiConfig().enabled) throw new Error('AI 기능이 꺼져 있습니다. 시스템 관리 → API 관리에서 켜세요.');
+  if (typeof cloudConfigured === 'function' && !cloudConfigured()) {
+    throw new Error('AI 기능은 클라우드 로그인 후 사용할 수 있습니다.');
   }
-  var text = _geminiText(data);
-  if (!text) throw new Error('Gemini에서 결과를 받지 못했습니다.');
+  let res;
   try {
-    return JSON.parse(text);
+    res = await _aiCallable()({ task: task, payload: payload || {} });
   } catch (error) {
-    return { summary: text, keyPoints: [], actionItems: [], risks: [], suggestedTags: [] };
+    // onCall 은 HttpsError 의 message 를 그대로 전달한다(서버에서 이미 안전하게 다듬음).
+    throw new Error((error && error.message) || 'AI 호출에 실패했습니다.');
   }
+  return (res && res.data && res.data.result) || {};
 }
 
 async function summarizeMemoWithGemini(text) {
   var source = String(text || '').trim();
   if (!source) throw new Error('요약할 메모가 없습니다.');
-  var now = new Date();
-  var currentDate = [
-    now.getFullYear(),
-    String(now.getMonth() + 1).padStart(2, '0'),
-    String(now.getDate()).padStart(2, '0')
-  ].join('-');
-  return callGeminiForMemo(
-    '다음 업무 메모를 한국어로 정리하세요. 현재 한국 날짜는 ' + currentDate + '입니다. ' +
-    '반드시 JSON 객체만 반환하세요. 메모에 연도 없이 월과 일만 있으면 현재 날짜를 기준으로 가장 가까운 미래 날짜로 해석하고, ' +
-    'dueDate는 반드시 YYYY-MM-DD 형식으로 작성하세요. 날짜를 알 수 없으면 빈 문자열을 사용하세요. ' +
-    '형식: {"summary":"3문장 이내 요약","keyPoints":["핵심 내용"],' +
-    '"actionItems":[{"text":"할 일","owner":"","dueDate":""}],' +
-    '"risks":["위험 또는 확인사항"],"suggestedTags":["태그"]}\n\n메모:\n' + source.substring(0, 20000)
-  );
+  return callAiTask('memoSummary', { text: source.substring(0, 20000), today: today() });
 }
 
 async function testGeminiApi(ev) {
@@ -30657,14 +30630,268 @@ async function testGeminiApi(ev) {
     button.innerHTML = '<i class="ti ti-loader animate-spin"></i>테스트 중';
   }
   try {
-    var result = await callGeminiForMemo(
-      '연결 테스트입니다. 반드시 {"summary":"Gemini 연결 성공","keyPoints":[],"actionItems":[],"risks":[],"suggestedTags":[]} JSON만 반환하세요.'
-    );
-    showToast(result.summary || 'Gemini 연결에 성공했습니다.', 'success');
+    // 서버 프록시까지 실제로 왕복해 본다(키 설정 여부는 서버가 판단해 알려준다).
+    var result = await summarizeMemoWithGemini('연결 테스트용 메모입니다. 내일까지 견적서를 발송해야 합니다.');
+    showToast(result && result.summary ? 'AI 연결에 성공했습니다.' : 'AI 응답이 비어 있습니다.', result && result.summary ? 'success' : 'error');
   } catch (error) {
-    showToast(error.message || 'Gemini 연결에 실패했습니다.', 'error');
+    showToast(error.message || 'AI 연결에 실패했습니다.', 'error');
   } finally {
     renderApiSettings();
+  }
+}
+
+/* ════════ AI 업무 보조 ════════ */
+
+/* ════════ AI 업무 보조 (서버 프록시 경유) ════════════════════════
+   공통 규칙: AI 는 초안·분류·검색까지만 한다. 금액 확정·승인은 사람이 한다.
+   결과는 항상 "제안"으로 표시하고, 반영은 사용자가 명시적으로 눌러야 일어난다.
+   프롬프트는 서버(functions 의 AI_TASKS)가 소유하고 여기서는 데이터만 보낸다. */
+
+function _aiBusy(button, on, label) {
+  if (!button) return;
+  button.disabled = on;
+  button.innerHTML = on
+    ? '<i class="ti ti-loader animate-spin"></i>' + (label || '처리 중')
+    : button.dataset.aiLabel || button.innerHTML;
+}
+
+/* ── 1순위: 견적 초안 ──
+   RFQ 품목에 대해 과거 견적/수주 이력의 단가를 근거로 초안을 제안한다.
+   이력에 없는 품목은 AI 가 null 을 주도록 서버 지시문에 못박아 뒀다(추측 단가 방지). */
+function _aiQuoteHistory(itemNames) {
+  // 같은 품목명이 등장한 과거 견적/수주를 최근순으로 모은다(최대 20건).
+  const wanted = itemNames.map(n => String(n||'').trim().toLowerCase()).filter(Boolean);
+  const rows = [];
+  [['quote', quoteList], ['order', orderList]].forEach(([type, list]) => {
+    (list || []).forEach(doc => {
+      _docItems(doc).forEach(item => {
+        const name = String(item.itemName||'').trim();
+        if (!name || !wanted.includes(name.toLowerCase())) return;
+        const price = Number(item.price) || 0;
+        if (!price) return;
+        rows.push({ type, itemName: name, spec: item.spec || '', unitPrice: price, date: doc.date || '' });
+      });
+    });
+  });
+  return rows.sort((a,b) => String(b.date).localeCompare(String(a.date))).slice(0, 20);
+}
+
+async function aiDraftQuoteFromRfq(rfqId, event) {
+  const button = event && event.currentTarget;
+  const r = (rfqList || []).find(x => x.id === rfqId);
+  if (!r) { showToast('견적요청서를 찾지 못했습니다.', 'error'); return; }
+  const items = _docItems(r);
+  if (!items.length) { showToast('견적요청서에 품목이 없습니다.', 'error'); return; }
+
+  _aiBusy(button, true, '초안 생성 중');
+  try {
+    const history = _aiQuoteHistory(items.map(i => i.itemName));
+    const result = await callAiTask('quoteDraft', {
+      rfq: {
+        supplier: r.supplier || '',
+        items: items.map(i => ({ itemName: i.itemName, spec: i.spec || '', qty: Number(i.qty)||0, targetPrice: Number(i.price)||null }))
+      },
+      history
+    });
+    _aiShowQuoteDraft(r, result, history.length);
+  } catch (e) {
+    showToast(e.message || '견적 초안 생성에 실패했습니다.', 'error');
+  } finally {
+    _aiBusy(button, false);
+  }
+}
+
+let _aiQuoteDraft = null;
+function _aiShowQuoteDraft(rfq, result, historyCount) {
+  const list = Array.isArray(result && result.items) ? result.items : [];
+  if (!list.length) { showToast('AI 가 제안할 단가를 찾지 못했습니다.', 'info'); return; }
+  _aiQuoteDraft = { rfqId: rfq.id, items: list };
+  const rows = list.map(x => {
+    const known = x.unitPrice != null && Number(x.unitPrice) > 0;
+    return '<tr>' +
+      '<td>' + esc(x.itemName || '') + '</td>' +
+      '<td style="text-align:right;font-weight:700;color:' + (known ? 'var(--tx-i)' : 'var(--tx-t)') + ';">'
+        + (known ? fmtW(Number(x.unitPrice)) : '근거 없음') + '</td>' +
+      '<td style="font-size:11px;color:var(--tx-t);">' + esc(x.reason || '') + '</td>' +
+    '</tr>';
+  }).join('');
+  confirm_('AI 견적 초안',
+    '<div style="font-size:11.5px;color:var(--tx-t);margin-bottom:8px;">과거 견적·수주 ' + historyCount + '건을 참고한 <b>초안</b>입니다. 반드시 검토 후 사용하세요.</div>' +
+    '<div style="max-height:260px;overflow:auto;"><table style="width:100%;font-size:12px;">' +
+      '<thead><tr><th style="text-align:left;">품목</th><th style="text-align:right;">제안 단가</th><th style="text-align:left;">근거</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody></table></div>' +
+    (result.note ? '<div style="margin-top:8px;font-size:11.5px;">' + esc(result.note) + '</div>' : '') +
+    '<div style="margin-top:8px;font-size:11.5px;color:var(--tx-w);">실행하면 이 단가로 <b>견적서를 새로 만듭니다.</b> 금액은 등록 후에도 수정할 수 있습니다.</div>',
+    _aiApplyQuoteDraft, 'btn-primary', 'ti-sparkles');
+}
+
+/* 초안을 견적서로 만든다 — 등록까지만 하고 발행/확정은 하지 않는다.
+   saveSODoc 의 규약을 그대로 따른다: SODOCS 설정 사용, 첫 품목을 최상위 필드에도 동기화
+   (목록·인쇄가 최상위 itemName/unitPrice 를 읽는다), 상태는 statuses[0]. */
+function _aiApplyQuoteDraft() {
+  if (!_aiQuoteDraft) return;
+  const cfg = SODOCS.quote;
+  if (typeof requireCreateAction === 'function' && !requireCreateAction('quote', cfg.title + ' 등록')) return;
+  const r = (rfqList || []).find(x => x.id === _aiQuoteDraft.rfqId);
+  if (!r) { showToast('견적요청서를 찾지 못했습니다.', 'error'); return; }
+  const priceOf = name => {
+    const hit = _aiQuoteDraft.items.find(x => String(x.itemName||'').trim() === String(name||'').trim());
+    return hit && hit.unitPrice != null ? Number(hit.unitPrice) || 0 : 0;
+  };
+  const items = _docItems(r).map(i => ({
+    itemName: i.itemName, spec: i.spec || '', qty: Number(i.qty) || 1,
+    unit: i.unit || '대', price: priceOf(i.itemName), note: ''
+  }));
+  const first = items[0];
+  const list = soDocList('quote');
+  const doc = stampRecordCreate({
+    id: nextDocCode(cfg.prefix, list),
+    orderId: '', productId: '', quoteId: '',
+    date: today(),
+    clientId: r.clientId || '',
+    clientName: '',
+    clientEmail: '',
+    clientBizNo: _docClientBizNo({ clientId: r.clientId || '' }),
+    itemName: first.itemName, spec: first.spec, qty: first.qty, unit: first.unit,
+    unitPrice: first.price,
+    deliveryDate: '',
+    note: 'AI 초안 (견적요청 ' + r.id + ' 기준) — 단가 검토 필요',
+    commonNote: 'AI 초안 (견적요청 ' + r.id + ' 기준) — 단가 검토 필요',
+    items,
+    status: cfg.statuses[0]
+  }, 'quote');
+  list.unshift(doc);
+  writeAuditLog('quote', doc.id, 'create', null, doc, { summary:'AI 견적 초안 생성', detail:'견적요청 ' + r.id + ' 기준' });
+  saveStorage(cfg.key, list);
+  _aiQuoteDraft = null;
+  if (typeof renderSODoc === 'function') renderSODoc('quote');
+  showToast('AI 초안으로 견적서 ' + doc.id + ' 를 만들었습니다. 단가를 검토해 주세요.', 'success');
+}
+
+/* ── 2순위: 클레임 분류·조치 초안 ──
+   자유 텍스트인 요청 내용에서 유형을 추천하고, 과거 유사 사례의 조치를 근거로 초안을 낸다.
+   유형은 등록 폼과 같은 선택지(클레임/AS/기타)로 제한한다 — 서버가 없는 유형을 못 만들게 지시한다. */
+const AI_CLAIM_KINDS = ['클레임','AS','기타'];
+
+/* 한국어는 조사가 붙어(베어링 → "베어링에서") 어절을 그대로 포함검사하면 거의 안 맞는다.
+   형태소 분석기는 없으므로, 어절에서 앞 2글자 이상을 잘라 서로 겹치는지 양방향으로 본다.
+   과하게 맞추려 하지 않는다 — 근거 후보를 추리는 용도이고 최종 판단은 AI 와 사람이 한다. */
+function _aiTokens(text) {
+  const stop = ['그리고','하지만','에서','으로','합니다','했습니다','있습니다','같습니다'];
+  return Array.from(new Set(
+    String(text || '').toLowerCase()
+      .split(/[^0-9a-z가-힣]+/)
+      .map(w => w.trim())
+      .filter(w => w.length >= 2 && !stop.includes(w))
+  ));
+}
+function _aiTokenHit(token, hay) {
+  if (hay.includes(token)) return true;
+  // 조사 제거 근사: 앞에서부터 2글자까지 줄여가며 겹치는지 확인
+  for (let len = token.length - 1; len >= 2; len--) {
+    if (hay.includes(token.slice(0, len))) return true;
+  }
+  return false;
+}
+function _aiClaimHistory(text) {
+  // 과거 클레임 중 조치 방안이 채워진 것만 근거로 준다(최대 15건).
+  const tokens = _aiTokens(text);
+  return (claims || [])
+    .filter(c => String(c.response||'').trim())
+    .map(c => {
+      const hay = (String(c.content||'') + ' ' + String(c.spec||'')).toLowerCase();
+      const score = tokens.reduce((s,t) => s + (_aiTokenHit(t, hay) ? 1 : 0), 0);
+      return { score, row: { id:c.id, kind:c.kind||'', content:String(c.content||'').slice(0,200), response:String(c.response||'').slice(0,200) } };
+    })
+    .filter(x => x.score > 0)
+    .sort((a,b) => b.score - a.score)
+    .slice(0, 15)
+    .map(x => x.row);
+}
+
+async function aiTriageClaim(claimId, event) {
+  const button = event && event.currentTarget;
+  const c = (claims || []).find(x => x.id === claimId);
+  if (!c) { showToast('클레임을 찾지 못했습니다.', 'error'); return; }
+  const text = String(c.content || '').trim();
+  if (!text) { showToast('분석할 요청 내용이 없습니다.', 'error'); return; }
+
+  _aiBusy(button, true, '분석 중');
+  try {
+    const result = await callAiTask('claimTriage', {
+      text: text.slice(0, 4000),
+      types: AI_CLAIM_KINDS,
+      history: _aiClaimHistory(text)
+    });
+    _aiShowClaimTriage(c, result);
+  } catch (e) {
+    showToast(e.message || 'AI 분석에 실패했습니다.', 'error');
+  } finally {
+    _aiBusy(button, false);
+  }
+}
+
+let _aiClaimResult = null;
+function _aiShowClaimTriage(claim, result) {
+  const type = AI_CLAIM_KINDS.includes(result && result.type) ? result.type : '';
+  const conf = Math.round((Number(result && result.confidence) || 0) * 100);
+  _aiClaimResult = { id: claim.id, type, action: String(result && result.action || '') };
+  const similar = Array.isArray(result && result.similar) && result.similar.length
+    ? '<div style="margin-top:8px;font-size:11.5px;color:var(--tx-t);">참고한 유사 사례: ' + esc(result.similar.join(', ')) + '</div>' : '';
+  confirm_('AI 클레임 분석',
+    '<div style="font-size:11.5px;color:var(--tx-t);margin-bottom:8px;">과거 유사 사례를 근거로 한 <b>제안</b>입니다. 검토 후 반영하세요.</div>' +
+    '<div><b>유형</b> ' + (type ? esc(type) : '판단 불가') +
+      ' <span style="font-size:11px;color:' + (conf >= 70 ? 'var(--tx-ok)' : 'var(--tx-w)') + ';">확신도 ' + conf + '%</span></div>' +
+    '<div style="margin-top:8px;"><b>조치 방안 초안</b><div style="margin-top:4px;">' + esc(_aiClaimResult.action || '제안 없음') + '</div></div>' +
+    (result && result.reason ? '<div style="margin-top:8px;font-size:11.5px;color:var(--tx-t);">근거: ' + esc(result.reason) + '</div>' : '') +
+    similar +
+    '<div style="margin-top:8px;font-size:11.5px;color:var(--tx-w);">실행하면 이 클레임의 유형·조치 방안에 <b>덮어씁니다.</b></div>',
+    _aiApplyClaimTriage, 'btn-primary', 'ti-sparkles');
+}
+
+function _aiApplyClaimTriage() {
+  if (!_aiClaimResult) return;
+  const c = (claims || []).find(x => x.id === _aiClaimResult.id);
+  if (!c) return;
+  if (typeof requireRecordPermission === 'function' && !requireRecordPermission('edit', c, 'claims')) return;
+  const before = _safeJsonClone(c);
+  if (_aiClaimResult.type) c.kind = _aiClaimResult.type;
+  if (_aiClaimResult.action) c.response = _aiClaimResult.action;
+  stampRecordUpdate(c, before, 'claims', { visibility:'company' });
+  writeAuditLog('claims', c.id, 'update', before, c, { summary:'AI 분류·조치 초안 반영' });
+  saveStorage('claims', claims);
+  _aiClaimResult = null;
+  if (typeof renderClaims === 'function') renderClaims();
+  showToast('AI 제안을 반영했습니다. 내용을 검토해 주세요.', 'success');
+}
+
+/* ── 3순위: 자연어 검색 ──
+   질문을 필터 조건으로 바꾼다. 실행(데이터 조회)은 클라이언트가 한다 —
+   AI 에 전체 데이터를 보내지 않으므로 개인정보·원가가 새어나가지 않고 토큰도 아낀다. */
+const AI_SEARCH_ENTITIES = {
+  deliveries: { label:'납품 현황', fields:['deliveredAt','clientName','productName','qty','price'] },
+  poList:     { label:'구매발주서', fields:['date','supplier','itemName','status','unitPrice'] },
+  claims:     { label:'고객 클레임', fields:['date','kind','content','status'] },
+  inventory:  { label:'재고',      fields:['name','type','qty','minQty','location'] }
+};
+
+async function aiNaturalSearch(query, event) {
+  const q = String(query || '').trim();
+  if (!q) { showToast('검색할 내용을 입력하세요.', 'error'); return null; }
+  const button = event && event.currentTarget;
+  _aiBusy(button, true, '해석 중');
+  try {
+    const result = await callAiTask('searchFilter', {
+      query: q,
+      today: today(),
+      entities: Object.keys(AI_SEARCH_ENTITIES).map(k => ({ entity:k, label:AI_SEARCH_ENTITIES[k].label, fields:AI_SEARCH_ENTITIES[k].fields }))
+    });
+    return result;
+  } catch (e) {
+    showToast(e.message || '검색 해석에 실패했습니다.', 'error');
+    return null;
+  } finally {
+    _aiBusy(button, false);
   }
 }
 
@@ -35190,6 +35417,20 @@ function selectionDetailScheduleRows(primary) {
   return fields.filter(field => /(금액|단가|합계|총액|일자|납기|예정|등록일|수정일)/.test(field.label)).slice(0, 5);
 }
 
+/* AI 보조 버튼 — 지원하는 도메인에서만 노출한다.
+   AI 기능이 꺼져 있으면(시스템 관리 → API 관리) 버튼 자체를 숨긴다. */
+function selectionDetailAiButtonHtml(context) {
+  if (typeof getGeminiConfig === 'function' && !getGeminiConfig().enabled) return '';
+  const id = context.items && context.items[0] && context.items[0].ref && context.items[0].ref.entityId;
+  if (!id) return '';
+  if (context.key === 'rfq' && typeof aiDraftQuoteFromRfq === 'function') {
+    return `<button class="selection-detail-work-btn" data-ai-label="<i class='ti ti-sparkles'></i>AI 견적 초안" onclick="aiDraftQuoteFromRfq('${selectionDetailEsc(id)}', event)"><i class="ti ti-sparkles"></i>AI 견적 초안</button>`;
+  }
+  if (context.key === 'claims' && typeof aiTriageClaim === 'function') {
+    return `<button class="selection-detail-work-btn" data-ai-label="<i class='ti ti-sparkles'></i>AI 분석" onclick="aiTriageClaim('${selectionDetailEsc(id)}', event)"><i class="ti ti-sparkles"></i>AI 분석</button>`;
+  }
+  return '';
+}
 function selectionDetailWorkActionsHtml(context) {
   if (!context) return '';
   if (context.source === 'react-domain') {
@@ -35202,7 +35443,9 @@ function selectionDetailWorkActionsHtml(context) {
         <button class="selection-detail-work-btn is-danger" onclick="runSelectionDetailPanelAction('delete')">삭제</button>`;
     }
     const actions = typeof bulkActionButtons === 'function' ? bulkActionButtons(context.key, { hideComplete:true }) : '';
-    return actions || '<button class="selection-detail-work-btn" onclick="openSelectionDetailAudit()">세부 이력</button>';
+    // AI 보조는 단건 선택일 때만 — 초안·분류는 한 건씩 검토해야 하는 작업이다.
+    const ai = context.count === 1 ? selectionDetailAiButtonHtml(context) : '';
+    return (actions || '<button class="selection-detail-work-btn" onclick="openSelectionDetailAudit()">세부 이력</button>') + ai;
   }
   if (context.source === 'react-inventory' && context.count !== 1) {
     return '<button class="selection-detail-work-btn" onclick="clearSelectionDetailSelection()">해제</button>';

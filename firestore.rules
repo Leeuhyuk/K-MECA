@@ -158,6 +158,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // AI 사용 로그(누가 어떤 작업을 몇 자로 돌렸는지). 서버(admin SDK)만 쓰고 admin 만 본다.
+    // 과금이 걸린 기능이라 사용량 추적이 필요하다.
+    match /ai_logs/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     match /audit_logs/{docId} {
       allow create: if validAuditCreate(docId);
       allow read: if isAdmin();

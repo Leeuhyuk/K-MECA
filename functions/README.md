@@ -61,7 +61,20 @@ npm install
 # 비밀값(직접 입력) — 실행 시 값을 붙여넣으라는 프롬프트가 뜬다
 firebase functions:secrets:set POPBILL_LINK_ID
 firebase functions:secrets:set POPBILL_SECRET_KEY
+
+# AI 기능(Gemini). 키 발급: https://aistudio.google.com/app/apikey
+# 이 키는 절대 클라이언트에 넣지 않는다 — 예전에 geminiConfig 로 브라우저에 내려보내던 것을
+# 서버 프록시(aiGenerate)로 옮긴 이유가 그것이다(활성 사용자 누구나 콘솔에서 꺼낼 수 있었다).
+firebase functions:secrets:set GEMINI_API_KEY
 ```
+
+등록 후 함수를 다시 배포해야 값이 반영된다:
+
+```bash
+firebase deploy --only functions:aiGenerate
+```
+
+키를 등록하지 않으면 AI 기능은 "설정되지 않았습니다" 안내와 함께 동작하지 않는다(앱의 다른 기능에는 영향 없음).
 
 또는 gcloud로 직접:
 

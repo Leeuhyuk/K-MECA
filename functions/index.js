@@ -25,6 +25,11 @@ const POPBILL_LINK_ID = defineSecret("POPBILL_LINK_ID");
 const POPBILL_SECRET_KEY = defineSecret("POPBILL_SECRET_KEY");
 const POPBILL_CORP_NUM = defineString("POPBILL_CORP_NUM"); // 팝빌 회원(우리 회사) 사업자번호
 const POPBILL_IS_TEST = defineString("POPBILL_IS_TEST", { default: "true" });
+/* Gemini API 키. 클라이언트에 내려보내지 않는다 —
+   예전에는 geminiConfig(mes_v2)에 키를 저장하고 브라우저가 직접 Google 을 호출했는데,
+   그 문서는 읽기가 활성 사용자 전체에 열려 있어 staff 도 콘솔에서 키를 꺼낼 수 있었다.
+   사용량 기반 과금이라 유출되면 그대로 청구된다. 키는 여기(Secret Manager)에만 둔다. */
+const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 
 const REGION = "asia-northeast3"; // 서울 — 국내 지연 최소화
 const EMAIL_MAIL_COLLECTION = "mail";
@@ -603,5 +608,216 @@ exports.popbillTaxinvoicePopupURL = onCall(
     const svc = txService();
     const url = await callPopbill((ok, err) => svc.getPopUpURL(memberCorpNum(), "SELL", mgtKey, "", ok, err));
     return { url };
+  }
+);
+
+/* ════════ AI (Gemini) 프록시 ════════════════════════════════════
+   클라이언트가 Google 을 직접 호출하지 않는다. 키는 Secret Manager 에만 있고
+   여기서만 쓴다(GEMINI_API_KEY 선언부 주석 참고).
+
+   프롬프트는 서버가 소유한다. 클라이언트는 task 이름과 데이터만 보내고,
+   무엇을 물을지는 AI_TASKS 가 정한다 — 임의 프롬프트를 받으면 남의 키로
+   아무 질문이나 돌리는 통로가 된다.
+
+   AI 는 초안·분류·검색까지만 한다. 금액 확정이나 승인 같은 결론은 내지 않는다. */
+
+const AI_MODEL = "gemini-3.1-flash-lite";
+const AI_MAX_INPUT_CHARS = 12000;   // 과금 폭주 방지
+const AI_LOG_COLLECTION = "ai_logs";
+
+/* task 별 지시문과 응답 스키마. 클라이언트는 key 만 고를 수 있다. */
+const AI_TASKS = {
+  // 기존 메모 요약 — 클라이언트 직접 호출(키 노출)에서 이관
+  memoSummary: {
+    label: "메모 요약",
+    system:
+      "너는 제조업 ERP의 업무 메모 정리 보조다. 주어진 메모(text)를 한국어로 정리한다. " +
+      "summary 는 3문장 이내. 메모에 없는 사실을 지어내지 마라. " +
+      "메모에 연도 없이 월·일만 있으면 today 기준 가장 가까운 미래로 해석하고, " +
+      "dueDate 는 YYYY-MM-DD 로 쓴다. 날짜를 알 수 없으면 빈 문자열로 둔다.",
+    schema: {
+      type: "object",
+      properties: {
+        summary: { type: "string" },
+        keyPoints: { type: "array", items: { type: "string" } },
+        // 클라이언트(normalizeAiActionItems)가 text/owner/dueDate 를 읽는다 — 구조를 맞춘다
+        actionItems: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              text: { type: "string" },
+              owner: { type: "string" },
+              dueDate: { type: "string" },
+            },
+            required: ["text", "owner", "dueDate"],
+          },
+        },
+        risks: { type: "array", items: { type: "string" } },
+        suggestedTags: { type: "array", items: { type: "string" } },
+      },
+      required: ["summary", "keyPoints", "actionItems", "risks", "suggestedTags"],
+    },
+  },
+  // 1순위 — 견적 초안: RFQ + 과거 유사 견적을 주고 단가/비고 초안을 받는다
+  quoteDraft: {
+    label: "견적 초안",
+    system:
+      "너는 제조업 ERP의 견적 담당 보조다. 주어진 견적요청(rfq)과 과거 유사 견적(history)을 근거로 " +
+      "각 품목의 단가 초안을 제안한다. 과거 이력에 없는 품목은 unitPrice 를 null 로 두고 reason 에 근거 없음을 밝힌다. " +
+      "추측으로 숫자를 지어내지 마라. 금액은 원 단위 정수다.",
+    schema: {
+      type: "object",
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              itemName: { type: "string" },
+              unitPrice: { type: ["integer", "null"] },
+              reason: { type: "string" },
+            },
+            required: ["itemName", "unitPrice", "reason"],
+          },
+        },
+        note: { type: "string" },
+      },
+      required: ["items", "note"],
+    },
+  },
+  // 2순위 — 클레임/AS 분류: 자유 텍스트에서 유형 추천 + 유사 이력 근거
+  claimTriage: {
+    label: "클레임 분류",
+    system:
+      "너는 제조업 ERP의 품질 담당 보조다. 클레임 내용(text)을 읽고 types 중에서 유형을 고르고, " +
+      "과거 유사 사례(history)를 근거로 조치 방안 초안을 제안한다. types 에 없는 유형을 지어내지 마라. " +
+      "확신이 낮으면 confidence 를 낮게 주고 이유를 밝힌다.",
+    schema: {
+      type: "object",
+      properties: {
+        type: { type: "string" },
+        confidence: { type: "number" },
+        action: { type: "string" },
+        similar: { type: "array", items: { type: "string" } },
+        reason: { type: "string" },
+      },
+      required: ["type", "confidence", "action", "reason"],
+    },
+  },
+  // 3순위 — 자연어 검색: 질문을 필터 조건으로 변환 (실행은 클라이언트가 한다)
+  searchFilter: {
+    label: "자연어 검색",
+    system:
+      "너는 제조업 ERP의 검색 보조다. 사용자의 한국어 질문(query)을 주어진 fields 로만 이루어진 " +
+      "필터 조건으로 바꾼다. fields 에 없는 항목은 쓰지 마라. 날짜는 YYYY-MM-DD 로 쓰고, " +
+      "기간은 from/to 로 표현한다. 해석할 수 없으면 filters 를 비우고 reason 에 이유를 쓴다.",
+    schema: {
+      type: "object",
+      properties: {
+        entity: { type: "string" },
+        filters: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              field: { type: "string" },
+              op: { type: "string" },
+              value: { type: "string" },
+            },
+            required: ["field", "op", "value"],
+          },
+        },
+        reason: { type: "string" },
+      },
+      required: ["entity", "filters", "reason"],
+    },
+  },
+};
+
+async function aiWriteLog(request, entry) {
+  try {
+    await db.collection(AI_LOG_COLLECTION).add({
+      task: entry.task || "",
+      ok: !!entry.ok,
+      errorCode: entry.errorCode || "",
+      inputChars: entry.inputChars || 0,
+      uid: (request.auth && request.auth.uid) || "",
+      email: (request.auth && request.auth.token && request.auth.token.email) || "",
+      createdAt: FieldValue.serverTimestamp(),
+    });
+  } catch (e) {
+    logger.warn("ai log write failed", { code: e && e.code });
+  }
+}
+
+/* AI 실행. data = { task, payload }
+   payload 는 task 별 입력(JSON). 프롬프트 문자열은 받지 않는다. */
+exports.aiGenerate = onCall(
+  { region: REGION, secrets: [GEMINI_API_KEY] },
+  async (request) => {
+    await requireActiveUser(request);
+
+    const taskKey = String((request.data && request.data.task) || "").trim();
+    const spec = AI_TASKS[taskKey];
+    if (!spec) throw new HttpsError("invalid-argument", "지원하지 않는 AI 작업입니다.");
+
+    const payload = (request.data && request.data.payload) || {};
+    const payloadText = JSON.stringify(payload);
+    if (payloadText.length > AI_MAX_INPUT_CHARS) {
+      throw new HttpsError("invalid-argument", "AI 에 보낼 데이터가 너무 큽니다. 범위를 좁혀 주세요.");
+    }
+
+    const apiKey = GEMINI_API_KEY.value();
+    if (!apiKey) throw new HttpsError("failed-precondition", "AI 기능이 설정되지 않았습니다. 관리자에게 문의하세요.");
+
+    const url =
+      "https://generativelanguage.googleapis.com/v1beta/models/" +
+      encodeURIComponent(AI_MODEL) + ":generateContent?key=" + encodeURIComponent(apiKey);
+
+    let res, data;
+    try {
+      res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: spec.system }] },
+          contents: [{ role: "user", parts: [{ text: payloadText }] }],
+          generationConfig: {
+            temperature: 0.2,
+            responseMimeType: "application/json",
+            responseSchema: spec.schema,
+          },
+        }),
+      });
+      data = await res.json().catch(() => ({}));
+    } catch (e) {
+      await aiWriteLog(request, { task: taskKey, ok: false, errorCode: "network", inputChars: payloadText.length });
+      throw new HttpsError("unavailable", "AI 서버에 연결하지 못했습니다.");
+    }
+
+    if (!res.ok) {
+      const code = (data.error && data.error.status) || String(res.status);
+      // 원문 오류에 키가 섞일 수 있어 그대로 내보내지 않는다.
+      logger.warn("aiGenerate upstream error", { task: taskKey, status: res.status, code });
+      await aiWriteLog(request, { task: taskKey, ok: false, errorCode: code, inputChars: payloadText.length });
+      throw new HttpsError("internal", `AI 호출에 실패했습니다. (${code})`);
+    }
+
+    const text =
+      data.candidates && data.candidates[0] && data.candidates[0].content &&
+      data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
+      data.candidates[0].content.parts[0].text;
+    let result;
+    try {
+      result = JSON.parse(text || "{}");
+    } catch (e) {
+      await aiWriteLog(request, { task: taskKey, ok: false, errorCode: "parse", inputChars: payloadText.length });
+      throw new HttpsError("internal", "AI 응답을 해석하지 못했습니다. 다시 시도해 주세요.");
+    }
+
+    await aiWriteLog(request, { task: taskKey, ok: true, inputChars: payloadText.length });
+    logger.info("aiGenerate ok", { task: taskKey, uid: request.auth.uid });
+    return { task: taskKey, result };
   }
 );
