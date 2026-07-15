@@ -13294,6 +13294,10 @@ function _finalizeCloseProject(c, targets) {
 
   const beforeClient = _safeJsonClone(c);
   c.closed = true; c.closedAt = today();
+  // 종료가 만든 납품만 재개 때 되돌리기 위해 대상을 기록한다.
+  // 종료 전에 수동으로 납품한 건은 여기 없으므로 재개해도 그대로 남는다.
+  if (delivered.length) c.closedDeliveredIds = delivered.map(({ item }) => item.id);
+  else delete c.closedDeliveredIds;
   stampRecordUpdate(c, beforeClient, 'clients', { visibility:'company' });
   writeAuditLog('clients', c.id, 'statusChange', beforeClient, c, {
     summary: delivered.length ? `고객사 프로젝트 종료(${delivered.length}건 일괄 납품)` : '고객사 프로젝트 종료'
@@ -13321,17 +13325,50 @@ function closeProject(id, force) {
     + `<div style="margin-top:8px;">납품 매출 <b>${fmtW(total)}</b>이 발생합니다.</div>`,
     () => _finalizeCloseProject(c, targets), 'btn-primary', 'ti-circle-check');
 }
+/* 재개 시 종료가 만든 납품을 되돌린다 — closedDeliveredIds 에 기록된 제품만 대상이다.
+   종료 전에 수동으로 납품한 건은 목록에 없으므로 건드리지 않는다.
+   수금이 처리된 납품은 실제로 받은 돈이라 되돌리지 않고 남긴다(onStageUndelivered 가 막는다).
+   종료가 전부 아니면 전무인 것과 달리, 재개는 되돌릴 수 있는 것만 되돌린다 —
+   납품 하나가 수금됐다고 프로젝트를 다시 열지 못하면 곤란하기 때문. */
+function _revertCloseDeliveries(c) {
+  const ids = Array.isArray(c.closedDeliveredIds) ? c.closedDeliveredIds : [];
+  if (!ids.length) return { reverted: 0, kept: 0 };
+  let reverted = 0, kept = 0;
+  const quiet = typeof showToast === 'function' ? showToast : null;
+  ids.forEach(pid => {
+    const p = products.find(x => x.id === pid);
+    if (!p || p.processStage !== '납품') return;   // 이미 사용자가 손댄 건은 건너뛴다
+    const before = _safeJsonClone(p);
+    // onStageUndelivered 는 막힐 때 스스로 토스트를 띄운다. 건별 안내는 아래에서 모아 한 번만 낸다.
+    if (quiet) window.showToast = () => {};
+    const ok = typeof onStageUndelivered === 'function' ? onStageUndelivered(p) : true;
+    if (quiet) window.showToast = quiet;
+    if (!ok) { kept++; return; }
+    p.processStage = '완료'; p.status = stageToStatus('완료');
+    stampRecordUpdate(p, before, 'products', { visibility:'company' });
+    writeAuditLog('products', p.id, 'statusChange', before, p, { summary:'프로젝트 재개로 납품 처리 취소' });
+    reverted++;
+  });
+  if (reverted) saveStorage('products', products);
+  return { reverted, kept };
+}
 function reopenProject(id) {
   if (!checkAdminAction()) return;
   const c = clients.find(x => x.id === id); if (!c) return;
   if (!requireRecordPermission('edit', c, 'clients')) return;
   const before = _safeJsonClone(c);
-  c.closed = false; delete c.closedAt;
+  const { reverted, kept } = _revertCloseDeliveries(c);
+  c.closed = false; delete c.closedAt; delete c.closedDeliveredIds;
   stampRecordUpdate(c, before, 'clients', { visibility:'company' });
-  writeAuditLog('clients', c.id, 'restore', before, c, { summary:'고객사 프로젝트 재개' });
+  writeAuditLog('clients', c.id, 'restore', before, c, {
+    summary: reverted ? `고객사 프로젝트 재개(납품 ${reverted}건 취소)` : '고객사 프로젝트 재개'
+  });
   saveStorage('clients', clients);
   renderClients();
-  showToast('프로젝트가 재개되었습니다.');
+  const keptMsg = kept ? ` 수금 처리된 ${kept}건은 납품 상태로 남겨두었습니다.` : '';
+  showToast(reverted
+    ? `프로젝트를 재개하고 납품 ${reverted}건을 취소했습니다.${keptMsg}`
+    : `프로젝트가 재개되었습니다.${keptMsg}`);
 }
 function deleteClient(id) {
   if (!checkAdminAction()) return;
