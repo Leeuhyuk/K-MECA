@@ -710,8 +710,12 @@ const AI_TASKS = {
     label: "자연어 검색",
     system:
       "너는 제조업 ERP의 검색 보조다. 사용자의 한국어 질문(query)을 주어진 fields 로만 이루어진 " +
-      "필터 조건으로 바꾼다. fields 에 없는 항목은 쓰지 마라. 날짜는 YYYY-MM-DD 로 쓰고, " +
-      "기간은 from/to 로 표현한다. 해석할 수 없으면 filters 를 비우고 reason 에 이유를 쓴다.",
+      "필터 조건으로 바꾼다. entity 는 주어진 entities 의 entity 값 중 하나여야 하고, " +
+      "field 는 그 entity 의 fields 에 있는 것만 쓴다. " +
+      "op 는 =, !=, >, <, >=, <=, contains 만 쓴다. " +
+      "날짜는 YYYY-MM-DD 로 쓰고, 기간은 >= 와 <= 두 조건으로 나눠 표현한다(from/to 같은 연산자는 없다). " +
+      "'지난달' 같은 상대 표현은 today 를 기준으로 실제 날짜로 바꾼다. " +
+      "해석할 수 없으면 filters 를 비우고 reason 에 이유를 쓴다.",
     schema: {
       type: "object",
       properties: {
@@ -722,7 +726,9 @@ const AI_TASKS = {
             type: "object",
             properties: {
               field: { type: "string" },
-              op: { type: "string" },
+              // enum 으로 못박는다. 예전엔 그냥 string 이라 AI 가 지시문대로 from/to 를 주면
+              // 클라이언트(_aiFilterMatch)가 모르는 연산자라 전부 불일치 → 결과 0건이 됐다.
+              op: { type: "string", enum: ["=", "!=", ">", "<", ">=", "<=", "contains"] },
               value: { type: "string" },
             },
             required: ["field", "op", "value"],
