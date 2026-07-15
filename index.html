@@ -30682,12 +30682,17 @@ async function testGeminiApi(ev) {
    결과는 항상 "제안"으로 표시하고, 반영은 사용자가 명시적으로 눌러야 일어난다.
    프롬프트는 서버(functions 의 AI_TASKS)가 소유하고 여기서는 데이터만 보낸다. */
 
+/* 버튼을 처리 중 상태로 바꾸고 되돌린다.
+   원래 라벨은 처음 한 번만 data-ai-label 에 저장해 둔다. 현재 innerHTML 을 복원값으로
+   쓰면(예전 방식) 같은 버튼이 두 번 겹쳐 실행될 때 두 번째가 '처리 중' 자체를 원본으로
+   잡아 그대로 되돌려 놓아 버튼이 영영 스피너에 멈춘다. */
 function _aiBusy(button, on, label) {
   if (!button) return;
+  if (!button.dataset.aiLabel) button.dataset.aiLabel = button.innerHTML;
   button.disabled = on;
   button.innerHTML = on
     ? '<i class="ti ti-loader animate-spin"></i>' + (label || '처리 중')
-    : button.dataset.aiLabel || button.innerHTML;
+    : button.dataset.aiLabel;
 }
 
 /* ── 1순위: 견적 초안 ──
@@ -31016,14 +31021,18 @@ function _aiFilterMatch(actual, op, expected) {
   }
 }
 
+/* 검색이 진행 중인지. Enter 를 눌렀는데 응답이 늦으면 한 번 더 누르거나 버튼을 클릭하기
+   쉬운데, 그렇게 겹쳐 실행되면 버튼 상태가 꼬이고 AI 도 두 번 호출돼(과금) 낭비다. */
+let _aiSearchRunning = false;
 async function runAiSearch(event) {
+  if (_aiSearchRunning) return;
   const field = inp('ai-search-input');
   const q = field ? String(field.value || '').trim() : '';
   if (!q) { showToast('찾을 내용을 입력하세요.', 'error'); return; }
   const box = inp('ai-search-result');
   const button = inp('ai-search-run');
-  const prev = button ? button.innerHTML : '';
-  if (button) { button.disabled = true; button.innerHTML = '<i class="ti ti-loader animate-spin"></i>해석 중'; }
+  _aiSearchRunning = true;
+  _aiBusy(button, true, '해석 중');
   if (box) box.innerHTML = '';
   try {
     const parsed = await aiNaturalSearch(q, null);
@@ -31056,7 +31065,8 @@ async function runAiSearch(event) {
     }
     box.innerHTML = html;
   } finally {
-    if (button) { button.disabled = false; button.innerHTML = prev; }
+    _aiSearchRunning = false;
+    _aiBusy(button, false);
   }
 }
 
