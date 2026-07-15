@@ -59,14 +59,14 @@ function renderApiSettings() {
     '</div>' +
 
     '<div class="card" id="api-card-gemini" style="margin-bottom:16px;">' +
-      '<div class="card-hd"><span class="card-ttl"><i class="ti ti-sparkles"></i>AI 기능 (Gemini)</span>' +
+      '<div class="card-hd"><span class="card-ttl"><i class="ti ti-sparkles"></i>Gemini - 메모 AI 요약</span>' +
         _apiStatus(gemini.enabled, gemini.enabled ? '사용 중' : '중지') + '</div>' +
       '<div style="display:grid;gap:12px;max-width:720px;">' +
         '<label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;">' +
-          '<input type="checkbox" id="api-gemini-enabled" ' + (gemini.enabled ? 'checked' : '') + '>AI 기능 사용 (메모 요약 · 견적 초안 · 클레임 분류 · 자연어 검색)</label>' +
+          '<input type="checkbox" id="api-gemini-enabled" ' + (gemini.enabled ? 'checked' : '') + '>메모 AI 요약 사용</label>' +
         '<div style="font-size:11px;color:var(--tx-t);line-height:1.6;">' +
-          'API 키는 서버(Secret Manager)에만 보관되며 브라우저로 내려오지 않습니다. 키 등록은 배포 담당자가 <code>firebase functions:secrets:set GEMINI_API_KEY</code> 로 수행합니다.<br>' +
-          'AI 는 초안·분류·검색까지만 수행하며 금액 확정이나 승인은 하지 않습니다. 요약·초안 결과는 반드시 사람이 검토한 뒤 사용하세요.<br>' +
+          'API 키는 서버(Secret Manager)에만 보관되며 브라우저로 내려오지 않습니다. 키 등록은 배포 담당자가 <code>npx firebase-tools functions:secrets:set GEMINI_API_KEY</code> 로 수행합니다.<br>' +
+          '요약 결과는 반드시 사람이 검토한 뒤 사용하세요.<br>' +
           '무료 티어 데이터는 서비스 개선에 사용될 수 있으므로 민감한 개인정보·원가 정보는 AI 에 보내기 전에 제외하는 것을 권장합니다.' +
         '</div>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +

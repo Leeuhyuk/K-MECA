@@ -123,18 +123,6 @@
     font-size: 19px;
   }
 
-  /* AI 검색 — 업무 모듈이 아니라 도구라 위쪽 목록과 구분선으로 떼어놓고
-     아이콘에 강조색을 준다(활성 페이지 표시가 없는 액션 버튼이라 색으로 구분). */
-  .modern-rail-ai {
-    margin-top: auto;
-    border-top: 1px solid var(--modern-rail-border);
-    border-radius: 0;
-    padding-top: 7px;
-  }
-
-  .modern-rail-ai i {
-    color: var(--tx-i);
-  }
 
   .modern-rail-button span {
     max-width: 52px;
