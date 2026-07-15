@@ -675,7 +675,10 @@ const AI_TASKS = {
             type: "object",
             properties: {
               itemName: { type: "string" },
-              unitPrice: { type: ["integer", "null"] },
+              // responseSchema 는 OpenAPI 서브셋이라 type:["integer","null"] 같은 타입 배열을
+              // 받지 못한다(400 INVALID_ARGUMENT). null 허용은 nullable 로 표현해야 한다.
+              // 이 null 은 "과거 이력이 없어 단가를 제안하지 않음"을 뜻하는 안전장치라 없앨 수 없다.
+              unitPrice: { type: "integer", nullable: true },
               reason: { type: "string" },
             },
             required: ["itemName", "unitPrice", "reason"],
