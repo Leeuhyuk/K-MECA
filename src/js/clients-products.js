@@ -382,18 +382,66 @@ function saveClientEdit(id) {
   renderClients(); syncFilterDropdowns();
   showToast(`고객사 정보가 수정되었습니다.${syncedCount ? ` 연결 문서 ${syncedCount}건 반영` : ''}`);
 }
+/* 종료 시 일괄 납품 대상: '완료' 단계 제품만.
+   가공·설계 중인 제품까지 납품 처리하면 매출이 부풀려지므로 '완료'만 대상으로 한다.
+   (강제 종료는 진행 중 제품이 있다는 뜻이라 일괄 납품을 하지 않는다 — closeProject 참고) */
+function projectDeliverTargets(clientId) {
+  return products.filter(p => p.clientId === clientId && p.processStage === '완료'
+    && (typeof canEditRecord !== 'function' || canEditRecord(p, 'products')));
+}
+/* 프로젝트 종료 확정 — 필요하면 '완료' 제품을 먼저 일괄 납품 처리한 뒤 종료한다.
+   납품 전환이 하나라도 실패하면(마감월 등) 종료까지 중단해, 일부만 처리된 어정쩡한
+   상태로 프로젝트가 닫히지 않게 한다. */
+function _finalizeCloseProject(c, targets) {
+  const delivered = [];
+  for (const p of targets) {
+    const before = _safeJsonClone(p);
+    p.processStage = '납품'; p.status = stageToStatus('납품');
+    if (typeof onStageDelivered === 'function' && !onStageDelivered(p)) {
+      p.processStage = before.processStage; p.status = before.status;   // 실패 건 되돌림
+      delivered.forEach(({ item, prev }) => {                            // 앞서 처리한 건도 되돌림
+        if (typeof onStageUndelivered === 'function') onStageUndelivered(item);
+        item.processStage = prev.processStage; item.status = prev.status;
+      });
+      saveStorage('products', products);
+      renderClients();
+      showToast('납품 처리에 실패해 프로젝트를 종료하지 않았습니다.', 'error');
+      return false;
+    }
+    stampRecordUpdate(p, before, 'products', { visibility:'company' });
+    writeAuditLog('products', p.id, 'statusChange', before, p, { summary:'프로젝트 종료 일괄 납품 처리' });
+    delivered.push({ item: p, prev: before });
+  }
+  if (delivered.length) saveStorage('products', products);
+
+  const beforeClient = _safeJsonClone(c);
+  c.closed = true; c.closedAt = today();
+  stampRecordUpdate(c, beforeClient, 'clients', { visibility:'company' });
+  writeAuditLog('clients', c.id, 'statusChange', beforeClient, c, {
+    summary: delivered.length ? `고객사 프로젝트 종료(${delivered.length}건 일괄 납품)` : '고객사 프로젝트 종료'
+  });
+  saveStorage('clients', clients);
+  renderClients();
+  showToast(delivered.length
+    ? `${delivered.length}건을 납품 처리하고 프로젝트를 종료했습니다.`
+    : '프로젝트가 종료 처리되었습니다.');
+  return true;
+}
 function closeProject(id, force) {
   if (!checkAdminAction()) return;
   const c = clients.find(x => x.id === id); if (!c) return;
   if (!requireRecordPermission('edit', c, 'clients')) return;
-  const before = _safeJsonClone(c);
   if (force && !confirm('진행 중인 제품이 있습니다. 강제로 종료하시겠습니까?')) return;
-  c.closed = true; c.closedAt = today();
-  stampRecordUpdate(c, before, 'clients', { visibility:'company' });
-  writeAuditLog('clients', c.id, 'statusChange', before, c, { summary:'고객사 프로젝트 종료' });
-  saveStorage('clients', clients);
-  renderClients();
-  showToast('프로젝트가 종료 처리되었습니다.');
+  // 강제 종료는 진행 중 제품이 남아 있는 상태라 일괄 납품 대상에서 제외한다.
+  const targets = force ? [] : projectDeliverTargets(id);
+  if (!targets.length) { _finalizeCloseProject(c, []); return; }
+  const total = targets.reduce((s, p) => s + (Number(p.price)||0) * (Number(p.qty)||0), 0);
+  const list = targets.slice(0, 5).map(p => `<div>· ${esc(p.name)} ${p.qty}${esc(p.unit||'대')}</div>`).join('')
+    + (targets.length > 5 ? `<div>· 외 ${targets.length - 5}건</div>` : '');
+  confirm_('프로젝트 종료', `완료된 제품 <b>${targets.length}건</b>을 납품 처리하고 프로젝트를 종료합니다.`
+    + `<div style="margin-top:8px;font-size:11.5px;color:var(--tx-s);">${list}</div>`
+    + `<div style="margin-top:8px;">납품 매출 <b>${fmtW(total)}</b>이 발생합니다.</div>`,
+    () => _finalizeCloseProject(c, targets), 'btn-primary', 'ti-circle-check');
 }
 function reopenProject(id) {
   if (!checkAdminAction()) return;
@@ -626,6 +674,8 @@ function saveProdEdit(clientId, productId) {
     const linkedDelivery = typeof deliveryRecordForProduct === 'function' ? deliveryRecordForProduct(productId) : null;
     if (!guardFinanceMonth(linkedDelivery?.deliveredAt || today())) return;
   }
+  // 납품 → 다른 단계: 자동 등록됐던 납품 기록도 함께 되돌린다(제품을 바꾸기 전에 확인).
+  if (before.processStage === '납품' && stage !== '납품' && typeof onStageUndelivered === 'function' && !onStageUndelivered(p)) return;
   const costFields = readProductCostFields(p);
   p.name = name; p.spec = v('pra-spec');
   p.qty = parseInt(v('pra-qty'))||1; p.unit = v('pra-unit')||'대';
@@ -648,6 +698,8 @@ function changeProdStage(productId, stage) {
     const linkedDelivery = typeof deliveryRecordForProduct === 'function' ? deliveryRecordForProduct(productId) : null;
     if (!guardFinanceMonth(linkedDelivery?.deliveredAt || today())) return;
   }
+  // 납품 → 다른 단계: 자동 등록됐던 납품 기록도 함께 되돌린다(제품을 바꾸기 전에 확인해 실패 시 단계 유지).
+  if (p.processStage === '납품' && stage !== '납품' && typeof onStageUndelivered === 'function' && !onStageUndelivered(p)) return;
   const before = _safeJsonClone(p);
   p.processStage = stage; p.status = stageToStatus(stage);
   if (p.processStage === '완료' && before.processStage !== '완료' && typeof onStageComplete === 'function') onStageComplete(p);

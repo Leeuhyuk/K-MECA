@@ -86,6 +86,31 @@ function onStageDelivered(product) {
   return true;
 }
 
+/* '납품' 단계에서 벗어날 때, 그 전환으로 자동 등록됐던 납품 기록을 함께 되돌린다.
+   없으면 제품은 생산중인데 납품 현황·매출·미수금에는 납품된 것으로 남는다(표시만이 아니라 재무에 잡힌다).
+   onStageDelivered 의 역동작이며, 실패 시 false 를 반환해 호출부가 단계 변경 자체를 취소하게 한다.
+   삭제 규약은 deleteDelivery/deleteProduct 와 동일하게 맞춘다(하드 삭제 + 수금기록 정리 + 감사 로그). */
+function onStageUndelivered(product) {
+  if (!product) return true;
+  const existing = deliveryRecordForProduct(product.id);
+  if (!existing) return true;                       // 자동 등록분이 없으면 되돌릴 것도 없다
+  if (typeof guardFinanceMonth === 'function' && !guardFinanceMonth(existing.deliveredAt || today())) return false;
+  // 수금이 처리된 납품을 말없이 지우면 재무 기록까지 사라진다. 사용자가 먼저 수금을 취소하게 한다.
+  const paid = financeData && financeData.paidReceivable && financeData.paidReceivable[existing.id];
+  if (paid) {
+    if (typeof showToast === 'function') showToast('수금 처리된 납품입니다. 납품 현황에서 수금을 먼저 취소한 뒤 단계를 변경하세요.', 'error');
+    return false;
+  }
+  deliveries = deliveries.filter(d => d.id !== existing.id);
+  writeAuditLog('delivery', existing.id, 'delete', existing, null, {
+    summary: '제품 납품 단계 해제로 납품 기록 자동 삭제',
+    detail: `${product.name || product.id} · ${fmtW((Number(existing.price)||0)*(Number(existing.qty)||0))}`
+  });
+  saveStorage('deliveries', deliveries);
+  if (typeof updateDlvBadge === 'function') updateDlvBadge();
+  return true;
+}
+
 function renderProcess() {
   const fc = v('proc-fc');
   fillClientSelect('proc-fc', true);
