@@ -52,28 +52,6 @@
   </div>
 </div>
 
-<!-- AI 검색: 자연어 질문 → 조건 해석 → 결과.
-     통합 검색(즉시 키워드)과 분리한 이유는 AI 호출이 과금이라 Enter 로만 실행해야 하기 때문. -->
-<div class="overlay" id="ai-search-dlg">
-  <div class="dlg" style="max-width:640px;width:min(640px,calc(100vw - 32px));">
-    <div class="dlg-title" style="color:var(--tx-i);"><i class="ti ti-sparkles"></i><span>AI 검색</span></div>
-    <div class="dlg-msg">
-      <div style="font-size:11.5px;color:var(--tx-t);margin-bottom:8px;">
-        찾고 싶은 내용을 문장으로 적으세요. 예: <b>지난달 납품 내역</b> · <b>입고 안 된 발주</b> · <b>안전재고 미달 재고</b>
-      </div>
-      <div style="display:flex;gap:8px;">
-        <input class="form-inp" id="ai-search-input" style="flex:1;" placeholder="예: 지난달 납품 내역"
-          onkeydown="if(event.key==='Enter'){event.preventDefault();runAiSearch(event);}">
-        <button class="btn btn-primary" id="ai-search-run" onclick="runAiSearch(event)"><i class="ti ti-sparkles"></i>검색</button>
-      </div>
-      <div id="ai-search-result" style="margin-top:12px;"></div>
-    </div>
-    <div class="dlg-actions">
-      <button class="btn" onclick="closeAiSearch()">닫기</button>
-    </div>
-  </div>
-</div>
-
 <!-- 공정 단계 변경 모달 (단계 단일화 - 상태 자동 파생) -->
 <div class="overlay" id="kanbanEditModal">
   <div class="dlg custom-modal">

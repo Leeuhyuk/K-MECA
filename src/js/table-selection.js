@@ -1379,20 +1379,6 @@ function selectionDetailScheduleRows(primary) {
   return fields.filter(field => /(금액|단가|합계|총액|일자|납기|예정|등록일|수정일)/.test(field.label)).slice(0, 5);
 }
 
-/* AI 보조 버튼 — 지원하는 도메인에서만 노출한다.
-   AI 기능이 꺼져 있으면(시스템 관리 → API 관리) 버튼 자체를 숨긴다. */
-function selectionDetailAiButtonHtml(context) {
-  if (typeof getGeminiConfig === 'function' && !getGeminiConfig().enabled) return '';
-  const id = context.items && context.items[0] && context.items[0].ref && context.items[0].ref.entityId;
-  if (!id) return '';
-  if (context.key === 'rfq' && typeof aiDraftQuoteFromRfq === 'function') {
-    return `<button class="selection-detail-work-btn" data-ai-label="<i class='ti ti-sparkles'></i>AI 견적 초안" onclick="aiDraftQuoteFromRfq('${selectionDetailEsc(id)}', event)"><i class="ti ti-sparkles"></i>AI 견적 초안</button>`;
-  }
-  if (context.key === 'claims' && typeof aiTriageClaim === 'function') {
-    return `<button class="selection-detail-work-btn" data-ai-label="<i class='ti ti-sparkles'></i>AI 분석" onclick="aiTriageClaim('${selectionDetailEsc(id)}', event)"><i class="ti ti-sparkles"></i>AI 분석</button>`;
-  }
-  return '';
-}
 function selectionDetailWorkActionsHtml(context) {
   if (!context) return '';
   if (context.source === 'react-domain') {
@@ -1405,9 +1391,7 @@ function selectionDetailWorkActionsHtml(context) {
         <button class="selection-detail-work-btn is-danger" onclick="runSelectionDetailPanelAction('delete')">삭제</button>`;
     }
     const actions = typeof bulkActionButtons === 'function' ? bulkActionButtons(context.key, { hideComplete:true }) : '';
-    // AI 보조는 단건 선택일 때만 — 초안·분류는 한 건씩 검토해야 하는 작업이다.
-    const ai = context.count === 1 ? selectionDetailAiButtonHtml(context) : '';
-    return (actions || '<button class="selection-detail-work-btn" onclick="openSelectionDetailAudit()">세부 이력</button>') + ai;
+    return actions || '<button class="selection-detail-work-btn" onclick="openSelectionDetailAudit()">세부 이력</button>';
   }
   if (context.source === 'react-inventory' && context.count !== 1) {
     return '<button class="selection-detail-work-btn" onclick="clearSelectionDetailSelection()">해제</button>';
