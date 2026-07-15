@@ -1,0 +1,254 @@
+/* ════════ AI 업무 보조 ════════ */
+
+/* ════════ AI 업무 보조 (서버 프록시 경유) ════════════════════════
+   공통 규칙: AI 는 초안·분류·검색까지만 한다. 금액 확정·승인은 사람이 한다.
+   결과는 항상 "제안"으로 표시하고, 반영은 사용자가 명시적으로 눌러야 일어난다.
+   프롬프트는 서버(functions 의 AI_TASKS)가 소유하고 여기서는 데이터만 보낸다. */
+
+function _aiBusy(button, on, label) {
+  if (!button) return;
+  button.disabled = on;
+  button.innerHTML = on
+    ? '<i class="ti ti-loader animate-spin"></i>' + (label || '처리 중')
+    : button.dataset.aiLabel || button.innerHTML;
+}
+
+/* ── 1순위: 견적 초안 ──
+   RFQ 품목에 대해 과거 견적/수주 이력의 단가를 근거로 초안을 제안한다.
+   이력에 없는 품목은 AI 가 null 을 주도록 서버 지시문에 못박아 뒀다(추측 단가 방지). */
+function _aiQuoteHistory(itemNames) {
+  // 같은 품목명이 등장한 과거 견적/수주를 최근순으로 모은다(최대 20건).
+  const wanted = itemNames.map(n => String(n||'').trim().toLowerCase()).filter(Boolean);
+  const rows = [];
+  [['quote', quoteList], ['order', orderList]].forEach(([type, list]) => {
+    (list || []).forEach(doc => {
+      _docItems(doc).forEach(item => {
+        const name = String(item.itemName||'').trim();
+        if (!name || !wanted.includes(name.toLowerCase())) return;
+        const price = Number(item.price) || 0;
+        if (!price) return;
+        rows.push({ type, itemName: name, spec: item.spec || '', unitPrice: price, date: doc.date || '' });
+      });
+    });
+  });
+  return rows.sort((a,b) => String(b.date).localeCompare(String(a.date))).slice(0, 20);
+}
+
+async function aiDraftQuoteFromRfq(rfqId, event) {
+  const button = event && event.currentTarget;
+  const r = (rfqList || []).find(x => x.id === rfqId);
+  if (!r) { showToast('견적요청서를 찾지 못했습니다.', 'error'); return; }
+  const items = _docItems(r);
+  if (!items.length) { showToast('견적요청서에 품목이 없습니다.', 'error'); return; }
+
+  _aiBusy(button, true, '초안 생성 중');
+  try {
+    const history = _aiQuoteHistory(items.map(i => i.itemName));
+    const result = await callAiTask('quoteDraft', {
+      rfq: {
+        supplier: r.supplier || '',
+        items: items.map(i => ({ itemName: i.itemName, spec: i.spec || '', qty: Number(i.qty)||0, targetPrice: Number(i.price)||null }))
+      },
+      history
+    });
+    _aiShowQuoteDraft(r, result, history.length);
+  } catch (e) {
+    showToast(e.message || '견적 초안 생성에 실패했습니다.', 'error');
+  } finally {
+    _aiBusy(button, false);
+  }
+}
+
+let _aiQuoteDraft = null;
+function _aiShowQuoteDraft(rfq, result, historyCount) {
+  const list = Array.isArray(result && result.items) ? result.items : [];
+  if (!list.length) { showToast('AI 가 제안할 단가를 찾지 못했습니다.', 'info'); return; }
+  _aiQuoteDraft = { rfqId: rfq.id, items: list };
+  const rows = list.map(x => {
+    const known = x.unitPrice != null && Number(x.unitPrice) > 0;
+    return '<tr>' +
+      '<td>' + esc(x.itemName || '') + '</td>' +
+      '<td style="text-align:right;font-weight:700;color:' + (known ? 'var(--tx-i)' : 'var(--tx-t)') + ';">'
+        + (known ? fmtW(Number(x.unitPrice)) : '근거 없음') + '</td>' +
+      '<td style="font-size:11px;color:var(--tx-t);">' + esc(x.reason || '') + '</td>' +
+    '</tr>';
+  }).join('');
+  confirm_('AI 견적 초안',
+    '<div style="font-size:11.5px;color:var(--tx-t);margin-bottom:8px;">과거 견적·수주 ' + historyCount + '건을 참고한 <b>초안</b>입니다. 반드시 검토 후 사용하세요.</div>' +
+    '<div style="max-height:260px;overflow:auto;"><table style="width:100%;font-size:12px;">' +
+      '<thead><tr><th style="text-align:left;">품목</th><th style="text-align:right;">제안 단가</th><th style="text-align:left;">근거</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody></table></div>' +
+    (result.note ? '<div style="margin-top:8px;font-size:11.5px;">' + esc(result.note) + '</div>' : '') +
+    '<div style="margin-top:8px;font-size:11.5px;color:var(--tx-w);">실행하면 이 단가로 <b>견적서를 새로 만듭니다.</b> 금액은 등록 후에도 수정할 수 있습니다.</div>',
+    _aiApplyQuoteDraft, 'btn-primary', 'ti-sparkles');
+}
+
+/* 초안을 견적서로 만든다 — 등록까지만 하고 발행/확정은 하지 않는다.
+   saveSODoc 의 규약을 그대로 따른다: SODOCS 설정 사용, 첫 품목을 최상위 필드에도 동기화
+   (목록·인쇄가 최상위 itemName/unitPrice 를 읽는다), 상태는 statuses[0]. */
+function _aiApplyQuoteDraft() {
+  if (!_aiQuoteDraft) return;
+  const cfg = SODOCS.quote;
+  if (typeof requireCreateAction === 'function' && !requireCreateAction('quote', cfg.title + ' 등록')) return;
+  const r = (rfqList || []).find(x => x.id === _aiQuoteDraft.rfqId);
+  if (!r) { showToast('견적요청서를 찾지 못했습니다.', 'error'); return; }
+  const priceOf = name => {
+    const hit = _aiQuoteDraft.items.find(x => String(x.itemName||'').trim() === String(name||'').trim());
+    return hit && hit.unitPrice != null ? Number(hit.unitPrice) || 0 : 0;
+  };
+  const items = _docItems(r).map(i => ({
+    itemName: i.itemName, spec: i.spec || '', qty: Number(i.qty) || 1,
+    unit: i.unit || '대', price: priceOf(i.itemName), note: ''
+  }));
+  const first = items[0];
+  const list = soDocList('quote');
+  const doc = stampRecordCreate({
+    id: nextDocCode(cfg.prefix, list),
+    orderId: '', productId: '', quoteId: '',
+    date: today(),
+    clientId: r.clientId || '',
+    clientName: '',
+    clientEmail: '',
+    clientBizNo: _docClientBizNo({ clientId: r.clientId || '' }),
+    itemName: first.itemName, spec: first.spec, qty: first.qty, unit: first.unit,
+    unitPrice: first.price,
+    deliveryDate: '',
+    note: 'AI 초안 (견적요청 ' + r.id + ' 기준) — 단가 검토 필요',
+    commonNote: 'AI 초안 (견적요청 ' + r.id + ' 기준) — 단가 검토 필요',
+    items,
+    status: cfg.statuses[0]
+  }, 'quote');
+  list.unshift(doc);
+  writeAuditLog('quote', doc.id, 'create', null, doc, { summary:'AI 견적 초안 생성', detail:'견적요청 ' + r.id + ' 기준' });
+  saveStorage(cfg.key, list);
+  _aiQuoteDraft = null;
+  if (typeof renderSODoc === 'function') renderSODoc('quote');
+  showToast('AI 초안으로 견적서 ' + doc.id + ' 를 만들었습니다. 단가를 검토해 주세요.', 'success');
+}
+
+/* ── 2순위: 클레임 분류·조치 초안 ──
+   자유 텍스트인 요청 내용에서 유형을 추천하고, 과거 유사 사례의 조치를 근거로 초안을 낸다.
+   유형은 등록 폼과 같은 선택지(클레임/AS/기타)로 제한한다 — 서버가 없는 유형을 못 만들게 지시한다. */
+const AI_CLAIM_KINDS = ['클레임','AS','기타'];
+
+/* 한국어는 조사가 붙어(베어링 → "베어링에서") 어절을 그대로 포함검사하면 거의 안 맞는다.
+   형태소 분석기는 없으므로, 어절에서 앞 2글자 이상을 잘라 서로 겹치는지 양방향으로 본다.
+   과하게 맞추려 하지 않는다 — 근거 후보를 추리는 용도이고 최종 판단은 AI 와 사람이 한다. */
+function _aiTokens(text) {
+  const stop = ['그리고','하지만','에서','으로','합니다','했습니다','있습니다','같습니다'];
+  return Array.from(new Set(
+    String(text || '').toLowerCase()
+      .split(/[^0-9a-z가-힣]+/)
+      .map(w => w.trim())
+      .filter(w => w.length >= 2 && !stop.includes(w))
+  ));
+}
+function _aiTokenHit(token, hay) {
+  if (hay.includes(token)) return true;
+  // 조사 제거 근사: 앞에서부터 2글자까지 줄여가며 겹치는지 확인
+  for (let len = token.length - 1; len >= 2; len--) {
+    if (hay.includes(token.slice(0, len))) return true;
+  }
+  return false;
+}
+function _aiClaimHistory(text) {
+  // 과거 클레임 중 조치 방안이 채워진 것만 근거로 준다(최대 15건).
+  const tokens = _aiTokens(text);
+  return (claims || [])
+    .filter(c => String(c.response||'').trim())
+    .map(c => {
+      const hay = (String(c.content||'') + ' ' + String(c.spec||'')).toLowerCase();
+      const score = tokens.reduce((s,t) => s + (_aiTokenHit(t, hay) ? 1 : 0), 0);
+      return { score, row: { id:c.id, kind:c.kind||'', content:String(c.content||'').slice(0,200), response:String(c.response||'').slice(0,200) } };
+    })
+    .filter(x => x.score > 0)
+    .sort((a,b) => b.score - a.score)
+    .slice(0, 15)
+    .map(x => x.row);
+}
+
+async function aiTriageClaim(claimId, event) {
+  const button = event && event.currentTarget;
+  const c = (claims || []).find(x => x.id === claimId);
+  if (!c) { showToast('클레임을 찾지 못했습니다.', 'error'); return; }
+  const text = String(c.content || '').trim();
+  if (!text) { showToast('분석할 요청 내용이 없습니다.', 'error'); return; }
+
+  _aiBusy(button, true, '분석 중');
+  try {
+    const result = await callAiTask('claimTriage', {
+      text: text.slice(0, 4000),
+      types: AI_CLAIM_KINDS,
+      history: _aiClaimHistory(text)
+    });
+    _aiShowClaimTriage(c, result);
+  } catch (e) {
+    showToast(e.message || 'AI 분석에 실패했습니다.', 'error');
+  } finally {
+    _aiBusy(button, false);
+  }
+}
+
+let _aiClaimResult = null;
+function _aiShowClaimTriage(claim, result) {
+  const type = AI_CLAIM_KINDS.includes(result && result.type) ? result.type : '';
+  const conf = Math.round((Number(result && result.confidence) || 0) * 100);
+  _aiClaimResult = { id: claim.id, type, action: String(result && result.action || '') };
+  const similar = Array.isArray(result && result.similar) && result.similar.length
+    ? '<div style="margin-top:8px;font-size:11.5px;color:var(--tx-t);">참고한 유사 사례: ' + esc(result.similar.join(', ')) + '</div>' : '';
+  confirm_('AI 클레임 분석',
+    '<div style="font-size:11.5px;color:var(--tx-t);margin-bottom:8px;">과거 유사 사례를 근거로 한 <b>제안</b>입니다. 검토 후 반영하세요.</div>' +
+    '<div><b>유형</b> ' + (type ? esc(type) : '판단 불가') +
+      ' <span style="font-size:11px;color:' + (conf >= 70 ? 'var(--tx-ok)' : 'var(--tx-w)') + ';">확신도 ' + conf + '%</span></div>' +
+    '<div style="margin-top:8px;"><b>조치 방안 초안</b><div style="margin-top:4px;">' + esc(_aiClaimResult.action || '제안 없음') + '</div></div>' +
+    (result && result.reason ? '<div style="margin-top:8px;font-size:11.5px;color:var(--tx-t);">근거: ' + esc(result.reason) + '</div>' : '') +
+    similar +
+    '<div style="margin-top:8px;font-size:11.5px;color:var(--tx-w);">실행하면 이 클레임의 유형·조치 방안에 <b>덮어씁니다.</b></div>',
+    _aiApplyClaimTriage, 'btn-primary', 'ti-sparkles');
+}
+
+function _aiApplyClaimTriage() {
+  if (!_aiClaimResult) return;
+  const c = (claims || []).find(x => x.id === _aiClaimResult.id);
+  if (!c) return;
+  if (typeof requireRecordPermission === 'function' && !requireRecordPermission('edit', c, 'claims')) return;
+  const before = _safeJsonClone(c);
+  if (_aiClaimResult.type) c.kind = _aiClaimResult.type;
+  if (_aiClaimResult.action) c.response = _aiClaimResult.action;
+  stampRecordUpdate(c, before, 'claims', { visibility:'company' });
+  writeAuditLog('claims', c.id, 'update', before, c, { summary:'AI 분류·조치 초안 반영' });
+  saveStorage('claims', claims);
+  _aiClaimResult = null;
+  if (typeof renderClaims === 'function') renderClaims();
+  showToast('AI 제안을 반영했습니다. 내용을 검토해 주세요.', 'success');
+}
+
+/* ── 3순위: 자연어 검색 ──
+   질문을 필터 조건으로 바꾼다. 실행(데이터 조회)은 클라이언트가 한다 —
+   AI 에 전체 데이터를 보내지 않으므로 개인정보·원가가 새어나가지 않고 토큰도 아낀다. */
+const AI_SEARCH_ENTITIES = {
+  deliveries: { label:'납품 현황', fields:['deliveredAt','clientName','productName','qty','price'] },
+  poList:     { label:'구매발주서', fields:['date','supplier','itemName','status','unitPrice'] },
+  claims:     { label:'고객 클레임', fields:['date','kind','content','status'] },
+  inventory:  { label:'재고',      fields:['name','type','qty','minQty','location'] }
+};
+
+async function aiNaturalSearch(query, event) {
+  const q = String(query || '').trim();
+  if (!q) { showToast('검색할 내용을 입력하세요.', 'error'); return null; }
+  const button = event && event.currentTarget;
+  _aiBusy(button, true, '해석 중');
+  try {
+    const result = await callAiTask('searchFilter', {
+      query: q,
+      today: today(),
+      entities: Object.keys(AI_SEARCH_ENTITIES).map(k => ({ entity:k, label:AI_SEARCH_ENTITIES[k].label, fields:AI_SEARCH_ENTITIES[k].fields }))
+    });
+    return result;
+  } catch (e) {
+    showToast(e.message || '검색 해석에 실패했습니다.', 'error');
+    return null;
+  } finally {
+    _aiBusy(button, false);
+  }
+}
