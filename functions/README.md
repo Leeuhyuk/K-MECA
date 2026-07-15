@@ -57,6 +57,12 @@ npm install
 
 테스트/운영 키를 분리해 두고, 운영 전환 시 값을 교체한다.
 
+> **CLI 실행 방법**: firebase-tools 를 전역 설치하지 않았다면 `firebase` 대신
+> **`npx firebase-tools`** 를 쓴다 (예: `npx firebase-tools deploy --only firestore:rules`).
+> 아래 예시의 `firebase` 를 모두 그렇게 바꿔 읽으면 된다. 명령은 저장소 루트에서 실행한다
+> (firebase.json 이 있는 곳 — 없으면 "Not in a Firebase app directory" 오류).
+> npm 캐시 권한 오류(EACCES)가 나면 앞에 `npm_config_cache=/tmp/npm-cache` 를 붙인다.
+
 ```bash
 # 비밀값(직접 입력) — 실행 시 값을 붙여넣으라는 프롬프트가 뜬다
 firebase functions:secrets:set POPBILL_LINK_ID
