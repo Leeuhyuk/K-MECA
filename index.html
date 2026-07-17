@@ -23713,10 +23713,24 @@ function _defaultDocTemplateBook(type) {
     ? '3. 세금계산서는 납품 완료 후 익일 발행 바랍니다.'
     : isRfq ? '3. 납품 가능 수량 및 납기일을 반드시 명시하여 주시기 바랍니다.' : '');
   _styleRange(ws, 'A34:L37', {
-    border, fill:{type:'pattern',pattern:'solid',fgColor:{argb:white}},
+    fill:{type:'pattern',pattern:'solid',fgColor:{argb:white}},
     font:{name:'맑은 고딕',size:8,color:{argb:'FF444444'}},
     alignment:{vertical:'middle',wrapText:true}
   });
+  // 비고 박스: 내부 가로줄 없이 바깥 테두리만 (PDF .remarks 와 동일)
+  const _rmEdge = { style:'thin', color:{argb:'FFCCCCCC'} };
+  for (let r = 34; r <= 37; r++) {
+    for (let c = 1; c <= 12; c++) ws.getCell(r, c).border = {};   // 전체 초기화
+    // HTML 렌더는 병합 마스터(A열)의 좌우 테두리로 박스 폭을 그린다
+    ws.getCell(r, 1).border = { left:_rmEdge, right:_rmEdge,
+      top:r===34?_rmEdge:undefined, bottom:r===37?_rmEdge:undefined };
+    ws.getCell(r, 12).border = { right:_rmEdge,                   // 실제 엑셀 우측 끝
+      top:r===34?_rmEdge:undefined, bottom:r===37?_rmEdge:undefined };
+  }
+  for (let c = 2; c <= 11; c++) {                                 // 실제 엑셀 상/하 외곽
+    ws.getCell(34, c).border = { top:_rmEdge };
+    ws.getCell(37, c).border = { bottom:_rmEdge };
+  }
   ws.getCell('A34').font = {name:'맑은 고딕',size:8.5,bold:true,color:{argb:navy}};
   [34,35,36,37].forEach(r => { ws.getRow(r).height = 18; });
 
