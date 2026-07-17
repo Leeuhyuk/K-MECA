@@ -2083,10 +2083,16 @@ function resetAllDocXlsxTemplates() {
   );
 }
 
+// 기본(내장) 템플릿 버퍼 캐시 — 인쇄마다 workbook 재생성+직렬화하는 비용을 없앤다.
+// 값은 로드 후 _fillDocTemplateSheet 에서 채우므로 빈 템플릿 캐시는 안전하다.
+const _defaultDocTemplateBufferCache = {};
 async function _docTemplateArray(type) {
   const saved = _docTemplateStore()[type];
   if (saved && saved.data) return _base64ToArray(saved.data);
-  return await _defaultDocTemplateBook(type).xlsx.writeBuffer();
+  if (!_defaultDocTemplateBufferCache[type]) {
+    _defaultDocTemplateBufferCache[type] = await _defaultDocTemplateBook(type).xlsx.writeBuffer();
+  }
+  return _defaultDocTemplateBufferCache[type].slice(0);   // load 가 버퍼를 변형해도 원본 보존
 }
 
 function _docTemplateGroups(type, id) {
@@ -2907,7 +2913,9 @@ function openSalesDocPrint(type, id) {
   const cfg = SALES[type], list = visibleSalesList(type);
   const targets = Array.isArray(id) ? list.filter(x=>id.includes(x.id)) : (id ? list.filter(x => x.id === id) : list);
   if (!targets.length) { showToast('출력할 문서가 없습니다.', 'error'); return; }
-  if (_docTemplateHasCustom(type)) {
+  // 단일 원본: PDF 인쇄도 엑셀 템플릿(등록 양식과 동일)에서 렌더한다.
+  // ExcelJS 미로딩(오프라인)·템플릿 미정의 타입일 때만 아래 HTML 양식으로 대체.
+  if (typeof ExcelJS !== 'undefined' && DOC_XLS_TEMPLATE_INFO[type]) {
     const ids = targets.map(d => d.id);
     openDocTemplatePdfPreview(type, ids.length === 1 ? ids[0] : ids);
     return;
@@ -3243,7 +3251,9 @@ function openSODocPrint(type, id) {
   const cfg = SODOCS[type], list = visibleSODocList(type);
   const targets = Array.isArray(id) ? list.filter(x=>id.includes(x.id)) : (id ? list.filter(x=>x.id===id) : list);
   if (!targets.length) { showToast('출력할 문서가 없습니다.', 'error'); return; }
-  if (_docTemplateHasCustom(type)) {
+  // 단일 원본: PDF 인쇄도 엑셀 템플릿(등록 양식과 동일)에서 렌더한다.
+  // ExcelJS 미로딩(오프라인)·템플릿 미정의 타입(예: 수주확인서)일 때만 HTML 대체.
+  if (typeof ExcelJS !== 'undefined' && DOC_XLS_TEMPLATE_INFO[type]) {
     const ids = targets.map(d => d.id);
     openDocTemplatePdfPreview(type, ids.length === 1 ? ids[0] : ids);
     return;
