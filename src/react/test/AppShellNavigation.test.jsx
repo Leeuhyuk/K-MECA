@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { AppShellNavigation } from '../src/components/AppShellNavigation.jsx';
 
 function installGlobals(hash = '#/dashboard') {
@@ -42,10 +42,11 @@ describe('AppShellNavigation', () => {
 
   it('업무 메뉴 접기 상태를 저장하고 다시 펼친다', () => {
     const { container } = render(<AppShellNavigation />);
-    fireEvent.click(container.querySelector('.modern-rail-collapse'));
+    // 상단 ☰(togglePrimaryMenu)이 쏘는 mes:toggle-context-nav 이벤트로 접힘/펼침을 제어한다
+    act(() => { globalThis.dispatchEvent(new CustomEvent('mes:toggle-context-nav')); });
     expect(localStorage.getItem('mes_modernContextCollapsed')).toBe('true');
     expect(container.querySelector('.modern-context-nav')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: '업무 메뉴 펼치기' }));
+    act(() => { globalThis.dispatchEvent(new CustomEvent('mes:toggle-context-nav')); });
     expect(localStorage.getItem('mes_modernContextCollapsed')).toBe('false');
     expect(container.querySelectorAll('.modern-context-item')).toHaveLength(3);
   });
