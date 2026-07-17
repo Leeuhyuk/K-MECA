@@ -22546,7 +22546,9 @@ function openRfqPrint(id) {
   const targets = id ? [sourceRows.find(x=>x.id===id)].filter(Boolean)
                      : sourceRows.filter(r => r.status !== '미채택');
   if (!targets.length) { showToast('출력할 견적요청서가 없습니다.', 'error'); return; }
-  if (_docTemplateHasCustom('rfq')) {
+  // 단일 원본: PDF 인쇄도 엑셀 템플릿(등록 양식과 동일)에서 렌더한다.
+  // ExcelJS 미로딩(오프라인) 시에만 아래 HTML 양식으로 대체.
+  if (typeof ExcelJS !== 'undefined') {
     const ids = targets.map(r => r.id);
     openDocTemplatePdfPreview('rfq', ids.length === 1 ? ids[0] : ids);
     return;
@@ -23059,7 +23061,9 @@ function openPoPrint(id, individual=false) {
   const targetList = ids ? ids.map(i=>visiblePo.find(x=>x.id===i)).filter(Boolean)
                         : visiblePo;   // 전체 출력: 입고완료 포함 모든 발주서
   if (!targetList.length) { showToast('출력할 발주서가 없습니다.', 'error'); return; }
-  if (_docTemplateHasCustom('po')) {
+  // 단일 원본: PDF 인쇄도 엑셀 템플릿(등록 양식과 동일)에서 렌더한다.
+  // ExcelJS 미로딩(오프라인) 시에만 아래 HTML 양식으로 대체.
+  if (typeof ExcelJS !== 'undefined') {
     const targetIds = targetList.map(p => p.id);
     openDocTemplatePdfPreview('po', targetIds.length === 1 ? targetIds[0] : targetIds, { individual });
     return;
