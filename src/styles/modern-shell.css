@@ -61,8 +61,7 @@
   }
 
   .modern-rail-logo,
-  .modern-rail-button,
-  .modern-rail-collapse {
+  .modern-rail-button {
     appearance: none;
     border: 0;
     color: inherit;
@@ -146,23 +145,6 @@
     box-shadow: inset 3px 0 0 #5ec9c5;
   }
 
-  .modern-rail-collapse {
-    width: 100%;
-    height: 46px;
-    flex: 0 0 46px;
-    border-top: 1px solid var(--modern-rail-border);
-  }
-
-  .modern-rail-collapse:hover,
-  .modern-rail-collapse:focus-visible {
-    color: #ffffff;
-    background: rgba(255, 255, 255, .07);
-  }
-
-  .modern-rail-collapse i {
-    font-size: 19px;
-  }
-
   .modern-context-nav {
     width: var(--modern-context-width);
     flex: 0 0 var(--modern-context-width);
@@ -198,25 +180,6 @@
   .modern-context-head strong {
     font-size: 14px;
     font-weight: 800;
-  }
-
-  .modern-context-head button {
-    width: 30px;
-    height: 30px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 0;
-    border-radius: 6px;
-    color: var(--tx-t);
-    background: transparent;
-    cursor: pointer;
-  }
-
-  .modern-context-head button:hover,
-  .modern-context-head button:focus-visible {
-    color: var(--tx-i);
-    background: var(--bg-i);
   }
 
   .modern-context-section-label {

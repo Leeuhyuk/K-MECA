@@ -166,8 +166,6 @@ export function AppShellNavigation() {
     navigate(currentItem || module.items[0]);
   };
 
-  const toggleCollapsed = () => setCollapsed((value) => !value);
-
   return (
     <nav className={`modern-app-navigation${collapsed ? ' is-context-collapsed' : ''}`} aria-label="주요 업무 메뉴">
       <div className="modern-global-rail">
@@ -190,18 +188,12 @@ export function AppShellNavigation() {
             </button>
           ))}
         </div>
-        <button className="modern-rail-collapse" type="button" onClick={toggleCollapsed} title={collapsed ? '업무 메뉴 펼치기' : '업무 메뉴 접기'} aria-label={collapsed ? '업무 메뉴 펼치기' : '업무 메뉴 접기'}>
-          <i className={`ti ${collapsed ? 'ti-chevrons-right' : 'ti-chevrons-left'}`} aria-hidden="true" />
-        </button>
       </div>
 
       {!collapsed && (
         <div className="modern-context-nav">
           <div className="modern-context-head">
             <strong>{activeModule?.label || '업무'}</strong>
-            <button type="button" onClick={toggleCollapsed} title="업무 메뉴 접기" aria-label="업무 메뉴 접기">
-              <i className="ti ti-layout-sidebar-left-collapse" aria-hidden="true" />
-            </button>
           </div>
           <div className="modern-context-section-label">업무 메뉴</div>
           <div className="modern-context-items">

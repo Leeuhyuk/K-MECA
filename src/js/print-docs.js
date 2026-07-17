@@ -718,7 +718,9 @@ function openRfqPrint(id) {
   const targets = id ? [sourceRows.find(x=>x.id===id)].filter(Boolean)
                      : sourceRows.filter(r => r.status !== '미채택');
   if (!targets.length) { showToast('출력할 견적요청서가 없습니다.', 'error'); return; }
-  if (_docTemplateHasCustom('rfq')) {
+  // 단일 원본: PDF 인쇄도 엑셀 템플릿(등록 양식과 동일)에서 렌더한다.
+  // ExcelJS 미로딩(오프라인) 시에만 아래 HTML 양식으로 대체.
+  if (typeof ExcelJS !== 'undefined') {
     const ids = targets.map(r => r.id);
     openDocTemplatePdfPreview('rfq', ids.length === 1 ? ids[0] : ids);
     return;
@@ -1231,7 +1233,9 @@ function openPoPrint(id, individual=false) {
   const targetList = ids ? ids.map(i=>visiblePo.find(x=>x.id===i)).filter(Boolean)
                         : visiblePo;   // 전체 출력: 입고완료 포함 모든 발주서
   if (!targetList.length) { showToast('출력할 발주서가 없습니다.', 'error'); return; }
-  if (_docTemplateHasCustom('po')) {
+  // 단일 원본: PDF 인쇄도 엑셀 템플릿(등록 양식과 동일)에서 렌더한다.
+  // ExcelJS 미로딩(오프라인) 시에만 아래 HTML 양식으로 대체.
+  if (typeof ExcelJS !== 'undefined') {
     const targetIds = targetList.map(p => p.id);
     openDocTemplatePdfPreview('po', targetIds.length === 1 ? targetIds[0] : targetIds, { individual });
     return;
@@ -1739,9 +1743,9 @@ function _defaultDocTemplateBook(type) {
   _mergeValue(ws, 'A7:F7', '{{회사사업자정보}}');
   _mergeValue(ws, 'G5:L6', titleMap[type] || DOC_XLS_TEMPLATE_INFO[type].title);
   _mergeValue(ws, 'G7:L7', (isPo ? '발주번호  ' : '문서번호  ') + '{{문서번호}}');
-  ws.getCell('A5').font = { name:'맑은 고딕', size:15, bold:true, color:{argb:navy} };
-  ws.getCell('A6').font = ws.getCell('A7').font = { name:'맑은 고딕', size:8, color:{argb:'FF777777'} };
-  ws.getCell('G5').font = { name:'맑은 고딕', size:21, bold:true, color:{argb:navy} };
+  ws.getCell('A5').font = { name:'맑은 고딕', size:12, bold:true, color:{argb:navy} };   // PDF .co-name 16px ≈ 12pt
+  ws.getCell('A6').font = ws.getCell('A7').font = { name:'맑은 고딕', size:7, color:{argb:'FF777777'} };  // PDF .co-detail 9.5px ≈ 7pt
+  ws.getCell('G5').font = { name:'맑은 고딕', size:18, bold:true, color:{argb:navy} };   // PDF .doc-title 24px ≈ 18pt
   ws.getCell('G5').alignment = { horizontal:'right', vertical:'middle' };
   ws.getCell('G7').font = { name:'맑은 고딕', size:9, bold:true, color:{argb:'FF555555'} };
   ws.getCell('G7').alignment = { horizontal:'right', vertical:'middle' };
@@ -1833,22 +1837,41 @@ function _defaultDocTemplateBook(type) {
   });
   ws.getCell('K28').numFmt = '#,##0;[Red]-#,##0'; ws.getRow(28).height = 21;
 
+  // 합계 요약 박스 — PDF .sum-box 와 동일하게 전체를 남색 2px 로 감싸고 내부만 옅은 구분선
   [['H30:I30',isRfq?'희망 공급가액':'공급가액','J30:L30','{{공급가액}}'],
    ['H31:I31','부가세 (10%)','J31:L31','{{부가세}}'],
    ['H32:I32',isPo?'발주 합계금액':isRfq?'희망 합계금액':'합계금액','J32:L32','{{합계금액}}']].forEach((parts, idx) => {
+    const isFinal = idx === 2;                          // PDF .sum-final
     const label = _mergeValue(ws, parts[0], parts[1]);
     const value = _mergeValue(ws, parts[2], parts[3]);
     _styleRange(ws, `${parts[0].split(':')[0]}:${parts[2].split(':')[1]}`, {
-      border:_excelBorder(idx===2?navy:'FFDDE0E8',idx===2?'medium':'thin'),
       fill:{type:'pattern',pattern:'solid',fgColor:{argb:white}},
-      font:{name:'맑은 고딕',size:idx===2?11:9,bold:true,color:{argb:idx===2?navy:'FF555555'}},
+      font:{name:'맑은 고딕',size:isFinal?10.5:9,bold:true,color:{argb:isFinal?navy:'FF555555'}},
       alignment:{horizontal:'right',vertical:'middle'}
     });
     value.numFmt = '#,##0" 원";[Red]-#,##0" 원"';
-    value.font = {name:'맑은 고딕',size:idx===2?12:9,bold:true,color:{argb:navy}};
+    value.font = {name:'맑은 고딕',size:isFinal?10.5:9,bold:true,color:{argb:navy}};  // PDF .sum-final .sum-val 14px ≈ 10.5pt
     label.alignment = {horizontal:'left',vertical:'middle'};
-    ws.getRow(30 + idx).height = idx===2 ? 23 : 20;
+    ws.getRow(30 + idx).height = isFinal ? 23 : 20;
   });
+  // 박스 외곽선(남색 2px) + 내부 가로 구분선(옅은색). 병합 마스터(H·J)와 실제 끝 셀(L) 모두 지정
+  const _sumNavy = { style:'medium', color:{argb:navy} };
+  const _sumDiv  = { style:'thin',   color:{argb:'FFDDDDEE'} };
+  const _setEdge = (r, c, edge, style) => {
+    const cell = ws.getCell(r, c);
+    cell.border = Object.assign({}, cell.border, { [edge]:style });
+  };
+  for (let r = 30; r <= 32; r++) {
+    _setEdge(r, 8, 'left', _sumNavy);            // H = 좌측 끝
+    _setEdge(r, 10, 'right', _sumNavy);          // J = HTML 렌더용(J:L 마스터)
+    _setEdge(r, 12, 'right', _sumNavy);          // L = 실제 엑셀용 우측 끝
+  }
+  for (let c = 8; c <= 12; c++) {                // H(8) ~ L(12)
+    _setEdge(30, c, 'top', _sumNavy);            // 상단 외곽
+    _setEdge(32, c, 'bottom', _sumNavy);         // 하단 외곽
+    _setEdge(30, c, 'bottom', _sumDiv);          // 1행/2행 사이 구분선
+    _setEdge(31, c, 'bottom', _sumDiv);          // 2행/3행 사이 구분선
+  }
 
   _mergeValue(ws, 'A34:L34', isPo ? '◆ 특기사항 및 거래조건' : isRfq ? '◆ 특기사항 및 요청조건' : '◆ 비고');
   _mergeValue(ws, 'A35:L35', isPo
@@ -1862,10 +1885,24 @@ function _defaultDocTemplateBook(type) {
     ? '3. 세금계산서는 납품 완료 후 익일 발행 바랍니다.'
     : isRfq ? '3. 납품 가능 수량 및 납기일을 반드시 명시하여 주시기 바랍니다.' : '');
   _styleRange(ws, 'A34:L37', {
-    border, fill:{type:'pattern',pattern:'solid',fgColor:{argb:white}},
+    fill:{type:'pattern',pattern:'solid',fgColor:{argb:white}},
     font:{name:'맑은 고딕',size:8,color:{argb:'FF444444'}},
     alignment:{vertical:'middle',wrapText:true}
   });
+  // 비고 박스: 내부 가로줄 없이 바깥 테두리만. 세로 얇은 선이 흐려 보이지 않도록
+  // 다른 표(#CCCCCC)보다 살짝 진한 회색으로 네 변을 또렷하게 표시.
+  // 합계 박스와 동일한 _setEdge(Object.assign, 변마다 새 객체)로 병합셀 변 누락 방지.
+  const _rmColor = 'FFA0A0A0';
+  const _rm = () => ({ style:'thin', color:{argb:_rmColor} });
+  for (let r = 34; r <= 37; r++) {
+    _setEdge(r, 1, 'left', _rm());     // A: 좌측 (A:L 병합 마스터 → HTML 좌측 변)
+    _setEdge(r, 1, 'right', _rm());    // A 마스터의 right → colSpan 오른쪽 끝(HTML)
+    _setEdge(r, 12, 'right', _rm());   // L: 실제 엑셀 우측 끝
+  }
+  for (let c = 1; c <= 12; c++) {      // 상/하 외곽 (A~L 전 열)
+    _setEdge(34, c, 'top', _rm());
+    _setEdge(37, c, 'bottom', _rm());
+  }
   ws.getCell('A34').font = {name:'맑은 고딕',size:8.5,bold:true,color:{argb:navy}};
   [34,35,36,37].forEach(r => { ws.getRow(r).height = 18; });
 
@@ -2060,10 +2097,16 @@ function resetAllDocXlsxTemplates() {
   );
 }
 
+// 기본(내장) 템플릿 버퍼 캐시 — 인쇄마다 workbook 재생성+직렬화하는 비용을 없앤다.
+// 값은 로드 후 _fillDocTemplateSheet 에서 채우므로 빈 템플릿 캐시는 안전하다.
+const _defaultDocTemplateBufferCache = {};
 async function _docTemplateArray(type) {
   const saved = _docTemplateStore()[type];
   if (saved && saved.data) return _base64ToArray(saved.data);
-  return await _defaultDocTemplateBook(type).xlsx.writeBuffer();
+  if (!_defaultDocTemplateBufferCache[type]) {
+    _defaultDocTemplateBufferCache[type] = await _defaultDocTemplateBook(type).xlsx.writeBuffer();
+  }
+  return _defaultDocTemplateBufferCache[type].slice(0);   // load 가 버퍼를 변형해도 원본 보존
 }
 
 function _docTemplateGroups(type, id) {
@@ -2884,7 +2927,9 @@ function openSalesDocPrint(type, id) {
   const cfg = SALES[type], list = visibleSalesList(type);
   const targets = Array.isArray(id) ? list.filter(x=>id.includes(x.id)) : (id ? list.filter(x => x.id === id) : list);
   if (!targets.length) { showToast('출력할 문서가 없습니다.', 'error'); return; }
-  if (_docTemplateHasCustom(type)) {
+  // 단일 원본: PDF 인쇄도 엑셀 템플릿(등록 양식과 동일)에서 렌더한다.
+  // ExcelJS 미로딩(오프라인)·템플릿 미정의 타입일 때만 아래 HTML 양식으로 대체.
+  if (typeof ExcelJS !== 'undefined' && DOC_XLS_TEMPLATE_INFO[type]) {
     const ids = targets.map(d => d.id);
     openDocTemplatePdfPreview(type, ids.length === 1 ? ids[0] : ids);
     return;
@@ -3220,7 +3265,9 @@ function openSODocPrint(type, id) {
   const cfg = SODOCS[type], list = visibleSODocList(type);
   const targets = Array.isArray(id) ? list.filter(x=>id.includes(x.id)) : (id ? list.filter(x=>x.id===id) : list);
   if (!targets.length) { showToast('출력할 문서가 없습니다.', 'error'); return; }
-  if (_docTemplateHasCustom(type)) {
+  // 단일 원본: PDF 인쇄도 엑셀 템플릿(등록 양식과 동일)에서 렌더한다.
+  // ExcelJS 미로딩(오프라인)·템플릿 미정의 타입(예: 수주확인서)일 때만 HTML 대체.
+  if (typeof ExcelJS !== 'undefined' && DOC_XLS_TEMPLATE_INFO[type]) {
     const ids = targets.map(d => d.id);
     openDocTemplatePdfPreview(type, ids.length === 1 ? ids[0] : ids);
     return;
